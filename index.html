@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Voxel Aeronautics Workshop — Contract Panel Hotfix</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/cannon@0.6.2/build/cannon.min.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <div id="ui-layer">
+    <div id="mobile-topbar">
+      <button id="btn-ui-toggle" class="mini-btn">UI</button>
+      <button id="btn-ui-build" class="mini-btn">BUILD</button>
+      <button id="btn-ui-flight" class="mini-btn">FLIGHT</button>
+      <button id="btn-ui-save" class="mini-btn">SAVE</button>
+      <button id="btn-ui-help" class="mini-btn">?</button>
+    </div>
+
+    <div id="hud-content">
+<button id="btn-contract-panel-open" class="mini-btn contract-panel-trigger" type="button" aria-controls="contract-panel" aria-expanded="false">
+  <span>FLIGHT CONTRACTS</span>
+  <span id="ui-contract-trigger-label" class="contract-panel-trigger-label">OPEN</span>
+</button>
+<div class="flex justify-between items-start gap-3 flex-wrap">
+  <div class="panel w-[24rem] max-w-[92vw]">
+    <div class="flex items-center justify-between mb-1 gap-2">
+      <div><h1 class="text-xl font-black text-white">Voxel Aeronautics Workshop</h1><div class="text-[10px] uppercase tracking-[0.18em] text-sky-300">Systems Audit Final • Reliable Missions & Damage</div></div>
+      <span id="ui-mode" class="chip text-amber-300">BUILD</span>
+    </div>
+    <p class="text-xs text-gray-400 mb-3 desktop-only">
+      Left click places. Right click removes. Hold Alt or use the middle mouse button to orbit.
+      Choose a module axis with the direction pad. R and Shift+R roll directional modules around that axis.
+      Ctrl+Z/Ctrl+Y provides safe undo and redo.
+    </p>
+    <p class="text-xs text-gray-400 mb-3 mobile-hint">
+      Tap to act. Drag to orbit. Pinch to zoom. Use the action buttons for place/remove.
+    </p>
+
+    <div class="mb-3">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-[11px] uppercase tracking-[0.18em] text-gray-500">Module orientation</span>
+        <span class="text-[11px] text-gray-400">Axis + profile roll</span>
+      </div>
+      <div id="direction-container" class="grid grid-cols-3 gap-2"></div>
+      <div class="grid grid-cols-3 gap-2 mt-2">
+        <button id="btn-roll-orientation-left" class="mini-btn">ROLL −90°</button>
+        <div class="chip justify-between"><span>Up</span><span id="ui-roll-orientation" class="font-mono text-white">+Y</span></div>
+        <button id="btn-roll-orientation-right" class="mini-btn">ROLL +90°</button>
+        <div id="control-config-panel" class="control-config mt-2" hidden>
+        <div class="text-[10px] uppercase tracking-[0.16em] text-cyan-300 mb-2">Control surface mixer</div>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btn-control-axis" class="mini-btn">AXIS: PITCH</button>
+          <button id="btn-control-sign" class="mini-btn">SIGN: AUTO</button>
+        </div>
+        <p class="text-[10px] text-gray-400 mt-2">AUTO chooses the flap direction that creates positive torque around the assigned axis.</p>
+      </div>
+    </div>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mb-2">
+      <button id="btn-symmetry" class="mini-btn">SYMMETRY: NONE</button>
+      <button id="btn-undo" class="mini-btn" disabled>UNDO</button>
+      <button id="btn-redo" class="mini-btn" disabled>REDO</button>
+      <button id="btn-save" class="mini-btn">SAVE</button>
+      <button id="btn-load" class="mini-btn">LOAD</button>
+      <button id="btn-clear" class="mini-btn">NEW</button>
+    </div>
+    <div class="flex flex-wrap gap-2 mb-3">
+      <button id="btn-export" class="mini-btn">EXPORT JSON</button>
+      <button id="btn-import" class="mini-btn">IMPORT JSON</button>
+      <input id="blueprint-file" type="file" accept="application/json,.json" hidden />
+    </div>
+
+    <div class="flex flex-col gap-2 mb-4" id="tool-container"></div>
+
+    <div class="grid grid-cols-2 gap-2 text-xs text-gray-300">
+      <div class="chip"><span>Axis</span><span id="ui-orientation" class="font-mono text-white">+X</span></div>
+      <div class="chip"><span>Profile up</span><span class="font-mono text-white">see above</span></div>
+      <div class="chip"><span>Symmetry</span><span id="ui-symmetry" class="font-mono text-white">NONE</span></div>
+      <div class="chip"><span>Adjacency</span><span id="ui-adj" class="font-mono text-white">OK</span></div>
+      <div class="chip"><span>Action</span><span id="ui-touch-action" class="font-mono text-white">PLACE</span></div>
+      <div class="chip col-span-2"><span>Controls</span><span class="font-mono text-white">Tap, drag, pinch, rotate</span></div>
+    </div>
+  </div>
+
+  <div id="contract-panel" class="panel w-[20rem] max-w-[92vw] max-h-[calc(100vh-7rem)] overflow-y-auto" hidden>
+    <div class="flex items-start justify-between gap-2 mb-2">
+      <div>
+        <h2 class="text-lg font-bold text-white">Flight Contracts</h2>
+        <div id="ui-career-rank" class="text-[10px] uppercase tracking-[0.18em] text-cyan-300">Apprentice Engineer</div>
+      </div>
+      <div class="contract-panel-header-actions">
+        <div class="text-right text-[11px]">
+          <div><span class="text-gray-500">Credits</span> <span id="ui-credits" class="font-mono text-amber-300">0</span></div>
+          <div><span class="text-gray-500">Stars</span> <span id="ui-total-stars" class="font-mono text-white">0</span></div>
+        </div>
+        <button id="btn-contract-panel-close" class="panel-close-btn" type="button" aria-label="Close flight contracts" title="Close contracts (C or Escape)">×</button>
+      </div>
+    </div>
+    <div id="contract-list" class="contract-list"></div>
+    <div class="mt-3 pt-3 border-t border-slate-700/70">
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <div id="ui-contract-title" class="font-bold text-white">Sandbox Test</div>
+          <div id="ui-contract-subtitle" class="text-[10px] uppercase tracking-[0.16em] text-sky-300">No objectives</div>
+        </div>
+        <span id="ui-contract-reward" class="chip text-amber-200">0 cr</span>
+      </div>
+      <p id="ui-contract-description" class="text-xs text-gray-300 mt-2 leading-relaxed"></p>
+      <div id="ui-contract-objectives" class="space-y-1 mt-2 text-[11px] text-gray-300"></div>
+      <div class="grid grid-cols-2 gap-2 mt-3 text-[11px]">
+        <div class="chip justify-between"><span>Time limit</span><span id="ui-contract-time" class="font-mono text-white">—</span></div>
+        <div class="chip justify-between"><span>Payload</span><span id="ui-contract-payload" class="font-mono text-white">0 kg</span></div>
+      </div>
+      <div id="ui-contract-readiness" class="contract-readiness mt-3">Select a contract and prepare a craft.</div>
+      <button id="btn-starter-craft" class="mini-btn w-full mt-2">LOAD STARTER VTOL</button>
+    </div>
+  </div>
+
+  <div class="panel w-[21rem] max-w-[92vw] max-h-[calc(100vh-7rem)] overflow-y-auto">
+    <h2 class="text-lg font-bold border-b border-gray-700 pb-2 mb-3 text-white">Telemetry</h2>
+    <div class="flex justify-between mb-2"><span class="text-gray-400">Status:</span><span id="ui-status" class="font-bold text-yellow-500">DRYDOCK</span></div>
+    <div class="flex justify-between mb-2"><span class="text-gray-400">Mass:</span><span id="ui-mass" class="font-mono text-white">0.0 kg</span></div>
+    <div class="flex justify-between mb-2"><span class="text-gray-400">Blocks:</span><span id="ui-blocks" class="font-mono text-white">0</span></div>
+    <div class="flex justify-between mb-2"><span class="text-gray-400">Fuel:</span><span id="ui-fuel" class="font-mono text-white">0 / 0</span></div>
+    <div class="flex justify-between mb-2"><span class="text-gray-400">Damage:</span><span id="ui-damage-status" class="font-mono text-white">No active damage</span></div>
+
+    <div class="space-y-3 mt-3">
+      <div>
+        <div class="flex justify-between mb-1 text-xs">
+          <span class="text-orange-200">Thruster power</span>
+          <span id="ui-thruster-power" class="font-mono text-white">70%</span>
+        </div>
+        <input id="thruster-power" class="slider power-slider" type="range" min="0" max="100" value="70" />
+      </div>
+      <div>
+        <div class="flex justify-between mb-1 text-xs">
+          <span class="text-sky-200">Balloon power</span>
+          <span id="ui-balloon-power" class="font-mono text-white">70%</span>
+        </div>
+        <input id="balloon-power" class="slider power-slider" type="range" min="0" max="100" value="70" />
+      </div>
+      <div>
+        <div class="flex justify-between mb-1 text-xs">
+          <span class="text-emerald-200">Stability</span>
+          <span id="ui-stability" class="font-mono text-white">18%</span>
+        </div>
+        <input id="stability" class="slider power-slider" type="range" min="0" max="100" value="18" />
+      </div>
+    </div>
+
+    <div class="mt-4 pt-3 border-t border-gray-700 text-xs text-gray-300 space-y-3">
+      <div class="mini-status">
+        <span class="text-gray-500 uppercase tracking-[0.18em] text-[11px]">Engineering analysis</span>
+        <span id="ui-flight-grade" class="font-bold text-amber-300">UNTESTED</span>
+      </div>
+      <div class="grid grid-cols-2 gap-2 text-[11px]">
+        <div class="chip justify-between"><span>Static lift</span><span id="ui-static-lift" class="font-mono text-white">0.00×</span></div>
+        <div class="chip justify-between"><span>Cruise lift</span><span id="ui-cruise-lift" class="font-mono text-white">0.00×</span></div>
+        <div class="chip justify-between"><span>Fuel time</span><span id="ui-endurance" class="font-mono text-white">—</span></div>
+        <div class="chip justify-between"><span>Trim torque</span><span id="ui-trim-torque" class="font-mono text-white">0.0</span></div>
+        <div class="chip justify-between"><span>Structure</span><span id="ui-structural-reserve" class="font-mono text-white">0.00×</span></div>
+        <div class="chip justify-between"><span>Weak links</span><span id="ui-weak-links" class="font-mono text-white">0</span></div>
+      </div>
+      <div>
+        <div class="flex justify-between mb-1 text-[11px]"><span class="text-sky-200">Pitch authority</span><span id="ui-control-pitch" class="font-mono text-white">0%</span></div>
+        <div class="flight-feedback-bar"><span id="ui-control-pitch-bar" style="left:0%; width:0%; background:linear-gradient(90deg,rgba(56,189,248,.3),rgba(56,189,248,.95));"></span></div>
+      </div>
+      <div>
+        <div class="flex justify-between mb-1 text-[11px]"><span class="text-emerald-200">Yaw authority</span><span id="ui-control-yaw" class="font-mono text-white">0%</span></div>
+        <div class="flight-feedback-bar"><span id="ui-control-yaw-bar" style="left:0%; width:0%; background:linear-gradient(90deg,rgba(52,211,153,.3),rgba(52,211,153,.95));"></span></div>
+      </div>
+      <div>
+        <div class="flex justify-between mb-1 text-[11px]"><span class="text-amber-200">Roll authority</span><span id="ui-control-roll" class="font-mono text-white">0%</span></div>
+        <div class="flight-feedback-bar"><span id="ui-control-roll-bar" style="left:0%; width:0%; background:linear-gradient(90deg,rgba(251,191,36,.3),rgba(251,191,36,.95));"></span></div>
+      </div>
+      <div id="ui-analysis-warnings" class="space-y-1 text-[11px]"></div>
+    </div>
+
+    <div class="mt-4 pt-3 border-t border-gray-700 text-xs text-gray-300 space-y-3">
+      <div class="mini-status">
+        <span class="text-gray-500 uppercase tracking-[0.18em] text-[11px]">Flight feedback</span>
+        <span id="ui-speed" class="font-mono text-white">0.0 m/s</span>
+      </div>
+      <div class="grid grid-cols-2 gap-2 text-[11px]">
+        <div class="chip justify-between"><span>Altitude</span><span id="ui-altitude" class="font-mono text-white">0.0 m</span></div>
+        <div class="chip justify-between"><span>Vertical</span><span id="ui-vertical-speed" class="font-mono text-white">0.0 m/s</span></div>
+        <div class="chip justify-between col-span-2"><span>Thrust / Lift / Drag</span><span id="ui-loads" class="font-mono text-white">0 / 0 / 0 N</span></div>
+      </div>
+      <div>
+        <div class="flex justify-between mb-1 text-[11px]"><span class="text-sky-200">Pitch</span><span id="ui-pitch-value" class="font-mono text-white">0%</span></div>
+        <div class="flight-feedback-bar"><span id="ui-pitch-bar" style="left:50%; width:0%; background: linear-gradient(90deg, rgba(56,189,248,0.2), rgba(56,189,248,0.9));"></span></div>
+      </div>
+      <div>
+        <div class="flex justify-between mb-1 text-[11px]"><span class="text-emerald-200">Yaw</span><span id="ui-yaw-value" class="font-mono text-white">0%</span></div>
+        <div class="flight-feedback-bar"><span id="ui-yaw-bar" style="left:50%; width:0%; background: linear-gradient(90deg, rgba(52,211,153,0.2), rgba(52,211,153,0.9));"></span></div>
+      </div>
+      <div>
+        <div class="flex justify-between mb-1 text-[11px]"><span class="text-amber-200">Roll</span><span id="ui-roll-value" class="font-mono text-white">0%</span></div>
+        <div class="flight-feedback-bar"><span id="ui-roll-bar" style="left:50%; width:0%; background: linear-gradient(90deg, rgba(251,191,36,0.2), rgba(251,191,36,0.9));"></span></div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 text-[11px] text-gray-300 pt-1">
+        <div class="chip justify-between"><span>Pitch</span><span id="ui-pitch-readout" class="font-mono text-white">0</span></div>
+        <div class="chip justify-between"><span>Yaw</span><span id="ui-yaw-readout" class="font-mono text-white">0</span></div>
+        <div class="chip justify-between"><span>Roll</span><span id="ui-roll-readout" class="font-mono text-white">0</span></div>
+        <div class="chip justify-between"><span>Tilt</span><span id="ui-angle-readout" class="font-mono text-white">0°</span></div>
+      </div>
+    </div>
+
+    <div class="mt-4 pt-3 border-t border-gray-700 text-xs text-gray-300 space-y-2">
+      <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]"></span><span>Center of mass</span></div>
+      <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]"></span><span>Center and vector of thrust</span></div>
+      <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-cyan-300 shadow-[0_0_8px_#67e8f9]"></span><span>Center and estimated lift</span></div>
+      <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b]"></span><span>Engine orientation</span></div>
+    </div>
+  </div>
+</div>
+
+      <div class="flex justify-center gap-3 flex-wrap mt-3">
+        <button id="btn-build" class="btn-action bg-yellow-600 shadow-[0_0_15px_rgba(202,138,4,0.45)]" disabled>Return to Drydock</button>
+        <button id="btn-flight" class="btn-action bg-emerald-600 shadow-[0_0_15px_rgba(16,185,129,0.45)]">Launch Selected Contract</button>
+        <button id="btn-help" class="btn-action bg-slate-700">?</button>
+      </div>
+    </div>
+
+    
+    <div id="mobile-controls" class="panel w-full justify-center gap-2 flex-wrap">
+      <div id="mobile-build-controls" class="mobile-build-controls">
+        <div class="flex gap-2 flex-wrap">
+          <button id="btn-touch-place" class="btn-action bg-blue-600 flex-1 min-w-[6.5rem]">Place</button>
+          <button id="btn-touch-remove" class="btn-action bg-rose-600 flex-1 min-w-[6.5rem]">Remove</button>
+          <button id="btn-touch-rotate" class="btn-action bg-amber-600 flex-1 min-w-[6.5rem]">Roll Part</button>
+          <button id="btn-touch-reset" class="btn-action bg-slate-700 flex-1 min-w-[6.5rem]">Reset Cam</button>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btn-touch-symmetry" class="btn-action bg-indigo-600">Symmetry</button>
+          <button id="btn-touch-save" class="btn-action bg-emerald-600">Save</button>
+        </div>
+      </div>
+
+      <div id="mobile-flight-controls" class="mobile-flight-controls">
+        <div class="grid grid-cols-3 gap-2">
+          <button id="btn-pitch-down" class="hold-btn">Pitch −</button>
+          <button id="btn-stabilize" class="hold-btn bg-emerald-700">Stabilize</button>
+          <button id="btn-pitch-up" class="hold-btn">Pitch +</button>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <button id="btn-yaw-left" class="hold-btn">Yaw −</button>
+          <button id="btn-center-controls" class="hold-btn bg-slate-700">Center</button>
+          <button id="btn-yaw-right" class="hold-btn">Yaw +</button>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btn-roll-left" class="hold-btn">Roll −</button>
+          <button id="btn-roll-right" class="hold-btn">Roll +</button>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btn-throttle-down" class="hold-btn bg-slate-700">Power −</button>
+          <button id="btn-throttle-up" class="hold-btn bg-orange-700">Power +</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <div id="mission-hud" class="mission-hud" hidden>
+    <div class="mission-hud-header">
+      <div>
+        <div id="mission-hud-title" class="mission-hud-title">Sandbox Test</div>
+        <div id="mission-hud-objective" class="mission-hud-objective">Free flight</div>
+      </div>
+      <div id="mission-hud-timer" class="mission-hud-timer">00:00</div>
+    </div>
+    <div class="mission-hud-grid">
+      <div><span>Progress</span><strong id="mission-hud-progress">—</strong></div>
+      <div><span>Integrity</span><strong id="mission-hud-integrity">100%</strong></div>
+      <div><span>Fuel</span><strong id="mission-hud-fuel">100%</strong></div>
+      <div><span>Impact</span><strong id="mission-hud-impact">0.0 m/s</strong></div>
+      <div><span>Parts lost</span><strong id="mission-hud-lost">0</strong></div>
+      <div><span>Fuel leak</span><strong id="mission-hud-leak">0.00/s</strong></div>
+      <div><span>Payload</span><strong id="mission-hud-payload">—</strong></div>
+    </div>
+    <div class="mission-progress-track"><span id="mission-progress-fill"></span></div>
+  </div>
+
+  <div id="debrief-modal" class="overlay-modal" hidden>
+    <div class="debrief-card">
+      <div id="debrief-kicker" class="debrief-kicker">FLIGHT REPORT</div>
+      <h2 id="debrief-title" class="debrief-title">Contract Complete</h2>
+      <p id="debrief-summary" class="debrief-summary"></p>
+      <div id="debrief-stars" class="debrief-stars">☆☆☆</div>
+      <div class="debrief-grid">
+        <div><span>Time</span><strong id="debrief-time">00:00</strong></div>
+        <div><span>Fuel remaining</span><strong id="debrief-fuel">0%</strong></div>
+        <div><span>Integrity</span><strong id="debrief-integrity">0%</strong></div>
+        <div><span>Maximum impact</span><strong id="debrief-impact">0.0 m/s</strong></div>
+        <div><span>Maximum altitude</span><strong id="debrief-altitude">0.0 m</strong></div>
+        <div><span>Reward</span><strong id="debrief-reward">0 cr</strong></div>
+        <div><span>Parts lost</span><strong id="debrief-lost">0</strong></div>
+        <div><span>Payload</span><strong id="debrief-payload">—</strong></div>
+        <div class="debrief-wide"><span>First failure</span><strong id="debrief-failure">No structural failure</strong></div>
+      </div>
+      <div id="debrief-notes" class="debrief-notes"></div>
+      <div class="debrief-actions">
+        <button id="btn-debrief-workshop" class="btn-action bg-yellow-600">Return to Workshop</button>
+        <button id="btn-debrief-retry" class="btn-action bg-emerald-600">Retry Contract</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="help-modal">
+    <div class="modal-content relative text-gray-300">
+      <button id="close-help" class="absolute top-4 right-4 text-gray-400 hover:text-white font-bold text-xl bg-transparent border-none cursor-pointer">✕</button>
+      <h2 class="text-2xl font-bold text-white mb-4">Aeronautics Workshop Campaign</h2>
+      <p class="mb-4">
+        Design a modular aircraft, choose a workshop contract, and prove the machine on a living test range.
+        Contracts now validate real gate crossings, stable hover, landing quality, payload survival, fuel, structural integrity and the first failure in the chain.
+        Free-flight sandbox remains available whenever you only want to experiment.
+      </p>
+      <ul class="list-disc pl-5 space-y-2 mb-6">
+        <li><strong class="text-white">Place:</strong> tap a surface or adjacent block.</li>
+        <li><strong class="text-white">Remove:</strong> switch to remove mode and tap a block.</li>
+        <li><strong class="text-white">Orient module:</strong> choose its forward/chord axis, then use <strong class="text-white">R</strong> and <strong class="text-white">Shift+R</strong> to roll the profile. Wings now have a real aerodynamic normal.</li>
+        <li><strong class="text-white">Camera:</strong> drag to orbit, pinch to zoom. On desktop, hold <strong class="text-white">Alt</strong> and drag.</li>
+        <li><strong class="text-white">Flight controls:</strong> W/S or ↑/↓ controls pitch, A/D or ←/→ controls yaw, Q/E controls roll, −/+ changes engine power, and Space toggles gyro stabilization.</li>
+        <li><strong class="text-white">Contracts:</strong> complete certification, gate, courier and heavy-lift trials to earn credits and stars.</li>
+        <li><strong class="text-white">Control surfaces:</strong> select the cyan module, assign pitch/yaw/roll and choose automatic or manual sign before placement.</li>
+        <li><strong class="text-white">Gimballed engine:</strong> the purple vector thruster bends its nozzle and generates control torque without hidden forces.</li>
+        <li><strong class="text-white">Damage:</strong> impacts damage local modules or cargo, propagate through connections, cause fuel leaks and can tear entire disconnected branches from the craft.</li>
+        <li><strong class="text-white">Cargo contracts:</strong> the payload must remain attached and meet its required integrity at delivery; barely surviving cargo no longer counts as a clean success.</li>
+        <li><strong class="text-white">Current solver limit:</strong> blueprints may contain up to 2500 modules, but test flight is capped at 480 attached modules until collider merging is implemented.</li>
+        <li><strong class="text-white">Mission HUD:</strong> follow the objective, timer, integrity, lost parts and live fuel-leak rate.</li>
+        <li><strong class="text-white">Engineering analysis:</strong> the workshop and runtime use the same part data, power settings and control mixer.</li>
+        <li><strong class="text-white">Undo/redo:</strong> use the buttons or Ctrl+Z / Ctrl+Y. Blueprint files can also be exported and imported as JSON.</li>
+        <li><strong class="text-white">Save:</strong> craft blueprints are stored locally in the browser and migrated from older stages.</li>
+      </ul>
+      <button id="start-engineering" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg transition">Start Engineering</button>
+    </div>
+  </div>
+
+  <div id="fatal-error" class="fatal-error" hidden>
+    <div class="panel max-w-[34rem]">
+      <h2 class="text-xl font-bold text-rose-300 mb-2">Game libraries could not be loaded</h2>
+      <p class="text-sm text-gray-300">This build uses pinned Three.js and Cannon.js CDN files. Check the internet connection, disable script-blocking for this local page, and reload.</p>
+    </div>
+  </div>
+  <!-- BEGIN APP LOADER -->
+  <script>
+    (() => {
+      const fatal = document.getElementById('fatal-error');
+      const showFatal = error => {
+        fatal.hidden = false;
+        const message = fatal.querySelector('p');
+        if (message && error) message.textContent = `Runtime error: ${error?.message || error}`;
+      };
+      window.addEventListener('error', event => showFatal(event.error || event.message));
+      window.addEventListener('unhandledrejection', event => showFatal(event.reason));
+      if (!window.THREE || !window.CANNON) {
+        showFatal('Required Three.js or Cannon.js library is unavailable. Check the internet connection and reload.');
+        return;
+      }
+
+      const sources = [
+        'src/foundation/kernel.js',
+        'src/foundation/config.js',
+        'src/foundation/catalog.js',
+        'src/foundation/orientation.js',
+        'src/foundation/blueprint.js',
+        'src/foundation/craft_model.js',
+        'src/foundation/craft_history.js',
+        'src/foundation/state.js',
+        'src/foundation/bootstrap.js',
+        'src/game.js'
+      ];
+      let cursor = 0;
+      const loadNext = () => {
+        if (cursor >= sources.length) return;
+        const source = sources[cursor++];
+        const script = document.createElement('script');
+        script.src = source;
+        script.async = false;
+        script.onload = loadNext;
+        script.onerror = () => showFatal(`The script ${source} could not be loaded.`);
+        document.body.appendChild(script);
+      };
+      loadNext();
+    })();
+  </script>
+  <!-- END APP LOADER -->
+</body>
+</html>

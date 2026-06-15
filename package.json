@@ -1,0 +1,15 @@
+{
+  "name": "voxel-aeronautics-workshop",
+  "version": "0.2.0-foundation.1b",
+  "private": true,
+  "description": "Voxel airship engineering sandbox — CraftModel boundary refactor milestone.",
+  "scripts": {
+    "test": "python tests/run_all.py",
+    "build": "python tools/build_release.py",
+    "serve": "python tools/serve.py"
+  },
+  "engines": {
+    "node": ">=18",
+    "python": ">=3.10"
+  }
+}
