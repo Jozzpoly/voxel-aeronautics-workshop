@@ -1,64 +1,77 @@
-# Validation Report — Foundation Phase 1C.2
+# Validation Report — Phase 1D.2D
 
-## Zakres
+## Automatyczna walidacja
 
-Walidacja objęła synchronizację przesłanej Phase 1C.1 z repozytorium, przegląd granic domenowych, wdrożenie Control Frame, sześciu osi wejścia i wspólnego systemu okien oraz pełny powtórny przebieg testów i buildów.
+```bash
+python tests/run_all.py
+python tools/build_release.py
+python tools/verify_release.py
+```
 
-## Problemy rozwiązane w tym etapie
+Wymagane: wszystkie testy zielone oraz `sourceParity: ok`.
 
-### 1. Orientacja statku była ukrytym założeniem globalnym
+## Manualny playtest przed pushem
 
-Pozycja Core była już swobodna, ale runtime nadal zakładał jeden globalny kierunek przodu i góry. To nie wystarcza dla pionowych rakiet, obróconych kokpitów ani przyszłych wielorodzajowych pojazdów.
+### Cache i wersja
 
-Rozwiązanie: orientacja Command Core definiuje jawny `CraftControlFrame` z osiami forward/up/right oraz origin. `CraftCompiler` zapisuje go w niezmiennym `CompiledCraft`.
+1. Uruchom przez `run_game.bat` lub `python tools/serve.py`.
+2. W Chrome użyj `Ctrl+Shift+R`.
+3. Potwierdź napis `Phase 1D.2D`.
 
-### 2. Preferencje gracza mieszały się z fizycznym znakiem sterowania
+### Domyślne bindingi
 
-Odwrócenie osi nie powinno zmieniać blueprintu ani konfiguracji aktuatora. Dodano osobny, wersjonowany `InputProfile` z sześcioma osiami, odwracaniem i czułością. Domyślny profil koryguje zgłoszony odwrócony pitch.
+1. `Space` daje pionową komendę +100%.
+2. `Left Ctrl` daje pionową komendę −100%.
+3. Częste naciskanie Left Ctrl nie może wywołać Klawiszy trwałych.
+4. `,` i `.` zmieniają Balloon power o 2% i natychmiast odświeżają licznik oraz thumb.
+5. `Shift` sam nie powinien sterować statkiem.
 
-### 3. Brakowało bocznej translacji
+### Rebinding
 
-Sterowanie posiada teraz pełne sześć stopni swobody: pitch, yaw, roll, surge, sway i lift. Z/C zasila `sway`, a monitor wejścia pokazuje wszystkie osie.
+1. Otwórz Controls.
+2. Kliknij pierwszy slot `Descend`, naciśnij np. `X`.
+3. Uruchom lot i potwierdź, że `X` schodzi, a Left Ctrl już nie.
+4. Przypisz `X` do innej akcji i potwierdź, że zostaje przeniesiony, nie zdublowany.
+5. `Backspace/Delete` czyści slot, `Escape` anuluje capture.
+6. Odśwież stronę i potwierdź zapis profilu.
+7. Reset przywraca domyślne bindingi i ustawienia osi.
 
-### 4. Interfejs był zbiorem wyjątków per panel
+### Flight Focus
 
-Build, Contracts, Telemetry i Controls korzystają teraz z jednego `foundation.ui-workspace`. Każde okno może zostać otwarte, zamknięte, zminimalizowane, przeciągnięte i przeskalowane, a layout jest normalizowany i zapisywany jako preferencja użytkownika.
+Testuj na HTTPS lub localhost w Chrome/Brave.
 
-### 5. Pipeline wydania duplikował pliki
+1. Kliknij `FLIGHT FOCUS` i zaakceptuj fullscreen/Keyboard Lock, jeśli pojawi się prompt.
+2. Status ma zmienić się na aktywny.
+3. W locie trzymaj Left Ctrl + W oraz Left Ctrl + S — gra ma otrzymać oba kierunki i karta nie może się zamknąć ani zapisać strony.
+4. Left Ctrl + `,/.` ma równocześnie schodzić i regulować balony.
+5. Wyjdź z fullscreen; status ma wrócić do Browser mode, a aktywne osie zostać wyczyszczone.
+6. Po odmowie uprawnienia gra ma pozostać grywalna i pokazać czytelny komunikat.
 
-Generator ZIP skanował istniejący katalog `release/`, a później ponownie dodawał aktualny HTML i SHA. Katalog artefaktów został wyłączony ze źródeł paczki. Test deterministyczności i zgodności źródeł przechodzi bez ostrzeżeń o duplikatach.
+Nie deklaruj pełnego bezpieczeństwa Ctrl chordów poza Flight Focus. W zwykłym trybie rozwiązaniem jest rebinding zejścia.
 
-## Wynik automatyczny
+### Aerostatyka
 
-Wszystkie testy przechodzą:
+Dla startera, lekkiego i ciężkiego balloon craft:
 
-- 15 źródeł aplikacji;
-- 213 funkcji runtime;
-- 183 unikalne ID HTML;
-- 12 modułów domenowych;
-- migracje blueprintów v3–v9;
-- orientowany Core i `CompiledCraft.controlFrame`;
-- sześć osi, profil wejścia i transformacja przez Control Frame;
-- 600 losowych operacji CraftModel;
-- model i kompilacja 2500 bloków;
-- regresje misji, fizyki, obrażeń i UI;
-- interakcyjny startup smoke;
-- deterministyczny HTML, ZIP, manifest i SHA-256.
+1. moc tuż nad markerem rozpoczyna wznoszenie;
+2. wznoszenie słabnie z wysokością;
+3. oscylacja wokół równowagi ma maleć, ale nie znikać natychmiast;
+4. przy Balloon power 0 dodatkowe tłumienie znika;
+5. bezpośredni thrust zachowuje autorytet.
 
-Ostatni przebieg zmierzył około 8.4 ms dla pełnego `replace` 2500 bloków oraz około 52.7 ms dla kompilacji 2500 części w Node.
+### Misje
 
-## Ocena
+1. Hover License zakończ na remote padzie.
+2. Powtórz na launch padzie.
+3. Sprawdź dwell i blocker HUD.
+4. Gate/Courier/Heavy-Lift zachowują własne pady.
 
-**Phase 1C.2 jest gotowa do pracy jako baza dla Foundation Phase 1D — Physics Boundary.**
+### Desktop scope
 
-Nie należy jeszcze podnosić limitu 480 aktywnych części ani wymieniać Cannon.js bez neutralnego interfejsu backendu, harnessu fizyki i benchmarków. Runtime nadal tworzy jeden collider na voxel i nadal skupia zbyt wiele odpowiedzialności w `game.js`.
+1. Panele można przeciągać, resize’ować, zamykać i otwierać.
+2. Poniżej 720 px pojawia się komunikat desktop-only.
+3. Nie ma mobilnego topbara ani ekranowych przycisków sterowania.
 
-## Niewykonana walidacja
+## Kryterium pushu
 
-Nie udało się przeprowadzić wiarygodnego, automatycznego playtestu prawdziwego WebGL/GPU w środowisku roboczym. Startup smoke nie zastępuje lokalnego sprawdzenia:
-
-- kierunku pitch/yaw/roll z rzeczywistą kamerą;
-- różnych orientacji Core;
-- przeciągania i skalowania okien przy różnych rozdzielczościach;
-- fokusu klawiatury między viewportem a kontrolkami;
-- długiego lotu i stabilności fizyki.
+Push dopiero po manualnym przejściu: rebinding, Flight Focus w Chrome lub Brave, domyślny Ctrl, misja lądowania oraz odczucie balonów. Keyboard Lock jest zależny od przeglądarki i uprawnienia, dlatego sam zielony test automatyczny nie wystarcza.

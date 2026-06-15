@@ -1,4 +1,4 @@
-# Architektura — Foundation Phase 1C.2
+# Architektura — Foundation Phase 1D.2D
 
 ## Cel etapu
 
@@ -24,7 +24,8 @@ CraftCompiler
     ▼
 Runtime adapter w game.js
     ├─ Three.js visuals
-    ├─ Cannon.js body/shapes
+    ├─ runtime.physics-port
+    │      └─ runtime.cannon-physics-backend
     ├─ damage runtime
     └─ flight telemetry
 ```
@@ -47,6 +48,9 @@ foundation.kernel
    ├─ foundation.ui-workspace
    ├─ foundation.flight-control
    └─ foundation.state
+
+runtime.physics-port
+   └─ runtime.cannon-physics-backend
             │
             ▼
    foundation.bootstrap
@@ -174,7 +178,23 @@ Kolejność części jest kanoniczna. Ta sama konstrukcja niezależnie od kolejn
 - przekazuje rzeczywistą pozycję Core do mocowania payloadu;
 - buduje istniejący runtime bez zmiany modelu lotu.
 
-Tworzenie body i colliderów nadal znajduje się w `game.js`. To główny zakres Phase 1D.
+Tworzenie świata, body oraz podstawowych colliderów przechodzi przez `runtime.physics-port` i adapter Cannon. `game.js` nadal buduje listę voxelowych colliderów oraz przechowuje runtime parts, dlatego pełny builder compound body pozostaje zakresem Phase 1D.3.
+
+
+## `runtime.physics-port` i `runtime.cannon-physics-backend`
+
+Port definiuje neutralne deskryptory świata, body, boxa, plane, wektora i kwaternionu oraz sprawdza wymagany zestaw operacji backendu. Nie zależy od DOM, Three.js ani Cannon.js.
+
+Adapter Cannon jest jedynym miejscem, w którym wolno tworzyć `CANNON.World`, `CANNON.Body`, `CANNON.Box`, `CANNON.Plane` i wykonywać `world.step`. Odpowiada także za:
+
+- dodawanie i usuwanie body;
+- tworzenie i usuwanie colliderów;
+- przesuwanie offsetów colliderów po zmianie COM;
+- aktualizację masy i flag broadphase/AABB;
+- siły, momenty i transformacje local/world;
+- rejestrację zdarzeń kolizji.
+
+Phase 1D.2B zachowuje natywne obiekty body i wektorów Cannon jako warstwę kompatybilności, ale kontakt jest już mapowany do neutralnego `{ otherBody, impactSpeed, relativePoint }`. `game.js` nie odczytuje pól `contact/bi/ri/rj` ani metod Cannon. Zmiana backendu nadal nie jest operacją podmiany jednego importu, ponieważ aerodynamika korzysta z natywnych metod wektorów.
 
 ## `foundation.control-frame`, `foundation.input-profile` i `foundation.flight-control`
 
@@ -191,7 +211,7 @@ sway+ / sway-
 lift+ / lift-
 ```
 
-Mapowanie klawiszy jest oddzielone od stanu pilota. Dzięki temu klawiatura, przyciski mobilne, przyszły gamepad i mikrokontroler mogą zasilać te same osie.
+Mapowanie klawiszy jest oddzielone od stanu pilota. Profil wejścia v2 przechowuje do dwóch fizycznych `KeyboardEvent.code` na akcję, migruje profile bez bindingów i gwarantuje jednoznaczność kodu. Dzięki temu klawiatura, przyszły gamepad i mikrokontroler mogą zasilać te same osie bez zmian w mikserze.
 
 `applyTranslationMix()` miesza lokalny kierunek thrustera z żądaniem:
 
@@ -199,12 +219,48 @@ Mapowanie klawiszy jest oddzielone od stanu pilota. Dzięki temu klawiatura, prz
 - `sway` — lokalne lewo / prawo;
 - `lift` — lokalne góra / dół.
 
-Suwak mocy ustala wyłącznie pasywny ciąg silników skierowanych ku lokalnemu +Y. Nie jest limitem mocy dostępnej dla wejść pilota. Poziome i skierowane w dół thrustry są neutralnie wyłączone, natomiast zgodna komenda translacji lub obrotu może zwiększyć dowolny thruster aż do 100%. Komenda przeciwna redukuje istniejący pasywny ciąg do zera. Dzięki temu Left Ctrl aktywuje silniki skierowane w dół, a jednocześnie wygasza skierowane w górę. Jest to etap przejściowy przed pełnym grafem sterowania i konfigurowalnym mikserem.
+Suwak mocy ustala wyłącznie pasywny ciąg silników skierowanych ku lokalnemu +Y. Nie jest limitem mocy dostępnej dla wejść pilota. Poziome i skierowane w dół thrustry są neutralnie wyłączone, natomiast zgodna komenda translacji lub obrotu może zwiększyć dowolny thruster aż do 100%. Komenda przeciwna redukuje istniejący pasywny ciąg do zera. Domyślny `Left Ctrl` publikuje semantyczne `lift-`, aktywuje thrustry skierowane w dół i wygasza pasywny ciąg skierowany w górę. Sam mikser nie zna fizycznego klawisza.
 
 
 ## `foundation.ui-workspace`
 
-Build, Contracts, Telemetry i Controls są projekcjami jednego wersjonowanego stanu okien. Stan przechowuje otwarcie, minimalizację, pozycję i rozmiar. Desktop renderuje pływające, przeciągane i skalowalne panele; mobile może pokazywać ten sam stan jako arkusze. Profil wejścia i workspace są preferencjami użytkownika, nie częścią blueprintu.
+Build, Contracts, Telemetry i Controls są projekcjami jednego wersjonowanego stanu okien. Ramka panelu zarządza pozycją i resize, natomiast `.workspace-panel-scroll` jest jedynym przewijanym korpusem. `fitPanelRect()` ogranicza całą ramkę do viewportu podczas odtwarzania i przeciągania. Workspace v3 zachowuje z-order i wersjonowany stan, resetuje wadliwą geometrię starszych zapisów oraz zachowuje preferencje otwarcia. Workspace ma jeden desktopowy model okien. Telefon i touch-only są poza zakresem runtime; nie istnieje alternatywna mobilna projekcja paneli. Profil wejścia i workspace są preferencjami użytkownika, nie częścią blueprintu.
+
+## `foundation.mission-evaluator` i jawne strefy lądowania
+
+Kontrakt nie może polegać na ukrytym założeniu „start pad albo finish pad”. `foundation.catalog` zapisuje `landingZones`, a runtime mapuje identyfikatory na strefy `TEST_RANGE`. `evaluateLandingZones()` ocenia jeden znormalizowany sample statku względem wszystkich dozwolonych stref. Jeżeli żadna nie jest zaliczona, zwraca najbliższą strefę dla komunikatu HUD; jeżeli dowolna spełnia warunki, zwraca ją jako zaliczoną.
+
+Sample lądowania zawiera pozycję body, prędkość, przechył, prześwit najniższej geometrii i wiek ostatniego kontaktu. Prześwit jest sygnałem podstawowym. Event kontaktu jest tylko ograniczonym czasowo potwierdzeniem i nie może samodzielnie zaliczyć statku wysoko nad ziemią. Dwell jest aktualizowany przez czystą funkcję z kontrolowanym decay.
+
+## `foundation.aerostatics`
+
+Aerostatyka jest czystym modułem bez DOM, Three.js i Cannon.js. Definiuje:
+
+```text
+efficiency(h) = max(minimumEfficiency, exp(-h / scaleHeight))
+availableLift = maxSeaLevelLift × power × efficiency(h)
+```
+
+`requiredPowerForHover()` oblicza neutralną moc po odjęciu pasywnej siły pionowych thrusterów, a `equilibriumAltitude()` szacuje pułap równowagi wybranej komendy. Pętla fizyki oraz marker UI korzystają z tej samej polityki `AEROSTATICS`. Marker jest analizą statyczną: nie obejmuje dynamicznej siły skrzydeł ani chwilowych wejść pilota.
+
+Stan Balloon power jest zmieniany tylko przez `setBalloonPower()`, który synchronizuje model, input, tekst, guidance i zapis. Comma/Period wywołuje tę samą ścieżkę co suwak. `verticalDampingForce()` dodaje ograniczony opór przeciwny do prędkości pionowej, zależny od aktywnego lift, ale nie od błędu wysokości.
+
+## Granica platformy desktopowej i Flight Focus
+
+Runtime zakłada klawiaturę i mysz. Pointer events obsługują mysz i pen, ale dotykowy canvas nie emuluje budowania ani pilotażu. Wąski viewport może wyświetlić komunikat o wymaganym desktopie. Touchpad laptopa pozostaje zwykłym pointerem i źródłem wheel/scroll.
+
+Bindingi są preferencją użytkownika i mogą używać modifierów. `foundation.flight-control` rozwiązuje fizyczny kod przez profil i publikuje wyłącznie semantyczne akcje lub pomocnicze adjustmenty. `game.js` nie posiada zapasowej hardkodowanej mapy.
+
+Zwykły `preventDefault()` nie jest kontraktem przejęcia wszystkich skrótów przeglądarki. Flight Focus jest opcjonalnym adapterem platformowym:
+
+```text
+user click
+  -> JavaScript Fullscreen
+  -> navigator.keyboard.lock(profile bound codes)
+  -> key events before supported browser shortcuts
+```
+
+Mechanizm działa best-effort: wymaga wsparcia, bezpiecznego kontekstu, zgody użytkownika i nie może przejąć kombinacji zastrzeżonych przez system operacyjny. Po wyjściu z fullscreen lock jest zwalniany, a aktywne akcje czyszczone. Rebinding pozostaje obowiązkowym fallbackiem.
 
 ## Ważne inwarianty
 
@@ -215,13 +271,23 @@ Build, Contracts, Telemetry i Controls są projekcjami jednego wersjonowanego st
 5. Edytor dopuszcza niegotowe stany robocze.
 6. Start wymaga dokładnie jednego Core i jednej wyspy.
 7. Każda zmiana formatu ma wersję i migrację.
-8. Sterowanie używa semantycznych osi, nie rozproszonych warunków klawiatury.
-9. Sterowanie lotem ma pierwszeństwo nad skrótami edytora.
+8. Sterowanie używa semantycznych osi, a fizyczne bindingi należą wyłącznie do wersjonowanego profilu wejścia.
+9. Dostarczone zdarzenia lotu mają pierwszeństwo nad skrótami edytora; przejęcie skrótów przeglądarki wymaga Flight Focus lub rebindingu.
 10. Nie podnosić limitu lotu przed benchmarkiem i collider compilerem.
 11. Pasywny ciąg i bezpośrednia autoryteta pilota są oddzielnymi pojęciami.
 12. Każdy artefakt wydania musi mieć weryfikowalną zgodność źródeł ZIP ↔ single HTML.
 13. Orientacja Core definiuje Control Frame, ale profil wejścia pozostaje preferencją użytkownika.
 14. Wszystkie główne okna używają wspólnego `UIWorkspace`.
+15. `game.js` nie może bezpośrednio tworzyć świata, body ani colliderów backendu i nie może bezpośrednio wykonywać kroku solvera.
+16. `game.js` nie może interpretować natywnego kontaktu Cannon.
+17. Ramka panelu nie jest obszarem scrollowania; przewija się wyłącznie `.workspace-panel-scroll`.
+18. Dozwolone strefy lądowania należą do danych kontraktu.
+19. Fizyka i telemetria balonów korzystają z tej samej polityki aerostatycznej.
+20. Tłumienie balonów może zależeć od prędkości i aktywnego lift, ale nie od docelowej wysokości.
+21. Główny runtime jest desktop-only; nie dodawać prowizorycznej mobilnej projekcji sterowania.
+22. Kontrolki Balloon power synchronizują się przez jeden setter.
+23. Jeden fizyczny kod nie może być niejawnie przypisany do dwóch akcji.
+24. Flight Focus jest opcjonalnym adapterem platformowym, nie warunkiem działania gry.
 
 ## Świadomy dług
 
@@ -233,14 +299,11 @@ Build, Contracts, Telemetry i Controls są projekcjami jednego wersjonowanego st
 - Three.js, Cannon.js i Tailwind pochodzą z CDN.
 - brak prawdziwego automatycznego testu WebGL w obecnym środowisku.
 
-## Następna granica — Foundation Phase 1D
+## Następna granica — Foundation Phase 1D.3
 
-Physics Boundary powinien:
-
-1. zdefiniować minimalne porty świata, ciała, collidera i siły;
-2. przenieść budowę compound body poza `game.js`;
-3. zachować Cannon.js jako adapter referencyjny;
-4. uruchamiać bezrendererowe kroki fizyki w testach;
-5. mierzyć stabilność i koszt 100/500/1000/2500 części;
-6. przygotować bezpieczny punkt porównania dla cannon-es i Rapier;
-7. dopiero potem umożliwić scalanie colliderów.
+1. przenieść składanie całego compound body z `game.js` do buildera runtime;
+2. zachować stabilne mapowanie collider → part;
+3. dodać headless scenariusze dynamiki i soak;
+4. zapisać benchmark kosztu tworzenia i kroku solvera;
+5. ograniczyć pozostałe natywne typy Cannon poza adapterem;
+6. dopiero potem rozpocząć Collider Compiler oraz porównanie backendów.

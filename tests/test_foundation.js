@@ -20,15 +20,19 @@ const sourceFiles = [
   'src/foundation/craft_compiler.js',
   'src/foundation/input_profile.js',
   'src/foundation/ui_workspace.js',
+  'src/foundation/mission_evaluator.js',
+  'src/foundation/aerostatics.js',
   'src/foundation/flight_control.js',
   'src/foundation/state.js',
+  'src/runtime/physics_port.js',
+  'src/runtime/cannon_physics_backend.js',
   'src/foundation/bootstrap.js'
 ];
 for (const relative of sourceFiles) {
   vm.runInThisContext(fs.readFileSync(path.join(ROOT, relative), 'utf8'), { filename: relative });
 }
 
-const { Config, Catalog, Orientation, Blueprint, CraftModel, CraftHistory, ControlFrame, CraftCompiler, InputProfile, UIWorkspace, FlightControl, State, Capabilities } = global.VAW_RUNTIME;
+const { Config, Catalog, Orientation, Blueprint, CraftModel, CraftHistory, ControlFrame, CraftCompiler, InputProfile, UIWorkspace, MissionEvaluator, Aerostatics, FlightControl, State, PhysicsPort, Physics, Capabilities } = global.VAW_RUNTIME;
 assert(Object.isFrozen(Config));
 assert(Object.isFrozen(Config.GRID));
 assert.strictEqual(Config.SAVE_VERSION, 9);
@@ -39,6 +43,13 @@ assert.strictEqual(Catalog.getContractById('courier').payloadMass, 10);
 assert.strictEqual(Catalog.getContractById('missing'), null);
 assert(Catalog.knownContractIds().has('heavy_lift'));
 assert.strictEqual(Capabilities.physicsBackend, 'cannon');
+assert.strictEqual(Capabilities.physicsBoundary, 'phase-1d-contact-normalization');
+assert.strictEqual(Capabilities.missionEvaluation, 'phase-1d2b-multi-pad-ground-state');
+assert.strictEqual(Capabilities.aerostatics, 'altitude-lift-damped-settling-v2');
+assert.strictEqual(Capabilities.platform, 'desktop-keyboard-mouse-v1');
+assert.strictEqual(Capabilities.workspaceState, 'version-3-z-order');
+assert.strictEqual(typeof Physics.createWorld, 'function');
+assert.strictEqual(typeof PhysicsPort.normalizeBodyDescriptor, 'function');
 assert.strictEqual(Orientation.ORIENTATION_BASES.length, 24);
 assert(Object.isFrozen(Orientation.ORIENTATION_BASES[0].forward));
 assert(Object.isFrozen(Orientation.ORIENTATION_BASES[0].quaternion));
@@ -65,6 +76,37 @@ const movedWorkspace = UIWorkspace.updatePanel(firstState.uiWorkspace, 'controls
 assert.strictEqual(movedWorkspace.panels.controls.open, true);
 assert.strictEqual(movedWorkspace.panels.controls.width, 420);
 assert.strictEqual(firstState.uiWorkspace.panels.controls.open, false, 'Workspace updates must be immutable.');
+assert.strictEqual(UIWorkspace.WORKSPACE_VERSION, 3);
+assert.strictEqual(typeof MissionEvaluator.evaluateLanding, 'function');
+assert.strictEqual(typeof MissionEvaluator.advanceHold, 'function');
+assert.strictEqual(typeof MissionEvaluator.evaluateLandingZones, 'function');
+assert.strictEqual(typeof Aerostatics.requiredPowerForHover, 'function');
+const migratedWorkspace = UIWorkspace.normalize({
+  version: 1,
+  panels: { build: { open: true, x: 9000, y: 9000, width: 260, height: 160 } }
+});
+assert.strictEqual(migratedWorkspace.panels.build.open, true, 'Workspace migration must preserve visibility preferences.');
+assert.strictEqual(migratedWorkspace.panels.build.x, UIWorkspace.DEFAULT_PANELS.build.x, 'Legacy geometry must reset after the scroll-shell migration.');
+assert.strictEqual(migratedWorkspace.panels.build.height, UIWorkspace.DEFAULT_PANELS.build.height);
+const migratedV2Workspace = UIWorkspace.normalize({
+  version: 2,
+  panels: { controls: { open: true, x: 111, y: 122, width: 444, height: 555 } }
+});
+assert.strictEqual(migratedV2Workspace.panels.controls.x, 111, 'Version 2 geometry must survive the z-order migration.');
+assert.strictEqual(migratedV2Workspace.panels.controls.height, 555);
+assert.deepStrictEqual([...migratedV2Workspace.zOrder].sort(), [...UIWorkspace.PANEL_IDS].sort(), 'Every panel must appear exactly once in z-order.');
+const focusedWorkspace = UIWorkspace.focusPanel(migratedV2Workspace, 'controls');
+assert.strictEqual(focusedWorkspace.zOrder.at(-1), 'controls');
+assert.strictEqual(UIWorkspace.topPanel(focusedWorkspace), 'controls');
+assert.strictEqual(UIWorkspace.topPanel(focusedWorkspace, id => id !== 'controls'), 'telemetry');
+const fittedWorkspaceRect = UIWorkspace.fitPanelRect(
+  { open: true, minimized: false, x: 9999, y: 9999, width: 900, height: 1200 },
+  { width: 800, height: 600 },
+  { panelId: 'build', topInset: 72 }
+);
+assert(fittedWorkspaceRect.left >= 8 && fittedWorkspaceRect.top >= 72);
+assert(fittedWorkspaceRect.left + fittedWorkspaceRect.width <= 792, 'Panel must remain horizontally reachable.');
+assert(fittedWorkspaceRect.top + fittedWorkspaceRect.height <= 592, 'Panel must remain vertically reachable.');
 
 const valid = Blueprint.normalize({
   version: 7,

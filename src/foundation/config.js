@@ -9,8 +9,8 @@
       return Object.freeze(value);
     }
 
-    const APP_VERSION = '0.4.0-foundation.1c2';
-    const RELEASE_ID = 'foundation-1c2-control-workspace';
+    const APP_VERSION = '0.5.6-foundation.1d2d';
+    const RELEASE_ID = 'foundation-1d2d-rebindable-flight-focus';
     const GRID = { halfExtent: 18, minY: 0, maxY: 20, maxBlocks: 2500 };
     const SAVE_VERSION = 9;
     const SAVE_KEY = 'voxel-aeronautics-blueprint-v9';
@@ -24,8 +24,9 @@
     ];
     const CAREER_SAVE_KEY = 'voxel-aeronautics-career-v1';
     const CAREER_SAVE_VERSION = 2;
-    const UI_SAVE_KEY = 'voxel-aeronautics-ui-v2';
-    const LEGACY_UI_SAVE_KEYS = ['voxel-aeronautics-ui-v1'];
+    const UI_SAVE_VERSION = 5;
+    const UI_SAVE_KEY = 'voxel-aeronautics-ui-v5';
+    const LEGACY_UI_SAVE_KEYS = ['voxel-aeronautics-ui-v4', 'voxel-aeronautics-ui-v3', 'voxel-aeronautics-ui-v2', 'voxel-aeronautics-ui-v1'];
     const NEIGHBOR_DIRECTIONS = [
       [1,0,0], [-1,0,0], [0,1,0], [0,-1,0], [0,0,1], [0,0,-1]
     ];
@@ -34,7 +35,31 @@
       startPad: { x: 0, y: 0, z: 0, radius: 9 },
       finishPad: { x: 82, y: 0, z: 0, radius: 9 },
       spawn: { x: 0, y: 3.5, z: 0 },
-      bounds: 190
+      bounds: 190,
+      groundY: -0.5
+    };
+    const MISSION = {
+      landing: {
+        requiredHoldSeconds: 1.6,
+        zoneMargin: 0.25,
+        maxGroundClearance: 0.30,
+        contactGraceSeconds: 0.45,
+        maxContactClearance: 0.55,
+        maxHorizontalSpeed: 1.8,
+        maxVerticalSpeed: 0.85,
+        maxTotalSpeed: 2.2,
+        maxTiltDegrees: 24,
+        holdDecayRate: 1.75
+      }
+    };
+    const AEROSTATICS = {
+      scaleHeight: 72,
+      minimumEfficiency: 0.06,
+      gravity: 9.81,
+      controlStep: 0.02,
+      verticalDampingRate: 0.52,
+      maxDampingWeightRatio: 0.10,
+      minimumDampingActivation: 0.08
     };
     const MISSION_PAYLOAD_POSITION = { x: 0, y: -1, z: 0 };
     const degToRad = degrees => degrees * Math.PI / 180;
@@ -76,8 +101,8 @@
 
     return deepFreeze({
       APP_VERSION, RELEASE_ID, GRID, SAVE_VERSION, SAVE_KEY, LEGACY_SAVE_KEYS,
-      CAREER_SAVE_KEY, CAREER_SAVE_VERSION, UI_SAVE_KEY, LEGACY_UI_SAVE_KEYS,
-      NEIGHBOR_DIRECTIONS, COLLISION_GROUP, TEST_RANGE,
+      CAREER_SAVE_KEY, CAREER_SAVE_VERSION, UI_SAVE_VERSION, UI_SAVE_KEY, LEGACY_UI_SAVE_KEYS,
+      NEIGHBOR_DIRECTIONS, COLLISION_GROUP, TEST_RANGE, MISSION, AEROSTATICS,
       MISSION_PAYLOAD_POSITION, PHYSICS, AXIS_VECTORS,
       AXIS_LABELS, SYMMETRY_MODES, CONTROL_AXES,
       CONTROL_SIGNS, HISTORY_POLICY, deepFreeze

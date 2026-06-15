@@ -8,10 +8,10 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE_ID = 'foundation-1c2-control-workspace'
-APP_VERSION = '0.4.0-foundation.1c2'
-SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1C2_Control_Workspace.html'
-ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1C2_Control_Workspace.zip'
+RELEASE_ID = 'foundation-1d2d-rebindable-flight-focus'
+APP_VERSION = '0.5.6-foundation.1d2d'
+SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D2D_Rebindable_Flight_Focus.html'
+ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D2D_Rebindable_Flight_Focus.zip'
 MANIFEST_NAME = 'SOURCE_MANIFEST.json'
 APP_SOURCES = (
     Path('src/foundation/kernel.js'),
@@ -25,8 +25,12 @@ APP_SOURCES = (
     Path('src/foundation/craft_compiler.js'),
     Path('src/foundation/input_profile.js'),
     Path('src/foundation/ui_workspace.js'),
+    Path('src/foundation/mission_evaluator.js'),
+    Path('src/foundation/aerostatics.js'),
     Path('src/foundation/flight_control.js'),
     Path('src/foundation/state.js'),
+    Path('src/runtime/physics_port.js'),
+    Path('src/runtime/cannon_physics_backend.js'),
     Path('src/foundation/bootstrap.js'),
     Path('src/game.js'),
 )

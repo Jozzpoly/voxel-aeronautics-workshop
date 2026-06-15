@@ -13,6 +13,9 @@ SOURCE_FILES = [
     ROOT / 'src/foundation/orientation.js',
     ROOT / 'src/foundation/blueprint.js',
     ROOT / 'src/foundation/state.js',
+    ROOT / 'src/foundation/aerostatics.js',
+    ROOT / 'src/foundation/input_profile.js',
+    ROOT / 'src/foundation/flight_control.js',
     ROOT / 'src/game.js',
 ]
 GAME = '\n'.join(path.read_text(encoding='utf-8') for path in SOURCE_FILES)
@@ -42,7 +45,7 @@ for element_id in [
     'mission-hud', 'mission-hud-objective', 'mission-hud-integrity',
     'mission-hud-lost', 'mission-hud-leak', 'mission-hud-payload', 'debrief-modal', 'debrief-stars',
     'debrief-lost', 'debrief-payload', 'debrief-failure', 'btn-debrief-workshop',
-    'btn-debrief-retry', 'btn-starter-craft',
+    'btn-debrief-retry', 'btn-starter-craft', 'ui-balloon-hover-marker', 'ui-balloon-guidance',
 ]:
     assert f'id="{element_id}"' in HTML, f'missing UI element {element_id}'
 
@@ -121,7 +124,7 @@ assert 'const loadedControls = computeControlMetrics(loadedSnapshot);' in GAME
 
 # Range decorations that look solid must have actual static collision bodies.
 assert 'const rangeStaticBodies = [];' in GAME
-assert 'body.userData = { rangeObstacle: true };' in GAME
+assert 'userData: { rangeObstacle: true }' in GAME
 assert GAME.count('0x000000, true') >= 4, 'expected collidable range structures'
 assert 'if (otherBody === groundBody) STATE.mission.lastGroundContact = STATE.mission.elapsed;' in GAME
 
@@ -166,10 +169,10 @@ print(json.dumps({
 assert 'pendingImpacts: []' in GAME
 assert 'STATE.flight.pendingImpacts.push({' in GAME
 assert 'function processPendingImpacts()' in GAME
-step_sequence = re.search(r"world\.step\(PHYSICS\.fixedDt\);\s*processPendingImpacts\(\);\s*updateMission", GAME)
+step_sequence = re.search(r"Physics\.step\(world, PHYSICS\.fixedDt\);\s*processPendingImpacts\(\);\s*updateMission", GAME)
 assert step_sequence, 'impact processing must happen after world.step and before mission evaluation'
-callback_start = GAME.index("body.addEventListener('collide'")
-callback_end = GAME.index('world.addBody(body);', callback_start)
+callback_start = GAME.index('Physics.addCollisionListener(body, event =>')
+callback_end = GAME.index('Physics.addBody(world, body);', callback_start)
 callback_source = GAME[callback_start:callback_end]
 assert 'applyImpactDamage(' not in callback_source, 'collision callback must not mutate body shapes directly'
 
@@ -182,3 +185,14 @@ print(json.dumps({
     'control_surface_analysis_runtime_parity': 'ok',
     'new_module_ghost_orientation': 'ok',
 }, indent=2))
+
+assert "landingZones: ['startPad', 'finishPad']" in GAME, 'Hover License should accept either clearly marked test pad.'
+assert "FlightControl.adjustmentForInput(event.code, STATE.input.profile)" in GAME, 'Balloon power hotkeys must come from the user input profile.'
+assert "'balloonPower-': Object.freeze(['Comma'])" in GAME
+assert "'balloonPower+': Object.freeze(['Period'])" in GAME
+assert "'lift-': Object.freeze(['ControlLeft'])" in GAME
+assert 'navigator.keyboard.lock' in GAME, 'Ctrl chords need optional browser-level capture in Flight Focus.'
+assert 'Aerostatics.liftEfficiencyAtAltitude' in GAME, 'Runtime balloon lift must weaken with altitude.'
+assert 'syncPowerControlReadouts();' in GAME, 'Power slider labels need immediate synchronization.'
+
+assert 'Aerostatics.verticalDampingForce' in GAME, 'Runtime must apply mild balloon settling damping.'

@@ -8,7 +8,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 GAME = (ROOT / 'src' / 'game.js').read_text(encoding='utf-8')
 FOUNDATION = '\n'.join(path.read_text(encoding='utf-8') for path in sorted((ROOT / 'src/foundation').glob('*.js')))
-ALL_JS = FOUNDATION + '\n' + GAME
+RUNTIME = '\n'.join(path.read_text(encoding='utf-8') for path in sorted((ROOT / 'src/runtime').glob('*.js')))
+ALL_JS = FOUNDATION + '\n' + RUNTIME + '\n' + GAME
 HTML = (ROOT / 'index.html').read_text(encoding='utf-8')
 CSS = (ROOT / 'styles.css').read_text(encoding='utf-8').rstrip()
 
@@ -81,14 +82,14 @@ assert 'PHYSICS.structuralCheckInterval' in step
 assert re.search(r'structuralCheckInterval:\s*1\s*/\s*30', ALL_JS)
 
 # Collider mutation happens only after world.step.
-assert re.search(r'world\.step\(PHYSICS\.fixedDt\);\s*processPendingImpacts\(\);\s*updateMission', GAME)
-callback = GAME[GAME.index("body.addEventListener('collide'"):GAME.index('world.addBody(body);', GAME.index("body.addEventListener('collide'"))]
+assert re.search(r'Physics\.step\(world, PHYSICS\.fixedDt\);\s*processPendingImpacts\(\);\s*updateMission', GAME)
+callback = GAME[GAME.index('Physics.addCollisionListener(body, event =>'):GAME.index('Physics.addBody(world, body);', GAME.index('Physics.addCollisionListener(body, event =>'))]
 assert 'applyImpactDamage(' not in callback
 
 # Debris must be bounded and isolated from debris-debris collision storms.
 assert 'maxPhysicalDebris: 48' in ALL_JS
-assert 'debrisBody.collisionFilterGroup = COLLISION_GROUP.debris;' in GAME
-assert 'debrisBody.collisionFilterMask = COLLISION_GROUP.world | COLLISION_GROUP.craft;' in GAME
+assert 'collisionGroup: COLLISION_GROUP.debris' in GAME
+assert 'collisionMask: COLLISION_GROUP.world | COLLISION_GROUP.craft' in GAME
 
 # Gates require a forward plane crossing, not proximity alone.
 def crosses(previous, current, center=(0.0, 0.0, 0.0), normal=(1.0, 0.0, 0.0), radius=5.0):
@@ -154,16 +155,23 @@ assert "tool === 'Core'" not in function_source('setSelectedTool')
 
 # Flight input exposes independent translation and rotation axes with corrected yaw semantics.
 assert 'foundation.flight-control' in ALL_JS
-assert "a: 'yaw+'" in ALL_JS and "d: 'yaw-'" in ALL_JS
-assert "Space: 'lift+'" in ALL_JS and "ControlLeft: 'lift-'" in ALL_JS
-assert "w: 'surge+'" in ALL_JS and "s: 'surge-'" in ALL_JS
+assert "'yaw+': Object.freeze(['KeyA', 'ArrowLeft'])" in ALL_JS
+assert "'yaw-': Object.freeze(['KeyD', 'ArrowRight'])" in ALL_JS
+assert "'lift+': Object.freeze(['Space'])" in ALL_JS
+assert "'lift-': Object.freeze(['ControlLeft'])" in ALL_JS
+assert "'surge+': Object.freeze(['KeyW'])" in ALL_JS and "'surge-': Object.freeze(['KeyS'])" in ALL_JS
 assert 'FlightControl.neutralCommand(' in function_source('computeCraftAnalysis')
 thruster_command = function_source('computeThrusterCommand')
 assert 'const neutralCommand = FlightControl.neutralCommand(localAxis, STATE.thrusterPower);' in thruster_command
 assert 'STATE.flight.thrusterTorqueMax' in thruster_command
 assert 'FlightControl.applyTranslationMix(' in thruster_command
 assert 'rotationalCommand,\n        1' in thruster_command
-assert 'Flight controls take priority over editor shortcuts' in GAME
+assert 'Flight controls use the user profile' in GAME
+assert "'balloonPower-': Object.freeze(['Comma'])" in ALL_JS
+assert "'balloonPower+': Object.freeze(['Period'])" in ALL_JS
+assert 'navigator.keyboard.lock' in GAME and 'requestFullscreen' in GAME
+assert 'InputProfile.updateBinding' in GAME and 'input-binding-list' in HTML
+assert 'activePointers' not in GAME and 'performTouchAction' not in GAME
 
 # Persistence rejects unknown future blueprint versions and sanitizes career data.
 validate = function_source('normalizeBlueprintData')
@@ -192,17 +200,66 @@ print({
     'save_sanitization': 'ok',
 })
 
-# Contract panel must never permanently block the workshop viewport.
-for element_id in ('btn-contract-panel-open', 'btn-contract-panel-close', 'ui-contract-trigger-label'):
+# Contract access is unified through the desktop workspace toolbar.
+for element_id in ('workspace-toolbar', 'contract-panel'):
     assert f'id="{element_id}"' in HTML
+for removed_id in ('btn-ui-contracts', 'mobile-topbar', 'mobile-controls', 'btn-touch-place'):
+    assert f'id="{removed_id}"' not in HTML
+assert 'id="desktop-required"' in HTML
+assert 'Foundation Phase 1D.2D' in HTML
+assert 'Foundation Phase 1D.2B • Mission + Balloon Control Fix' not in HTML
 assert re.search(r'id="contract-panel"[^>]*\shidden', HTML)
+assert 'btn-contract-panel-open' not in HTML and 'btn-contract-panel-close' not in HTML
+assert 'contract-panel-trigger' not in CSS and 'panel-close-btn' not in CSS
 assert 'function syncContractPanelVisibility()' in GAME
 assert "panelId === 'build' || panelId === 'contracts'" in GAME
 assert "if (key === 'c')" in GAME
-assert "UI_SAVE_KEY = 'voxel-aeronautics-ui-v2'" in ALL_JS
-assert "'voxel-aeronautics-ui-v1'" in ALL_JS
+assert "UI_SAVE_VERSION = 5" in ALL_JS
+assert "UI_SAVE_KEY = 'voxel-aeronautics-ui-v5'" in ALL_JS
+for legacy_key in ('voxel-aeronautics-ui-v4', 'voxel-aeronautics-ui-v3', 'voxel-aeronautics-ui-v2', 'voxel-aeronautics-ui-v1'):
+    assert legacy_key in ALL_JS
 assert 'foundation.ui-workspace' in ALL_JS
 assert 'data-workspace-panel="controls"' in HTML
-assert 'data-panel-toggle="build"' in HTML
-assert '.contract-panel-trigger' in CSS and '.panel-close-btn' in CSS
-print({'workspace_panel_close_reopen': 'ok', 'contract_panel_flight_autohide': 'ok', 'workspace_preference_migration': 'ok'})
+assert 'data-panel-toggle="build"' in HTML and 'aria-controls="build-panel"' in HTML
+assert 'workspace-tab-unavailable' in CSS
+print({'workspace_panel_close_reopen': 'ok', 'contract_access_unified': 'ok', 'workspace_preference_migration': 'ok', 'desktop_scope': 'ok'})
+
+# Workspace panels require a dedicated scroll body, viewport-safe geometry, focus order and durable resize persistence.
+for panel_id in ('build', 'contracts', 'telemetry', 'controls'):
+    assert f'data-panel-scroll="{panel_id}"' in HTML
+assert HTML.count('class="workspace-panel-scroll"') == 4
+for token in ('overflow-y: auto', 'touch-action: pan-y', 'overscroll-behavior: contain', 'scrollbar-gutter: stable'):
+    assert token in CSS
+assert 'UIWorkspace.fitPanelRect(panel' in GAME
+assert 'workspaceTopInset()' in GAME
+assert 'viewportHeight - visibleHeight - gap' in ALL_JS
+assert 'WORKSPACE_VERSION = 3' in ALL_JS
+assert 'function focusWorkspacePanel(panelId' in GAME
+assert 'UIWorkspace.topPanel(' in GAME
+assert 'workspace-panel-front' in CSS
+resize_observer = GAME[GAME.index('if (typeof ResizeObserver'):GAME.index("window.addEventListener('resize'", GAME.index('if (typeof ResizeObserver'))]
+assert 'scheduleWorkspaceSave()' in resize_observer
+print({'workspace_inner_scroll': 'ok', 'workspace_viewport_clamp': 'ok', 'workspace_z_order': 'ok', 'workspace_resize_persistence': 'ok'})
+
+# Landing completion is evaluated from physical state; a one-shot collision event is only corroborating evidence.
+assert 'foundation.mission-evaluator' in ALL_JS
+landing_sample = function_source('landingSample')
+landing = function_source('evaluateCraftLandingZones')
+assert 'groundClearance: estimateCraftGroundClearance()' in landing_sample
+assert 'contactAge: STATE.mission.elapsed - STATE.mission.lastGroundContact' in landing_sample
+assert 'MissionEvaluator.evaluateLandingZones' in landing
+assert 'MissionEvaluator.advanceHold' in function_source('updateMission')
+assert 'STATE.mission.landingHold = 0;' not in function_source('isCraftSettledAtAny')
+assert 'elapsed - STATE.mission.lastGroundContact < 0.3' not in GAME
+assert 'return lowestWorldY - TEST_RANGE.groundY;' in function_source('estimateCraftGroundClearance')
+print({'state_based_landing': 'ok', 'collision_event_not_required_for_dwell': 'ok', 'landing_hysteresis': 'ok'})
+
+# Runtime collision callbacks expose a backend-neutral event instead of Cannon contact internals.
+collision_callback = GAME[GAME.index('Physics.addCollisionListener(body, event =>'):GAME.index('Physics.addBody(world, body);', GAME.index('Physics.addCollisionListener(body, event =>'))]
+assert 'event.contact' not in collision_callback
+assert 'event.body' not in collision_callback
+assert 'event.impactSpeed' in collision_callback
+assert 'event.otherBody' in collision_callback
+assert 'event.relativePoint' in collision_callback
+assert 'normalizeCollisionEvent' in ALL_JS
+print({'physics_collision_event_boundary': 'ok'})

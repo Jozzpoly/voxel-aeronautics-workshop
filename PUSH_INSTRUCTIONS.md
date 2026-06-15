@@ -1,47 +1,40 @@
-# Voxel Aeronautics Workshop — publikacja Phase 1C.2
+# Push Instructions — Phase 1D.2D
 
-Ta paczka zawiera pełne źródła projektu bez katalogu `.git` i bez wygenerowanych katalogów `dist/` / `release/`.
+## Przed commitem
 
-## Zalecana, bezpieczna metoda
-
-1. Otwórz PowerShell w katalogu, w którym chcesz trzymać projekt.
-2. Sklonuj repozytorium i utwórz osobną gałąź:
-
-```powershell
-git clone https://github.com/Jozzpoly/voxel-aeronautics-workshop.git
-cd voxel-aeronautics-workshop
-git switch -c phase-1c2-control-workspace
-```
-
-3. Skopiuj całą zawartość tej paczki do katalogu repozytorium i zatwierdź zastąpienie plików. Nie usuwaj katalogu `.git`.
-4. Uruchom testy:
+1. Rozpakuj paczkę źródłową do katalogu repozytorium.
+2. Uruchom:
 
 ```powershell
 python tests/run_all.py
+python tools/build_release.py
+python tools/verify_release.py
 ```
 
-5. Sprawdź i zapisz zmiany:
+3. Wykonaj manualną checklistę z `VALIDATION_REPORT.md`, szczególnie:
+   - domyślny Left Ctrl;
+   - rebinding i zapis profilu;
+   - Flight Focus w Chrome/Brave;
+   - ukończenie Hover License;
+   - zachowanie balonów.
+4. Użyj `Ctrl+Shift+R` przed playtestem.
+
+## Kontrola zmian
 
 ```powershell
 git status
-git add -A
-git commit -m "Foundation Phase 1C.2: control frame and UI workspace"
-git push -u origin phase-1c2-control-workspace
+git diff --stat
+git diff
 ```
 
-6. Na GitHubie utwórz Pull Request z `phase-1c2-control-workspace` do `main` i scal go po sprawdzeniu.
+Nie commituj przypadkowych save’ów, logów ani starego `release/`.
 
-## Publikacja bezpośrednio na main
-
-Zamiast tworzyć osobną gałąź możesz po skopiowaniu plików wykonać:
+## Commit
 
 ```powershell
-git switch main
-git pull --ff-only origin main
-python tests/run_all.py
-git add -A
-git commit -m "Foundation Phase 1C.2: control frame and UI workspace"
+git add .
+git commit -m "Foundation 1D.2D: add rebindable input and flight focus"
 git push origin main
 ```
 
-Osobna gałąź jest bezpieczniejsza, ponieważ zachowuje łatwy punkt powrotu i czytelny przegląd zmian.
+Repozytorium nie zostało zmienione automatycznie przez agenta.

@@ -5,28 +5,23 @@
     'foundation.flight-control',
     ['foundation.input-profile', 'foundation.control-frame'],
     (InputProfile, ControlFrame) => {
-    const KEY_BINDINGS = Object.freeze({
-      w: 'surge+',
-      s: 'surge-',
-      arrowup: 'pitch+',
-      arrowdown: 'pitch-',
-      a: 'yaw+',
-      arrowleft: 'yaw+',
-      d: 'yaw-',
-      arrowright: 'yaw-',
-      q: 'roll-',
-      e: 'roll+',
-      z: 'sway-',
-      c: 'sway+'
-    });
-    const CODE_BINDINGS = Object.freeze({
-      Space: 'lift+',
-      ControlLeft: 'lift-',
-      ControlRight: 'lift-'
+    const AUXILIARY_ACTIONS = Object.freeze({
+      'balloonPower-': Object.freeze({ target: 'balloonPower', direction: -1 }),
+      'balloonPower+': Object.freeze({ target: 'balloonPower', direction: 1 })
     });
 
-    function actionForInput(key = '', code = '') {
-      return CODE_BINDINGS[code] || KEY_BINDINGS[String(key).toLowerCase()] || null;
+    function actionForInput(code = '', profile = InputProfile.createDefault()) {
+      const action = InputProfile.actionForCode(profile, code);
+      return action && !AUXILIARY_ACTIONS[action] ? action : null;
+    }
+
+    function adjustmentForInput(code = '', profile = InputProfile.createDefault()) {
+      const action = InputProfile.actionForCode(profile, code);
+      return AUXILIARY_ACTIONS[action] || null;
+    }
+
+    function keyboardLockCodes(profile = InputProfile.createDefault()) {
+      return InputProfile.allBoundCodes(profile);
     }
 
     function pilotFromActions(actions, profile) {
@@ -39,9 +34,6 @@
 
     function clamp01(value) { return Math.max(0, Math.min(1, Number(value) || 0)); }
 
-    // The slider defines passive thrust only for engines pointing toward local +Y.
-    // It is not a player-input ceiling. Horizontal and downward-facing engines
-    // stay idle until the pilot or rotational mixer explicitly requests them.
     function neutralCommand(localAxis, passivePower = 1) {
       const axisVector = Array.isArray(localAxis)
         ? localAxis
@@ -70,8 +62,8 @@
     }
 
     return Object.freeze({
-      KEY_BINDINGS, CODE_BINDINGS, actionForInput, pilotFromActions, pilotToBodyFrame,
-      neutralCommand, applyTranslationMix
+      AUXILIARY_ACTIONS, actionForInput, adjustmentForInput, keyboardLockCodes,
+      pilotFromActions, pilotToBodyFrame, neutralCommand, applyTranslationMix
     });
   });
 })();

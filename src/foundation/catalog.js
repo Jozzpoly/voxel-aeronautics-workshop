@@ -26,15 +26,16 @@
       },
       {
         id: 'hover_license', title: '01 • Hover License', short: 'Altitude and safe recovery',
-        description: 'Prove that the craft can climb under its own power, hold altitude and return without destroying the airframe.',
+        description: 'Prove that the craft can climb under its own power, hold altitude and recover safely on either marked test pad.',
         reward: 220, payloadMass: 0, timeLimit: 90, parTime: 45, kind: 'hover-return', prerequisite: null,
-        targetAltitude: 8, holdSeconds: 3,
-        objectives: ['Reach 8 m altitude', 'Hold altitude for 3 seconds', 'Land on the launch pad']
+        targetAltitude: 8, holdSeconds: 3, landingZones: ['startPad', 'finishPad'],
+        objectives: ['Reach 8 m altitude', 'Hold altitude for 3 seconds', 'Land on either marked test pad']
       },
       {
         id: 'gate_course', title: '02 • Control Course', short: 'Three-dimensional handling',
         description: 'Fly through the marked gates in order and settle on the remote landing pad. Stable control matters more than raw speed.',
         reward: 420, payloadMass: 0, timeLimit: 130, parTime: 75, kind: 'gate-course', prerequisite: 'hover_license',
+        landingZones: ['finishPad'],
         gates: [
           { x: 22, y: 8, z: 0, radius: 5 },
           { x: 44, y: 12, z: 10, radius: 5 },
@@ -46,6 +47,7 @@
         id: 'courier', title: '03 • Workshop Courier', short: 'Payload and fuel discipline',
         description: 'Carry a 10 kg instrument crate through the route and deliver it with at least 25% fuel remaining.',
         reward: 680, payloadMass: 10, timeLimit: 150, parTime: 95, minFuelFraction: 0.25, minPayloadIntegrity: 0.65, kind: 'courier', prerequisite: 'gate_course',
+        landingZones: ['finishPad'],
         gates: [
           { x: 28, y: 7, z: -8, radius: 5.5 },
           { x: 58, y: 10, z: 8, radius: 5.5 }
@@ -56,7 +58,7 @@
         id: 'heavy_lift', title: '04 • Heavy-Lift Trial', short: 'Lift a serious payload',
         description: 'A reinforced 20 kg test payload is attached to the command core. Climb to 12 m, hold, then recover at the launch pad.',
         reward: 900, payloadMass: 20, timeLimit: 120, parTime: 70, minPayloadIntegrity: 0.50, kind: 'hover-return', prerequisite: 'courier',
-        targetAltitude: 12, holdSeconds: 4,
+        targetAltitude: 12, holdSeconds: 4, landingZones: ['startPad'],
         objectives: ['Lift the 20 kg payload', 'Reach 12 m and hold for 4 seconds', 'Land with at least 50% cargo integrity']
       }
     ];

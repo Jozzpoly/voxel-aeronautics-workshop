@@ -1,80 +1,81 @@
-# Voxel Aeronautics Workshop — Foundation Phase 1C.2 Control & Workspace
+# Voxel Aeronautics Workshop — Foundation Phase 1D.2D
 
-Foundation Phase 1C.2 synchronizuje pełne źródła projektu, wprowadza orientowany układ sterowania statku oraz zastępuje rosnący zestaw wyjątków UI wspólnym systemem okien. Command Core może znajdować się w dowolnym miejscu, a jego orientacja definiuje przód, górę i prawą stronę maszyny.
+**Rebindable Input & Flight Focus**
 
-Główna wizja pozostaje bez zmian: **budowanie statków powietrznych blok po bloku, programowanie ich zachowania, testowanie i swobodne latanie**.
+Voxel Aeronautics Workshop jest desktopowym voxelowym sandboxem inżynieryjnym. Gracz buduje statek blok po bloku, testuje fizykę, sterowanie, uszkodzenia i misje, analizuje telemetrię, a następnie poprawia projekt.
+
+Phase 1D.2D zamyka problem konfliktów klawiatury bez rezygnowania z preferowanego przez użytkownika `Left Ctrl` jako zejścia.
 
 ## Najważniejsze zmiany
 
-### Pusty, swobodny warsztat
+### Konfigurowalne sterowanie już teraz
 
-Nowy projekt zaczyna się od pustej siatki. Pierwszym elementem może być dowolny moduł, na przykład skierowany ku górze thruster będący najniższym blokiem jednoblokowej rakiety.
+Nie odkładamy rebindingu na późniejszy etap. `foundation.input-profile` ma teraz wersję 2 i przechowuje:
 
-- Core nie jest już przyspawany do `0,0,0`.
-- Core można usunąć i postawić ponownie.
-- Konstrukcję bez Core, pustą lub chwilowo rozłączoną można edytować i zapisać.
-- Start wymaga dokładnie jednego Core i jednej połączonej wyspy konstrukcji.
-- Stare blueprinty v3–v8 zachowują kompatybilność i są migrowane do v9; starsze Core otrzymują dawną orientację +X/+Y.
+- ustawienia sześciu osi;
+- do dwóch fizycznych klawiszy na każdą komendę lotu;
+- bindingi regulacji Balloon power;
+- automatyczną migrację starszego profilu bez bindingów;
+- jednoznaczne przenoszenie klawisza, gdy zostanie przypisany do innej akcji.
 
-### `CraftCompiler`
+W panelu Controls kliknij slot, a następnie naciśnij klawisz. `Backspace/Delete` czyści slot, `Escape` anuluje przechwytywanie.
 
-Dodano czysty moduł `foundation.craft-compiler`, który kompiluje `CraftModel` do niezmiennego `CompiledCraft`.
+### Left Ctrl zostaje domyślnym zejściem
 
-Artefakt zawiera między innymi:
-
-- deterministyczną sygnaturę i rewizję źródła;
-- kanoniczną listę części oraz `key -> index`;
-- graf sąsiedztwa i diagnostykę spójności;
-- pozycję rzeczywistego Core;
-- masę, ciężar, środek masy i przybliżenie bezwładności;
-- lokalne pozycje, orientacje, siły i momenty części;
-- urządzenia pogrupowane według typu;
-- referencyjny plan colliderów `jeden voxel = jeden box`;
-- błędy gotowości do lotu i ostrzeżenia.
-
-Kompilator nie zależy od DOM, Three.js ani Cannon.js. Wynik tej samej rewizji jest cache’owany i głęboko zamrożony.
-
-### Sterowanie sześcioma osiami i orientowany Control Frame
-
-Aktualne mapowanie:
+Domyślne sterowanie:
 
 - `W / S` — przód / tył;
 - `Z / C` — translacja w lewo / prawo;
 - `Space / Left Ctrl` — góra / dół;
 - `↑ / ↓` — pitch;
-- `A / D` lub `← / →` — yaw w lewo / prawo;
+- `A / D` lub `← / →` — yaw;
 - `Q / E` — roll;
-- `- / +` — pasywny ciąg pionowy silników skierowanych ku lokalnemu `+Y`;
-- `G` — stabilizacja.
+- `, / .` — Balloon power −/+2%;
+- `- / +` — pasywny ciąg thrusterów skierowanych ku lokalnemu `+Y`;
+- `G` — stabilizacja;
+- `F` — powrót do warsztatu.
 
-Command Core definiuje osie statku niezależnie od tego, jak konstrukcja jest obrócona na siatce. Każdą oś można odwrócić i ustawić jej czułość w oknie Controls. Domyślny profil naprawia historycznie odwrócony pitch. A/D ma poprawiony kierunek. Silniki poziome i skierowane w dół pozostają bezczynne bez komendy. Suwak ustala wyłącznie pasywny ciąg silników skierowanych ku górze i **nie ogranicza wejść gracza**. W/S, Space/Ctrl oraz sterowanie obrotowe zachowują pełną moc sterowania nawet przy pasywnym ciągu 0%. Left Ctrl włącza silniki skierowane w dół i jednocześnie wygasza pasywny ciąg skierowany w górę. Sterowanie lotem ma pierwszeństwo nad skrótami edytora, dlatego `Left Ctrl + S` działa jako dół + tył.
+`Shift` nie jest domyślnym bindingiem lotu, więc częste naciskanie zejścia nie uruchamia Klawiszy trwałych Windows.
 
-## Moduły fundamentu
+### Flight Focus dla kombinacji Ctrl
 
-- `foundation.kernel` — rejestr i rozwiązywanie zależności;
-- `foundation.config` — limity, wersje zapisów i polityki;
-- `foundation.catalog` — katalog bloków i kontraktów;
-- `foundation.orientation` — 24 orientacje przestrzenne;
-- `foundation.blueprint` — format, normalizacja i migracje v3–v9;
-- `foundation.craft-model` — autorytatywny model edytowanej konstrukcji;
-- `foundation.craft-history` — ograniczona historia undo/redo;
-- `foundation.control-frame` — układ forward/up/right wynikający z Core;
-- `foundation.craft-compiler` — model → niezmienny artefakt lotny;
-- `foundation.input-profile` — odwracanie, czułość i sześć osi;
-- `foundation.ui-workspace` — trwały stan okien;
-- `foundation.flight-control` — semantyczne wejścia pilota i miks translacji;
-- `foundation.state` — fabryka niezależnych instancji stanu;
-- `foundation.bootstrap` — kontrolowany start runtime.
+Zwykła strona nie może niezawodnie przejąć wszystkich skrótów przeglądarki. `Ctrl+W`, `Ctrl+T` i podobne kombinacje mogą wygrać z grą.
+
+Przycisk **Flight Focus** w panelu Controls:
+
+1. uruchamia JavaScript fullscreen;
+2. prosi Chromium o Keyboard Lock dla aktualnych bindingów;
+3. przechwytuje m.in. `Ctrl+W` jako wejście gry, o ile przeglądarka i system udzielą zgody;
+4. automatycznie aktualizuje listę przechwytywanych klawiszy po rebindingu.
+
+Tryb jest opcjonalny. Gdy API nie jest dostępne lub zgoda zostanie odrzucona, panel pokazuje ostrzeżenie i gracz może przepiąć zejście na dowolny bezpieczny klawisz.
+
+### Desktop jako jawna granica produktu
+
+- telefon i touch-only pozostają poza zakresem;
+- nie ma mobilnego topbara ani ekranowych przycisków sześciu osi;
+- touchpad laptopa działa jako pointer i scroll;
+- przyszłe sterowanie kontrolerem/Steam Deckiem wymaga osobnego profilu wejścia i UX.
+
+### Zachowane poprawki 1D.2A–1D.2C
+
+- state-based, multi-zone mission landing;
+- Hover License akceptuje launch pad lub remote pad;
+- natychmiastowa synchronizacja Balloon power;
+- marker progu zawisu i wysokość równowagi;
+- siła balonów malejąca z wysokością;
+- łagodne, ograniczone tłumienie pionowe bez ukrytego autopilota;
+- desktopowy workspace z trwałym z-orderem, pozycją i rozmiarem.
 
 ## Uruchomienie
 
-### Windows
+Windows:
 
 ```text
 run_game.bat
 ```
 
-### Linux / macOS
+Linux/macOS:
 
 ```bash
 ./run_game.sh
@@ -86,71 +87,32 @@ lub:
 python tools/serve.py
 ```
 
-Gra nadal korzysta z przypiętych CDN-ów Three.js r128, Cannon.js 0.6.2 oraz Tailwind CSS, dlatego do uruchomienia potrzebuje internetu.
+Po podmianie wersji użyj `Ctrl+Shift+R`. Flight Focus najlepiej testować przez `https://` albo `localhost`; przeglądarka może poprosić o zgodę na Keyboard Lock.
 
 ## Testy
 
 ```bash
-npm test
-```
-
-lub:
-
-```bash
 python tests/run_all.py
+python tools/build_release.py
+python tools/verify_release.py
 ```
 
-Testy obejmują między innymi:
+Automaty obejmują m.in. profil wejścia v2, migrację, przejmowanie konfliktu bindingów, domyślny Left Ctrl, zestaw kodów Keyboard Lock, runtime rebinding, startup smoke, misje, aerostatykę, physics boundary i source parity.
 
-- składnię 15 źródeł aplikacji;
-- statyczną zgodność 213 funkcji runtime i 183 identyfikatorów HTML;
-- migracje blueprintów v3–v9;
-- pusty warsztat, ruchomy i usuwalny Core;
-- rozłączone stany robocze i blokowanie niegotowego startu;
-- atomowe transakcje i historię;
-- deterministyczny `CraftCompiler` do 2500 bloków;
-- poprawne kierunki A/D;
-- osobne osie przód–tył, lewo–prawo i góra–dół;
-- orientowany Control Frame i profil sześciu osi;
-- trwałe otwieranie, minimalizację, przeciąganie i resize okien;
-- kombinację `Left Ctrl + S`;
-- ścieżkę UI: pusty start → starter → lot → wejścia pilota → powrót → pusty projekt;
-- zachowane regresje misji, obrażeń i fizyki;
-- bajtową zgodność źródeł w ZIP-ie z kodem osadzonym w jednoplikowym HTML;
-- manifest źródeł i SHA-256.
-
-Szczegóły znajdują się w `TEST_REPORT.md` oraz `VALIDATION_REPORT.md`.
+Pełna checklista manualna znajduje się w `VALIDATION_REPORT.md`.
 
 ## Build wydania
 
 ```bash
-npm run build
+python tools/build_release.py
 ```
 
-W `dist/` powstaną:
+Artefakty w `dist/`:
 
-- `Voxel_Aeronautics_Workshop_Foundation_Phase_1C2_Control_Workspace.html`;
-- `Voxel_Aeronautics_Workshop_Foundation_Phase_1C2_Control_Workspace.zip`;
+- `Voxel_Aeronautics_Workshop_Foundation_Phase_1D2D_Rebindable_Flight_Focus.html`;
+- `Voxel_Aeronautics_Workshop_Foundation_Phase_1D2D_Rebindable_Flight_Focus.zip`;
 - `SHA256.txt`.
 
-ZIP zawiera pełne źródła oraz kopię dokładnie tego samego jednoplikowego HTML w katalogu `release/`. Plik `SOURCE_MANIFEST.json` zapisuje hashe wszystkich wejść buildu.
+## Następny etap
 
-Po rozpakowaniu można niezależnie sprawdzić zgodność:
-
-```bash
-npm run verify-release
-```
-
-Wynik `sourceParity: ok` oznacza, że osadzone moduły HTML są dokładnie tymi samymi plikami, które znajdują się w paczce źródłowej.
-
-## Najbliższy etap
-
-**Foundation Phase 1D — Physics Boundary**:
-
-- minimalny interfejs świata fizycznego, ciała, collidera i sił;
-- adapter referencyjny dla obecnego Cannon.js;
-- przeniesienie tworzenia compound body poza `game.js`;
-- bezrendererowy harness fizyki i benchmark bazowy;
-- dopiero potem collider compiler i scalanie voxelowych boxów.
-
-Nie podnosimy limitu 480 aktywnych części lotnych przed pomiarami i scaleniem colliderów.
+**Foundation Phase 1D.3 — Runtime Body Builder & Headless Physics Harness**. Rebinding nie jest już blokadą kolejnego etapu; następne prace nad wejściem to gamepad, import/export profilu i UX konfliktów, a nie kolejna przebudowa fundamentu klawiatury.

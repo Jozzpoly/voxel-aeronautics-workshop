@@ -14,7 +14,8 @@
     ['CANNON.Body', window.CANNON.Body],
     ['CANNON.Box', window.CANNON.Box],
     ['CANNON.Plane', window.CANNON.Plane],
-    ['CANNON.Vec3', window.CANNON.Vec3]
+    ['CANNON.Vec3', window.CANNON.Vec3],
+    ['CANNON.Quaternion', window.CANNON.Quaternion]
   ];
   const missingCapabilities = requiredCapabilities.filter(([, value]) => typeof value !== 'function').map(([name]) => name);
   if (missingCapabilities.length) {
@@ -31,16 +32,26 @@
   const CraftCompiler = window.VAW.require('foundation.craft-compiler');
   const InputProfile = window.VAW.require('foundation.input-profile');
   const UIWorkspace = window.VAW.require('foundation.ui-workspace');
+  const MissionEvaluator = window.VAW.require('foundation.mission-evaluator');
+  const Aerostatics = window.VAW.require('foundation.aerostatics');
   const FlightControl = window.VAW.require('foundation.flight-control');
   const State = window.VAW.require('foundation.state');
+  const PhysicsPort = window.VAW.require('runtime.physics-port');
+  const CannonPhysicsBackend = window.VAW.require('runtime.cannon-physics-backend');
+  const Physics = CannonPhysicsBackend.create(window.CANNON);
 
   const Capabilities = Object.freeze({
     threeRevision: String(window.THREE.REVISION || 'unknown'),
-    cannonVersion: String(window.CANNON.version || '0.6.x/unknown'),
+    cannonVersion: Physics.version,
     webglRenderer: true,
-    physicsBackend: 'cannon'
+    physicsBackend: Physics.id,
+    physicsBoundary: 'phase-1d-contact-normalization',
+    missionEvaluation: 'phase-1d2b-multi-pad-ground-state',
+    aerostatics: 'altitude-lift-damped-settling-v2',
+    platform: 'desktop-keyboard-mouse-v1',
+    workspaceState: 'version-3-z-order'
   });
-  const runtime = Object.freeze({ Config, Catalog, Orientation, Blueprint, CraftModel, CraftHistory, ControlFrame, CraftCompiler, InputProfile, UIWorkspace, FlightControl, State, Capabilities });
+  const runtime = Object.freeze({ Config, Catalog, Orientation, Blueprint, CraftModel, CraftHistory, ControlFrame, CraftCompiler, InputProfile, UIWorkspace, MissionEvaluator, Aerostatics, FlightControl, State, PhysicsPort, Physics, Capabilities });
   Object.defineProperty(window, 'VAW_RUNTIME', {
     configurable: false,
     enumerable: true,

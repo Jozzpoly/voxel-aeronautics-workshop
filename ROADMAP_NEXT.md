@@ -1,112 +1,62 @@
-# Roadmap po Foundation Phase 1C.2
+# Roadmap po Foundation Phase 1D.2D
 
-## Ukończone — Phase 1C.2
+## Ukończone — Phase 1D.2D
 
-- blueprint v9 i orientowany Command Core;
-- jawny `CompiledCraft.controlFrame`;
-- sześć osi sterowania z `sway`;
-- profil użytkownika z odwracaniem i czułością każdej osi;
-- transformacja wejścia do lokalnych osi konstrukcji;
-- wspólny, trwały system okien workspace;
-- otwieranie, zamykanie, minimalizacja, przeciąganie i resize;
-- osobne okno Controls i monitor układu odniesienia;
-- naprawiony deterministic release ZIP bez zduplikowanych artefaktów.
+- input profile v2 z trwałymi, migrowanymi bindingami;
+- dwa sloty na każdą komendę lotu;
+- runtime rebind UI w panelu Controls;
+- domyślny Left Ctrl jako zejście bez używania Shift;
+- ostrzeżenia o ryzyku modifierów;
+- opcjonalny Flight Focus: JavaScript fullscreen + Keyboard Lock;
+- dynamiczne odświeżanie zablokowanych kodów po rebindingu;
+- UI preferences v5 z migracją v1–v4;
+- testy migracji, konfliktów, capture i startup smoke.
 
-## Ukończone — Phase 1C
+## Następny etap — Foundation Phase 1D.3: Runtime Body Builder & Headless Harness
 
-- blueprint v8;
-- pusty warsztat i dowolny pierwszy blok;
-- ruchomy oraz usuwalny Core;
-- rozdzielenie poprawności edytora od gotowości do lotu;
-- `CraftCompiler` z deterministycznym `CompiledCraft`;
-- rzeczywista pozycja Core używana przez runtime i payload;
-- osobne osie translacji `surge` i `lift`;
-- poprawiony kierunek A/D;
-- Space / Left Ctrl dla góra / dół;
-- priorytet wejść lotu nad skrótami edytora;
-- nowe testy interakcyjne i regresyjne.
+### 1. Runtime body builder
 
-## Następny etap — Foundation Phase 1D: Physics Boundary
+- przenieść `CompiledCraft.parts -> colliders/runtime parts` poza `game.js`;
+- zachować stabilne `blockKey -> collider/part`;
+- zabezpieczyć payload, detach i recenter COM.
 
-### 1. Kontrakt backendu
+### 2. Headless physics harness
 
-Zdefiniować minimalne, neutralne porty:
+- free fall;
+- hover i aerostatic equilibrium;
+- offset thrust i moment;
+- zmiana COM;
+- detach i długi soak.
 
-- `PhysicsWorld`;
-- `RigidBody`;
-- `Collider`;
-- dodawanie/usuwanie body;
-- siła i moment w punkcie;
-- transformacje local/world;
-- krok symulacji;
-- zdarzenia kontaktu;
-- aktualizacja masy.
+### 3. Benchmark
 
-Nie budować jeszcze uniwersalnego silnika wszystkiego. Interfejs ma pokrywać rzeczywiste potrzeby obecnego runtime.
+- 100/500/1000/2500 colliderów;
+- czas budowy body;
+- średni i 99. percentyl kroku;
+- pamięć i stabilność.
 
-### 2. Adapter Cannon.js
+### 4. Decyzja backendowa
 
-- zachować Cannon.js jako wynik referencyjny;
-- przenieść budowę body i box colliderów poza `game.js`;
-- zachować mapowanie `blockKey -> runtime part/collider`;
-- zabezpieczyć payload, obrażenia i odrywanie części;
-- porównać wyniki przed/po adapterze.
+Cannon.js, cannon-es i Rapier porównywać dopiero na tej samej baterii scenariuszy.
 
-### 3. Headless physics harness
+## Wejście — dalsze prace równoległe, nieblokujące 1D.3
 
-Bez Three.js i DOM testować:
-
-- spadek swobodny;
-- hover;
-- ciąg w osi;
-- moment od niesymetrycznego thrustera;
-- zmianę COM;
-- odłączenie części;
-- długi soak stabilności;
-- 100/500/1000/2500 części.
-
-### 4. Benchmark bazowy
-
-Mierzyć osobno:
-
-- czas kompilacji;
-- czas tworzenia body;
-- koszt jednego kroku;
-- 99. percentyl kroku;
-- liczbę kształtów;
-- zużycie pamięci;
-- stabilność kontaktów.
-
-### 5. Decyzja backendowa
-
-Dopiero po adapterze i benchmarku porównać:
-
-- obecny Cannon.js;
-- cannon-es;
-- Rapier.
-
-Migracja nie może być jednocześnie migracją gameplayu.
+- import/export profilu;
+- preset `Default Ctrl`, `Browser-safe`, `Left-handed`;
+- gamepad i deadzony analogowe;
+- widok konfliktów i filtr nieprzypisanych akcji;
+- połączenie Flight Focus z opcjonalnym Pointer Lock;
+- badanie osobnego desktop wrappera, jeśli webowe ograniczenia skrótów okażą się zbyt uciążliwe.
 
 ## Foundation Phase 2 — Collider Compiler
 
 - greedy merge pełnych voxelowych boxów;
-- osobne collidery dla części specjalnych;
+- osobne collidery części specjalnych;
 - mapowanie trafienia scalonego collidera na voxel;
 - lokalna rekompilacja po uszkodzeniu;
-- filtrowanie self-collision;
 - podniesienie limitu lotu wyłącznie po pomiarach.
 
-## Foundation Phase 3 — Rendering Boundary
-
-- instancing modułów;
-- picking instancji;
-- dirty regions;
-- wspólne geometrie i materiały;
-- budżet draw calli i GPU.
-
-## Następne filary gameplayu
-
-Po stabilnych granicach fizyki i renderera:
+## Dalsze filary gameplayu
 
 - sensory, aktuatory i graf sygnałów;
 - mikrokontrolery, PID i oscyloskop;
@@ -114,4 +64,4 @@ Po stabilnych granicach fizyki i renderera:
 - aerodynamika odsłoniętych powierzchni;
 - komory gazowe, zawory i balast;
 - świat, pogoda i długie loty;
-- dopiero później multiplayer.
+- później multiplayer.

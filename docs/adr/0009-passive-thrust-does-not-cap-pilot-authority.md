@@ -14,10 +14,15 @@ The slider controls only passive thrust for engines pointing toward craft-local 
 - Horizontal and downward-facing engines have zero passive command.
 - Matching pilot translation or rotational commands may raise an engine to 100% independently of the slider.
 - Opposing input reduces an existing passive command toward zero.
-- Left Ctrl activates downward-facing engines and suppresses upward passive thrust.
+- The semantic `lift-` command activates downward-facing engines and suppresses upward passive thrust; its current keyboard binding is Shift under ADR 0018.
 
 ## Consequences
 
 - Passive hover power and pilot authority are separate concepts.
-- A slider value of 0% does not disable W/S, Space/Ctrl, yaw, pitch or roll thruster mixing.
+- A slider value of 0% does not disable W/S, Space/Shift, yaw, pitch or roll thruster mixing.
 - Future programmable controllers must receive the same separation between trim/passive values and actuator authority.
+
+
+## Binding update
+
+ADR 0018 moved vertical descent from Ctrl to Shift; the passive-authority decision itself is unchanged.

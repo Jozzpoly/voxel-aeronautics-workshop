@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted in Foundation Phase 1C.2.
+Accepted for preferences; mobile projection clause superseded by ADR 0018 in Foundation Phase 1D.2C.
 
 ## Decision
 
@@ -14,5 +14,5 @@ Both are stored under the versioned UI preference key. Neither is serialized ins
 
 - Sharing a blueprint does not overwrite another player's controls or screen layout.
 - All major panels use one registry and one persistence path instead of panel-specific booleans.
-- Desktop panels may float and resize; mobile presentation may use a different projection of the same state.
+- Desktop panels may float and resize. The former mobile-projection option was retired by ADR 0018 when the runtime became desktop-only.
 - Future gamepad curves, deadzones, docking and workspace presets can evolve without changing the craft save schema.
