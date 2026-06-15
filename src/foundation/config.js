@@ -9,10 +9,14 @@
       return Object.freeze(value);
     }
 
+    const APP_VERSION = '0.4.0-foundation.1c2';
+    const RELEASE_ID = 'foundation-1c2-control-workspace';
     const GRID = { halfExtent: 18, minY: 0, maxY: 20, maxBlocks: 2500 };
-    const SAVE_VERSION = 7;
-    const SAVE_KEY = 'voxel-aeronautics-blueprint-v7';
+    const SAVE_VERSION = 9;
+    const SAVE_KEY = 'voxel-aeronautics-blueprint-v9';
     const LEGACY_SAVE_KEYS = [
+      'voxel-aeronautics-blueprint-v8',
+      'voxel-aeronautics-blueprint-v7',
       'voxel-aeronautics-blueprint-v6',
       'voxel-aeronautics-blueprint-v5',
       'voxel-aeronautics-blueprint-v4',
@@ -20,7 +24,8 @@
     ];
     const CAREER_SAVE_KEY = 'voxel-aeronautics-career-v1';
     const CAREER_SAVE_VERSION = 2;
-    const UI_SAVE_KEY = 'voxel-aeronautics-ui-v1';
+    const UI_SAVE_KEY = 'voxel-aeronautics-ui-v2';
+    const LEGACY_UI_SAVE_KEYS = ['voxel-aeronautics-ui-v1'];
     const NEIGHBOR_DIRECTIONS = [
       [1,0,0], [-1,0,0], [0,1,0], [0,-1,0], [0,0,1], [0,0,-1]
     ];
@@ -32,6 +37,7 @@
       bounds: 190
     };
     const MISSION_PAYLOAD_POSITION = { x: 0, y: -1, z: 0 };
+    const degToRad = degrees => degrees * Math.PI / 180;
     const PHYSICS = {
       fixedDt: 1 / 120,
       maxSubSteps: 8,
@@ -39,8 +45,8 @@
       cruiseReferenceSpeed: 12,
       wingBaseLiftCoefficient: 0.30,
       wingLiftSlope: 3.25,
-      wingStallStart: THREE.MathUtils.degToRad(20),
-      wingStallEnd: THREE.MathUtils.degToRad(65),
+      wingStallStart: degToRad(20),
+      wingStallEnd: degToRad(65),
       thrusterControlGain: 0.94,
       gyroManualTorque: 7.5,
       targetAngularAcceleration: 1.15,
@@ -48,9 +54,9 @@
       crossflowDragCoefficient: 0.22,
       hardImpactSpeed: 7.5,
       severeImpactSpeed: 13,
-      controlSurfaceMaxDeflection: THREE.MathUtils.degToRad(28),
+      controlSurfaceMaxDeflection: degToRad(28),
       controlSurfaceLiftGain: 1.35,
-      gimbalAngle: THREE.MathUtils.degToRad(16),
+      gimbalAngle: degToRad(16),
       damagePropagation: 0.34,
       debrisLifetime: 28,
       maxPhysicalDebris: 48,
@@ -69,8 +75,8 @@
     const HISTORY_POLICY = { maxSnapshots: 80, maxStoredParts: 12000 };
 
     return deepFreeze({
-      GRID, SAVE_VERSION, SAVE_KEY, LEGACY_SAVE_KEYS,
-      CAREER_SAVE_KEY, CAREER_SAVE_VERSION, UI_SAVE_KEY,
+      APP_VERSION, RELEASE_ID, GRID, SAVE_VERSION, SAVE_KEY, LEGACY_SAVE_KEYS,
+      CAREER_SAVE_KEY, CAREER_SAVE_VERSION, UI_SAVE_KEY, LEGACY_UI_SAVE_KEYS,
       NEIGHBOR_DIRECTIONS, COLLISION_GROUP, TEST_RANGE,
       MISSION_PAYLOAD_POSITION, PHYSICS, AXIS_VECTORS,
       AXIS_LABELS, SYMMETRY_MODES, CONTROL_AXES,

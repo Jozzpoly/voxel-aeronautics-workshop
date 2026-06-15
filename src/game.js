@@ -3,10 +3,10 @@
     const FOUNDATION = window.VAW_RUNTIME;
     if (!FOUNDATION) throw new Error('Foundation runtime was not initialized before game.js.');
 
-    const { Config, Catalog, Orientation, Blueprint, State } = FOUNDATION;
+    const { Config, Catalog, Orientation, Blueprint, ControlFrame, CraftCompiler, InputProfile, UIWorkspace, FlightControl, State } = FOUNDATION;
     const {
       GRID, SAVE_VERSION, SAVE_KEY, LEGACY_SAVE_KEYS,
-      CAREER_SAVE_KEY, CAREER_SAVE_VERSION, UI_SAVE_KEY,
+      CAREER_SAVE_KEY, CAREER_SAVE_VERSION, UI_SAVE_KEY, LEGACY_UI_SAVE_KEYS,
       NEIGHBOR_DIRECTIONS, COLLISION_GROUP, TEST_RANGE,
       MISSION_PAYLOAD_POSITION, PHYSICS, AXIS_LABELS,
       SYMMETRY_MODES, CONTROL_AXES, CONTROL_SIGNS
@@ -364,41 +364,101 @@
       }
     }
 
-    function loadUIPreferences() {
-      try {
-        const raw = localStorage.getItem(UI_SAVE_KEY);
-        if (!raw) return;
-        const parsed = JSON.parse(raw);
-        if (typeof parsed?.contractPanelCollapsed === 'boolean') {
-          STATE.contractPanelCollapsed = parsed.contractPanelCollapsed;
+    function readFirstStoredJSON(primaryKey, legacyKeys = []) {
+      for (const key of [primaryKey, ...legacyKeys]) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw) return JSON.parse(raw);
+        } catch (error) {
+          console.warn(`Stored preferences ${key} could not be read:`, error);
         }
-      } catch (error) {
-        console.warn('UI preferences could not be loaded:', error);
       }
+      return null;
+    }
+
+    function loadUIPreferences() {
+      const parsed = readFirstStoredJSON(UI_SAVE_KEY, LEGACY_UI_SAVE_KEYS);
+      if (!parsed) return;
+      STATE.input.profile = InputProfile.normalize(parsed.inputProfile);
+      STATE.uiWorkspace = UIWorkspace.normalize(parsed.workspace);
+      if (typeof parsed.contractPanelCollapsed === 'boolean' && !parsed.workspace) {
+        STATE.uiWorkspace = UIWorkspace.updatePanel(STATE.uiWorkspace, 'contracts', { open: !parsed.contractPanelCollapsed });
+      }
+      STATE.contractPanelCollapsed = !STATE.uiWorkspace.panels.contracts.open;
     }
 
     function saveUIPreferences() {
       try {
         localStorage.setItem(UI_SAVE_KEY, JSON.stringify({
-          contractPanelCollapsed: STATE.contractPanelCollapsed
+          version: 2,
+          inputProfile: STATE.input.profile,
+          workspace: STATE.uiWorkspace,
+          contractPanelCollapsed: !STATE.uiWorkspace.panels.contracts.open
         }));
       } catch (error) {
         console.warn('UI preferences could not be written:', error);
       }
     }
 
+    function panelElement(panelId) {
+      return document.querySelector(`[data-workspace-panel="${panelId}"]`);
+    }
+
+    function panelVisibleInCurrentMode(panelId) {
+      if (STATE.uiCollapsed) return false;
+      if (panelId === 'build' || panelId === 'contracts') return STATE.mode === 'BUILD';
+      return true;
+    }
+
+    function resolvePanelLeft(panel, width) {
+      return panel.x < 0 ? Math.max(8, width + panel.x) : panel.x;
+    }
+
+    function applyWorkspaceLayout() {
+      const viewportWidth = Math.max(320, window.innerWidth || 1280);
+      const viewportHeight = Math.max(320, window.innerHeight || 720);
+      for (const panelId of UIWorkspace.PANEL_IDS) {
+        const element = /** @type {HTMLElement|null} */ (panelElement(panelId));
+        const panel = STATE.uiWorkspace.panels[panelId];
+        if (!element || !panel) continue;
+        const visible = panel.open && panelVisibleInCurrentMode(panelId);
+        element.hidden = !visible;
+        element.classList.toggle('workspace-panel-minimized', panel.minimized);
+        if (visible && !isMobileLayout()) {
+          const width = Math.min(panel.width, viewportWidth - 16);
+          const height = Math.min(panel.height, viewportHeight - 80);
+          element.style.width = `${width}px`;
+          element.style.height = panel.minimized ? 'auto' : `${height}px`;
+          element.style.left = `${Math.min(Math.max(8, resolvePanelLeft(panel, viewportWidth - width)), viewportWidth - width - 8)}px`;
+          element.style.top = `${Math.min(Math.max(56, panel.y), viewportHeight - 80)}px`;
+        } else {
+          element.style.removeProperty('width');
+          element.style.removeProperty('height');
+          element.style.removeProperty('left');
+          element.style.removeProperty('top');
+        }
+        document.querySelectorAll(`[data-panel-toggle="${panelId}"]`).forEach(button => {
+          button.classList.toggle('active', visible);
+          button.setAttribute('aria-pressed', String(visible));
+        });
+      }
+      STATE.contractPanelCollapsed = !STATE.uiWorkspace.panels.contracts.open;
+      const openButton = document.getElementById('btn-contract-panel-open');
+      if (openButton) openButton.hidden = STATE.uiWorkspace.panels.contracts.open || STATE.mode !== 'BUILD' || STATE.uiCollapsed;
+    }
+
+    function updateWorkspacePanel(panelId, patch, persist = true) {
+      STATE.uiWorkspace = UIWorkspace.updatePanel(STATE.uiWorkspace, panelId, patch);
+      applyWorkspaceLayout();
+      if (persist) saveUIPreferences();
+    }
+
+    function setWorkspacePanelOpen(panelId, open, persist = true) {
+      updateWorkspacePanel(panelId, { open: Boolean(open), minimized: false }, persist);
+    }
+
     function syncContractPanelVisibility() {
-      const panel = /** @type {HTMLElement|null} */ (document.getElementById('contract-panel'));
-      const openButton = /** @type {HTMLButtonElement|null} */ (document.getElementById('btn-contract-panel-open'));
-      const closeButton = /** @type {HTMLButtonElement|null} */ (document.getElementById('btn-contract-panel-close'));
-      if (!panel || !openButton || !closeButton) return;
-
-      const panelVisible = !STATE.contractPanelCollapsed && STATE.mode === 'BUILD' && !STATE.uiCollapsed;
-      panel.hidden = !panelVisible;
-      openButton.hidden = panelVisible || STATE.mode !== 'BUILD' || STATE.uiCollapsed;
-      openButton.setAttribute('aria-expanded', String(panelVisible));
-      closeButton.setAttribute('aria-expanded', String(panelVisible));
-
+      applyWorkspaceLayout();
       const label = document.getElementById('ui-contract-trigger-label');
       if (label) {
         const contract = getSelectedContract();
@@ -407,14 +467,138 @@
     }
 
     function setContractPanelCollapsed(collapsed, persist = true) {
-      STATE.contractPanelCollapsed = Boolean(collapsed);
-      syncContractPanelVisibility();
-      if (persist) saveUIPreferences();
+      setWorkspacePanelOpen('contracts', !Boolean(collapsed), persist);
     }
 
     function toggleContractPanel() {
       if (STATE.mode !== 'BUILD' || STATE.uiCollapsed) return;
-      setContractPanelCollapsed(!STATE.contractPanelCollapsed);
+      setWorkspacePanelOpen('contracts', !STATE.uiWorkspace.panels.contracts.open);
+    }
+
+    function resetWorkspaceLayout() {
+      STATE.uiWorkspace = UIWorkspace.createDefault();
+      applyWorkspaceLayout();
+      saveUIPreferences();
+      showStatus('WORKSPACE RESET', 1100);
+    }
+
+    function bindWorkspacePanels() {
+      document.querySelectorAll('[data-panel-toggle]').forEach(button => {
+        button.addEventListener('click', () => {
+          const panelId = button.getAttribute('data-panel-toggle');
+          if (!panelId) return;
+          setWorkspacePanelOpen(panelId, !STATE.uiWorkspace.panels[panelId]?.open);
+        });
+      });
+      document.querySelectorAll('[data-panel-close]').forEach(button => {
+        button.addEventListener('click', () => setWorkspacePanelOpen(button.getAttribute('data-panel-close'), false));
+      });
+      document.querySelectorAll('[data-panel-minimize]').forEach(button => {
+        button.addEventListener('click', () => {
+          const panelId = button.getAttribute('data-panel-minimize');
+          updateWorkspacePanel(panelId, { minimized: !STATE.uiWorkspace.panels[panelId]?.minimized });
+        });
+      });
+      document.getElementById('btn-workspace-reset')?.addEventListener('click', resetWorkspaceLayout);
+
+      document.querySelectorAll('.workspace-panel-handle').forEach(handle => {
+        const element = /** @type {HTMLElement|null} */ (handle.closest('[data-workspace-panel]'));
+        const panelId = element?.getAttribute('data-workspace-panel');
+        if (!element || !panelId) return;
+        handle.addEventListener('pointerdown', event => {
+          if (isMobileLayout() || event.button !== 0 || event.target.closest('button')) return;
+          event.preventDefault();
+          const startX = event.clientX;
+          const startY = event.clientY;
+          const rect = element.getBoundingClientRect();
+          try { handle.setPointerCapture(event.pointerId); } catch (_) {}
+          const move = moveEvent => {
+            element.style.left = `${Math.max(8, rect.left + moveEvent.clientX - startX)}px`;
+            element.style.top = `${Math.max(56, rect.top + moveEvent.clientY - startY)}px`;
+          };
+          const end = () => {
+            handle.removeEventListener('pointermove', move);
+            handle.removeEventListener('pointerup', end);
+            handle.removeEventListener('pointercancel', end);
+            const finalRect = element.getBoundingClientRect();
+            updateWorkspacePanel(panelId, { x: finalRect.left, y: finalRect.top, width: finalRect.width, height: finalRect.height });
+          };
+          handle.addEventListener('pointermove', move);
+          handle.addEventListener('pointerup', end);
+          handle.addEventListener('pointercancel', end);
+        });
+      });
+
+      if (typeof ResizeObserver === 'function') {
+        const observer = new ResizeObserver(entries => {
+          for (const entry of entries) {
+            const element = entry.target;
+            const panelId = element.getAttribute('data-workspace-panel');
+            if (!panelId || element.hidden || isMobileLayout() || STATE.uiWorkspace.panels[panelId]?.minimized) continue;
+            const rect = element.getBoundingClientRect();
+            STATE.uiWorkspace = UIWorkspace.updatePanel(STATE.uiWorkspace, panelId, { width: rect.width, height: rect.height });
+          }
+        });
+        document.querySelectorAll('[data-workspace-panel]').forEach(panel => observer.observe(panel));
+      }
+      bindInputProfileControls();
+    }
+
+    function axisLabelFromArray(vector) {
+      const values = Array.isArray(vector) ? vector : [0, 0, 0];
+      let best = 0;
+      for (let index = 1; index < values.length; index += 1) {
+        if (Math.abs(values[index]) > Math.abs(values[best])) best = index;
+      }
+      const labels = ['X', 'Y', 'Z'];
+      return `${values[best] >= 0 ? '+' : '-'}${labels[best]}`;
+    }
+
+    function syncControlFrameReadout() {
+      const compiled = STATE.flight.compiled || CraftCompiler.compile(CRAFT);
+      const frame = compiled.controlFrame || ControlFrame.fromCore(null);
+      const readout = document.getElementById('ui-control-frame');
+      if (readout) {
+        readout.textContent = `Forward ${axisLabelFromArray(frame.forward)} • Up ${axisLabelFromArray(frame.up)} • Right ${axisLabelFromArray(frame.right)}`;
+      }
+    }
+
+    function syncInputProfileUI() {
+      STATE.input.profile = InputProfile.normalize(STATE.input.profile);
+      for (const axis of InputProfile.AXES) {
+        const settings = STATE.input.profile.axes[axis];
+        const invert = /** @type {HTMLInputElement|null} */ (document.getElementById(`input-invert-${axis}`));
+        const sensitivity = /** @type {HTMLInputElement|null} */ (document.getElementById(`input-sensitivity-${axis}`));
+        const value = document.getElementById(`input-sensitivity-${axis}-value`);
+        if (invert) invert.checked = settings.invert;
+        if (sensitivity) sensitivity.value = String(Math.round(settings.sensitivity * 100));
+        if (value) value.textContent = `${settings.sensitivity.toFixed(2)}×`;
+      }
+      syncControlFrameReadout();
+    }
+
+    function updateInputAxis(axis, patch) {
+      STATE.input.profile = InputProfile.updateAxis(STATE.input.profile, axis, patch);
+      recomputePilotAxes();
+      syncInputProfileUI();
+      saveUIPreferences();
+    }
+
+    function bindInputProfileControls() {
+      for (const axis of InputProfile.AXES) {
+        const invert = /** @type {HTMLInputElement|null} */ (document.getElementById(`input-invert-${axis}`));
+        const sensitivity = /** @type {HTMLInputElement|null} */ (document.getElementById(`input-sensitivity-${axis}`));
+        invert?.addEventListener('change', () => updateInputAxis(axis, { invert: invert.checked }));
+        sensitivity?.addEventListener('input', () => updateInputAxis(axis, { sensitivity: Number(sensitivity.value) / 100 }));
+      }
+      document.getElementById('btn-input-profile-reset')?.addEventListener('click', () => {
+        STATE.input.profile = InputProfile.createDefault();
+        recomputePilotAxes();
+        syncInputProfileUI();
+        saveUIPreferences();
+        showStatus('CONTROL PROFILE RESET', 1100);
+      });
+      syncInputProfileUI();
     }
 
     function formatMissionTime(seconds) {
@@ -965,10 +1149,16 @@
     }
 
     function recomputePilotAxes() {
-      const actions = STATE.input.controlActions;
-      STATE.pilot.pitch = (actions.has('pitch+') ? 1 : 0) - (actions.has('pitch-') ? 1 : 0);
-      STATE.pilot.yaw = (actions.has('yaw+') ? 1 : 0) - (actions.has('yaw-') ? 1 : 0);
-      STATE.pilot.roll = (actions.has('roll+') ? 1 : 0) - (actions.has('roll-') ? 1 : 0);
+      const intent = FlightControl.pilotFromActions(STATE.input.controlActions, STATE.input.profile);
+      Object.assign(STATE.controlIntent, intent);
+      const compiled = STATE.flight.compiled || CraftCompiler.compile(CRAFT);
+      const bodyPilot = FlightControl.pilotToBodyFrame(intent, compiled.controlFrame);
+      STATE.pilot.pitch = bodyPilot.pitch;
+      STATE.pilot.yaw = bodyPilot.yaw;
+      STATE.pilot.roll = bodyPilot.roll;
+      STATE.pilot.surge = bodyPilot.surge;
+      STATE.pilot.sway = bodyPilot.sway;
+      STATE.pilot.lift = bodyPilot.lift;
       updateFlightFeedback();
     }
 
@@ -983,6 +1173,10 @@
       STATE.pilot.pitch = 0;
       STATE.pilot.yaw = 0;
       STATE.pilot.roll = 0;
+      STATE.pilot.surge = 0;
+      STATE.pilot.lift = 0;
+      STATE.pilot.sway = 0;
+      for (const axis of InputProfile.AXES) STATE.controlIntent[axis] = 0;
       document.querySelectorAll('.hold-btn.active').forEach(button => button.classList.remove('active'));
       updateFlightFeedback();
     }
@@ -990,9 +1184,12 @@
     function updateFlightFeedback() {
       const body = STATE.flight.body;
       const speed = body ? Math.sqrt(body.velocity.x ** 2 + body.velocity.y ** 2 + body.velocity.z ** 2) : 0;
-      const pitch = STATE.pilot.pitch || 0;
-      const yaw = STATE.pilot.yaw || 0;
-      const roll = STATE.pilot.roll || 0;
+      const pitch = STATE.controlIntent.pitch || 0;
+      const yaw = STATE.controlIntent.yaw || 0;
+      const roll = STATE.controlIntent.roll || 0;
+      const surge = STATE.controlIntent.surge || 0;
+      const sway = STATE.controlIntent.sway || 0;
+      const liftCommand = STATE.controlIntent.lift || 0;
 
       let tiltDegrees = 0;
       if (body) {
@@ -1030,14 +1227,23 @@
       setText('ui-pitch-value', `${Math.round(pitch * 100)}%`);
       setText('ui-yaw-value', `${Math.round(yaw * 100)}%`);
       setText('ui-roll-value', `${Math.round(roll * 100)}%`);
+      setText('ui-surge-value', `${Math.round(surge * 100)}%`);
+      setText('ui-lift-command-value', `${Math.round(liftCommand * 100)}%`);
+      setText('ui-sway-value', `${Math.round(sway * 100)}%`);
       setText('ui-pitch-readout', Math.round(pitch * 100));
       setText('ui-yaw-readout', Math.round(yaw * 100));
       setText('ui-roll-readout', Math.round(roll * 100));
+      setText('ui-surge-readout', Math.round(surge * 100));
+      setText('ui-lift-command-readout', Math.round(liftCommand * 100));
+      setText('ui-sway-readout', Math.round(sway * 100));
       setText('ui-angle-readout', `${Math.round(tiltDegrees)}°`);
 
       setBar('ui-pitch-bar', pitch);
       setBar('ui-yaw-bar', yaw);
       setBar('ui-roll-bar', roll);
+      setBar('ui-surge-bar', surge);
+      setBar('ui-lift-command-bar', liftCommand);
+      setBar('ui-sway-bar', sway);
 
       const stabBtn = document.getElementById('btn-stabilize');
       if (stabBtn) stabBtn.classList.toggle('active', STATE.pilot.stabilize);
@@ -1363,59 +1569,54 @@
     }
 
     function buildCraftSnapshot() {
+      const compiled = CraftCompiler.compile(CRAFT);
       const snapshot = {
-        mass: 0,
-        weight: 0,
-        fuelCapacity: 0,
-        dragArea: 0,
-        com: new THREE.Vector3(),
-        inertia: new THREE.Vector3(),
-        counts: Object.fromEntries(Object.keys(BLOCKS).map(type => [type, 0])),
-        parts: []
+        compiled,
+        ready: compiled.ready,
+        errors: [...compiled.errors],
+        mass: compiled.mass,
+        weight: compiled.weight,
+        fuelCapacity: compiled.fuelCapacity,
+        dragArea: compiled.dragArea,
+        com: new THREE.Vector3(...compiled.com),
+        inertia: new THREE.Vector3(...compiled.inertia),
+        counts: { ...compiled.counts },
+        coreKey: compiled.coreKey,
+        corePosition: compiled.corePosition ? new THREE.Vector3(...compiled.corePosition) : null,
+        parts: compiled.parts.map(part => {
+          const def = BLOCKS[part.type];
+          const position = new THREE.Vector3(...part.grid);
+          const offset = new THREE.Vector3(...part.offset);
+          const basis = {
+            chord: new THREE.Vector3(...part.basis.forward),
+            normal: new THREE.Vector3(...part.basis.up),
+            span: new THREE.Vector3(...part.basis.span)
+          };
+          const fullForce = new THREE.Vector3(...part.fullForce);
+          const localTorque = new THREE.Vector3(...part.localTorque);
+          return {
+            index: part.index,
+            key: part.key,
+            type: part.type,
+            position,
+            offset,
+            orientation: part.orientation,
+            basis,
+            def,
+            controlAxis: part.controlAxis,
+            controlSign: part.controlSign,
+            fullForce,
+            localTorque,
+            neighbors: [...part.neighbors]
+          };
+        })
       };
-
-      const blocks = CRAFT.values();
-      for (const block of blocks) {
-        const def = BLOCKS[block.type];
-        const mass = def.mass || 0;
-        snapshot.mass += mass;
-        snapshot.com.add(new THREE.Vector3(block.x, block.y, block.z).multiplyScalar(mass));
-        snapshot.fuelCapacity += def.fuelCapacity || 0;
-        snapshot.dragArea += def.dragArea || 0;
-        snapshot.counts[block.type] += 1;
-      }
-      if (snapshot.mass <= 0) return snapshot;
-
-      snapshot.com.divideScalar(snapshot.mass);
-      for (const block of blocks) {
-        const def = BLOCKS[block.type];
-        const position = new THREE.Vector3(block.x, block.y, block.z);
-        const offset = position.clone().sub(snapshot.com);
-        const basis = getModuleBasis(block.orientation);
-        const cubeInertia = (def.mass || 0) / 6;
-        snapshot.inertia.x += (def.mass || 0) * (offset.y ** 2 + offset.z ** 2) + cubeInertia;
-        snapshot.inertia.y += (def.mass || 0) * (offset.x ** 2 + offset.z ** 2) + cubeInertia;
-        snapshot.inertia.z += (def.mass || 0) * (offset.x ** 2 + offset.y ** 2) + cubeInertia;
-        const fullForce = (block.type === 'Thruster' || block.type === 'VectorThruster')
-          ? basis.chord.clone().multiplyScalar(def.force || 0)
-          : new THREE.Vector3();
-        snapshot.parts.push({
-          type: block.type,
-          position,
-          offset,
-          orientation: block.orientation,
-          basis,
-          def,
-          controlAxis: normalizeControlAxis(block.controlAxis),
-          controlSign: normalizeControlSign(block.controlSign),
-          fullForce,
-          localTorque: offset.clone().cross(fullForce)
-        });
-      }
       return snapshot;
     }
 
+
     function computeMixerCommandFromTorque(localTorque, pilot, basePower, torqueMax) {
+      const base = THREE.MathUtils.clamp(Number(basePower) || 0, 0, 1);
       let score = 0;
       let activeAxes = 0;
       if (Math.abs(pilot.roll) > 0.0001 && torqueMax.x > 0.0001) {
@@ -1432,8 +1633,8 @@
       }
       if (activeAxes > 1) score /= Math.sqrt(activeAxes);
       score = THREE.MathUtils.clamp(score, -1, 1);
-      const headroom = score >= 0 ? (1 - basePower) : basePower;
-      return THREE.MathUtils.clamp(basePower + score * headroom * PHYSICS.thrusterControlGain, 0, 1);
+      const headroom = score >= 0 ? (1 - base) : base;
+      return THREE.MathUtils.clamp(base + score * headroom * PHYSICS.thrusterControlGain, 0, 1);
     }
 
     function controlSurfaceAutoSign(part) {
@@ -1466,7 +1667,7 @@
       return part.offset.clone().cross(forceDirection.multiplyScalar(forceMagnitude));
     }
 
-    function computeGimbalForceThree(part, pilot, command = STATE.thrusterPower) {
+    function computeGimbalForceThree(part, pilot, command = 0) {
       if (part.type !== 'VectorThruster') return part.basis.chord.clone().multiplyScalar((part.def.force || 0) * command);
       const desired = new THREE.Vector3(pilot.roll || 0, pilot.yaw || 0, pilot.pitch || 0);
       const baseForce = (part.def.force || 0) * command;
@@ -1491,7 +1692,11 @@
       for (const part of snapshot.parts) {
         if (part.type === 'ControlSurface') torque.add(computeControlSurfaceTorqueThree(part, pilot));
         if (part.type === 'VectorThruster') {
-          const command = computeMixerCommandFromTorque(part.localTorque, pilot, STATE.thrusterPower, torqueMax);
+          const command = computeMixerCommandFromTorque(
+            part.localTorque, pilot,
+            FlightControl.neutralCommand([part.basis.chord.x, part.basis.chord.y, part.basis.chord.z], STATE.thrusterPower),
+            torqueMax
+          );
           const base = part.basis.chord.clone().multiplyScalar((part.def.force || 0) * command);
           const deflected = computeGimbalForceThree(part, pilot, command);
           torque.add(part.offset.clone().cross(deflected.sub(base)));
@@ -1515,20 +1720,25 @@
       const torque = new THREE.Vector3();
       for (const part of snapshot.parts) {
         if (part.type !== 'Thruster' && part.type !== 'VectorThruster') continue;
-        const command = computeMixerCommandFromTorque(part.localTorque, pilot, STATE.thrusterPower, torqueMax);
+        const command = computeMixerCommandFromTorque(
+            part.localTorque, pilot,
+            FlightControl.neutralCommand([part.basis.chord.x, part.basis.chord.y, part.basis.chord.z], STATE.thrusterPower),
+            torqueMax
+          );
         torque.add(part.localTorque.clone().multiplyScalar(command));
       }
       return torque;
     }
 
-    function missionPayloadPositionVector() {
-      return new THREE.Vector3(MISSION_PAYLOAD_POSITION.x, MISSION_PAYLOAD_POSITION.y, MISSION_PAYLOAD_POSITION.z);
+    function missionPayloadPositionVector(snapshot = null) {
+      const anchor = snapshot?.corePosition ? snapshot.corePosition.clone() : new THREE.Vector3();
+      return anchor.add(new THREE.Vector3(MISSION_PAYLOAD_POSITION.x, MISSION_PAYLOAD_POSITION.y, MISSION_PAYLOAD_POSITION.z));
     }
 
     function buildLoadedSnapshot(baseSnapshot, payloadMass = 0) {
       const safePayloadMass = Math.max(0, Number(payloadMass) || 0);
       if (safePayloadMass <= 0 || baseSnapshot.mass <= 0) return baseSnapshot;
-      const payloadPosition = missionPayloadPositionVector();
+      const payloadPosition = missionPayloadPositionVector(baseSnapshot);
       const runtimeMass = baseSnapshot.mass + safePayloadMass;
       const runtimeCom = baseSnapshot.com.clone().multiplyScalar(baseSnapshot.mass)
         .add(payloadPosition.clone().multiplyScalar(safePayloadMass))
@@ -1630,9 +1840,23 @@
         warnings: [],
         grade: 'UNTESTED'
       };
-      if (snapshot.mass <= 0) return analysis;
+      const warn = (level, text) => analysis.warnings.push({ level, text });
+      const compileMessages = {
+        'empty-craft': 'The workshop is empty. Place any first module, then add exactly one Command Core before launch.',
+        'missing-core': 'No Command Core is installed. The craft may be edited and saved, but cannot launch.',
+        'multiple-cores': 'Only one Command Core may be installed.',
+        'disconnected': 'The craft contains disconnected structural islands.',
+        'block-limit': `The blueprint exceeds the ${GRID.maxBlocks}-module editor limit.`,
+        'invalid-block': 'The blueprint contains an invalid module record.',
+        'duplicate-position': 'Two modules occupy the same grid position.'
+      };
+      for (const error of snapshot.errors || []) warn('critical', compileMessages[error] || `Craft compilation failed: ${error}.`);
+      if (snapshot.mass <= 0) {
+        analysis.grade = 'DANGEROUS';
+        return analysis;
+      }
 
-      const craftKeys = new Set(CRAFT.keys());
+      const craftKeys = new Set(snapshot.parts.map(part => part.key));
       const neighborDirs = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
       for (const part of snapshot.parts) {
         analysis.totalDurability += part.def.durability || 0;
@@ -1649,7 +1873,10 @@
 
       for (const part of snapshot.parts) {
         if (part.type === 'Thruster' || part.type === 'VectorThruster') {
-          const command = STATE.thrusterPower;
+          const command = FlightControl.neutralCommand(
+            [part.basis.chord.x, part.basis.chord.y, part.basis.chord.z],
+            STATE.thrusterPower
+          );
           const force = part.fullForce.clone().multiplyScalar(command);
           const torque = part.offset.clone().cross(force);
           analysis.netThrust.add(force);
@@ -1698,8 +1925,7 @@
       analysis.controlCoupling = controls.controlCoupling;
 
       analysis.enduranceSeconds = nominalFuelRate > 0 ? analysis.fuelCapacity / nominalFuelRate : Infinity;
-      const warn = (level, text) => analysis.warnings.push({ level, text });
-      if (CRAFT.size <= 1) warn('critical', 'The craft contains only the command core.');
+      if (snapshot.parts.length === 1) warn('info', 'The craft currently contains a single module.');
       if (snapshot.counts.Thruster + snapshot.counts.VectorThruster + snapshot.counts.Balloon === 0) warn('critical', 'No propulsion or powered lift is installed.');
       if (nominalFuelRate > 0 && analysis.fuelCapacity <= 0) warn('critical', 'Powered modules have no fuel tank.');
       if (snapshot.counts.Wing + snapshot.counts.ControlSurface === 0 && analysis.staticLiftRatio < 0.95) warn('warn', 'Current power cannot support a vertical take-off.');
@@ -1716,9 +1942,9 @@
       if (analysis.fuelCapacity > 0 && analysis.enduranceSeconds < 20) warn('info', 'Estimated fuel endurance at current power is very short.');
       if (analysis.weakLinks > 0) warn(analysis.weakLinks > 4 ? 'warn' : 'info', `${analysis.weakLinks} part${analysis.weakLinks === 1 ? '' : 's'} depend on a single structural connection.`);
       if (analysis.exposedFuel > 0) warn('info', `${analysis.exposedFuel} fuel tank${analysis.exposedFuel === 1 ? ' is' : 's are'} weakly protected and vulnerable to impact leaks.`);
-      if (analysis.structuralReserve < 0.75 && CRAFT.size > 8) warn('warn', 'Low durability-to-mass reserve; reinforce long branches with Frame modules.');
-      if (CRAFT.size > PHYSICS.maxFlightParts) warn('critical', `Flight is limited to ${PHYSICS.maxFlightParts} attached modules until collider merging is implemented.`);
-      else if (CRAFT.size > PHYSICS.maxFlightParts * 0.8) warn('info', 'The craft is approaching the current flight-solver module limit.');
+      if (analysis.structuralReserve < 0.75 && snapshot.parts.length > 8) warn('warn', 'Low durability-to-mass reserve; reinforce long branches with Frame modules.');
+      if (snapshot.parts.length > PHYSICS.maxFlightParts) warn('critical', `Flight is limited to ${PHYSICS.maxFlightParts} attached modules until collider merging is implemented.`);
+      else if (snapshot.parts.length > PHYSICS.maxFlightParts * 0.8) warn('info', 'The craft is approaching the current flight-solver module limit.');
 
       const criticalCount = analysis.warnings.filter(item => item.level === 'critical').length;
       const warningCount = analysis.warnings.filter(item => item.level === 'warn').length;
@@ -1836,6 +2062,21 @@
           new THREE.MeshStandardMaterial({ color: 0xf5d0fe, roughness: 0.35, metalness: 0.1, emissive: 0x4c1d95, emissiveIntensity: 0.18, transparent: ghostMode, opacity: ghostMode ? 0.72 : 1 })
         );
         root.add(inner);
+
+        const nose = new THREE.Mesh(
+          new THREE.ConeGeometry(0.13, 0.42, 8),
+          new THREE.MeshStandardMaterial({ color: 0xf0abfc, roughness: 0.38, metalness: 0.22, emissive: 0x581c87, emissiveIntensity: 0.2, transparent: ghostMode, opacity: ghostMode ? 0.65 : 1 })
+        );
+        nose.rotation.z = -Math.PI / 2;
+        nose.position.x = 0.58;
+        root.add(nose);
+
+        const topMarker = new THREE.Mesh(
+          new THREE.BoxGeometry(0.34, 0.08, 0.18),
+          new THREE.MeshStandardMaterial({ color: 0x67e8f9, roughness: 0.4, metalness: 0.28, emissive: 0x164e63, emissiveIntensity: 0.18, transparent: ghostMode, opacity: ghostMode ? 0.62 : 1 })
+        );
+        topMarker.position.set(0, 0.51, 0);
+        root.add(topMarker);
       }
 
       if (type === 'Thruster') {
@@ -2131,8 +2372,10 @@
     CRAFT.subscribe(handleCraftModelChange);
 
     function updateTelemetry() {
+      syncControlFrameReadout();
       const analysis = computeCraftAnalysis();
       STATE.flight.analysis = analysis;
+      STATE.flight.compiled = analysis.snapshot.compiled;
 
       if (analysis.mass > 0) {
         comSphere.position.copy(analysis.com);
@@ -2163,7 +2406,7 @@
     }
 
     function setSelectedTool(tool) {
-      if (STATE.mode !== 'BUILD' || !BLOCKS[tool] || tool === 'Core') return;
+      if (STATE.mode !== 'BUILD' || !BLOCKS[tool]) return;
       STATE.selectedBlock = tool;
       document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
       const active = Array.from(document.querySelectorAll('.tool-btn')).find(element => /** @type {HTMLElement} */ (element).dataset.tool === tool);
@@ -2202,6 +2445,7 @@
       STATE.flight.fuel = 0;
       STATE.flight.fuelMax = 0;
       STATE.flight.analysis = null;
+      STATE.flight.compiled = null;
       STATE.flight.thrusterTorqueMax.set(0, 0, 0);
       STATE.flight.gyroCount = 0;
       STATE.flight.blockCount = 0;
@@ -2242,18 +2486,17 @@
     }
 
 
-    function seedCore(persist = true) {
+    function resetToEmptyCraft(persist = true) {
       cleanupFlightState();
       STATE.mode = 'BUILD';
       STATE.statusText = 'DRYDOCK';
-      const seeded = CRAFT.replace([
-        { x: 0, y: 0, z: 0, type: 'Core', orientation: DEFAULT_ORIENTATION, controlAxis: 'pitch', controlSign: 0 }
-      ], 'seed-core');
-      if (!seeded.ok) throw new Error(`Unable to seed command core: ${seeded.reason}`);
+      const cleared = CRAFT.clear('new-empty-craft');
+      if (!cleared.ok) throw new Error(`Unable to clear craft: ${cleared.reason}`);
       updateTelemetry();
       updateGhost();
       if (persist) autoSave(false);
     }
+
 
 
     function addBlock(x, y, z, type, orientation = STATE.orientation, allowMirror = true) {
@@ -2289,7 +2532,7 @@
       x = snapInt(x); y = snapInt(y); z = snapInt(z);
       const key = makeKey(x, y, z);
       const block = CRAFT.get(key);
-      if (!block || block.type === 'Core') return false;
+      if (!block) return false;
       const mesh = WORKSHOP.meshesByKey.get(key);
       const historyBefore = collectBlueprint();
       const removed = CRAFT.remove(key, 'remove-block');
@@ -2439,11 +2682,15 @@
       STATE.flight.metricsDirty = true;
     }
 
+    function getRuntimeCore() {
+      return STATE.flight.runtimeParts.find(part => part.type === 'Core') || null;
+    }
+
     function recomputeFlightIntegrity(force = false) {
       if (!force && !STATE.flight.metricsDirty) return;
       const attached = STATE.flight.runtimeParts.filter(part => part.attached);
       const health = attached.reduce((sum, part) => sum + Math.max(0, part.health), 0);
-      const core = STATE.flight.runtimePartByKey.get('0,0,0');
+      const core = getRuntimeCore();
       const coreOperational = Boolean(core?.attached && core.health > 0);
       STATE.flight.integrity = coreOperational && STATE.flight.initialHealth > 0
         ? THREE.MathUtils.clamp(health / STATE.flight.initialHealth * 100, 0, 100)
@@ -2583,10 +2830,10 @@
 
     function collectDisconnectedRuntimeParts() {
       const byKey = STATE.flight.runtimePartByKey;
-      const core = byKey.get('0,0,0');
+      const core = getRuntimeCore();
       if (!core?.attached) return STATE.flight.runtimeParts.filter(part => part.attached && part.type !== 'Core');
-      const visited = new Set(['0,0,0']);
-      const queue = ['0,0,0'];
+      const visited = new Set([core.key]);
+      const queue = [core.key];
       for (let cursor = 0; cursor < queue.length; cursor++) {
         const [x,y,z] = queue[cursor].split(',').map(Number);
         for (const [dx,dy,dz] of NEIGHBOR_DIRECTIONS) {
@@ -2597,6 +2844,7 @@
       }
       return STATE.flight.runtimeParts.filter(part => part.attached && part.type !== 'Core' && !visited.has(part.key));
     }
+
 
     function detachRuntimeParts(entries, cascade = true) {
       const pending = new Map();
@@ -2736,7 +2984,7 @@
       const failures = [];
       if (payloadNearest) {
         damagePayload(energyDamage * 0.72, reason);
-        const core = STATE.flight.runtimePartByKey.get('0,0,0');
+        const core = getRuntimeCore();
         if (core && applyDamageOnly(core, energyDamage * 0.18, 'payload mount transferred impact')) failures.push({ part: core, reason: 'payload mount transferred impact' });
       } else {
         if (applyDamageOnly(nearest, energyDamage, reason)) failures.push({ part: nearest, reason });
@@ -2815,11 +3063,15 @@
       cleanupFlightState();
 
       const analysis = computeCraftAnalysis();
-      if (analysis.mass <= 0 || !CRAFT.has('0,0,0') || !isStructureContiguous()) return false;
+      if (!analysis.snapshot.ready || analysis.mass <= 0 || !isStructureContiguous()) {
+        const reason = analysis.snapshot.errors?.[0] || 'invalid-craft';
+        showStatus(`CANNOT LAUNCH: ${String(reason).replaceAll('-', ' ').toUpperCase()}`, 2200);
+        return false;
+      }
       const contract = getSelectedContract();
       const payloadMass = Math.max(0, contract.payloadMass || 0);
       const snapshot = buildLoadedSnapshot(analysis.snapshot, payloadMass);
-      const payloadPosition = snapshot.payloadPosition || missionPayloadPositionVector();
+      const payloadPosition = snapshot.payloadPosition || missionPayloadPositionVector(snapshot);
       const runtimeMass = snapshot.mass;
       const runtimeCom = snapshot.com;
       STATE.flight.com.copy(runtimeCom);
@@ -2853,7 +3105,7 @@
         const visual = createModuleVisual(part.type, part.orientation, false);
         visual.position.set(localOffset.x, localOffset.y, localOffset.z);
         group.add(visual);
-        const key = makeKey(part.position.x, part.position.y, part.position.z);
+        const key = part.key;
         const sourceMesh = WORKSHOP.meshesByKey.get(key);
         if (sourceMesh) sourceMesh.visible = false;
 
@@ -2954,9 +3206,10 @@
       STATE.flight.fuelMax = Math.max(0, analysis.fuelCapacity);
       STATE.flight.fuel = STATE.flight.fuelMax;
       STATE.flight.analysis = analysis;
+      STATE.flight.compiled = snapshot.compiled;
       STATE.flight.thrusterTorqueMax.copy(thrusterTorqueMax);
       STATE.flight.gyroCount = gyroCount;
-      STATE.flight.blockCount = CRAFT.size;
+      STATE.flight.blockCount = snapshot.parts.length;
       STATE.flight.dragArea = snapshot.dragArea;
       STATE.flight.lastLoads = { lift: 0, drag: 0, thrust: 0, impact: 0 };
       STATE.flight.outOfFuel = false;
@@ -3005,7 +3258,8 @@
         STATE.mission.previousPosition = null;
         STATE.mission.helpPaused = false;
       } else {
-        if (CRAFT.size > PHYSICS.maxFlightParts) {
+        const compiled = CraftCompiler.compile(CRAFT);
+        if (compiled.blockCount > PHYSICS.maxFlightParts) {
           STATE.statusText = 'CRAFT TOO LARGE';
           showStatus(`FLIGHT LIMIT: ${PHYSICS.maxFlightParts} MODULES`, 2200);
           updateTelemetry();
@@ -3044,11 +3298,8 @@
         startMissionSession();
       }
 
-      if (mode === 'FLIGHT') {
-        setContractPanelCollapsed(true, false);
-      } else {
-        syncContractPanelVisibility();
-      }
+      applyWorkspaceLayout();
+      syncContractPanelVisibility();
       updateTelemetry();
       updateGhost();
       updateFlightFeedback();
@@ -3207,10 +3458,8 @@
       const replacement = CRAFT.replace(normalized.blocks, 'load-blueprint');
       if (!replacement.ok) {
         console.error('CraftModel rejected a normalized blueprint:', replacement.reason);
-        const fallback = CRAFT.replace([
-          { x: 0, y: 0, z: 0, type: 'Core', orientation: DEFAULT_ORIENTATION, controlAxis: 'pitch', controlSign: 0 }
-        ], 'load-fallback-core');
-        if (!fallback.ok) throw new Error(`Unable to restore fallback core: ${fallback.reason}`);
+        const fallback = CRAFT.clear('load-fallback-empty');
+        if (!fallback.ok) throw new Error(`Unable to restore empty workshop: ${fallback.reason}`);
         updateTelemetry();
         return false;
       }
@@ -3219,7 +3468,7 @@
         const btn = /** @type {HTMLElement} */ (element);
         btn.classList.toggle('active', btn.dataset.tool === STATE.selectedBlock);
       });
-      comSphere.visible = true;
+      comSphere.visible = CRAFT.size > 0;
       axesHelper.visible = true;
       updateTelemetry();
       updateGhost();
@@ -3293,7 +3542,7 @@
       /** @type {HTMLInputElement} */ (document.getElementById('thruster-power')).value = '70';
       /** @type {HTMLInputElement} */ (document.getElementById('balloon-power')).value = '70';
       /** @type {HTMLInputElement} */ (document.getElementById('stability')).value = '18';
-      seedCore(false);
+      resetToEmptyCraft(false);
       document.querySelectorAll('.tool-btn').forEach(element => {
         const btn = /** @type {HTMLElement} */ (element);
         btn.classList.toggle('active', btn.dataset.tool === STATE.selectedBlock);
@@ -3361,14 +3610,13 @@
 
     const toolContainer = document.getElementById('tool-container');
     Object.keys(BLOCKS).forEach(name => {
-      if (name === 'Core') return;
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.dataset.tool = name;
       btn.className = `tool-btn ${name === STATE.selectedBlock ? 'active' : ''}`;
       const colorHex = `#${BLOCKS[name].color.toString(16).padStart(6, '0')}`;
       const displayName = name.replace(/([a-z])([A-Z])/g, '$1 $2');
-      const shortcutIndex = Object.keys(BLOCKS).filter(type => type !== 'Core').indexOf(name) + 1;
+      const shortcutIndex = name === 'Core' ? 0 : Object.keys(BLOCKS).filter(type => type !== 'Core').indexOf(name) + 1;
       btn.innerHTML = `
         <div class="w-6 h-6 rounded border border-white/30 shrink-0" style="background:${colorHex}"></div>
         <div class="min-w-0 flex-1">
@@ -3578,9 +3826,10 @@
       autoSave(false);
     });
 
+    bindWorkspacePanels();
+    applyWorkspaceLayout();
     document.getElementById('btn-flight').addEventListener('click', () => setMode('FLIGHT'));
-    document.getElementById('btn-contract-panel-open')?.addEventListener('click', () => setContractPanelCollapsed(false));
-    document.getElementById('btn-contract-panel-close')?.addEventListener('click', () => setContractPanelCollapsed(true));
+    document.getElementById('btn-contract-panel-open')?.addEventListener('click', () => setWorkspacePanelOpen('contracts', true));
     document.getElementById('btn-build').addEventListener('click', requestReturnToWorkshop);
     document.getElementById('btn-help').addEventListener('click', () => setHelpVisible(true));
     document.getElementById('btn-ui-toggle').addEventListener('click', () => {
@@ -3671,10 +3920,16 @@
 
     bindHoldButton('btn-pitch-up', 'pitch+');
     bindHoldButton('btn-pitch-down', 'pitch-');
-    bindHoldButton('btn-yaw-left', 'yaw-');
-    bindHoldButton('btn-yaw-right', 'yaw+');
+    bindHoldButton('btn-yaw-left', 'yaw+');
+    bindHoldButton('btn-yaw-right', 'yaw-');
     bindHoldButton('btn-roll-left', 'roll-');
     bindHoldButton('btn-roll-right', 'roll+');
+    bindHoldButton('btn-surge-back', 'surge-');
+    bindHoldButton('btn-surge-forward', 'surge+');
+    bindHoldButton('btn-lift-down', 'lift-');
+    bindHoldButton('btn-lift-up', 'lift+');
+    bindHoldButton('btn-sway-left', 'sway-');
+    bindHoldButton('btn-sway-right', 'sway+');
 
     const btnCenterControls = document.getElementById('btn-center-controls');
     btnCenterControls?.addEventListener('click', () => clearPilotAxes());
@@ -3696,13 +3951,10 @@
     const btnThrottleUp = document.getElementById('btn-throttle-up');
     btnThrottleUp?.addEventListener('click', () => adjustThrusterPower(0.05));
 
-    const KEY_TO_ACTION = new Map([
-      ['w', 'pitch+'], ['arrowup', 'pitch+'],
-      ['s', 'pitch-'], ['arrowdown', 'pitch-'],
-      ['a', 'yaw-'], ['arrowleft', 'yaw-'],
-      ['d', 'yaw+'], ['arrowright', 'yaw+'],
-      ['q', 'roll-'], ['e', 'roll+']
-    ]);
+    function controlActionForEvent(event) {
+      return FlightControl.actionForInput(event.key, event.code);
+    }
+
 
     window.addEventListener('keydown', event => {
       const key = event.key.toLowerCase();
@@ -3715,6 +3967,30 @@
         if (event.key === 'Escape') setHelpVisible(false);
         return;
       }
+      // Flight controls take priority over editor shortcuts so combinations such as
+      // Left Ctrl + S can command down + reverse at the same time.
+      if (STATE.mode === 'FLIGHT') {
+        const action = controlActionForEvent(event);
+        if (action) {
+          event.preventDefault();
+          setControlAction(action, true);
+          return;
+        }
+        if (event.repeat) return;
+        if (event.key === '-' || event.key === '_') {
+          adjustThrusterPower(-0.05);
+        } else if (event.key === '+' || event.key === '=') {
+          adjustThrusterPower(0.05);
+        } else if (key === 'g') {
+          setStabilize(!STATE.pilot.stabilize);
+        } else if (key === 'f') {
+          requestReturnToWorkshop();
+        } else if (event.key === 'Escape') {
+          setHelpVisible(false);
+        }
+        return;
+      }
+
       const modifier = event.ctrlKey || event.metaKey;
       if (modifier && key === 's') {
         event.preventDefault();
@@ -3733,29 +4009,6 @@
         return;
       }
 
-      if (STATE.mode === 'FLIGHT') {
-        const action = KEY_TO_ACTION.get(key);
-        if (action) {
-          event.preventDefault();
-          setControlAction(action, true);
-          return;
-        }
-        if (event.repeat) return;
-        if (event.key === '-' || event.key === '_') {
-          adjustThrusterPower(-0.05);
-        } else if (event.key === '+' || event.key === '=') {
-          adjustThrusterPower(0.05);
-        } else if (event.key === ' ') {
-          event.preventDefault();
-          setStabilize(!STATE.pilot.stabilize);
-        } else if (key === 'f') {
-          requestReturnToWorkshop();
-        } else if (event.key === 'Escape') {
-          setHelpVisible(false);
-        }
-        return;
-      }
-
       if (event.repeat) return;
       if (key === 'c') {
         toggleContractPanel();
@@ -3770,6 +4023,8 @@
         saveBlueprint();
       } else if (key === 'x') {
         toggleSymmetry();
+      } else if (event.key === '0') {
+        setSelectedTool('Core');
       } else if (event.key === '1') {
         setSelectedTool('Hull');
       } else if (event.key === '2') {
@@ -3792,7 +4047,7 @@
     });
 
     window.addEventListener('keyup', event => {
-      const action = KEY_TO_ACTION.get(event.key.toLowerCase());
+      const action = controlActionForEvent(event);
       if (action) setControlAction(action, false);
     });
     window.addEventListener('blur', clearControlActions);
@@ -3845,11 +4100,19 @@
     }
 
     function computeThrusterCommand(mod, pilot) {
-      return computeMixerCommandFromTorque(
+      const localAxis = [mod.localAxis.x, mod.localAxis.y, mod.localAxis.z];
+      const neutralCommand = FlightControl.neutralCommand(localAxis, STATE.thrusterPower);
+      const rotationalCommand = computeMixerCommandFromTorque(
         mod.localTorque,
         pilot,
-        STATE.thrusterPower,
+        neutralCommand,
         STATE.flight.thrusterTorqueMax
+      );
+      return FlightControl.applyTranslationMix(
+        localAxis,
+        pilot,
+        rotationalCommand,
+        1
       );
     }
 
@@ -4125,6 +4388,7 @@
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
+      applyWorkspaceLayout();
       updateResponsivePanels();
       updateFlightFeedback();
     });
@@ -4134,10 +4398,12 @@
       loadUIPreferences();
       const loaded = loadBlueprint();
       if (!loaded) {
-        seedCore(false);
+        resetToEmptyCraft(false);
       }
       refreshRaycastList();
       updateTelemetry();
+      syncInputProfileUI();
+      applyWorkspaceLayout();
       updateHUD();
       syncHudVisibility();
       syncContractPanelVisibility();

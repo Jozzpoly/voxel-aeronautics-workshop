@@ -1,5 +1,101 @@
 # Changelog
 
+## Foundation Phase 1C.2 — Control Frame, Input Profile & UI Workspace
+
+### Sterowanie i układ odniesienia
+
+- Blueprint podniesiono do v9.
+- Command Core ma pełną orientację i definiuje `forward`, `up` oraz `right` całej konstrukcji.
+- `CraftCompiler` emituje zamrożony `controlFrame`.
+- Intencje pilota są transformowane z układu stanowiska sterowania do lokalnych osi bryły.
+- Dodano szóstą oś translacji `sway` na Z/C.
+- Dodano osobny `foundation.input-profile` z odwracaniem i czułością każdej osi.
+- Domyślny pitch naprawia historycznie odwrócony znak.
+- Starsze blueprinty v3–v8 migrują Core do dawnej orientacji +X/+Y.
+- Model Core dostał widoczny znacznik nosa i góry.
+
+### Interfejs
+
+- Dodano `foundation.ui-workspace`.
+- Build, Contracts, Telemetry i Controls są wspólnymi oknami workspace.
+- Okna można otwierać, zamykać, minimalizować, przeciągać i zmieniać ich rozmiar.
+- Layout jest zapisywany i migruje starą preferencję panelu kontraktów.
+- Dodano kompaktowy pasek zakładek i reset layoutu.
+- Okno Controls pokazuje orientację statku oraz ustawienia wszystkich sześciu osi.
+- Na urządzeniach mobilnych okna wracają do układu arkuszy bez swobodnego przeciągania.
+
+### Narzędzia i jakość
+
+- Usunięto zależność parametrów fizyki w `foundation.config` od `THREE.MathUtils`.
+- Naprawiono generator ZIP, który wcześniej dopisywał drugi raz pliki z katalogu `release/`.
+- Rozszerzono testy migracji, control frame, input profile, workspace i sześciu osi.
+
+## Foundation Phase 1C.1 — Source Parity & Thruster Semantics Hotfix
+
+### Wydanie i zgodność źródeł
+
+- Nadano nową, unikalną nazwę artefaktom, aby przeglądarka lub pobieranie nie myliło ich z wcześniejszym Phase 1C.
+- Dodano `SOURCE_MANIFEST.json` z hashami wejść buildu.
+- Jednoplikowy HTML zawiera identyfikator wydania i hash manifestu.
+- ZIP zawiera pełne źródła oraz dokładnie ten sam jednoplikowy HTML w katalogu `release/`.
+- Test buildu porównuje każdy osadzony moduł bajt po bajcie ze źródłem i porównuje pliki ZIP-u z katalogiem roboczym.
+- Dodano `npm run verify-release` do samodzielnej walidacji po rozpakowaniu.
+
+### Sterowanie thrusterami
+
+- Suwak nie jest już limitem wejść pilota.
+- Ustawia wyłącznie pasywny ciąg silników skierowanych ku lokalnemu `+Y`.
+- Silniki poziome i skierowane w dół pozostają wyłączone bez komendy.
+- W/S, Space/Left Ctrl oraz miks obrotowy mogą dojść do 100% niezależnie od pasywnego ciągu.
+- Left Ctrl uruchamia silniki skierowane w dół i wygasza pasywny ciąg silników skierowanych w górę.
+- Dodano testy znaku pionowego i niezależności sterowania od suwaka.
+
+
+## Foundation Phase 1C — CraftCompiler, Freeform Core & Flight Input
+
+### Walidacja
+
+- Ponownie uruchomiono pełny zestaw testów Phase 1B przed zmianami.
+- Potwierdzono spójność modelu, historii, startupu i buildu.
+- Rozszerzony audyt wykrył błąd `snapshot` poza zakresem w ścieżce Launch; naprawiono go i dodano test kliknięcia Launch.
+
+### Blueprint i warsztat
+
+- Podniesiono format blueprintu do v8.
+- Nowy projekt zaczyna się pusty.
+- Pierwszym blokiem może być dowolny moduł.
+- Core może znajdować się w dowolnej pozycji i można go usunąć.
+- Edytor dopuszcza pusty, bez-Core i rozłączony stan roboczy.
+- Start nadal wymaga dokładnie jednego Core i spójnej konstrukcji.
+- Zachowano migracje v3–v7 z historycznym Core w `0,0,0`.
+
+### CraftCompiler
+
+- Dodano `foundation.craft-compiler`.
+- Wynik jest deterministyczny, głęboko zamrożony i cache’owany per rewizja.
+- Kompilowane są masa, COM, bezwładność, graf, Core, części funkcjonalne, siły i bazowy plan colliderów.
+- Runtime lotu pobiera konstrukcję przez kompilator.
+- Payload jest kotwiczony względem rzeczywistej pozycji Core.
+
+### Sterowanie
+
+- Dodano `foundation.flight-control`.
+- W/S steruje przód/tył.
+- Space/Left Ctrl steruje góra/dół.
+- A/D ma poprawiony kierunek yaw.
+- Pitch przeniesiono na strzałki góra/dół; Q/E pozostaje rollem.
+- Dodano mobilne przyciski translacji i telemetrię obu osi.
+- Pierwotna implementacja Phase 1C używała suwaka jako limitu mocy; zachowanie to zostało zastąpione w Phase 1C.1 przez niezależną autorytetę wejść pilota.
+- Usunięto błąd pozwalający komendom kierunkowym ominąć suwak ustawiony na 0%.
+- Sterowanie lotem ma pierwszeństwo nad Ctrl+S, dzięki czemu Ctrl+S działa jako dół + tył podczas lotu.
+
+### Testy
+
+- Dodano testy CraftCompiler i FlightControl.
+- Dodano testy pustego warsztatu, ruchomego Core i rozłączonych WIP.
+- Startup smoke wykonuje teraz realną ścieżkę Launch i wejścia pilota.
+- Wszystkie odziedziczone regresje pozostają zielone.
+
 ## Foundation Phase 1B — CraftModel Boundary
 
 ### Walidacja poprzedniego etapu

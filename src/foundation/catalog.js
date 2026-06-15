@@ -5,7 +5,7 @@
     const { deepFreeze } = config;
 
     const BLOCKS = {
-      Core:     { mass: 6.0, color: 0x9f7aea, desc: 'Command anchor and flight computer.', orientationMode: 'none', dragArea: 0.18, durability: 260, structural: 2.5 },
+      Core:     { mass: 6.0, color: 0x9f7aea, desc: 'Oriented command anchor defining craft forward, up and right.', orientationMode: 'basis', dragArea: 0.18, durability: 260, structural: 2.5 },
       Hull:     { mass: 1.0, color: 0x9a6b45, desc: 'Light structural block.', orientationMode: 'none', dragArea: 0.15, durability: 72, structural: 0.75 },
       Frame:    { mass: 2.6, color: 0x7c8ea8, desc: 'Reinforced load-bearing block.', orientationMode: 'none', dragArea: 0.18, durability: 210, structural: 2.6 },
       Thruster: { mass: 1.6, color: 0xff5a55, desc: 'Fixed directional engine; off-center units provide differential control.', orientationMode: 'direction', force: 42, fuelRate: 0.34, dragArea: 0.12, durability: 96, structural: 0.9 },

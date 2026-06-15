@@ -2,7 +2,7 @@
 
 ## Status
 
-Przyjęte.
+Częściowo zastąpione przez ADR 0006 dla blueprintów v8. Zasady Core w początku i stałej spójności obowiązują wyłącznie migracje v3–v7.
 
 ## Kontekst
 
@@ -15,8 +15,10 @@ Blueprint jest zwykłym dokumentem danych, który można tworzyć, walidować, k
 ## Inwarianty
 
 - maksymalnie jeden Core;
-- Core znajduje się w `0,0,0`;
-- wszystkie bloki są połączone ścianami z Core;
+- dla dokumentów v3–v7 Core znajduje się w `0,0,0`;
+- dla dokumentów v3–v7 wszystkie bloki są połączone ścianami z Core;
+- dokument v8 może być pusty, bez Core lub chwilowo rozłączony;
+- v8 dopuszcza maksymalnie jeden Core w dowolnej pozycji;
 - brak powtarzających się pozycji;
 - współrzędne są całkowite i mieszczą się w siatce;
 - typ bloku istnieje w katalogu;

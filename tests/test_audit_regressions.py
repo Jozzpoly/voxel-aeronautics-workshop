@@ -127,7 +127,7 @@ assert 'payloadIntegrity: deliveredPayloadIntegrity' in GAME
 
 # Large editor blueprints remain valid, but the current compound-body solver has an explicit safe launch cap.
 assert 'maxFlightParts: 480' in ALL_JS
-assert "CRAFT.size > PHYSICS.maxFlightParts" in GAME
+assert "snapshot.parts.length > PHYSICS.maxFlightParts" in GAME
 assert 'Flight is limited to ${PHYSICS.maxFlightParts} attached modules' in GAME
 
 # Undo/redo history is bounded by both snapshot count and stored-part budget.
@@ -139,8 +139,31 @@ assert 'storedParts > maxStoredParts' in ALL_JS
 
 # A destroyed command core is always a terminal craft failure, regardless of remaining wing health.
 integrity = function_source('recomputeFlightIntegrity')
-assert "runtimePartByKey.get('0,0,0')" in integrity
+assert 'getRuntimeCore()' in integrity
 assert 'coreOperational && STATE.flight.initialHealth > 0' in integrity
+
+
+# Editing readiness is separated from flight readiness: empty/disconnected work-in-progress is saveable,
+# while CraftCompiler owns launch diagnostics and a movable Core.
+assert 'foundation.craft-compiler' in ALL_JS
+assert "errors.push('missing-core')" in ALL_JS
+assert "errors.push('disconnected')" in ALL_JS
+assert "corePosition" in ALL_JS
+assert "resetToEmptyCraft(false)" in GAME
+assert "tool === 'Core'" not in function_source('setSelectedTool')
+
+# Flight input exposes independent translation and rotation axes with corrected yaw semantics.
+assert 'foundation.flight-control' in ALL_JS
+assert "a: 'yaw+'" in ALL_JS and "d: 'yaw-'" in ALL_JS
+assert "Space: 'lift+'" in ALL_JS and "ControlLeft: 'lift-'" in ALL_JS
+assert "w: 'surge+'" in ALL_JS and "s: 'surge-'" in ALL_JS
+assert 'FlightControl.neutralCommand(' in function_source('computeCraftAnalysis')
+thruster_command = function_source('computeThrusterCommand')
+assert 'const neutralCommand = FlightControl.neutralCommand(localAxis, STATE.thrusterPower);' in thruster_command
+assert 'STATE.flight.thrusterTorqueMax' in thruster_command
+assert 'FlightControl.applyTranslationMix(' in thruster_command
+assert 'rotationalCommand,\n        1' in thruster_command
+assert 'Flight controls take priority over editor shortcuts' in GAME
 
 # Persistence rejects unknown future blueprint versions and sanitizes career data.
 validate = function_source('normalizeBlueprintData')
@@ -174,8 +197,12 @@ for element_id in ('btn-contract-panel-open', 'btn-contract-panel-close', 'ui-co
     assert f'id="{element_id}"' in HTML
 assert re.search(r'id="contract-panel"[^>]*\shidden', HTML)
 assert 'function syncContractPanelVisibility()' in GAME
-assert "setContractPanelCollapsed(true, false);" in GAME
+assert "panelId === 'build' || panelId === 'contracts'" in GAME
 assert "if (key === 'c')" in GAME
-assert "UI_SAVE_KEY = 'voxel-aeronautics-ui-v1'" in ALL_JS
+assert "UI_SAVE_KEY = 'voxel-aeronautics-ui-v2'" in ALL_JS
+assert "'voxel-aeronautics-ui-v1'" in ALL_JS
+assert 'foundation.ui-workspace' in ALL_JS
+assert 'data-workspace-panel="controls"' in HTML
+assert 'data-panel-toggle="build"' in HTML
 assert '.contract-panel-trigger' in CSS and '.panel-close-btn' in CSS
-print({'contract_panel_close_reopen': 'ok', 'contract_panel_flight_autohide': 'ok', 'contract_panel_preference': 'ok'})
+print({'workspace_panel_close_reopen': 'ok', 'contract_panel_flight_autohide': 'ok', 'workspace_preference_migration': 'ok'})
