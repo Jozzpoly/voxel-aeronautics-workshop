@@ -3,13 +3,13 @@
 
   window.VAW.define('foundation.input-profile', [], () => {
     const AXES = Object.freeze(['pitch', 'yaw', 'roll', 'surge', 'sway', 'lift']);
-    const PROFILE_VERSION = 2;
+    const PROFILE_VERSION = 3;
     const BINDING_SLOTS = 2;
 
     const BINDABLE_ACTIONS = Object.freeze([
       'surge+', 'surge-', 'sway-', 'sway+', 'lift+', 'lift-',
       'pitch+', 'pitch-', 'yaw+', 'yaw-', 'roll-', 'roll+',
-      'balloonPower-', 'balloonPower+'
+      'thrusterPower-', 'thrusterPower+', 'balloonPower-', 'balloonPower+'
     ]);
 
     const ACTION_LABELS = Object.freeze({
@@ -25,6 +25,8 @@
       'yaw-': 'Yaw right',
       'roll-': 'Roll left',
       'roll+': 'Roll right',
+      'thrusterPower-': 'Passive thrust −',
+      'thrusterPower+': 'Passive thrust +',
       'balloonPower-': 'Balloon power −',
       'balloonPower+': 'Balloon power +'
     });
@@ -42,6 +44,8 @@
       'yaw-': Object.freeze(['KeyD', 'ArrowRight']),
       'roll-': Object.freeze(['KeyQ']),
       'roll+': Object.freeze(['KeyE']),
+      'thrusterPower-': Object.freeze(['Minus']),
+      'thrusterPower+': Object.freeze(['Equal']),
       'balloonPower-': Object.freeze(['Comma']),
       'balloonPower+': Object.freeze(['Period'])
     });
@@ -62,7 +66,7 @@
       MetaLeft: 'Left Meta', MetaRight: 'Right Meta',
       ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→',
       Comma: ',', Period: '.', Semicolon: ';', Quote: "'", Slash: '/', Backslash: '\\',
-      BracketLeft: '[', BracketRight: ']', Minus: '-', Equal: '=', Backquote: '`',
+      BracketLeft: '[', BracketRight: ']', Minus: '−', Equal: '+', Backquote: '`',
       Escape: 'Esc', Enter: 'Enter', Tab: 'Tab', Backspace: 'Backspace', Delete: 'Delete',
       PageUp: 'Page Up', PageDown: 'Page Down', Home: 'Home', End: 'End'
     });
@@ -104,15 +108,34 @@
     function normalizeBindings(raw) {
       const bindings = {};
       const claimed = new Set();
+      const source = raw && typeof raw === 'object' ? raw : null;
+
+      // Preserve every explicit user binding before filling missing actions with defaults.
+      // This matters during schema migration: a new default must never steal a key that
+      // an older profile already assigned to a later action in BINDABLE_ACTIONS.
       for (const action of BINDABLE_ACTIONS) {
-        const requested = normalizeBindingList(raw?.[action], DEFAULT_BINDINGS[action]);
+        const hasExplicitValue = source && Object.prototype.hasOwnProperty.call(source, action);
+        if (!hasExplicitValue) continue;
         const accepted = [];
-        for (const code of requested) {
+        for (const code of normalizeBindingList(source[action], [])) {
           if (claimed.has(code)) continue;
           accepted.push(code);
           claimed.add(code);
         }
-        bindings[action] = Object.freeze(accepted);
+        bindings[action] = accepted;
+      }
+
+      for (const action of BINDABLE_ACTIONS) {
+        if (!bindings[action]) {
+          const accepted = [];
+          for (const code of DEFAULT_BINDINGS[action] || []) {
+            if (claimed.has(code)) continue;
+            accepted.push(code);
+            claimed.add(code);
+          }
+          bindings[action] = accepted;
+        }
+        bindings[action] = Object.freeze(bindings[action]);
       }
       return Object.freeze(bindings);
     }

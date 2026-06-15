@@ -167,10 +167,19 @@ assert 'STATE.flight.thrusterTorqueMax' in thruster_command
 assert 'FlightControl.applyTranslationMix(' in thruster_command
 assert 'rotationalCommand,\n        1' in thruster_command
 assert 'Flight controls use the user profile' in GAME
+assert "'thrusterPower-': Object.freeze(['Minus'])" in ALL_JS
+assert "'thrusterPower+': Object.freeze(['Equal'])" in ALL_JS
 assert "'balloonPower-': Object.freeze(['Comma'])" in ALL_JS
 assert "'balloonPower+': Object.freeze(['Period'])" in ALL_JS
 assert 'navigator.keyboard.lock' in GAME and 'requestFullscreen' in GAME
 assert 'InputProfile.updateBinding' in GAME and 'input-binding-list' in HTML
+assert 'PROFILE_VERSION = 3' in ALL_JS
+assert 'requiredSupplementalPowerForHover' in ALL_JS
+assert 'function setThrusterPower(value, options = {})' in GAME
+assert "adjustment?.target === 'thrusterPower' || adjustment?.target === 'balloonPower'" in GAME
+assert "event.key === '-'" not in GAME and "event.key === '+'" not in GAME
+for element_id in ('ui-thruster-hover-marker', 'ui-thruster-climb-zone', 'ui-thruster-guidance'):
+    assert f'id="{element_id}"' in HTML
 assert 'activePointers' not in GAME and 'performTouchAction' not in GAME
 
 # Persistence rejects unknown future blueprint versions and sanitizes career data.
@@ -206,7 +215,7 @@ for element_id in ('workspace-toolbar', 'contract-panel'):
 for removed_id in ('btn-ui-contracts', 'mobile-topbar', 'mobile-controls', 'btn-touch-place'):
     assert f'id="{removed_id}"' not in HTML
 assert 'id="desktop-required"' in HTML
-assert 'Foundation Phase 1D.2D' in HTML
+assert 'Foundation Phase 1D.2E' in HTML
 assert 'Foundation Phase 1D.2B • Mission + Balloon Control Fix' not in HTML
 assert re.search(r'id="contract-panel"[^>]*\shidden', HTML)
 assert 'btn-contract-panel-open' not in HTML and 'btn-contract-panel-close' not in HTML

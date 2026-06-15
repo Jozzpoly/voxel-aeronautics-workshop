@@ -1,16 +1,17 @@
-# Roadmap po Foundation Phase 1D.2D
+# Roadmap po Foundation Phase 1D.2E
 
-## Ukończone — Phase 1D.2D
+## Ukończone — Phase 1D.2E
 
-- input profile v2 z trwałymi, migrowanymi bindingami;
-- dwa sloty na każdą komendę lotu;
-- runtime rebind UI w panelu Controls;
-- domyślny Left Ctrl jako zejście bez używania Shift;
-- ostrzeżenia o ryzyku modifierów;
-- opcjonalny Flight Focus: JavaScript fullscreen + Keyboard Lock;
-- dynamiczne odświeżanie zablokowanych kodów po rebindingu;
-- UI preferences v5 z migracją v1–v4;
-- testy migracji, konfliktów, capture i startup smoke.
+- input profile v3 z akcjami obu regulatorów mocy;
+- rebindable `−/+` dla Passive vertical thrust oraz `,/.` dla Balloon power;
+- automatyczna migracja profili v1–v2 bez przejmowania zajętych klawiszy;
+- centralny `setThrusterPower()` obok `setBalloonPower()`;
+- wspólny sample pionowego wsparcia dla UI;
+- czyste `requiredSupplementalPowerForHover()`;
+- marker progu zawisu i climb zone dla pasywnego ciągu;
+- dynamiczne etykiety skrótów pobierane z aktualnego profilu;
+- testy suwaka, hotkeyów, migracji i jednoczesnego sterowania z Left Ctrl;
+- stały `DELIVERY_WORKFLOW.md` i obowiązkowe instrukcje aktualizacji repozytorium.
 
 ## Następny etap — Foundation Phase 1D.3: Runtime Body Builder & Headless Harness
 
@@ -24,6 +25,7 @@
 
 - free fall;
 - hover i aerostatic equilibrium;
+- settling oraz reakcja na oba regulatory pionowej siły;
 - offset thrust i moment;
 - zmiana COM;
 - detach i długi soak.
@@ -39,14 +41,14 @@
 
 Cannon.js, cannon-es i Rapier porównywać dopiero na tej samej baterii scenariuszy.
 
-## Wejście — dalsze prace równoległe, nieblokujące 1D.3
+## Sterowanie — dalsze prace równoległe, nieblokujące 1D.3
 
 - import/export profilu;
-- preset `Default Ctrl`, `Browser-safe`, `Left-handed`;
-- gamepad i deadzony analogowe;
+- presety `Default Ctrl`, `Browser-safe`, `Left-handed`;
+- gamepad i analogowe deadzony;
 - widok konfliktów i filtr nieprzypisanych akcji;
-- połączenie Flight Focus z opcjonalnym Pointer Lock;
-- badanie osobnego desktop wrappera, jeśli webowe ograniczenia skrótów okażą się zbyt uciążliwe.
+- opcjonalny Pointer Lock połączony z Flight Focus;
+- później szybsza regulacja mocy z konfigurowalnym krokiem lub osią analogową.
 
 ## Foundation Phase 2 — Collider Compiler
 

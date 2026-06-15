@@ -1,29 +1,42 @@
-# Critical Review — Foundation Phase 1D.2D
+# Critical Review — Foundation Phase 1D.2E
 
 ## Problem źródłowy
 
-Zmiana Ctrl → Shift naprawiała skróty Chrome, ale tworzyła konflikt z Klawiszami trwałymi Windows. To ujawniło błąd architektoniczny: mapowanie klawiszy było traktowane jak stała gry, mimo że jest preferencją użytkownika i zależy od systemu, przeglądarki oraz układu klawiatury.
+Balloon power miało czytelny model guidance, natomiast Passive vertical thrust pozostawało zwykłym procentowym suwakiem. Gracz nie wiedział, czy 35%, 70% lub 100% wystarczy do utrzymania konkretnego statku. Klawisze `−/+` działały poza wersjonowanym profilem, więc nowy system rebindingu nie obejmował całego sterowania.
 
-## Korekta
+## Korekta architektoniczna
 
-Rebinding został wdrożony teraz, nie przesunięty do późniejszej fazy. Dzięki temu kolejny konflikt nie wymaga nowego hotfixu w `game.js`.
+Nie skopiowano jedynie wyglądu Balloon power. Oba regulatory korzystają teraz ze wspólnego sample masy, wysokości i dostępnych źródeł pionowej siły. Czysta funkcja `requiredSupplementalPowerForHover()` odpowiada na ogólne pytanie: jaki udział dodatkowego źródła liftu jest potrzebny po uwzględnieniu źródła bazowego.
+
+Dla passive thrust:
+
+- bazowym źródłem jest aktualny lift balonów na bieżącej wysokości;
+- dodatkowym źródłem są sprawne thrustry skierowane ku lokalnemu `+Y`;
+- próg jest przedstawiony markerem oraz strefą wznoszenia;
+- suwak, hotkey i fizyka przechodzą przez `setThrusterPower()`.
+
+## Ocena rozwiązania
 
 ### Mocne strony
 
-- semantyczne akcje pozostają oddzielone od fizycznych kodów;
-- profil v2 ma jawne migracje;
-- jeden kod nie może niejawnie sterować dwiema akcjami;
-- UI przechwytuje fizyczny `event.code`, więc binding nie zależy od znaku generowanego przez layout;
-- Flight Focus używa platformowego mechanizmu do przechwytywania modifier chords;
-- brak udawania, że `preventDefault()` rozwiązuje wszystkie skróty Chrome.
+- nie powstała druga, rozbieżna formuła zawisu w DOM;
+- input profile v3 obejmuje wszystkie cztery akcje regulacji mocy;
+- etykiety skrótów w UI są odczytywane z aktualnego profilu;
+- migracja v2 dodaje nowe akcje, ale nie zabiera kodów już przypisanych przez użytkownika;
+- bezpośrednie wejście pilota nadal nie jest ograniczone suwakiem;
+- testy obejmują suwak, klawisze i kombinacje z Left Ctrl.
 
-### Ryzyka
+### Ograniczenia
 
-- Keyboard Lock ma ograniczone wsparcie i wymaga fullscreen, bezpiecznego kontekstu oraz zgody;
-- nie wykonano automatycznego testu prawdziwego promptu/uprawnienia Chrome;
-- dwa sloty na akcję zwiększają rozmiar panelu Controls;
-- brak jeszcze presetów, importu/exportu i obsługi gamepada.
+- marker jest analizą statyczną i nie przewiduje chwilowego liftu skrzydeł, turbulencji ani bezpośredniego thrustu pilota;
+- przy uszkodzeniu części próg może skokowo zmienić pozycję, co jest poprawne fizycznie, ale wymaga obserwacji UX;
+- brak prawdziwego automatycznego playtestu WebGL i odczucia sterowania;
+- `game.js` nadal agreguje analizę pionowych źródeł i powinien oddać ten obowiązek przyszłemu runtime modelowi.
+
+## Workflow wydania
+
+Wcześniejszy błąd non-fast-forward pokazał, że samo przekazanie plików nie wystarcza. `DELIVERY_WORKFLOW.md` i `PUSH_INSTRUCTIONS.md` ustanawiają od tej wersji obowiązkową, powtarzalną procedurę: synchronizacja przed kopiowaniem, testy, commit, ponowny fetch/rebase i `git push origin HEAD:main`, bez force-pusha.
 
 ## Wniosek
 
-Phase 1D.2D jest lepszym punktem pushu niż kolejna zamiana jednego klawisza na drugi. Default użytkownika zostaje zachowany, a projekt otrzymuje drogę wyjścia zarówno dla ograniczeń przeglądarki, jak i osobistych preferencji.
+Phase 1D.2E zamyka niespójność obu regulatorów pionowej siły i usuwa ostatni twardo zakodowany fragment ich sterowania. Jest bezpieczną bazą do Phase 1D.3 po krótkim manualnym sprawdzeniu markerów na lekkim, ciężkim i pozbawionym pionowych thrusterów statku.

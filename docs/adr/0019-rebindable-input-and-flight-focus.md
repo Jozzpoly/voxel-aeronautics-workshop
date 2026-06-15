@@ -13,7 +13,7 @@ A normal page-level `keydown.preventDefault()` is not a reliable guarantee for a
 ## Decision
 
 1. Physical keyboard mapping is part of `foundation.input-profile`, not `game.js`.
-2. Input profile v2 stores up to two `KeyboardEvent.code` values per bindable action.
+2. Input profile v2 introduced up to two `KeyboardEvent.code` values per bindable action. Phase 1D.2E/ADR 0020 advances the schema to v3 by adding both vertical-power adjustment pairs; the ownership decision remains unchanged.
 3. Older profiles without bindings migrate to current defaults.
 4. Assigning an occupied code moves it to the new action.
 5. `Left Ctrl` remains the default `lift-` binding requested by the user.

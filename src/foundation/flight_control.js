@@ -6,6 +6,8 @@
     ['foundation.input-profile', 'foundation.control-frame'],
     (InputProfile, ControlFrame) => {
     const AUXILIARY_ACTIONS = Object.freeze({
+      'thrusterPower-': Object.freeze({ target: 'thrusterPower', direction: -1 }),
+      'thrusterPower+': Object.freeze({ target: 'thrusterPower', direction: 1 }),
       'balloonPower-': Object.freeze({ target: 'balloonPower', direction: -1 }),
       'balloonPower+': Object.freeze({ target: 'balloonPower', direction: 1 })
     });

@@ -1,9 +1,35 @@
-# Push Instructions — Phase 1D.2D
+# Push Instructions — Phase 1D.2E
 
-## Przed commitem
+## Który plik jest źródłem prawdy
 
-1. Rozpakuj paczkę źródłową do katalogu repozytorium.
-2. Uruchom:
+Do aktualizacji repozytorium używaj pełnego ZIP-a źródłowego:
+
+`Voxel_Aeronautics_Workshop_Foundation_Phase_1D2E_Guided_Vertical_Power_Controls.zip`
+
+Jednoplikowy HTML służy do szybkiego uruchomienia i prezentacji. Nie zastępuje źródeł repozytorium.
+
+## Bezpieczna aktualizacja krok po kroku
+
+### 1. Zsynchronizuj lokalne `main`
+
+W katalogu repozytorium:
+
+```powershell
+git checkout main
+git status
+git fetch origin
+git pull --rebase origin main
+```
+
+Jeżeli `git status` pokazuje niezatwierdzone własne zmiany, najpierw je commituj albo schowaj przez `git stash`. Nie kopiuj wydania na brudny working tree.
+
+### 2. Rozpakuj paczkę poza repo
+
+Rozpakuj ZIP do osobnego katalogu. Następnie skopiuj **zawartość katalogu projektu** do katalogu repozytorium, zastępując istniejące pliki.
+
+Nie usuwaj ani nie nadpisuj katalogu `.git`.
+
+### 3. Zweryfikuj projekt
 
 ```powershell
 python tests/run_all.py
@@ -11,30 +37,71 @@ python tools/build_release.py
 python tools/verify_release.py
 ```
 
-3. Wykonaj manualną checklistę z `VALIDATION_REPORT.md`, szczególnie:
-   - domyślny Left Ctrl;
-   - rebinding i zapis profilu;
-   - Flight Focus w Chrome/Brave;
-   - ukończenie Hover License;
-   - zachowanie balonów.
-4. Użyj `Ctrl+Shift+R` przed playtestem.
+Wymagane są wszystkie zielone testy oraz `sourceParity: ok`.
 
-## Kontrola zmian
+### 4. Wykonaj manualną checklistę
+
+Przejdź `VALIDATION_REPORT.md`, szczególnie:
+
+- aktualizacja Passive vertical thrust suwakiem i klawiszami;
+- marker progu zawisu obu regulatorów;
+- jednoczesne `Left Ctrl` z `−/+` i `,/.` w Flight Focus;
+- zapis i migracja bindingów;
+- Hover License;
+- zachowanie balonów.
+
+Przed playtestem użyj `Ctrl+Shift+R`.
+
+### 5. Sprawdź diff i utwórz commit
 
 ```powershell
 git status
 git diff --stat
 git diff
+git add -A
+git commit -m "Foundation 1D.2E: add guided vertical power controls"
 ```
 
-Nie commituj przypadkowych save’ów, logów ani starego `release/`.
+### 6. Zsynchronizuj się ponownie przed pushem
 
-## Commit
+To chroni przed sytuacją, w której ktoś dodał commit na GitHubie podczas Twojego testowania:
 
 ```powershell
-git add .
-git commit -m "Foundation 1D.2D: add rebindable input and flight focus"
-git push origin main
+git fetch origin
+git rebase origin/main
 ```
+
+Jeżeli rebase zmienił pliki projektu, ponownie uruchom:
+
+```powershell
+python tests/run_all.py
+```
+
+### 7. Push aktualnej gałęzi na `main`
+
+```powershell
+git push origin HEAD:main
+```
+
+## Gdy rebase zgłosi konflikt
+
+```powershell
+git status
+```
+
+Popraw wskazane pliki, a potem:
+
+```powershell
+git add -A
+git rebase --continue
+```
+
+Powtarzaj do komunikatu o pomyślnym zakończeniu rebase. Gdy trzeba wrócić do stanu sprzed operacji:
+
+```powershell
+git rebase --abort
+```
+
+Nie używaj `git push --force` do zwykłej publikacji wydania.
 
 Repozytorium nie zostało zmienione automatycznie przez agenta.

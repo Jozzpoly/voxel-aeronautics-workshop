@@ -1,6 +1,6 @@
 # AI PROJECT MEMORY — Voxel Aeronautics Workshop
 
-> Obowiązkowy punkt wejścia. Najpierw przeczytaj ten plik, następnie `ARCHITECTURE.md`, `VALIDATION_REPORT.md` i testy.
+> Obowiązkowy punkt wejścia. Najpierw przeczytaj ten plik, następnie `ARCHITECTURE.md`, `VALIDATION_REPORT.md`, `DELIVERY_WORKFLOW.md` i testy.
 
 ## 1. Wizja
 
@@ -8,7 +8,7 @@ Główna fantazja: **buduję, programuję, testuję i latam własnym voxelowym s
 
 ## 2. Aktualny milestone
 
-**Foundation Phase 1D.2D — Rebindable Input & Flight Focus**
+**Foundation Phase 1D.2E — Guided Vertical Power Controls**
 
 Ukończone fundamenty:
 
@@ -16,12 +16,13 @@ Ukończone fundamenty:
 - ruchomy, usuwalny i orientowany Command Core;
 - blueprint v9 oraz `CompiledCraft.controlFrame`;
 - sześć semantycznych osi;
-- input profile v2 z trwałymi bindingami;
+- input profile v3 z trwałymi bindingami;
 - desktop workspace v3;
 - physics lifecycle/contact boundary;
 - state-based, multi-zone landing;
 - wspólna aerostatyka UI/fizyka;
 - ograniczone tłumienie pionowe balonów;
+- prowadzone kontrolki Balloon power i Passive vertical thrust;
 - deterministyczny ZIP + single HTML z source parity.
 
 ## 3. Nienaruszalne reguły
@@ -41,7 +42,10 @@ Ukończone fundamenty:
 13. Tłumienie balonów nie może używać docelowej wysokości.
 14. Bindingi są preferencją użytkownika, nie częścią blueprintu.
 15. Mapowanie klawiszy nie może ponownie zostać rozproszone po `game.js`; źródłem jest `foundation.input-profile`.
-16. Po etapie dostarczać ZIP źródeł, single HTML, raport i testy.
+16. Pasywny ciąg jest trimem, a nie limitem autorytetu pilota.
+17. Balloon power oraz Passive vertical thrust mają po jednym centralnym setterze i wspólny model guidance.
+18. Każda dostawa plików musi zawierać ZIP źródeł, single HTML, raport, walidację, sumy kontrolne oraz dokładną instrukcję aktualizacji repozytorium.
+19. Nigdy nie zalecać `git push --force` jako zwykłego sposobu publikacji wydania.
 
 ## 4. Platforma
 
@@ -62,20 +66,23 @@ Domyślny profil:
 - ↑/↓ — pitch;
 - A/D lub ←/→ — yaw;
 - Q/E — roll;
+- −/+ — Passive vertical thrust −/+2%;
 - ,/. — Balloon power −/+2%.
 
-Profil wejścia v2 przechowuje do dwóch kodów fizycznych na akcję. Starsze profile bez sekcji `bindings` migrują do bieżących defaultów. Przypisanie zajętego klawisza przenosi go do nowej akcji, zamiast tworzyć niejednoznaczność.
+Profil wejścia v3 przechowuje do dwóch fizycznych kodów na każdą akcję, w tym oba regulatory mocy. Profile v1–v2 migrują do bieżącego schematu. Nowe defaulty są dodawane tylko wtedy, gdy nie zabierają klawisza już zajętego przez użytkownika. Przypisanie zajętego klawisza przenosi go do nowej akcji zamiast tworzyć niejednoznaczność.
 
-`Left Ctrl` pozostaje świadomym defaultem użytkownika. W zwykłym trybie przeglądarki nie można zagwarantować kombinacji typu `Ctrl+W`. **Flight Focus** używa JavaScript fullscreen + Keyboard Lock, aby Chromium przekazało aktualne kody gry przed obsługą skrótów przeglądarki. Funkcja jest opcjonalna, zależna od wsparcia, bezpiecznego kontekstu i zgody użytkownika. Zawsze pozostaje możliwość rebindingu.
+`Left Ctrl` pozostaje świadomym defaultem użytkownika. W zwykłym trybie przeglądarki nie można zagwarantować kombinacji typu `Ctrl+W`. **Flight Focus** używa JavaScript fullscreen + Keyboard Lock, aby Chromium przekazało aktualne kody gry przed obsługą wspieranych skrótów przeglądarki. Zawsze pozostaje rebinding.
 
-## 6. Aerostatyka
+## 6. Pionowe źródła siły
 
-- lift maleje z wysokością;
-- UI pokazuje próg zawisu i wysokość równowagi;
-- `setBalloonPower()` jest jedyną ścieżką zmiany mocy;
-- `verticalDampingForce()` przeciwdziała prędkości pionowej;
-- efekt skaluje się z aktywnym liftem i jest ograniczony;
-- przy wyłączonych balonach efekt znika.
+- lift balonów maleje z wysokością;
+- oba suwaki pokazują aktualny próg statycznego zawisu;
+- Balloon power pokazuje także przybliżoną wysokość równowagi;
+- `setBalloonPower()` i `setThrusterPower()` są jedynymi ścieżkami zmiany swoich stanów;
+- suwak, hotkey, procent, marker i fizyka korzystają z tych samych wartości;
+- `requiredSupplementalPowerForHover()` oblicza, ile pasywnego ciągu potrzeba po uwzględnieniu aktualnego liftu balonów;
+- bezpośrednie wejście pilota zachowuje pełną moc niezależnie od ustawienia pasywnego ciągu;
+- `verticalDampingForce()` ogranicza oscylację balonów bez autopilota wysokości.
 
 ## 7. Najbliższy etap
 
@@ -92,11 +99,23 @@ Profil wejścia v2 przechowuje do dwóch kodów fizycznych na akcję. Starsze pr
 Po 1D.3, bez blokowania fizyki:
 
 - import/export profilu sterowania;
-- preset browser-safe oraz gamepad;
+- preset browser-safe, left-handed oraz gamepad;
 - lepszy ekran konfliktów i wyszukiwanie nieprzypisanych akcji;
-- ewentualny Pointer Lock/Flight Focus jako spójny tryb immersyjny.
+- opcjonalny Pointer Lock jako część Flight Focus.
 
-## 9. Świadomy dług
+## 9. Workflow dostaw
+
+Pełne zasady znajdują się w `DELIVERY_WORKFLOW.md`. Każda odpowiedź przekazująca nowe pliki ma podawać:
+
+- który ZIP jest źródłem prawdy;
+- co rozpakować i gdzie skopiować;
+- jak zsynchronizować `main` przed zmianą;
+- jakie testy uruchomić;
+- proponowaną wiadomość commita;
+- bezpieczne komendy `fetch`, `rebase` i `push origin HEAD:main`;
+- procedurę konfliktu i zakaz force-pusha.
+
+## 10. Świadomy dług
 
 - duży `game.js`;
 - jeden collider na voxel;

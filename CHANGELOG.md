@@ -1,5 +1,19 @@
 # Changelog
 
+## Foundation Phase 1D.2E — Guided Vertical Power Controls
+
+- Upgraded `foundation.input-profile` to v3 with rebindable Passive vertical thrust adjustment.
+- Added default `Minus/Equal` bindings beside existing `Comma/Period` Balloon power bindings.
+- Added migration from v1–v2 that preserves user-claimed physical codes.
+- Centralized passive power changes in `setThrusterPower()`.
+- Added shared vertical support sampling and `requiredSupplementalPowerForHover()`.
+- Added a hover marker, climb zone and live state guidance to Passive vertical thrust.
+- Made both power-control shortcut labels reflect the current input profile.
+- Added slider, hotkey, migration, simultaneous Ctrl chord and guidance regression tests.
+- Added permanent `DELIVERY_WORKFLOW.md` and robust fetch/rebase/push instructions.
+- Version `0.5.7-foundation.1d2e`.
+- Release id `foundation-1d2e-guided-vertical-power-controls`.
+
 ## Foundation Phase 1D.2D — Rebindable Input & Flight Focus
 
 - Upgraded `foundation.input-profile` to v2 with persistent physical-key bindings.

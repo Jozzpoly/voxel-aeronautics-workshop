@@ -9,8 +9,8 @@
       return Object.freeze(value);
     }
 
-    const APP_VERSION = '0.5.6-foundation.1d2d';
-    const RELEASE_ID = 'foundation-1d2d-rebindable-flight-focus';
+    const APP_VERSION = '0.5.7-foundation.1d2e';
+    const RELEASE_ID = 'foundation-1d2e-guided-vertical-power-controls';
     const GRID = { halfExtent: 18, minY: 0, maxY: 20, maxBlocks: 2500 };
     const SAVE_VERSION = 9;
     const SAVE_KEY = 'voxel-aeronautics-blueprint-v9';

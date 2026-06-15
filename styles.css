@@ -228,6 +228,14 @@
       line-height:1.25;
     }
     .power-slider-guidance > span:first-child { color:#fde68a; }
+    .thruster-power-guide .power-slider-climb-zone {
+      background:rgba(251,146,60,.72);
+      box-shadow:0 0 7px rgba(251,146,60,.38);
+    }
+    .thruster-power-guide .power-slider-climb-zone.unreachable {
+      background:rgba(251,113,133,.72);
+      box-shadow:0 0 7px rgba(251,113,133,.35);
+    }
 
     .power-slider {
       height: 10px;

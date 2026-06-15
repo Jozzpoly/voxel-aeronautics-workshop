@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Voxel Aeronautics Workshop — Foundation Phase 1D.2D Rebindable Input + Flight Focus</title>
+  <title>Voxel Aeronautics Workshop — Foundation Phase 1D.2E Guided Vertical Power Controls</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
   <script src="https://unpkg.com/cannon@0.6.2/build/cannon.min.js"></script>
@@ -34,7 +34,7 @@
     <div class="workspace-panel-handle"><span>BUILD WORKSPACE</span><span class="workspace-panel-actions"><button type="button" data-panel-minimize="build" aria-label="Minimize build panel">—</button><button type="button" data-panel-close="build" aria-label="Close build panel">×</button></span></div>
     <div class="workspace-panel-scroll" data-panel-scroll="build" tabindex="0" role="region" aria-label="Build workspace content">
     <div class="flex items-center justify-between mb-1 gap-2">
-      <div><h1 class="text-xl font-black text-white">Voxel Aeronautics Workshop</h1><div class="text-[10px] uppercase tracking-[0.18em] text-sky-300">Foundation Phase 1D.2D • Rebindable Input + Flight Focus</div></div>
+      <div><h1 class="text-xl font-black text-white">Voxel Aeronautics Workshop</h1><div class="text-[10px] uppercase tracking-[0.18em] text-sky-300">Foundation Phase 1D.2E • Guided Vertical Power Controls</div></div>
       <span id="ui-mode" class="chip text-amber-300">BUILD</span>
     </div>
     <p class="text-xs text-gray-400 mb-3">
@@ -144,7 +144,12 @@
           <span class="text-orange-200">Passive vertical thrust</span>
           <span id="ui-thruster-power" class="font-mono text-white">70%</span>
         </div>
-        <input id="thruster-power" class="slider power-slider" type="range" min="0" max="100" value="70" />
+        <div class="power-slider-shell thruster-power-guide">
+          <input id="thruster-power" class="slider power-slider" type="range" min="0" max="100" value="70" aria-describedby="ui-thruster-guidance" />
+          <span id="ui-thruster-climb-zone" class="power-slider-climb-zone" style="left:70%;width:30%" aria-hidden="true"></span>
+          <span id="ui-thruster-hover-marker" class="power-slider-marker" style="left:70%" aria-hidden="true"></span>
+        </div>
+        <div id="ui-thruster-guidance" class="power-slider-guidance"><span>Hover threshold: —</span><span>− / +</span></div>
       </div>
       <div>
         <div class="flex justify-between mb-1 text-xs">
@@ -358,7 +363,7 @@
         <li><strong class="text-white">Remove:</strong> right-click a block.</li>
         <li><strong class="text-white">Orient module:</strong> choose its forward/chord axis, then use <strong class="text-white">R</strong> and <strong class="text-white">Shift+R</strong> to roll the profile. Wings now have a real aerodynamic normal.</li>
         <li><strong class="text-white">Camera:</strong> hold <strong class="text-white">Alt</strong> and drag, or drag with the middle mouse button, to orbit. Use the mouse wheel to zoom.</li>
-        <li><strong class="text-white">Flight controls:</strong> W/S requests forward or reverse thrust, Z/C requests lateral thrust, Space/Left Ctrl requests vertical thrust, ↑/↓ controls pitch, A/D or ←/→ controls yaw, Q/E controls roll, −/+ changes passive vertical thruster power, comma/period changes balloon power, direct pilot inputs retain full authority, and G toggles gyro stabilization. Balloon lift weakens with altitude and now has mild vertical damping, so a fixed setting approaches its equilibrium height without excessive bouncing.</li>
+        <li><strong class="text-white">Flight controls:</strong> W/S requests forward or reverse thrust, Z/C requests lateral thrust, Space/Left Ctrl requests vertical thrust, ↑/↓ controls pitch, A/D or ←/→ controls yaw, Q/E controls roll, −/+ changes passive vertical thruster power, comma/period changes balloon power, both pairs are rebindable and both sliders show the current hover threshold, direct pilot inputs retain full authority, and G toggles gyro stabilization. Balloon lift weakens with altitude and now has mild vertical damping, so a fixed setting approaches its equilibrium height without excessive bouncing.</li>
         <li><strong class="text-white">Contracts:</strong> complete certification, gate, courier and heavy-lift trials to earn credits and stars.</li>
         <li><strong class="text-white">Control surfaces:</strong> select the cyan module, assign pitch/yaw/roll and choose automatic or manual sign before placement.</li>
         <li><strong class="text-white">Gimballed engine:</strong> the purple vector thruster bends its nozzle and generates control torque without hidden forces.</li>

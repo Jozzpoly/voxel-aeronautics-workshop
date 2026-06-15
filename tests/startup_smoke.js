@@ -39,6 +39,10 @@ try{
  const reboundEvent=dispatchWindowEvent('keydown',{key:'x',code:'KeyX'});
  assert(reboundEvent.defaultPrevented===true,'Binding capture must claim the selected physical key.');
  elements.get('btn-input-profile-reset').click();
+ elements.get('thruster-power').value='41';
+ elements.get('thruster-power').dispatchEvent({type:'input'});
+ assert(elements.get('ui-thruster-power').textContent==='41%','Passive-thrust slider must refresh its numeric readout immediately.');
+ assert(elements.get('ui-thruster-guidance').innerHTML.includes('− / +'),'Passive-thrust guidance must expose its current shortcut pair.');
  elements.get('balloon-power').value='37';
  elements.get('balloon-power').dispatchEvent({type:'input'});
  assert(elements.get('ui-balloon-power').textContent==='37%','Balloon slider must refresh its numeric readout immediately.');
@@ -50,6 +54,14 @@ try{
  elements.get('start-engineering').click();
  elements.get('btn-flight').click();
  assert(elements.get('ui-mode').textContent==='FLIGHT','A compiled starter craft must enter flight mode.');
+ elements.get('thruster-power').value='70';
+ elements.get('thruster-power').dispatchEvent({type:'input'});
+ const thrusterUpEvent=dispatchWindowEvent('keydown',{key:'+',code:'Equal'});
+ assert(thrusterUpEvent.defaultPrevented===true,'Passive-thrust hotkey must suppress browser text handling during flight.');
+ assert(elements.get('ui-thruster-power').textContent==='72%','Equal must increase passive thrust by 2%.');
+ assert(elements.get('thruster-power').value==='72','Passive-thrust hotkey must keep the slider thumb synchronized.');
+ dispatchWindowEvent('keydown',{key:'-',code:'Minus'});
+ assert(elements.get('ui-thruster-power').textContent==='70%','Minus must decrease passive thrust by 2%.');
  const balloonUpEvent=dispatchWindowEvent('keydown',{key:'.',code:'Period'});
  assert(balloonUpEvent.defaultPrevented===true,'Balloon power hotkey must suppress browser text handling during flight.');
  assert(elements.get('ui-balloon-power').textContent==='72%','Period must increase balloon power by 2%.');
@@ -68,6 +80,12 @@ try{
  assert(elements.get('ui-lift-command-value').textContent==='-100%','Left Ctrl must remain available as down thrust while another axis is held.');
  assert(elements.get('ui-surge-value').textContent==='-100%','Left Ctrl + S must command down + reverse.');
  dispatchWindowEvent('keyup',{key:'s',code:'KeyS',ctrlKey:true});
+ const ctrlThrusterEvent=dispatchWindowEvent('keydown',{key:'+',code:'Equal',ctrlKey:true});
+ assert(ctrlThrusterEvent.defaultPrevented===true,'Ctrl + Equal must remain a game input when the browser delivers it.');
+ assert(elements.get('ui-lift-command-value').textContent==='-100%','Adjusting passive thrust must not release held descent.');
+ assert(elements.get('ui-thruster-power').textContent==='72%','Ctrl + Equal must adjust passive thrust while descending.');
+ dispatchWindowEvent('keydown',{key:'-',code:'Minus',ctrlKey:true});
+ assert(elements.get('ui-thruster-power').textContent==='70%','Ctrl + Minus must adjust passive thrust while descending.');
  const ctrlBalloonEvent=dispatchWindowEvent('keydown',{key:'.',code:'Period',ctrlKey:true});
  assert(ctrlBalloonEvent.defaultPrevented===true,'Ctrl + Period must remain a game input when the browser delivers it.');
  assert(elements.get('ui-lift-command-value').textContent==='-100%','Adjusting Balloon power must not release held descent.');

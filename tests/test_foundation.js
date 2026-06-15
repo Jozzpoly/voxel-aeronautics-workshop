@@ -81,6 +81,7 @@ assert.strictEqual(typeof MissionEvaluator.evaluateLanding, 'function');
 assert.strictEqual(typeof MissionEvaluator.advanceHold, 'function');
 assert.strictEqual(typeof MissionEvaluator.evaluateLandingZones, 'function');
 assert.strictEqual(typeof Aerostatics.requiredPowerForHover, 'function');
+assert.strictEqual(typeof Aerostatics.requiredSupplementalPowerForHover, 'function');
 const migratedWorkspace = UIWorkspace.normalize({
   version: 1,
   panels: { build: { open: true, x: 9000, y: 9000, width: 260, height: 160 } }

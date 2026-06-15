@@ -1,27 +1,32 @@
-# Test Report — Phase 1D.2D
+# Test Report — Phase 1D.2E
 
 ## Wynik
 
 `python tests/run_all.py` — PASS.
 
-## Zakres nowej regresji
+## Nowe regresje
 
-- input profile v2;
-- migracja starszego profilu bez bindingów;
-- domyślny `ControlLeft -> lift-`;
-- brak defaultowego `Shift -> lift-`;
-- dwa sloty bindingów;
-- przenoszenie zajętego klawisza między akcjami;
-- ostrzeżenie dla Ctrl/Flight Focus;
-- generowanie listy kodów Keyboard Lock;
-- runtime capture i reset profilu w startup smoke;
-- UI preferences v5 oraz legacy keys v1–v4;
-- obecność Flight Focus i rebind UI.
+- input profile v3;
+- nowe akcje `thrusterPower-` i `thrusterPower+`;
+- domyślne `Minus/Equal` i obecność kodów w Keyboard Lock;
+- migracja profilu v2 do v3 bez odbierania zajętych klawiszy;
+- `requiredSupplementalPowerForHover()` dla braku zapotrzebowania, częściowego progu, braku dodatkowego liftu i wartości granicznych;
+- natychmiastowa synchronizacja Passive vertical thrust przez setter;
+- marker i guidance pasywnego ciągu;
+- hotkeye `−/+` oraz `,/.` przechodzące przez profil;
+- jednoczesne zejście przez Left Ctrl i regulacja obu źródeł mocy;
+- brak starej hardkodowanej obsługi znaków `-` i `+` w `game.js`.
 
 ## Pełna bateria
 
-Zachowane testy blueprintu, CraftModel, CraftCompiler, historii, misji, state-based landing, aerostatyki, uszkodzeń, physics boundary, desktop workspace, deterministic build i source parity.
+Przechodzą także testy składni, statycznego audytu, blueprintu, CraftModel, CraftCompiler, historii, misji, state-based landing, Balloon power, aerostatyki, uszkodzeń, physics boundary, desktop workspace, startup smoke, deterministycznego buildu i source parity.
+
+Ostatni zarejestrowany startup smoke:
+
+```text
+STARTUP_OK { ids: 159, elements: 543, modules: 16, sources: 19, interaction: 'ok' }
+```
 
 ## Ograniczenie
 
-Automaty nie potwierdzają zachowania promptu Keyboard Lock ani przejęcia `Ctrl+W` w realnym Chrome/Brave. To wymaga manualnej checklisty.
+Automaty nie oceniają czytelności markera podczas rzeczywistego lotu ani odczucia regulacji w WebGL. Keyboard Lock i fullscreen również wymagają manualnej walidacji w docelowym Chrome/Brave.

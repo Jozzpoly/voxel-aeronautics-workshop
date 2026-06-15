@@ -57,6 +57,17 @@
       return liftNeeded / (maxSeaLevelLift * efficiency);
     }
 
+    function requiredSupplementalPowerForHover(sampleValue = {}) {
+      const sample = sampleValue && typeof sampleValue === 'object' ? sampleValue : {};
+      const weight = Math.max(0, finite(sample.weight));
+      const baselineLift = Math.max(0, finite(sample.baselineLift));
+      const maxSupplementalLift = Math.max(0, finite(sample.maxSupplementalLift));
+      const liftNeeded = Math.max(0, weight - baselineLift);
+      if (liftNeeded <= 1e-9) return 0;
+      if (maxSupplementalLift <= 1e-9) return Number.POSITIVE_INFINITY;
+      return liftNeeded / maxSupplementalLift;
+    }
+
     function equilibriumAltitude(sampleValue = {}, policyValue = DEFAULT_POLICY) {
       const sample = sampleValue && typeof sampleValue === 'object' ? sampleValue : {};
       const policy = normalizePolicy(policyValue);
@@ -101,6 +112,7 @@
       liftEfficiencyAtAltitude,
       availableLift,
       requiredPowerForHover,
+      requiredSupplementalPowerForHover,
       equilibriumAltitude,
       verticalDampingForce
     });

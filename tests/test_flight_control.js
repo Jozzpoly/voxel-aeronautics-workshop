@@ -13,7 +13,7 @@ const InputProfile = global.VAW.require('foundation.input-profile');
 const FlightControl = global.VAW.require('foundation.flight-control');
 const profile = InputProfile.createDefault();
 
-assert.strictEqual(profile.version, 2, 'Input profile must persist versioned bindings.');
+assert.strictEqual(profile.version, 3, 'Input profile must persist guided power-control bindings.');
 assert.strictEqual(FlightControl.actionForInput('KeyA', profile), 'yaw+', 'A must command left yaw.');
 assert.strictEqual(FlightControl.actionForInput('KeyD', profile), 'yaw-', 'D must command right yaw.');
 assert.strictEqual(FlightControl.actionForInput('KeyW', profile), 'surge+');
@@ -21,6 +21,8 @@ assert.strictEqual(FlightControl.actionForInput('KeyS', profile), 'surge-');
 assert.strictEqual(FlightControl.actionForInput('Space', profile), 'lift+');
 assert.strictEqual(FlightControl.actionForInput('ControlLeft', profile), 'lift-', 'Left Ctrl remains the requested default descent binding.');
 assert.strictEqual(FlightControl.actionForInput('ShiftLeft', profile), null, 'Shift is not a default flight binding and cannot trigger Sticky Keys through repeated descent taps.');
+assert.deepStrictEqual(FlightControl.adjustmentForInput('Minus', profile), { target: 'thrusterPower', direction: -1 });
+assert.deepStrictEqual(FlightControl.adjustmentForInput('Equal', profile), { target: 'thrusterPower', direction: 1 });
 assert.deepStrictEqual(FlightControl.adjustmentForInput('Comma', profile), { target: 'balloonPower', direction: -1 });
 assert.deepStrictEqual(FlightControl.adjustmentForInput('Period', profile), { target: 'balloonPower', direction: 1 });
 assert.strictEqual(FlightControl.adjustmentForInput('PageUp', profile), null, 'Browser tab-navigation keys must not control the craft by default.');
@@ -29,6 +31,8 @@ assert.strictEqual(FlightControl.actionForInput('KeyZ', profile), 'sway-');
 assert.strictEqual(FlightControl.actionForInput('KeyC', profile), 'sway+');
 assert(FlightControl.keyboardLockCodes(profile).includes('KeyW'));
 assert(FlightControl.keyboardLockCodes(profile).includes('ControlLeft'));
+assert(FlightControl.keyboardLockCodes(profile).includes('Minus'));
+assert(FlightControl.keyboardLockCodes(profile).includes('Equal'));
 
 const rebound = InputProfile.updateBinding(profile, 'lift-', 0, 'KeyX');
 assert.strictEqual(FlightControl.actionForInput('KeyX', rebound), 'lift-');
@@ -38,6 +42,14 @@ assert.strictEqual(FlightControl.actionForInput('KeyX', reassigned), 'surge+', '
 assert.strictEqual(reassigned.bindings['lift-'].includes('KeyX'), false);
 const migrated = InputProfile.normalize({ version: 1, axes: profile.axes });
 assert.strictEqual(FlightControl.actionForInput('ControlLeft', migrated), 'lift-', 'Profiles without bindings must migrate to current defaults.');
+assert.deepStrictEqual(FlightControl.adjustmentForInput('Minus', migrated), { target: 'thrusterPower', direction: -1 });
+const legacyV2Bindings = Object.fromEntries(Object.entries(profile.bindings).filter(([action]) => !action.startsWith('thrusterPower')));
+const migratedV2 = InputProfile.normalize({ version: 2, axes: profile.axes, bindings: legacyV2Bindings });
+assert.deepStrictEqual(FlightControl.adjustmentForInput('Equal', migratedV2), { target: 'thrusterPower', direction: 1 }, 'Version 2 profiles must receive the new passive-thrust defaults when those keys are free.');
+const legacyCustomBindings = { ...legacyV2Bindings, 'balloonPower-': ['Minus'] };
+const migratedCustomV2 = InputProfile.normalize({ version: 2, axes: profile.axes, bindings: legacyCustomBindings });
+assert.deepStrictEqual(FlightControl.adjustmentForInput('Minus', migratedCustomV2), { target: 'balloonPower', direction: -1 }, 'A new v3 default must not steal a physical code explicitly claimed by a v2 profile.');
+assert.strictEqual(migratedCustomV2.bindings['thrusterPower-'].length, 0, 'The conflicting new action should remain unbound rather than overwrite a legacy choice.');
 assert(InputProfile.bindingWarnings(profile).some(message => message.includes('Flight Focus')), 'Ctrl default must carry a precise browser-chord warning.');
 
 const pilot = FlightControl.pilotFromActions(new Set(['yaw+', 'surge+', 'lift-', 'roll-', 'sway+']), profile);
@@ -78,6 +90,7 @@ assert(diagonal > 0 && diagonal < 1);
 console.log(JSON.stringify({
   yawDirection: 'ok',
   versionedRebindableBindings: 'ok',
+  rebindablePassiveAndBalloonPower: 'ok',
   ctrlDefaultWithFlightFocusWarning: 'ok',
   keyboardLockCodeSet: 'ok',
   pilotAggregation: 'ok',

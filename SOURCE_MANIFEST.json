@@ -1,5 +1,5 @@
 {
-  "appVersion": "0.5.6-foundation.1d2d",
+  "appVersion": "0.5.7-foundation.1d2e",
   "embeddedApplicationSources": [
     "src/foundation/kernel.js",
     "src/foundation/config.js",
@@ -23,30 +23,30 @@
   ],
   "entrypoint": "index.html",
   "files": {
-    "index.html": "939d0162a8f9319bed5aca1a91e8c47026215bb7c6275ed517a3e57bf9d209d9",
-    "package.json": "9bd69f438eb483d2c386a094614e156ca4074072a4479eed7c4ac9db8a038318",
-    "src/foundation/aerostatics.js": "3291dc1df2d3ae379f8bf264a41fd7ac7c6bd277b243556c4242abe6ed25c84d",
+    "index.html": "18e0bd02e957d7a5e3afab03a2ffa5601b93c97ae419e31ee501032d273c5f30",
+    "package.json": "acb02830e2661e14409ce980b7d9ce10bc80711ea1596726d302a9773ffcde45",
+    "src/foundation/aerostatics.js": "e37234a1b8b92561a6d73e9c8f734c16afc8f1d421845e24bd21a210c1b51f4f",
     "src/foundation/blueprint.js": "7d6c2dce4baf3430c8eb8cd23a4665de4de3366519617fdf35c76de5817f7529",
     "src/foundation/bootstrap.js": "67f0b780b5ce5d891dd05d109dca30bee0259e1771fcf37645f5923f41aecd08",
     "src/foundation/catalog.js": "706e15203a8481d9f28e28f36696d34b214701cbd5beb99202f752868fce5023",
-    "src/foundation/config.js": "2e27e0f24e8c532ead978ec630d7fbfb8a5ec9c8914d6c93800f6040892dba54",
+    "src/foundation/config.js": "bd21baea30e0f4eb69495b8fc8c0038539183fdc52e443126a4f1552af7b0bce",
     "src/foundation/control_frame.js": "11557b116b7130e599f85db62ef9a9bc0d16619715ac3d191c0f4afe8c452f7e",
     "src/foundation/craft_compiler.js": "9a5be405240f613e5ee73a1b204b78e5a993afab98de56204d68c147daf771e2",
     "src/foundation/craft_history.js": "a5365c702c39dd63ba64f1f3e331ad552442a92cd2613a6f4cfb418e507ce081",
     "src/foundation/craft_model.js": "80c4db834194192068315e4c9af7487b462afbee894be6ae884db38d628efe76",
-    "src/foundation/flight_control.js": "9d8371403e55c4c5d008ef4d3ac681f13861aa1c5bdd890e1b3454977fae5bd9",
-    "src/foundation/input_profile.js": "8c0243c573fc8fb58ccd7e7349b56e2c0ff9a88f59b5313982493e807bbf4b52",
+    "src/foundation/flight_control.js": "9f01afe2017db78297e6c45c53bff64ebc46996428b1c8bfdfaa4b08983e6902",
+    "src/foundation/input_profile.js": "ca9ee81b1c403878ca005e29475ad2b1acf52af8f35bfdcd270122bc12a9dceb",
     "src/foundation/kernel.js": "1d5e8da8776b8e197778e9584b938b795df72ed9683035171ba86ee8ac979306",
     "src/foundation/mission_evaluator.js": "d205801fa02c1b4d7969a8d72a4f7b26d52860e937f970ded54d4b4a523e51de",
     "src/foundation/orientation.js": "2876adaea49589467d98c3632eb010f93565ea8a371c07abfada908fe4be2417",
     "src/foundation/state.js": "27460ffa38d32ac7925fca13cd8d227994e3734d1aab237a03638c96a297686f",
     "src/foundation/ui_workspace.js": "375da2b44ca9cbaaada3ff139c19ac0a6b316fb0329f24ad80e407cd530c567c",
-    "src/game.js": "f3d376f8f86e1ae144a139ace996cf87f98d19450f120ffa854f6469f0c613bd",
+    "src/game.js": "3c81f82c86f8161306beac79632ebe9751485e4727a5fb0ab15b3c8782802079",
     "src/runtime/cannon_physics_backend.js": "378fe2d78e955de43ed8547aa8dc6aa027a6e38933a2be93177b98794cdc7a7b",
     "src/runtime/physics_port.js": "ec0c52d4bbc421722ae64d1bdef17af04bbd29cd203dc919969fec1bb705e5c2",
-    "styles.css": "234e569625c678c44af821494d1381936bfa66dbbe47d83b25a94d3ecf40b9b1",
-    "tools/build_release.py": "39e637f33d748e9eebdfcb2eb3ae7241bc15f4a2c8f0def1882aeae6948813b7",
+    "styles.css": "6283421d321ee24a721539c3173113d77b04412c091564b74c9de1b17ed5c998",
+    "tools/build_release.py": "e42433d3546b0c099bda56d8d41d602a1f0e7c030b77988f97b5cb34382328ac",
     "tools/verify_release.py": "52cf308017ba860da8c0534644d2a5dc2536aec0a09771c27cb1b40c17fe6dd1"
   },
-  "releaseId": "foundation-1d2d-rebindable-flight-focus"
+  "releaseId": "foundation-1d2e-guided-vertical-power-controls"
 }

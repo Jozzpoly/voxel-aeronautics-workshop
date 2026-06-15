@@ -25,6 +25,10 @@ assert(Math.abs(800 * 0.75 * efficiencyAtEquilibrium + 100 - 500) < 1e-6);
 assert.strictEqual(Aerostatics.equilibriumAltitude({ weight: 500, passiveLift: 100, maxSeaLevelLift: 800, power: 0.4 }, policy), null);
 
 assert.strictEqual(Aerostatics.equilibriumAltitude({ weight: 500, passiveLift: 100, maxSeaLevelLift: 800, power: 0.5 }, policy), 0);
+const passiveRequired = Aerostatics.requiredSupplementalPowerForHover({ weight: 500, baselineLift: 200, maxSupplementalLift: 600 });
+assert(Math.abs(passiveRequired - 0.5) < 1e-9, 'Passive thrust marker must solve the same vertical force balance as the runtime.');
+assert.strictEqual(Aerostatics.requiredSupplementalPowerForHover({ weight: 500, baselineLift: 500, maxSupplementalLift: 0 }), 0, 'No supplemental power is required when the baseline lift already carries the craft.');
+assert.strictEqual(Aerostatics.requiredSupplementalPowerForHover({ weight: 500, baselineLift: 100, maxSupplementalLift: 0 }), Number.POSITIVE_INFINITY);
 const noFiniteCeiling = Aerostatics.equilibriumAltitude({ weight: 100, passiveLift: 0, maxSeaLevelLift: 2000, power: 1 }, policy);
 assert.strictEqual(noFiniteCeiling, Number.POSITIVE_INFINITY, 'Minimum-efficiency floor can imply continued climb.');
 
@@ -36,4 +40,4 @@ assert(Math.abs(upwardDamping) <= 98.1 + 1e-9, 'Damping must remain capped to a 
 assert.strictEqual(Aerostatics.verticalDampingForce({ mass: 100, verticalSpeed: 2, commandedLift: 0, weight: 981 }, policy), 0, 'Balloons at zero effective lift must not create hidden damping.');
 assert.strictEqual(Aerostatics.verticalDampingForce({ mass: 100, verticalSpeed: 0, commandedLift: 981, weight: 981 }, policy), 0);
 
-console.log(JSON.stringify({ altitudeFalloff: 'ok', neutralPower: 'ok', equilibriumHeight: 'ok', mildVerticalDamping: 'ok' }, null, 2));
+console.log(JSON.stringify({ altitudeFalloff: 'ok', neutralPower: 'ok', supplementalPowerGuidance: 'ok', equilibriumHeight: 'ok', mildVerticalDamping: 'ok' }, null, 2));

@@ -8,10 +8,10 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE_ID = 'foundation-1d2d-rebindable-flight-focus'
-APP_VERSION = '0.5.6-foundation.1d2d'
-SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D2D_Rebindable_Flight_Focus.html'
-ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D2D_Rebindable_Flight_Focus.zip'
+RELEASE_ID = 'foundation-1d2e-guided-vertical-power-controls'
+APP_VERSION = '0.5.7-foundation.1d2e'
+SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D2E_Guided_Vertical_Power_Controls.html'
+ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D2E_Guided_Vertical_Power_Controls.zip'
 MANIFEST_NAME = 'SOURCE_MANIFEST.json'
 APP_SOURCES = (
     Path('src/foundation/kernel.js'),
