@@ -8,7 +8,7 @@
     const REQUIRED_BACKEND_METHODS = Object.freeze([
       'createWorld', 'createBody', 'addBody', 'removeBody', 'step',
       'addBoxCollider', 'addPlaneCollider', 'removeCollider', 'shiftColliderOffsets',
-      'vec3', 'setBodyTransform', 'setBodyVelocity', 'setBodyMass',
+      'vec3', 'setBodyTransform', 'setBodyVelocity', 'setBodyMass', 'setBodyMassProperties',
       'markBodyDirty', 'addCollisionListener',
       'applyForce', 'addTorque',
       'vectorToWorldFrame', 'vectorToLocalFrame', 'pointToWorldFrame'
@@ -94,6 +94,21 @@
       });
     }
 
+
+    function normalizeMassProperties(value = {}) {
+      const descriptor = value && typeof value === 'object' ? value : {};
+      const inertia = normalizeVec3(descriptor.inertiaDiagonal, { x: 0, y: 0, z: 0 });
+      return Object.freeze({
+        mass: positiveNumber(descriptor.mass, 0),
+        centerOfMass: normalizeVec3(descriptor.centerOfMass),
+        inertiaDiagonal: Object.freeze({
+          x: positiveNumber(inertia.x, 0),
+          y: positiveNumber(inertia.y, 0),
+          z: positiveNumber(inertia.z, 0)
+        })
+      });
+    }
+
     function normalizeCollisionEvent(value = {}) {
       const event = value && typeof value === 'object' ? value : {};
       return Object.freeze({
@@ -119,6 +134,7 @@
       normalizeQuaternion,
       normalizeWorldDescriptor,
       normalizeBodyDescriptor,
+      normalizeMassProperties,
       normalizeBoxDescriptor,
       normalizePlaneDescriptor,
       normalizeCollisionEvent,

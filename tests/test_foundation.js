@@ -18,6 +18,7 @@ const sourceFiles = [
   'src/foundation/craft_history.js',
   'src/foundation/control_frame.js',
   'src/foundation/craft_compiler.js',
+  'src/foundation/runtime_assembly.js',
   'src/foundation/input_profile.js',
   'src/foundation/ui_workspace.js',
   'src/foundation/mission_evaluator.js',
@@ -32,10 +33,11 @@ for (const relative of sourceFiles) {
   vm.runInThisContext(fs.readFileSync(path.join(ROOT, relative), 'utf8'), { filename: relative });
 }
 
-const { Config, Catalog, Orientation, Blueprint, CraftModel, CraftHistory, ControlFrame, CraftCompiler, InputProfile, UIWorkspace, MissionEvaluator, Aerostatics, FlightControl, State, PhysicsPort, Physics, Capabilities } = global.VAW_RUNTIME;
+const { Config, Catalog, Orientation, Blueprint, CraftModel, CraftHistory, ControlFrame, CraftCompiler, RuntimeAssembly, InputProfile, UIWorkspace, MissionEvaluator, Aerostatics, FlightControl, State, PhysicsPort, Physics, Capabilities } = global.VAW_RUNTIME;
 assert(Object.isFrozen(Config));
 assert(Object.isFrozen(Config.GRID));
-assert.strictEqual(Config.SAVE_VERSION, 9);
+assert.strictEqual(Config.SAVE_VERSION, 10);
+assert.strictEqual(Config.TEST_RANGE.maxAltitude, 160);
 assert.strictEqual(typeof Config.PHYSICS.wingStallStart, 'number');
 assert(Object.isFrozen(Catalog.BLOCKS));
 assert(Object.isFrozen(Catalog.CONTRACTS));
@@ -43,7 +45,8 @@ assert.strictEqual(Catalog.getContractById('courier').payloadMass, 10);
 assert.strictEqual(Catalog.getContractById('missing'), null);
 assert(Catalog.knownContractIds().has('heavy_lift'));
 assert.strictEqual(Capabilities.physicsBackend, 'cannon');
-assert.strictEqual(Capabilities.physicsBoundary, 'phase-1d-contact-normalization');
+assert.strictEqual(Capabilities.physicsBoundary, 'phase-1d2f-mass-properties');
+assert.strictEqual(Capabilities.runtimeAssembly, 'single-body-plan-v1');
 assert.strictEqual(Capabilities.missionEvaluation, 'phase-1d2b-multi-pad-ground-state');
 assert.strictEqual(Capabilities.aerostatics, 'altitude-lift-damped-settling-v2');
 assert.strictEqual(Capabilities.platform, 'desktop-keyboard-mouse-v1');
@@ -141,8 +144,14 @@ assert.strictEqual(legacyCoreDocument.blocks[0].orientation, Orientation.DEFAULT
 const orientedCoreDocument = Blueprint.normalize({ version: 9, blocks: [
   { x: 0, y: 0, z: 0, type: 'Core', orientation: rotatedCoreOrientation }
 ] });
-assert.strictEqual(orientedCoreDocument.blocks[0].orientation, rotatedCoreOrientation, 'Version 9 must preserve oriented Core control frames.');
+assert.strictEqual(orientedCoreDocument.blocks[0].orientation, rotatedCoreOrientation, 'Version 9+ must preserve oriented Core control frames.');
+assert(orientedCoreDocument.blocks[0].blockId, 'Legacy documents must receive persistent block ids.');
+assert.strictEqual(typeof RuntimeAssembly.createPlan, 'function');
 
+assert.strictEqual(Blueprint.normalize({ version: 10, blocks: [
+  { blockId: 'same', x: 0, y: 0, z: 0, type: 'Core' },
+  { blockId: 'same', x: 1, y: 0, z: 0, type: 'Hull' }
+] }), null, 'Version 10 must reject ambiguous duplicate block identities.');
 assert.strictEqual(Blueprint.normalize({ version: 999, blocks: [] }), null, 'Future save versions must be rejected.');
 assert.strictEqual(Blueprint.normalize({ version: 7, blocks: [
   { x: 0, y: 0, z: 0, type: 'Core' },
@@ -168,7 +177,7 @@ const document = Blueprint.createDocument({
   thrusterPower: 2, balloonPower: -1, stabilityAssist: 0.5,
   controlAxis: 'invalid', controlSign: 99
 });
-assert.strictEqual(document.version, 9);
+assert.strictEqual(document.version, 10);
 assert.strictEqual(document.blocks[0].type, 'Core');
 assert.strictEqual(document.selectedBlock, 'Core');
 assert.strictEqual(document.symmetry, 'NONE');

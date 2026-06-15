@@ -1,32 +1,33 @@
-# Test Report — Phase 1D.2E
+# Test Report — Phase 1D.2F
 
 ## Wynik
 
-`python tests/run_all.py` — PASS.
+`python tests/run_all.py` — **PASS**.
 
-## Nowe regresje
+Ostatni startup smoke:
 
-- input profile v3;
-- nowe akcje `thrusterPower-` i `thrusterPower+`;
-- domyślne `Minus/Equal` i obecność kodów w Keyboard Lock;
-- migracja profilu v2 do v3 bez odbierania zajętych klawiszy;
-- `requiredSupplementalPowerForHover()` dla braku zapotrzebowania, częściowego progu, braku dodatkowego liftu i wartości granicznych;
-- natychmiastowa synchronizacja Passive vertical thrust przez setter;
-- marker i guidance pasywnego ciągu;
-- hotkeye `−/+` oraz `,/.` przechodzące przez profil;
-- jednoczesne zejście przez Left Ctrl i regulacja obu źródeł mocy;
-- brak starej hardkodowanej obsługi znaków `-` i `+` w `game.js`.
+```text
+STARTUP_OK { ids: 160, elements: 544, modules: 17, sources: 20, interaction: 'ok' }
+```
+
+## Nowe pokrycie
+
+- blueprint v10 i migracja trwałych `blockId`;
+- odrzucanie zduplikowanych identyfikatorów;
+- `CraftModel.move()` zachowujące tożsamość;
+- `getById()` i `keyForId()`;
+- `CompiledCraft.blockIdToIndex`;
+- gravity z konfiguracji;
+- `RuntimeAssemblyPlan` i mapowanie bloków do body;
+- miejsce na constraints i signal links;
+- `setBodyMassProperties()`;
+- jawna masa, inertia i inverse inertia backendu;
+- startup i source parity z nowym modułem.
 
 ## Pełna bateria
 
-Przechodzą także testy składni, statycznego audytu, blueprintu, CraftModel, CraftCompiler, historii, misji, state-based landing, Balloon power, aerostatyki, uszkodzeń, physics boundary, desktop workspace, startup smoke, deterministycznego buildu i source parity.
-
-Ostatni zarejestrowany startup smoke:
-
-```text
-STARTUP_OK { ids: 159, elements: 543, modules: 16, sources: 19, interaction: 'ok' }
-```
+Nadal przechodzą testy misji, lądowania stanowego, aerostatyki, input profile, workspace, historii, uszkodzeń, detach, fuel leaks, release build, deterministycznych archiwów i embedded source parity.
 
 ## Ograniczenie
 
-Automaty nie oceniają czytelności markera podczas rzeczywistego lotu ani odczucia regulacji w WebGL. Keyboard Lock i fullscreen również wymagają manualnej walidacji w docelowym Chrome/Brave.
+Stub backend potwierdza kontrakt mass properties, ale nie zastępuje prawdziwego headless testu dynamiki Cannon. Manualnie należy sprawdzić zachowanie długiej, asymetrycznej konstrukcji oraz detach podczas obrotu.

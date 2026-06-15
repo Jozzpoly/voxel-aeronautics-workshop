@@ -215,7 +215,7 @@ for element_id in ('workspace-toolbar', 'contract-panel'):
 for removed_id in ('btn-ui-contracts', 'mobile-topbar', 'mobile-controls', 'btn-touch-place'):
     assert f'id="{removed_id}"' not in HTML
 assert 'id="desktop-required"' in HTML
-assert 'Foundation Phase 1D.2E' in HTML
+assert 'Foundation Phase 1D.2F' in HTML
 assert 'Foundation Phase 1D.2B • Mission + Balloon Control Fix' not in HTML
 assert re.search(r'id="contract-panel"[^>]*\shidden', HTML)
 assert 'btn-contract-panel-open' not in HTML and 'btn-contract-panel-close' not in HTML

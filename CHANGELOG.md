@@ -1,5 +1,21 @@
 # Changelog
 
+## Foundation Phase 1D.2F — Runtime Assembly Foundation
+
+- Added blueprint v10 with persistent `blockId` independent from grid coordinates.
+- Added v3–v9 migration and duplicate identity rejection.
+- Added `CraftModel.getById()`, `keyForId()` and identity-preserving `move()`.
+- Added `CompiledCraft.blockIdToIndex`, configured gravity and compiled format v3.
+- Added pure `foundation.runtime-assembly` with rigid body, collider, constraint and signal-link contracts.
+- Added runtime `bodyById`, `runtimePartById` and immutable launch assembly plan.
+- Added `setBodyMassProperties()` to Physics Port and Cannon backend.
+- Applied compiled/loaded inertia to the solver and recomputed it after detach/recenter.
+- Moved flight altitude bound into `TEST_RANGE.maxAltitude`.
+- Added launch-level Balloon guidance and combined vertical-support ratio.
+- Added regression coverage for identity migration, movement, assembly planning and explicit mass properties.
+- Version `0.5.8-foundation.1d2f`.
+- Release id `foundation-1d2f-runtime-assembly-foundation`.
+
 ## Foundation Phase 1D.2E — Guided Vertical Power Controls
 
 - Upgraded `foundation.input-profile` to v3 with rebindable Passive vertical thrust adjustment.

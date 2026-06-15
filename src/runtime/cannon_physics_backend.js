@@ -151,6 +151,38 @@
         body.aabbNeedsUpdate = true;
       }
 
+
+      function setBodyMassProperties(body, value = {}) {
+        if (!body) throw new TypeError('Body is required.');
+        const descriptor = PhysicsPort.normalizeMassProperties(value);
+        const center = descriptor.centerOfMass;
+        if (Math.hypot(center.x, center.y, center.z) > 1e-8) {
+          throw new RangeError('Cannon mass properties require colliders to be centered around local COM before assignment.');
+        }
+        body.mass = descriptor.mass;
+        body.invMass = descriptor.mass > 0 ? 1 / descriptor.mass : 0;
+        const inertia = descriptor.inertiaDiagonal;
+        const hasExplicitInertia = inertia.x > 0 || inertia.y > 0 || inertia.z > 0;
+        if (!hasExplicitInertia) {
+          if (typeof body.updateMassProperties === 'function') body.updateMassProperties();
+        } else {
+          if (!body.inertia || !body.invInertia) throw new Error('Cannon body does not expose diagonal inertia fields.');
+          body.inertia.set(inertia.x, inertia.y, inertia.z);
+          body.invInertia.set(
+            inertia.x > 0 && !body.fixedRotation ? 1 / inertia.x : 0,
+            inertia.y > 0 && !body.fixedRotation ? 1 / inertia.y : 0,
+            inertia.z > 0 && !body.fixedRotation ? 1 / inertia.z : 0
+          );
+          if (typeof body.updateInertiaWorld === 'function') body.updateInertiaWorld(true);
+          if (typeof body.updateSolveMassProperties === 'function') body.updateSolveMassProperties();
+        }
+        markBodyDirty(body);
+        return Object.freeze({
+          mass: body.mass,
+          inertiaDiagonal: Object.freeze({ x: body.inertia?.x || 0, y: body.inertia?.y || 0, z: body.inertia?.z || 0 })
+        });
+      }
+
       function setBodyMass(body, mass) {
         if (!body) throw new TypeError('Body is required.');
         body.mass = Math.max(0, Number(mass) || 0);
@@ -229,6 +261,7 @@
         setBodyTransform,
         setBodyVelocity,
         setBodyMass,
+        setBodyMassProperties,
         markBodyDirty,
         addCollisionListener,
         applyForce,

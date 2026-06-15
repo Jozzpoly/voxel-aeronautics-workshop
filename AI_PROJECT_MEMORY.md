@@ -1,126 +1,115 @@
 # AI PROJECT MEMORY — Voxel Aeronautics Workshop
 
-> Obowiązkowy punkt wejścia. Najpierw przeczytaj ten plik, następnie `ARCHITECTURE.md`, `VALIDATION_REPORT.md`, `DELIVERY_WORKFLOW.md` i testy.
+> Obowiązkowy punkt wejścia. Najpierw przeczytaj ten plik, następnie `ARCHITECTURE.md`, `ROADMAP_NEXT.md`, `VALIDATION_REPORT.md`, `DELIVERY_WORKFLOW.md` i testy.
 
 ## 1. Wizja
 
-Główna fantazja: **buduję, programuję, testuję i latam własnym voxelowym statkiem powietrznym**. Kontrakty i progresja są warstwą pomocniczą.
+Główna fantazja:
+
+> **buduję, programuję, testuję i latam własnym voxelowym statkiem lub maszyną powietrzną.**
+
+Sandbox i ręczne latanie są pełnoprawnym rdzeniem gry. Kontrakty, gwiazdki i progresja są warstwą pomocniczą, nigdy warunkiem sensowności sandboxu.
+
+Docelowo gracz może:
+
+- adresować i programować każdy funkcjonalny blok osobno;
+- łączyć sensory, logikę i aktuatory grafem sygnałów;
+- zachować domyślny automatyczny mikser albo przejąć bezpośrednią kontrolę;
+- budować wiele sztywnych podzespołów połączonych free bearing, rotary motor, servo i późniejszymi jointami;
+- tworzyć wirniki, obrotowe gondole, składane konstrukcje i mechanizmy.
 
 ## 2. Aktualny milestone
 
-**Foundation Phase 1D.2E — Guided Vertical Power Controls**
+**Foundation Phase 1D.2F — Runtime Assembly Foundation**
 
 Ukończone fundamenty:
 
 - pusty warsztat i dowolny pierwszy blok;
 - ruchomy, usuwalny i orientowany Command Core;
-- blueprint v9 oraz `CompiledCraft.controlFrame`;
-- sześć semantycznych osi;
-- input profile v3 z trwałymi bindingami;
-- desktop workspace v3;
+- blueprint v10 z trwałym `blockId`;
+- `gridKey` oddzielony od tożsamości bloku;
+- `CompiledCraft.blockIdToIndex`;
+- `RuntimeAssemblyPlan` z `rigidBodies[]`, `constraints[]` i `signalLinks[]`;
+- runtime `bodyById` i `runtimePartById`;
+- jawne diagonalne mass properties przekazywane do Cannon;
+- ponowne liczenie bezwładności po payloadzie i detach;
+- sześć semantycznych osi i rebindable input profile v3;
 - physics lifecycle/contact boundary;
-- state-based, multi-zone landing;
-- wspólna aerostatyka UI/fizyka;
-- ograniczone tłumienie pionowe balonów;
-- prowadzone kontrolki Balloon power i Passive vertical thrust;
+- guided Balloon power i Passive vertical thrust;
 - deterministyczny ZIP + single HTML z source parity.
 
 ## 3. Nienaruszalne reguły
 
 1. `CraftModel` jest źródłem prawdy edytora.
-2. `CompiledCraft` jest jedynym zweryfikowanym wejściem lotu.
+2. `CompiledCraft` jest jedynym zweryfikowanym wejściem runtime.
 3. Meshe, body, shapes i DOM nie trafiają do blueprintu.
 4. Core ma specjalną rolę, nie specjalną pozycję.
 5. Edytor dopuszcza pusty, bez-Core i rozłączony WIP.
-6. Start wymaga dokładnie jednego Core i jednej połączonej wyspy.
+6. Start obecnego jedno-body runtime wymaga dokładnie jednego Core i jednej połączonej wyspy.
 7. Zmiany wieloblokowe są atomowe.
 8. Każda wersja zapisu ma migrację.
-9. Nie podnosić limitu 480 części bez benchmarku i Collider Compilera.
-10. `game.js` nie może omijać physics portu ani interpretować natywnego kontaktu Cannon.
-11. Misja lądowania jest stanowa; event kolizji jest sygnałem pomocniczym.
-12. UI i fizyka balonów korzystają z tej samej polityki.
-13. Tłumienie balonów nie może używać docelowej wysokości.
-14. Bindingi są preferencją użytkownika, nie częścią blueprintu.
-15. Mapowanie klawiszy nie może ponownie zostać rozproszone po `game.js`; źródłem jest `foundation.input-profile`.
-16. Pasywny ciąg jest trimem, a nie limitem autorytetu pilota.
-17. Balloon power oraz Passive vertical thrust mają po jednym centralnym setterze i wspólny model guidance.
-18. Każda dostawa plików musi zawierać ZIP źródeł, single HTML, raport, walidację, sumy kontrolne oraz dokładną instrukcję aktualizacji repozytorium.
-19. Nigdy nie zalecać `git push --force` jako zwykłego sposobu publikacji wydania.
+9. `blockId` jest trwałą tożsamością; współrzędne i `gridKey` nie mogą jej zastępować.
+10. Przeniesienie urządzenia musi zachowywać `blockId`; kopiowanie tworzy nowe `blockId`.
+11. Pojedyncze body jest pierwszym przypadkiem `RuntimeAssembly`, nie docelowym ograniczeniem.
+12. Struktura sztywna, graf mechaniczny i graf sygnałowy są osobnymi modelami.
+13. Joint przecina sztywne połączenie; obejście jointa zwykłą strukturą musi być diagnozowane.
+14. Globalne regulatory i obecny mikser są domyślnymi źródłami sygnału, nie końcowym modelem sterowania.
+15. PID jest zwykłym węzłem logiki, nie specjalnym wyjątkiem zaszytym w fizyce.
+16. `game.js` nie może omijać Physics Portu.
+17. Panel analizy i solver muszą korzystać ze zgodnych właściwości masowych.
+18. Nie podnosić limitu części bez benchmarku i świadomej decyzji o colliderach.
+19. Każda dostawa zawiera źródła, single HTML, raport, walidację, sumy i bezpieczną instrukcję aktualizacji.
+20. Nigdy nie zalecać zwykłego `git push --force`.
+21. Domyślna dostawa to pełny, gotowy ZIP projektu; użytkownik wykonuje lokalny commit i push według instrukcji. Nie publikować projektu na GitHub w kawałkach ani przez tymczasowe pliki pośrednie.
 
-## 4. Platforma
+## 4. Trzy grafy przyszłej maszyny
 
-Runtime docelowy to **desktop keyboard + mouse**.
+### Structural graph
 
-- telefon i touch-only są poza zakresem;
-- nie przywracać mobilnego topbara ani ekranowych przycisków sześciu osi;
-- touchpad laptopa działa jako pointer/scroll;
-- gamepad/handheld wymaga osobnej warstwy profilu i UX.
+Określa, które voxele należą do jednej sztywnej bryły.
 
-## 5. Sterowanie i bindingi
+### Mechanical graph
 
-Domyślny profil:
+Łączy sztywne bryły przez jointy: free bearing, motor, servo, piston, docking i późniejsze typy.
 
-- W/S — surge +/−;
-- Z/C — sway −/+;
-- Space/Left Ctrl — lift +/−;
-- ↑/↓ — pitch;
-- A/D lub ←/→ — yaw;
-- Q/E — roll;
-- −/+ — Passive vertical thrust −/+2%;
-- ,/. — Balloon power −/+2%.
+### Signal graph
 
-Profil wejścia v3 przechowuje do dwóch fizycznych kodów na każdą akcję, w tym oba regulatory mocy. Profile v1–v2 migrują do bieżącego schematu. Nowe defaulty są dodawane tylko wtedy, gdy nie zabierają klawisza już zajętego przez użytkownika. Przypisanie zajętego klawisza przenosi go do nowej akcji zamiast tworzyć niejednoznaczność.
+Łączy porty urządzeń. Może przechodzić przez jointy niezależnie od połączeń fizycznych.
 
-`Left Ctrl` pozostaje świadomym defaultem użytkownika. W zwykłym trybie przeglądarki nie można zagwarantować kombinacji typu `Ctrl+W`. **Flight Focus** używa JavaScript fullscreen + Keyboard Lock, aby Chromium przekazało aktualne kody gry przed obsługą wspieranych skrótów przeglądarki. Zawsze pozostaje rebinding.
+Tych grafów nie wolno scalać w jeden model.
 
-## 6. Pionowe źródła siły
+## 5. Najbliższy etap
 
-- lift balonów maleje z wysokością;
-- oba suwaki pokazują aktualny próg statycznego zawisu;
-- Balloon power pokazuje także przybliżoną wysokość równowagi;
-- `setBalloonPower()` i `setThrusterPower()` są jedynymi ścieżkami zmiany swoich stanów;
-- suwak, hotkey, procent, marker i fizyka korzystają z tych samych wartości;
-- `requiredSupplementalPowerForHover()` oblicza, ile pasywnego ciągu potrzeba po uwzględnieniu aktualnego liftu balonów;
-- bezpośrednie wejście pilota zachowuje pełną moc niezależnie od ustawienia pasywnego ciągu;
-- `verticalDampingForce()` ogranicza oscylację balonów bez autopilota wysokości.
+**Foundation Phase 1D.3 — Runtime Assembly Builder & Headless Harness**
 
-## 7. Najbliższy etap
+1. wydzielić całe tworzenie body/runtime parts z `game.js`;
+2. zachować `blockId -> body/part/collider`;
+3. testować mass properties, free fall, hover, torque, COM, payload, detach i soak;
+4. benchmarkować 100/500/1000/2500 colliderów;
+5. wykonać joint capability spike: dwa body + free hinge + powered hinge;
+6. nie rozpoczynać kolejnej szerokiej rundy polerowania aerodynamiki przed Per-Block Control Bus.
 
-**Foundation Phase 1D.3 — Runtime Body Builder & Headless Physics Harness**
+## 6. Pierwszy gameplay po 1D.3
 
-1. builder `CompiledCraft -> runtime body`;
-2. stabilne `blockKey -> collider/runtime part`;
-3. headless free fall, hover, equilibrium, settling, offset thrust, COM, detach i soak;
-4. benchmark 100/500/1000/2500 colliderów;
-5. Collider Compiler dopiero po pomiarach.
+**Phase 1E — Per-Block Control Bus**
 
-## 8. Dalszy plan wejścia
+- wybór konkretnego aktywnego bloku;
+- tryb `Default mixer`, `Direct signal`, `Control group`, `Disabled`;
+- gain, invert, trim, min i max;
+- grupy urządzeń;
+- trwały zapis konfiguracji w blueprintcie;
+- uszkodzony lub odłączony blok zachowuje tożsamość konfiguracji.
 
-Po 1D.3, bez blokowania fizyki:
+Następnie sensory, podstawowe węzły matematyczne, live scope i PID.
 
-- import/export profilu sterowania;
-- preset browser-safe, left-handed oraz gamepad;
-- lepszy ekran konfliktów i wyszukiwanie nieprzypisanych akcji;
-- opcjonalny Pointer Lock jako część Flight Focus.
+## 7. Świadomy dług
 
-## 9. Workflow dostaw
-
-Pełne zasady znajdują się w `DELIVERY_WORKFLOW.md`. Każda odpowiedź przekazująca nowe pliki ma podawać:
-
-- który ZIP jest źródłem prawdy;
-- co rozpakować i gdzie skopiować;
-- jak zsynchronizować `main` przed zmianą;
-- jakie testy uruchomić;
-- proponowaną wiadomość commita;
-- bezpieczne komendy `fetch`, `rebase` i `push origin HEAD:main`;
-- procedurę konfliktu i zakaz force-pusha.
-
-## 10. Świadomy dług
-
-- duży `game.js`;
+- duży `game.js` nadal buduje wizualizację i część runtime;
+- `RuntimeAssemblyPlan` ma obecnie dokładnie jedno body i zero constraintów;
 - jeden collider na voxel;
-- limit 480 części;
-- część natywnych wektorów Cannon w runtime;
+- limit 480 części w locie;
+- payload nie ma jeszcze graczowego `PayloadMount`;
+- część natywnych wektorów Cannon pozostaje w runtime;
+- brak prawdziwego headless solver harnessu i testu jointów;
 - biblioteki z CDN;
-- brak pełnego automatycznego testu WebGL/GPU;
-- Keyboard Lock wymaga manualnej walidacji w docelowym Chrome/Brave.
+- brak pełnego automatycznego testu WebGL/GPU.

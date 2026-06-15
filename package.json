@@ -1,8 +1,8 @@
 {
   "name": "voxel-aeronautics-workshop",
-  "version": "0.5.7-foundation.1d2e",
+  "version": "0.5.8-foundation.1d2f",
   "private": true,
-  "description": "Desktop voxel airship engineering sandbox — rebindable input, guided balloon and passive-thrust power controls, multi-pad missions, and damped aerostatics.",
+  "description": "Desktop voxel airship engineering sandbox — rebindable input, persistent block identities, runtime assembly planning, mass-property parity, guided controls, and multi-pad missions.",
   "scripts": {
     "test": "python tests/run_all.py",
     "build": "python tools/build_release.py",

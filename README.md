@@ -1,43 +1,60 @@
-# Voxel Aeronautics Workshop — Foundation Phase 1D.2E
+# Voxel Aeronautics Workshop — Foundation Phase 1D.2F
 
-**Guided Vertical Power Controls**
+**Runtime Assembly Foundation**
 
-Voxel Aeronautics Workshop jest desktopowym voxelowym sandboxem inżynieryjnym. Gracz buduje statek blok po bloku, testuje fizykę, sterowanie, uszkodzenia i misje, analizuje telemetrię, a następnie poprawia projekt.
+Voxel Aeronautics Workshop to desktopowy voxelowy sandbox inżynieryjny. Główna fantazja projektu brzmi:
 
-Phase 1D.2E ujednolica dwa pionowe regulatory: **Balloon power** oraz **Passive vertical thrust**. Oba mają teraz natychmiastowy odczyt, wizualny próg zawisu i rebindable hotkeye.
+> **buduję, programuję, testuję i latam własną fizyczną maszyną.**
 
-## Najważniejsze zmiany
+Kontrakty i progresja są dodatkiem. Pełnoprawnym trybem jest także czysty sandbox: budowa, ręczne sterowanie, eksperymenty, awarie i kolejne przebudowy.
 
-### Passive vertical thrust z pełnym guidance
+## Co wnosi Phase 1D.2F
 
-Kontrolka pasywnego ciągu pokazuje:
+### Trwała tożsamość każdego bloku
 
-- aktualny procent;
-- marker mocy wymaganej do statycznego zawisu;
-- wyróżniony zakres, w którym aktualna konfiguracja powinna się wznosić;
-- stan `descend`, `near hover`, `climb` albo informację, że konstrukcja nie ma aktywnych thrusterów skierowanych ku lokalnemu `+Y`.
+Blueprint v10 zapisuje `blockId` niezależne od `gridKey`.
 
-Próg uwzględnia masę, aktualny lift balonów, wysokość oraz uszkodzone lub odłączone części. Jest analizą statyczną i nie obejmuje chwilowej siły skrzydeł ani bezpośredniego wejścia pilota.
+- `blockId` identyfikuje urządzenie przez cały cykl życia projektu;
+- `gridKey` opisuje wyłącznie aktualną pozycję w lokalnej siatce;
+- przeniesienie bloku przez `CraftModel.move()` zachowuje jego tożsamość;
+- kompilator publikuje `blockIdToIndex`;
+- runtime publikuje `runtimePartById`.
 
-### Wspólna ścieżka stanu
+To jest fundament pod indywidualne sterowanie thrusterami, grupy urządzeń, przewody sygnałowe, sensory i jointy.
 
-- `setThrusterPower()` jest jedyną ścieżką zmiany pasywnego ciągu;
-- `setBalloonPower()` pozostaje jedyną ścieżką zmiany mocy balonów;
-- suwaki i hotkeye odświeżają procent, thumb, marker, guidance, zapis i fizykę na tych samych wartościach;
-- `foundation.aerostatics.requiredSupplementalPowerForHover()` oblicza wymagany udział dodatkowego źródła liftu po uwzględnieniu źródła bazowego.
+### Runtime Assembly Plan
 
-### Input profile v3
+Nowy czysty moduł `foundation.runtime-assembly` zamienia skompilowany lub załadowany snapshot w neutralny plan:
 
-Profil przechowuje teraz także bindingi obu regulatorów:
+```text
+RuntimeAssemblyPlan
+  rigidBodies[]
+  constraints[]
+  signalLinks[]
+  parts[]
+  blockIdToBodyId
+  blockIdToPartIndex
+```
 
-- `− / +` — Passive vertical thrust −/+2%;
-- `, / .` — Balloon power −/+2%.
+Obecnie plan zawiera jeden `body:root`, lecz API nie zakłada, że tak pozostanie. Następne etapy mogą podzielić konstrukcję na sztywne podzespoły połączone łożyskami, silnikami obrotowymi i serwami.
 
-Każda akcja ma do dwóch slotów i może zostać zmieniona w panelu Controls. Profile v1–v2 migrują automatycznie; nowe defaulty nie odbierają klawisza już używanego przez użytkownika.
+### Zgodność bezwładności analizy i solvera
 
-### Zachowany Left Ctrl i Flight Focus
+Physics Port otrzymał atomową operację `setBodyMassProperties()`.
 
-Domyślne sterowanie:
+- masa i diagonalna bezwładność z kompilatora trafiają do Cannon.js;
+- payload korzysta z bezwładności załadowanego snapshotu;
+- po odpadnięciu części COM i bezwładność są liczone ponownie;
+- panel inżynieryjny i solver nie bazują już świadomie na dwóch różnych modelach bezwładności.
+
+### Korekty spójności
+
+- `CompiledCraft.weight` używa skonfigurowanej grawitacji;
+- limit wysokości znajduje się w `TEST_RANGE.maxAltitude`;
+- Balloon guidance mówi wprost, że próg dotyczy wysokości startowej;
+- Telemetry pokazuje łączny stosunek aktualnego wsparcia pionowego do ciężaru.
+
+## Obecne sterowanie
 
 - `W / S` — przód / tył;
 - `Z / C` — translacja w lewo / prawo;
@@ -45,16 +62,12 @@ Domyślne sterowanie:
 - `↑ / ↓` — pitch;
 - `A / D` lub `← / →` — yaw;
 - `Q / E` — roll;
+- `− / +` — Passive vertical thrust;
+- `, / .` — Balloon power;
 - `G` — stabilizacja;
 - `F` — powrót do warsztatu.
 
-Flight Focus używa fullscreen i Keyboard Lock jako best-effort ochrony kombinacji z Ctrl. Poza tym trybem przeglądarka nadal może przejąć niektóre skróty, dlatego rebinding pozostaje właściwym fallbackiem.
-
-### Desktop jako jawna granica produktu
-
-- telefon i touch-only są poza zakresem;
-- touchpad laptopa działa jako pointer i scroll;
-- przyszłe sterowanie kontrolerem wymaga osobnego profilu oraz UX.
+Obecny mikser pozostanie domyślnym, łatwym sposobem sterowania. Docelowo każdy aktywny blok będzie mógł przejść w tryb bezpośredniego sygnału lub przypisanej grupy.
 
 ## Uruchomienie
 
@@ -70,7 +83,7 @@ Linux/macOS:
 ./run_game.sh
 ```
 
-lub:
+albo:
 
 ```bash
 python tools/serve.py
@@ -78,7 +91,7 @@ python tools/serve.py
 
 Po podmianie wersji użyj `Ctrl+Shift+R`.
 
-## Testy
+## Testy i build
 
 ```bash
 python tests/run_all.py
@@ -86,43 +99,14 @@ python tools/build_release.py
 python tools/verify_release.py
 ```
 
-Automaty obejmują profil wejścia v3 i migracje, oba regulatory mocy, markery zawisu, jednoczesne `Left Ctrl` z hotkeyami mocy, misje, aerostatykę, physics boundary, startup smoke oraz source parity.
+Bateria obejmuje blueprint v10, migracje, trwałe identyfikatory bloków, assembly plan, jawne mass properties, CraftModel, CraftCompiler, misje, aerostatykę, input, physics boundary, startup smoke, deterministyczny build oraz source parity.
 
-Pełna checklista manualna znajduje się w `VALIDATION_REPORT.md`.
+## Następny zdecydowany kierunek
 
-## Build wydania
+1. dokończyć `Runtime Assembly Builder` i headless harness;
+2. wykonać capability spike dwóch body połączonych free hinge i rotary motor;
+3. zbudować `Per-Block Control Bus`;
+4. dodać sensory, podstawowe węzły logiki, scope i PID;
+5. wystawić pierwsze jointy jako pełnoprawne bloki gracza.
 
-```bash
-python tools/build_release.py
-```
-
-Artefakty w `dist/`:
-
-- `Voxel_Aeronautics_Workshop_Foundation_Phase_1D2E_Guided_Vertical_Power_Controls.html`;
-- `Voxel_Aeronautics_Workshop_Foundation_Phase_1D2E_Guided_Vertical_Power_Controls.zip`;
-- `SHA256.txt`.
-
-## Aktualizacja repozytorium
-
-Pełna i bezpieczna procedura znajduje się w `PUSH_INSTRUCTIONS.md`. Skrót:
-
-```powershell
-git checkout main
-git fetch origin
-git pull --rebase origin main
-# skopiuj zawartość rozpakowanego ZIP-a źródłowego do katalogu repo, nie usuwając .git
-python tests/run_all.py
-python tools/build_release.py
-python tools/verify_release.py
-git add -A
-git commit -m "Foundation 1D.2E: add guided vertical power controls"
-git fetch origin
-git rebase origin/main
-git push origin HEAD:main
-```
-
-Nie używaj `git push --force`. Stała zasada dostaw znajduje się w `DELIVERY_WORKFLOW.md`.
-
-## Następny etap
-
-**Foundation Phase 1D.3 — Runtime Body Builder & Headless Physics Harness**. Oba pionowe regulatory mają już wspólny model guidance i nie powinny blokować wydzielania buildera fizyki.
+Szczegóły znajdują się w `ROADMAP_NEXT.md` i `ARCHITECTURE.md`.

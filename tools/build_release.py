@@ -8,11 +8,12 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE_ID = 'foundation-1d2e-guided-vertical-power-controls'
-APP_VERSION = '0.5.7-foundation.1d2e'
-SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D2E_Guided_Vertical_Power_Controls.html'
-ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D2E_Guided_Vertical_Power_Controls.zip'
+RELEASE_ID = 'foundation-1d2f-runtime-assembly-foundation'
+APP_VERSION = '0.5.8-foundation.1d2f'
+SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D2F_Runtime_Assembly_Foundation.html'
+ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D2F_Runtime_Assembly_Foundation.zip'
 MANIFEST_NAME = 'SOURCE_MANIFEST.json'
+ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_Phase_1D2F_RUNTIME_ASSEMBLY_READY_TO_PUSH'
 APP_SOURCES = (
     Path('src/foundation/kernel.js'),
     Path('src/foundation/config.js'),
@@ -23,6 +24,7 @@ APP_SOURCES = (
     Path('src/foundation/craft_history.js'),
     Path('src/foundation/control_frame.js'),
     Path('src/foundation/craft_compiler.js'),
+    Path('src/foundation/runtime_assembly.js'),
     Path('src/foundation/input_profile.js'),
     Path('src/foundation/ui_workspace.js'),
     Path('src/foundation/mission_evaluator.js'),
@@ -168,12 +170,12 @@ def write_zip(root: Path, destination: Path, single_file: Path | None = None) ->
                 continue
             if path.resolve() == destination.resolve():
                 continue
-            archive.write(path, Path(root.name) / path.relative_to(root))
+            archive.write(path, Path(ARCHIVE_ROOT) / path.relative_to(root))
         if single_file is not None:
-            release_path = (Path(root.name) / 'release' / single_file.name).as_posix()
+            release_path = (Path(ARCHIVE_ROOT) / 'release' / single_file.name).as_posix()
             archive.writestr(_deterministic_info(release_path), single_file.read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
             single_hash = f'{sha256(single_file)}  {single_file.name}\n'.encode('utf-8')
-            hash_path = (Path(root.name) / 'release' / 'SHA256.txt').as_posix()
+            hash_path = (Path(ARCHIVE_ROOT) / 'release' / 'SHA256.txt').as_posix()
             archive.writestr(_deterministic_info(hash_path), single_hash, compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
 
 

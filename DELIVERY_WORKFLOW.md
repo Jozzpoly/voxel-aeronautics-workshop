@@ -21,7 +21,14 @@ Pełny ZIP źródeł jest przeznaczony do aktualizacji repozytorium. Single HTML
 
 ZIP i single HTML muszą pochodzić z jednego deterministycznego buildu i przechodzić `sourceParity: ok`.
 
-## 3. Bezpieczna procedura publikacji
+
+## 3. Domyślny model publikacji
+
+Agent przygotowuje kompletny, zweryfikowany ZIP projektu oraz artefakty wydania. Użytkownik rozpakowuje paczkę, uruchamia testy i wykonuje commit/push lokalnie według `PUSH_INSTRUCTIONS.md`.
+
+Bezpośrednie zapisywanie projektu do GitHub przez agenta nie jest domyślnym workflow. Może być użyte wyłącznie po wyraźnej prośbie użytkownika i tylko wtedy, gdy narzędzia pozwalają przesłać całe drzewo projektu atomowo, bez plików pośrednich, fragmentów ani tymczasowych workflow.
+
+## 4. Bezpieczna procedura publikacji
 
 Przed skopiowaniem nowego wydania:
 
@@ -50,7 +57,7 @@ git push origin HEAD:main
 
 Drugi test po rebase jest wymagany, gdy rebase rzeczywiście dołączył zdalne zmiany.
 
-## 4. Konflikty
+## 5. Konflikty
 
 Przy konflikcie:
 
@@ -69,6 +76,6 @@ git rebase --abort
 
 Nie używać `git push --force` jako standardowego rozwiązania non-fast-forward. Nie kopiować wydania na working tree z niezapisanymi zmianami bez świadomego commita lub `git stash`.
 
-## 5. Weryfikacja bazowej wersji
+## 6. Weryfikacja bazowej wersji
 
 Przed rozpoczęciem kolejnego etapu agent powinien sprawdzić aktualny `main` repozytorium i oprzeć pracę na jego najnowszym commicie albo na jawnie wskazanej przez użytkownika nowszej paczce. Nie wolno zakładać, że luźny katalog z wcześniejszej sesji jest aktualniejszy od zweryfikowanego ZIP-a lub repozytorium.

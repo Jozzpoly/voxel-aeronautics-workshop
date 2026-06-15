@@ -54,6 +54,10 @@ assert.deepStrictEqual(compiled.controlFrame.forward, [1, 0, 0]);
 assert.deepStrictEqual(compiled.controlFrame.up, [0, 1, 0]);
 assert.deepStrictEqual(compiled.controlFrame.right, [0, 0, 1]);
 assert.strictEqual(compiled.blockCount, 4);
+assert.strictEqual(typeof compiled.parts[0].blockId, 'string');
+assert.strictEqual(compiled.blockIdToIndex[compiled.parts[0].blockId], 0);
+assert.strictEqual(compiled.gravity, Config.AEROSTATICS.gravity);
+assert.strictEqual(compiled.weight, compiled.mass * compiled.gravity);
 assert.strictEqual(compiled.connectedCount, 4);
 assert.strictEqual(compiled.colliderPlan.length, 4);
 assert.strictEqual(compiled.parts[compiled.coreIndex].type, 'Core');
@@ -129,5 +133,7 @@ console.log(JSON.stringify({
   revisionCache: 'ok',
   disconnectedDiagnostics: 'ok',
   maximumCompileMs: Number(compileMs.toFixed(2)),
-  maximumParts: maximumCompiled.parts.length
+  maximumParts: maximumCompiled.parts.length,
+  persistentBlockMapping: 'ok',
+  configuredGravity: 'ok'
 }, null, 2));

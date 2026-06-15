@@ -30,6 +30,7 @@
   const CraftHistory = window.VAW.require('foundation.craft-history');
   const ControlFrame = window.VAW.require('foundation.control-frame');
   const CraftCompiler = window.VAW.require('foundation.craft-compiler');
+  const RuntimeAssembly = window.VAW.require('foundation.runtime-assembly');
   const InputProfile = window.VAW.require('foundation.input-profile');
   const UIWorkspace = window.VAW.require('foundation.ui-workspace');
   const MissionEvaluator = window.VAW.require('foundation.mission-evaluator');
@@ -45,13 +46,14 @@
     cannonVersion: Physics.version,
     webglRenderer: true,
     physicsBackend: Physics.id,
-    physicsBoundary: 'phase-1d-contact-normalization',
+    physicsBoundary: 'phase-1d2f-mass-properties',
+    runtimeAssembly: 'single-body-plan-v1',
     missionEvaluation: 'phase-1d2b-multi-pad-ground-state',
     aerostatics: 'altitude-lift-damped-settling-v2',
     platform: 'desktop-keyboard-mouse-v1',
     workspaceState: 'version-3-z-order'
   });
-  const runtime = Object.freeze({ Config, Catalog, Orientation, Blueprint, CraftModel, CraftHistory, ControlFrame, CraftCompiler, InputProfile, UIWorkspace, MissionEvaluator, Aerostatics, FlightControl, State, PhysicsPort, Physics, Capabilities });
+  const runtime = Object.freeze({ Config, Catalog, Orientation, Blueprint, CraftModel, CraftHistory, ControlFrame, CraftCompiler, RuntimeAssembly, InputProfile, UIWorkspace, MissionEvaluator, Aerostatics, FlightControl, State, PhysicsPort, Physics, Capabilities });
   Object.defineProperty(window, 'VAW_RUNTIME', {
     configurable: false,
     enumerable: true,

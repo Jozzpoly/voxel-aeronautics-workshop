@@ -1,10 +1,10 @@
-# Push Instructions — Phase 1D.2E
+# Push Instructions — Phase 1D.2F
 
 ## Który plik jest źródłem prawdy
 
 Do aktualizacji repozytorium używaj pełnego ZIP-a źródłowego:
 
-`Voxel_Aeronautics_Workshop_Foundation_Phase_1D2E_Guided_Vertical_Power_Controls.zip`
+`VAW_Phase_1D2F_Runtime_Assembly_Foundation_Source.zip`
 
 Jednoplikowy HTML służy do szybkiego uruchomienia i prezentacji. Nie zastępuje źródeł repozytorium.
 
@@ -59,7 +59,7 @@ git status
 git diff --stat
 git diff
 git add -A
-git commit -m "Foundation 1D.2E: add guided vertical power controls"
+git commit -m "Foundation 1D.2F: establish runtime assembly foundation"
 ```
 
 ### 6. Zsynchronizuj się ponownie przed pushem
@@ -104,4 +104,4 @@ git rebase --abort
 
 Nie używaj `git push --force` do zwykłej publikacji wydania.
 
-Repozytorium nie zostało zmienione automatycznie przez agenta.
+Repozytorium nie zostało zmienione automatycznie przez agenta. Publikację wykonuje użytkownik lokalnie z pełnej paczki źródłowej.

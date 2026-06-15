@@ -63,7 +63,7 @@ with tempfile.TemporaryDirectory() as temporary:
     extracted.write_text(embedded, encoding='utf-8')
     subprocess.run(['node', '--check', str(extracted)], check=True)
 
-    prefix = ROOT.name + '/'
+    prefix = module.ARCHIVE_ROOT + '/'
     with zipfile.ZipFile(archive) as zipped:
         names = set(zipped.namelist())
         required = {

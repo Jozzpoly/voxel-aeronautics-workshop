@@ -9,12 +9,13 @@
       return Object.freeze(value);
     }
 
-    const APP_VERSION = '0.5.7-foundation.1d2e';
-    const RELEASE_ID = 'foundation-1d2e-guided-vertical-power-controls';
+    const APP_VERSION = '0.5.8-foundation.1d2f';
+    const RELEASE_ID = 'foundation-1d2f-runtime-assembly-foundation';
     const GRID = { halfExtent: 18, minY: 0, maxY: 20, maxBlocks: 2500 };
-    const SAVE_VERSION = 9;
-    const SAVE_KEY = 'voxel-aeronautics-blueprint-v9';
+    const SAVE_VERSION = 10;
+    const SAVE_KEY = 'voxel-aeronautics-blueprint-v10';
     const LEGACY_SAVE_KEYS = [
+      'voxel-aeronautics-blueprint-v9',
       'voxel-aeronautics-blueprint-v8',
       'voxel-aeronautics-blueprint-v7',
       'voxel-aeronautics-blueprint-v6',
@@ -36,6 +37,7 @@
       finishPad: { x: 82, y: 0, z: 0, radius: 9 },
       spawn: { x: 0, y: 3.5, z: 0 },
       bounds: 190,
+      maxAltitude: 160,
       groundY: -0.5
     };
     const MISSION = {

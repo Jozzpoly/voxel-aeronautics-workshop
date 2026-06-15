@@ -1,4 +1,4 @@
-# Validation Report — Phase 1D.2E
+# Validation Report — Phase 1D.2F
 
 ## Automatyczna walidacja
 
@@ -8,59 +8,58 @@ python tools/build_release.py
 python tools/verify_release.py
 ```
 
-Wymagane: wszystkie testy zielone oraz `sourceParity: ok`.
+Wymagane: wszystkie testy zielone oraz source parity `ok`.
 
-## Manualny playtest przed pushem
+## Manualny playtest przed mergem
 
-### Cache i wersja
+### Migracja i zapis
 
-1. Uruchom przez `run_game.bat` lub `python tools/serve.py`.
-2. W Chrome użyj `Ctrl+Shift+R`.
-3. Potwierdź napis `Phase 1D.2E`.
+1. Uruchom istniejący zapis v9.
+2. Potwierdź poprawny wygląd statku.
+3. Zapisz, odśwież i ponownie wczytaj.
+4. W konsoli nie może być błędu blueprint v10.
+5. Undo/redo oraz symmetry placement nadal działają.
 
-### Passive vertical thrust
+### Budowanie
 
-Dla statku z pionowymi thrusterami:
+1. Zacznij od pustego warsztatu i dowolnego bloku.
+2. Dodaj, usuń i przenieś Command Core.
+3. Umieść bloki z symmetry X/Z/XZ.
+4. Usuń i przywróć części przez undo/redo.
+5. Zbuduj cienką rakietę szerokości jednego voxela.
 
-1. przesuwaj suwak i potwierdź natychmiastową zmianę procentu;
-2. sprawdź marker progu zawisu i kolorową strefę wznoszenia;
-3. `−` i `+` zmieniają moc o 2%;
-4. wartości zmienione hotkeyem i suwakiem są identyczne po odświeżeniu;
-5. przy statku bez upward thrusterów UI pokazuje brak dostępnego źródła zamiast fałszywego progu;
-6. przy wymaganiu ponad 100% UI jawnie pokazuje brak wystarczającej mocy;
-7. zmniejszenie Balloon power powinno podnieść wymagany próg Passive vertical thrust.
+### Mass properties
 
-### Balloon power
+1. Zbuduj długi statek z ciężarem przesuniętym na bok.
+2. Porównaj reakcję pitch/yaw/roll z panelem engineering analysis.
+3. Dodaj payload i potwierdź zmianę sterowności.
+4. Oderwij boczną część podczas obrotu.
+5. Statek nie może skoczyć, dostać NaN ani zachować starej bezwładności.
 
-1. `,` i `.` zmieniają moc o 2%;
-2. marker zawisu reaguje na zmianę pasywnego ciągu;
-3. wznoszenie słabnie z wysokością;
-4. oscylacja wokół równowagi maleje, lecz nie znika natychmiast;
-5. przy Balloon power 0 dodatkowe tłumienie znika.
+### Vertical support
 
-### Rebinding i kombinacje
+1. Potwierdź odczyt `Vertical support: X.XX× weight`.
+2. Zmieniaj oba suwaki i sprawdź natychmiastową aktualizację.
+3. Balloon guidance musi mówić, że próg dotyczy launch level.
+4. W locie wzrost wysokości nadal osłabia balony.
 
-1. Otwórz Controls i przepnij jeden z hotkeyów Passive thrust.
-2. Potwierdź natychmiastową zmianę etykiety obok suwaka.
-3. Odśwież stronę i sprawdź zapis.
-4. Reset przywraca `−/+` oraz `,/.`.
-5. W Flight Focus trzymaj Left Ctrl i naciskaj `−/+`; statek ma schodzić i jednocześnie zmieniać pasywny ciąg.
-6. Powtórz dla Left Ctrl z `,/.`.
-7. Poza Flight Focus nie deklaruj gwarancji dla wszystkich chordów Ctrl; użyj rebindingu, gdy przeglądarka przejmuje kombinację.
+### Granice lotu
 
-### Autorytet pilota
+1. Opuść range po X/Z i sprawdź poprawne zakończenie.
+2. Przekrocz skonfigurowane 160 m wysokości.
+3. Nie może istnieć inny, ukryty limit Y.
 
-1. Ustaw Passive vertical thrust na 0%.
-2. Potwierdź, że Space, Left Ctrl, W/S i momenty sterujące nadal mogą używać pełnej mocy odpowiednich thrusterów.
-3. Ustaw 100% i potwierdź, że Left Ctrl wygasza pasywny ciąg skierowany w górę oraz uruchamia silniki skierowane w dół.
+### Regresje
 
-### Misje i UI
+- ręczne sterowanie wszystkimi osiami;
+- Flight Focus;
+- sandbox;
+- Hover License na obu padach;
+- gate course;
+- payload i cargo damage;
+- panel close/reopen/resize;
+- powrót do warsztatu po awarii.
 
-1. Ukończ Hover License na remote padzie oraz launch padzie.
-2. Sprawdź dwell i blocker HUD.
-3. Panele można przeciągać, resize’ować, zamykać i otwierać.
-4. Poniżej 720 px pojawia się komunikat desktop-only.
+## Kryterium merge
 
-## Kryterium pushu
-
-Push dopiero po manualnym potwierdzeniu obu markerów, hotkeyów, rebindingu, autorytetu pilota, Flight Focus, misji lądowania i zachowania balonów. Następnie użyj procedury z `PUSH_INSTRUCTIONS.md`.
+Merge dopiero po zielonej baterii automatycznej i manualnym potwierdzeniu migracji v9, asymetrycznej bezwładności, payloadu, detach oraz podstawowego sandboxu.

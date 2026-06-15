@@ -39,6 +39,9 @@ let result = craft.add(block(0, 0, 0, 'Thruster'), 'first-module');
 assert(result.ok, 'Any module may be the first block.');
 assert.strictEqual(craft.revision, 1);
 assert(Object.isFrozen(craft.get('0,0,0')));
+const firstBlockId = craft.get('0,0,0').blockId;
+assert(firstBlockId);
+assert.strictEqual(craft.getById(firstBlockId).key, '0,0,0');
 assert(!('mesh' in craft.get('0,0,0')), 'Domain records must not contain renderer objects.');
 
 result = craft.add(block(0, 1, 0, 'Hull'), 'rocket-body');
@@ -87,6 +90,9 @@ assert(result.ok);
 assert.strictEqual(craft.size, 4);
 assert.strictEqual(craft.get('0,3,0').controlAxis, 'roll');
 assert.strictEqual(craft.get('0,3,0').controlSign, -1);
+const movedId = craft.get('0,3,0').blockId;
+assert(craft.move(movedId, 1, 3, 0, 'move-control-surface').ok);
+assert.strictEqual(craft.getById(movedId).key, '1,3,0', 'Moving a block must preserve its persistent identity.');
 
 const document = craft.toDocument({
   selectedBlock: 'Core', selectedOrientation: 3, symmetry: 'X',
@@ -178,6 +184,7 @@ console.log(JSON.stringify({
   workInProgressStates: 'ok',
   immutableSnapshots: 'ok',
   documentRoundTrip: 'ok',
+  persistentBlockIdentity: 'ok',
   deterministicStressSteps: 600,
   finalStressBlocks: stress.size,
   maximumCraftBlocks: maxCraft.size,

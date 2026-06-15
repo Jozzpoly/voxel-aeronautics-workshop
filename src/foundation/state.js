@@ -20,6 +20,9 @@
           },
           flight: {
             body: null,
+            bodies: [],
+            bodyById: new Map(),
+            assemblyPlan: null,
             group: null,
             functionalBlocks: [],
             fuel: 0,
@@ -41,6 +44,8 @@
             payloadMass: 0,
             lastImpactAt: -Infinity,
             runtimeParts: [],
+            runtimePartById: new Map(),
+            currentInertia: new THREE.Vector3(),
             debris: [],
             lostParts: 0,
             leakingFuelRate: 0,

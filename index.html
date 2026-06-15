@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Voxel Aeronautics Workshop — Foundation Phase 1D.2E Guided Vertical Power Controls</title>
+  <title>Voxel Aeronautics Workshop — Foundation Phase 1D.2F Runtime Assembly Foundation</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
   <script src="https://unpkg.com/cannon@0.6.2/build/cannon.min.js"></script>
@@ -34,7 +34,7 @@
     <div class="workspace-panel-handle"><span>BUILD WORKSPACE</span><span class="workspace-panel-actions"><button type="button" data-panel-minimize="build" aria-label="Minimize build panel">—</button><button type="button" data-panel-close="build" aria-label="Close build panel">×</button></span></div>
     <div class="workspace-panel-scroll" data-panel-scroll="build" tabindex="0" role="region" aria-label="Build workspace content">
     <div class="flex items-center justify-between mb-1 gap-2">
-      <div><h1 class="text-xl font-black text-white">Voxel Aeronautics Workshop</h1><div class="text-[10px] uppercase tracking-[0.18em] text-sky-300">Foundation Phase 1D.2E • Guided Vertical Power Controls</div></div>
+      <div><h1 class="text-xl font-black text-white">Voxel Aeronautics Workshop</h1><div class="text-[10px] uppercase tracking-[0.18em] text-sky-300">Foundation Phase 1D.2F • Runtime Assembly Foundation</div></div>
       <span id="ui-mode" class="chip text-amber-300">BUILD</span>
     </div>
     <p class="text-xs text-gray-400 mb-3">
@@ -137,6 +137,7 @@
     <div class="flex justify-between mb-2"><span class="text-gray-400">Blocks:</span><span id="ui-blocks" class="font-mono text-white">0</span></div>
     <div class="flex justify-between mb-2"><span class="text-gray-400">Fuel:</span><span id="ui-fuel" class="font-mono text-white">0 / 0</span></div>
     <div class="flex justify-between mb-2"><span class="text-gray-400">Damage:</span><span id="ui-damage-status" class="font-mono text-white">No active damage</span></div>
+    <div class="flex justify-between mb-2"><span class="text-gray-400">Vertical support:</span><span id="ui-vertical-support" class="font-mono text-white">—</span></div>
 
     <div class="space-y-3 mt-3">
       <div>
@@ -411,6 +412,7 @@
         'src/foundation/craft_history.js',
         'src/foundation/control_frame.js',
         'src/foundation/craft_compiler.js',
+        'src/foundation/runtime_assembly.js',
         'src/foundation/input_profile.js',
         'src/foundation/ui_workspace.js',
         'src/foundation/mission_evaluator.js',

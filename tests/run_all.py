@@ -23,6 +23,7 @@ def main() -> None:
     run('node', 'tests/test_mission_evaluator.js')
     run('node', 'tests/test_aerostatics.js')
     run('node', 'tests/test_runtime_physics.js')
+    run('node', 'tests/test_runtime_assembly.js')
     run('node', 'tests/test_craft_model.js')
     run('node', 'tests/test_craft_compiler.js')
     run('node', 'tests/test_flight_control.js')

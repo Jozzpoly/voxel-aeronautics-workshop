@@ -69,6 +69,7 @@
         const warnings = [];
         const normalized = [];
         const seen = new Set();
+        const seenBlockIds = new Set();
         let coreCount = 0;
 
         if (input.blocks.length > GRID.maxBlocks) errors.push('block-limit');
@@ -86,9 +87,14 @@
             continue;
           }
           seen.add(key);
+          const requestedBlockId = blueprint.normalizeBlockId(raw.blockId);
+          const blockId = blueprint.allocateBlockId(requestedBlockId, x, y, z, seenBlockIds);
+          if (requestedBlockId && seenBlockIds.has(requestedBlockId)) errors.push('duplicate-block-id');
+          seenBlockIds.add(blockId);
           if (raw.type === 'Core') coreCount += 1;
           const orientationMode = BLOCKS[raw.type].orientationMode || 'none';
           normalized.push({
+            blockId,
             key,
             x,
             y,
@@ -108,7 +114,8 @@
         if (coreCount > 1) errors.push('multiple-cores');
 
         const keyToIndex = Object.create(null);
-        normalized.forEach((block, index) => { keyToIndex[block.key] = index; });
+        const blockIdToIndex = Object.create(null);
+        normalized.forEach((block, index) => { keyToIndex[block.key] = index; blockIdToIndex[block.blockId] = index; });
         const adjacency = normalized.map(() => []);
         for (let index = 0; index < normalized.length; index += 1) {
           const block = normalized[index];
@@ -175,6 +182,7 @@
 
           const part = {
             index,
+            blockId: block.blockId,
             key: block.key,
             grid: position,
             type: block.type,
@@ -209,12 +217,12 @@
         if (normalized.length > config.PHYSICS.maxFlightParts) warnings.push('flight-part-limit');
 
         const canonicalSignature = normalized.map(block => [
-          block.x, block.y, block.z, block.type, block.orientation, block.controlAxis, block.controlSign
+          block.blockId, block.x, block.y, block.z, block.type, block.orientation, block.controlAxis, block.controlSign
         ]);
         const signature = stableHash(JSON.stringify(canonicalSignature));
         const uniqueErrors = [...new Set(errors)];
         const compiled = deepFreeze({
-          format: 'VAW_COMPILED_CRAFT_V2',
+          format: 'VAW_COMPILED_CRAFT_V3',
           sourceRevision: input.revision,
           signature,
           ready: uniqueErrors.length === 0,
@@ -227,13 +235,15 @@
           corePosition: coreIndex >= 0 ? [normalized[coreIndex].x, normalized[coreIndex].y, normalized[coreIndex].z] : null,
           controlFrame,
           mass,
-          weight: mass * 9.81,
+          gravity: config.AEROSTATICS.gravity,
+          weight: mass * config.AEROSTATICS.gravity,
           fuelCapacity,
           dragArea,
           com,
           inertia,
           counts,
           keyToIndex,
+          blockIdToIndex,
           adjacency,
           parts,
           functionalByType,
