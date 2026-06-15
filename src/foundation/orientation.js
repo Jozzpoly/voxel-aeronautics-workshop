@@ -72,7 +72,7 @@
       if (version <= 4 && orientation >= 0 && orientation < LEGACY_ORIENTATION_MAP.length) {
         return LEGACY_ORIENTATION_MAP[orientation];
       }
-      if (type === 'Core') return DEFAULT_ORIENTATION;
+      if (type === 'Core' && version <= 8) return DEFAULT_ORIENTATION;
       return normalizeOrientationId(orientation);
     }
 

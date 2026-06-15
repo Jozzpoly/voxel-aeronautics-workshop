@@ -1,84 +1,117 @@
-# Roadmap po Foundation Phase 1B
+# Roadmap po Foundation Phase 1C.2
 
-## Ukończone: Foundation Phase 1B — CraftModel
+## Ukończone — Phase 1C.2
 
-Zrealizowano:
+- blueprint v9 i orientowany Command Core;
+- jawny `CompiledCraft.controlFrame`;
+- sześć osi sterowania z `sway`;
+- profil użytkownika z odwracaniem i czułością każdej osi;
+- transformacja wejścia do lokalnych osi konstrukcji;
+- wspólny, trwały system okien workspace;
+- otwieranie, zamykanie, minimalizacja, przeciąganie i resize;
+- osobne okno Controls i monitor układu odniesienia;
+- naprawiony deterministic release ZIP bez zduplikowanych artefaktów.
 
-- czysty `CraftModel` bez meshy i fizyki;
-- osobny widok warsztatu;
-- atomowe dodawanie, usuwanie i wymianę konstrukcji;
-- zdarzenia zmian i rewizje;
-- ochronę spójności konstrukcji;
-- czysty `CraftHistory`;
-- testy losowych operacji;
-- test pełnych 2500 bloków;
-- statyczne zabezpieczenia przed powrotem starego sprzężenia.
+## Ukończone — Phase 1C
 
-Świadomie nie dodano jeszcze pełnego obracania lub lustrzanego przekształcania całej konstrukcji. Obecna symetria placementu działa, ale przyszłe transformacje całego blueprintu powinny zostać dodane do modelu razem z testami kolizji pozycji i orientacji.
+- blueprint v8;
+- pusty warsztat i dowolny pierwszy blok;
+- ruchomy oraz usuwalny Core;
+- rozdzielenie poprawności edytora od gotowości do lotu;
+- `CraftCompiler` z deterministycznym `CompiledCraft`;
+- rzeczywista pozycja Core używana przez runtime i payload;
+- osobne osie translacji `surge` i `lift`;
+- poprawiony kierunek A/D;
+- Space / Left Ctrl dla góra / dół;
+- priorytet wejść lotu nad skrótami edytora;
+- nowe testy interakcyjne i regresyjne.
 
-## Następny etap: Foundation Phase 1C — CraftCompiler
+## Następny etap — Foundation Phase 1D: Physics Boundary
 
-Cel: utworzyć niezmienny artefakt pomiędzy konstrukcją i runtime.
+### 1. Kontrakt backendu
 
-`CompiledCraft` powinien zawierać:
+Zdefiniować minimalne, neutralne porty:
 
-- identyfikator rewizji źródłowej;
-- kanoniczną listę części;
-- mapę `key -> partIndex`;
-- graf sąsiedztwa;
-- masę i środek masy;
-- tensor lub jawne przybliżenie bezwładności;
-- pozycje względem COM;
-- bazy orientacji w neutralnym formacie liczbowym;
-- punkty przyłożenia ciągu, wyporu i aerodynamiki;
-- urządzenia funkcjonalne pogrupowane według typu;
-- mapowanie voxel ID do przyszłych colliderów i runtime parts;
-- plan colliderów w wersji `one voxel = one box` jako punkt odniesienia;
-- raport błędów i ostrzeżeń;
-- deterministyczną sygnaturę kompilacji.
+- `PhysicsWorld`;
+- `RigidBody`;
+- `Collider`;
+- dodawanie/usuwanie body;
+- siła i moment w punkcie;
+- transformacje local/world;
+- krok symulacji;
+- zdarzenia kontaktu;
+- aktualizacja masy.
 
-### Zasady wdrożenia
+Nie budować jeszcze uniwersalnego silnika wszystkiego. Interfejs ma pokrywać rzeczywiste potrzeby obecnego runtime.
 
-1. Najpierw test zgodności z obecnym `buildCraftSnapshot()`.
-2. Brak zmiany balansu i zachowania lotu w tym samym commicie.
-3. Kompilator nie może zależeć od DOM, sceny ani Cannon.js.
-4. Wynik powinien być niezmienny.
-5. Kompilacja tej samej rewizji może być cache’owana.
-6. Runtime ma przyjmować wyłącznie `CompiledCraft`, nie czytać modelu warsztatu bezpośrednio.
+### 2. Adapter Cannon.js
 
-## Foundation Phase 1D — Physics Boundary
+- zachować Cannon.js jako wynik referencyjny;
+- przenieść budowę body i box colliderów poza `game.js`;
+- zachować mapowanie `blockKey -> runtime part/collider`;
+- zabezpieczyć payload, obrażenia i odrywanie części;
+- porównać wyniki przed/po adapterze.
 
-- zdefiniować minimalny interfejs świata, ciała, collidera, siły i kroku;
-- zachować Cannon.js jako pierwszy adapter referencyjny;
-- przenieść tworzenie compound body poza `game.js`;
-- dodać deterministyczny harness bez renderera;
-- zmierzyć aktualny backend przed decyzją o cannon-es lub Rapier.
+### 3. Headless physics harness
+
+Bez Three.js i DOM testować:
+
+- spadek swobodny;
+- hover;
+- ciąg w osi;
+- moment od niesymetrycznego thrustera;
+- zmianę COM;
+- odłączenie części;
+- długi soak stabilności;
+- 100/500/1000/2500 części.
+
+### 4. Benchmark bazowy
+
+Mierzyć osobno:
+
+- czas kompilacji;
+- czas tworzenia body;
+- koszt jednego kroku;
+- 99. percentyl kroku;
+- liczbę kształtów;
+- zużycie pamięci;
+- stabilność kontaktów.
+
+### 5. Decyzja backendowa
+
+Dopiero po adapterze i benchmarku porównać:
+
+- obecny Cannon.js;
+- cannon-es;
+- Rapier.
+
+Migracja nie może być jednocześnie migracją gameplayu.
 
 ## Foundation Phase 2 — Collider Compiler
 
-- greedy merge pełnych bloków konstrukcyjnych;
-- osobne collidery dla części funkcjonalnych i przyszłych mechanizmów;
-- mapowanie trafienia na pojedynczy voxel;
-- lokalna rekompilacja po oderwaniu fragmentu;
-- benchmarki 100, 500, 1000 i 2500 bloków;
-- podniesienie limitu lotu wyłącznie na podstawie wyników.
+- greedy merge pełnych voxelowych boxów;
+- osobne collidery dla części specjalnych;
+- mapowanie trafienia scalonego collidera na voxel;
+- lokalna rekompilacja po uszkodzeniu;
+- filtrowanie self-collision;
+- podniesienie limitu lotu wyłącznie po pomiarach.
 
 ## Foundation Phase 3 — Rendering Boundary
 
-- instancing powtarzalnych modułów;
+- instancing modułów;
 - picking instancji;
 - dirty regions;
-- wspólne geometrie i kontrola materiałów;
-- budżet draw calli i pamięci GPU.
+- wspólne geometrie i materiały;
+- budżet draw calli i GPU.
 
-## Późniejsze systemy
+## Następne filary gameplayu
 
-Dopiero po powyższych granicach:
+Po stabilnych granicach fizyki i renderera:
 
-- graf sygnałów i mikrokontrolery;
-- sensory i aktuatory;
-- mechanizmy ruchome;
+- sensory, aktuatory i graf sygnałów;
+- mikrokontrolery, PID i oscyloskop;
+- jointy, wirniki i wały;
 - aerodynamika odsłoniętych powierzchni;
-- komory gazowe i balast;
-- świat, pogoda i długie trasy;
-- multiplayer.
+- komory gazowe, zawory i balast;
+- świat, pogoda i długie loty;
+- dopiero później multiplayer.

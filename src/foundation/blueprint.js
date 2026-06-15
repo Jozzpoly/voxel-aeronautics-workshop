@@ -23,12 +23,15 @@
       }
 
       function canonicalBlock(block) {
+        const definition = BLOCKS[block.type];
         return {
           x: block.x,
           y: block.y,
           z: block.z,
           type: block.type,
-          orientation: block.type === 'Core' ? orientation.DEFAULT_ORIENTATION : orientation.normalizeOrientationId(block.orientation),
+          orientation: definition?.orientationMode === 'none'
+            ? orientation.DEFAULT_ORIENTATION
+            : orientation.normalizeOrientationId(block.orientation),
           controlAxis: normalizeControlAxis(block.controlAxis),
           controlSign: normalizeControlSign(block.controlSign)
         };
@@ -41,11 +44,14 @@
       }
 
       function createDocument({ blocks, selectedBlock, selectedOrientation, symmetry, thrusterPower, balloonPower, stabilityAssist, controlAxis, controlSign }) {
+        const safeSelectedBlock = BLOCKS[selectedBlock] ? selectedBlock : 'Hull';
         return {
           version: SAVE_VERSION,
           blocks: sortBlocks(blocks.map(canonicalBlock)),
-          selectedBlock: BLOCKS[selectedBlock] && selectedBlock !== 'Core' ? selectedBlock : 'Hull',
-          orientation: orientation.normalizeOrientationId(selectedOrientation),
+          selectedBlock: safeSelectedBlock,
+          orientation: BLOCKS[safeSelectedBlock]?.orientationMode === 'none'
+            ? orientation.DEFAULT_ORIENTATION
+            : orientation.normalizeOrientationId(selectedOrientation),
           symmetry: SYMMETRY_MODES.includes(symmetry) ? symmetry : 'NONE',
           thrusterPower: clamp01(Number.isFinite(thrusterPower) ? thrusterPower : 0.7),
           balloonPower: clamp01(Number.isFinite(balloonPower) ? balloonPower : 0.7),
@@ -59,9 +65,10 @@
       function signature(document) { return JSON.stringify(document); }
 
       function connectedCount(blocksByKey) {
-        if (!blocksByKey.has('0,0,0')) return 0;
-        const visited = new Set(['0,0,0']);
-        const queue = ['0,0,0'];
+        if (!(blocksByKey instanceof Map) || blocksByKey.size === 0) return 0;
+        const firstKey = blocksByKey.keys().next().value;
+        const visited = new Set([firstKey]);
+        const queue = [firstKey];
         for (let cursor = 0; cursor < queue.length; cursor++) {
           const [cx, cy, cz] = queue[cursor].split(',').map(Number);
           for (const [dx, dy, dz] of NEIGHBOR_DIRECTIONS) {
@@ -87,14 +94,13 @@
           const x = Number(raw.x);
           const y = Number(raw.y);
           const z = Number(raw.z);
-          if (![x, y, z].every(Number.isFinite) || ![x, y, z].every(Number.isInteger)) return null;
-          if (!isWithinGrid(x, y, z)) return null;
+          if (![x, y, z].every(Number.isInteger) || !isWithinGrid(x, y, z)) return null;
 
           const key = makeKey(x, y, z);
           if (normalizedByKey.has(key)) return null;
           if (raw.type === 'Core') {
             coreCount += 1;
-            if (key !== '0,0,0') return null;
+            if (dataVersion <= 7 && key !== '0,0,0') return null;
           }
           normalizedByKey.set(key, {
             x, y, z,
@@ -105,24 +111,28 @@
           });
         }
 
-        if (coreCount === 0) {
+        // Historical blueprints required an origin-locked Core. Preserve those files exactly
+        // while version 8 permits empty workspaces and a movable Core.
+        if (dataVersion <= 7 && coreCount === 0) {
           if (normalizedByKey.has('0,0,0')) return null;
           normalizedByKey.set('0,0,0', {
             x: 0, y: 0, z: 0, type: 'Core',
             orientation: orientation.DEFAULT_ORIENTATION,
             controlAxis: 'pitch', controlSign: 0
           });
-        } else if (coreCount !== 1) {
-          return null;
+          coreCount = 1;
         }
+        if (coreCount > 1) return null;
+        if (dataVersion <= 7 && normalizedByKey.size > 0 && connectedCount(normalizedByKey) !== normalizedByKey.size) return null;
 
-        if (connectedCount(normalizedByKey) !== normalizedByKey.size) return null;
-        const selectedBlock = BLOCKS[data.selectedBlock] && data.selectedBlock !== 'Core' ? data.selectedBlock : 'Hull';
+        const selectedBlock = BLOCKS[data.selectedBlock] ? data.selectedBlock : 'Hull';
         return {
-          version: dataVersion,
+          version: SAVE_VERSION,
           blocks: sortBlocks([...normalizedByKey.values()]),
           selectedBlock,
-          orientation: orientation.normalizeSavedOrientation(data.orientation, dataVersion, selectedBlock),
+          orientation: BLOCKS[selectedBlock]?.orientationMode === 'none'
+            ? orientation.DEFAULT_ORIENTATION
+            : orientation.normalizeSavedOrientation(data.orientation, dataVersion, selectedBlock),
           symmetry: SYMMETRY_MODES.includes(data.symmetry) ? data.symmetry : 'NONE',
           thrusterPower: clamp01(typeof data.thrusterPower === 'number' ? data.thrusterPower : (typeof data.throttle === 'number' ? data.throttle : 0.7)),
           balloonPower: clamp01(typeof data.balloonPower === 'number' ? data.balloonPower : (typeof data.throttle === 'number' ? data.throttle : 0.7)),

@@ -27,6 +27,11 @@
   const Blueprint = window.VAW.require('foundation.blueprint');
   const CraftModel = window.VAW.require('foundation.craft-model');
   const CraftHistory = window.VAW.require('foundation.craft-history');
+  const ControlFrame = window.VAW.require('foundation.control-frame');
+  const CraftCompiler = window.VAW.require('foundation.craft-compiler');
+  const InputProfile = window.VAW.require('foundation.input-profile');
+  const UIWorkspace = window.VAW.require('foundation.ui-workspace');
+  const FlightControl = window.VAW.require('foundation.flight-control');
   const State = window.VAW.require('foundation.state');
 
   const Capabilities = Object.freeze({
@@ -35,7 +40,7 @@
     webglRenderer: true,
     physicsBackend: 'cannon'
   });
-  const runtime = Object.freeze({ Config, Catalog, Orientation, Blueprint, CraftModel, CraftHistory, State, Capabilities });
+  const runtime = Object.freeze({ Config, Catalog, Orientation, Blueprint, CraftModel, CraftHistory, ControlFrame, CraftCompiler, InputProfile, UIWorkspace, FlightControl, State, Capabilities });
   Object.defineProperty(window, 'VAW_RUNTIME', {
     configurable: false,
     enumerable: true,

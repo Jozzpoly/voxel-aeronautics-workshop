@@ -21,7 +21,6 @@
         if (!blueprint.isWithinGrid(x, y, z)) return null;
         if (!BLOCKS[raw.type]) return null;
         const key = blueprint.makeKey(x, y, z);
-        if (raw.type === 'Core' && key !== '0,0,0') return null;
         const orientationMode = BLOCKS[raw.type].orientationMode || 'none';
         const safeOrientation = orientationMode === 'none'
           ? orientation.DEFAULT_ORIENTATION
@@ -46,9 +45,10 @@
       }
 
       function connectedKeys(blocksByKey) {
-        if (!blocksByKey.has('0,0,0')) return new Set();
-        const visited = new Set(['0,0,0']);
-        const queue = ['0,0,0'];
+        if (!(blocksByKey instanceof Map) || blocksByKey.size === 0) return new Set();
+        const firstKey = blocksByKey.keys().next().value;
+        const visited = new Set([firstKey]);
+        const queue = [firstKey];
         for (let cursor = 0; cursor < queue.length; cursor += 1) {
           const current = blocksByKey.get(queue[cursor]);
           if (!current) continue;
@@ -63,22 +63,22 @@
         return visited;
       }
 
-      function validateMap(blocksByKey, { allowEmpty = false } = {}) {
+      function validateMap(blocksByKey, { allowEmpty = true } = {}) {
         if (!(blocksByKey instanceof Map)) return makeResult(false, 'invalid-map');
-        if (blocksByKey.size === 0) return allowEmpty ? makeResult(true) : makeResult(false, 'missing-core');
+        if (blocksByKey.size === 0) return allowEmpty ? makeResult(true) : makeResult(false, 'empty-craft');
         if (blocksByKey.size > GRID.maxBlocks) return makeResult(false, 'block-limit');
-        const core = blocksByKey.get('0,0,0');
-        if (!core || core.type !== 'Core') return makeResult(false, 'missing-core');
         let coreCount = 0;
         for (const block of blocksByKey.values()) {
           if (block.type === 'Core') coreCount += 1;
         }
-        if (coreCount !== 1) return makeResult(false, 'invalid-core-count');
+        if (coreCount > 1) return makeResult(false, 'multiple-cores');
         const connected = connectedKeys(blocksByKey);
-        if (connected.size !== blocksByKey.size) {
-          return makeResult(false, 'disconnected', { connectedCount: connected.size, blockCount: blocksByKey.size });
-        }
-        return makeResult(true);
+        return makeResult(true, '', {
+          coreCount,
+          connectedCount: connected.size,
+          blockCount: blocksByKey.size,
+          contiguous: connected.size === blocksByKey.size
+        });
       }
 
       function freezeList(values) {
@@ -144,7 +144,7 @@
         }
 
         function isContiguous() {
-          return blocksByKey.size > 0 && connectedKeys(blocksByKey).size === blocksByKey.size;
+          return blocksByKey.size === 0 || connectedKeys(blocksByKey).size === blocksByKey.size;
         }
 
         function neighborCount(keyOrBlock) {
@@ -196,7 +196,6 @@
           const key = typeof keyOrX === 'string' ? keyOrX : blueprint.makeKey(keyOrX, y, z);
           const block = blocksByKey.get(key);
           if (!block) return makeResult(false, 'missing-block', { key });
-          if (block.type === 'Core') return makeResult(false, 'core-protected', { key });
           const candidate = new Map(blocksByKey);
           candidate.delete(key);
           const validity = validateMap(candidate);

@@ -1,93 +1,87 @@
-# Test Report — Foundation Phase 1B
+# Test Report — Foundation Phase 1C.2 Control & Workspace
 
 ## Wynik
 
-**Wszystkie automatyczne testy przechodzą po walidacji i refaktorze CraftModel.**
+**Wszystkie automatyczne testy przechodzą.**
 
-Polecenie referencyjne:
+Polecenie:
 
 ```bash
 python tests/run_all.py
 ```
 
-## Testowane źródła aplikacji
+## Zakres i wynik końcowy
 
-1. `src/foundation/kernel.js`
-2. `src/foundation/config.js`
-3. `src/foundation/catalog.js`
-4. `src/foundation/orientation.js`
-5. `src/foundation/blueprint.js`
-6. `src/foundation/craft_model.js`
-7. `src/foundation/craft_history.js`
-8. `src/foundation/state.js`
-9. `src/foundation/bootstrap.js`
-10. `src/game.js`
+- składnia wszystkich 15 źródeł aplikacji przechodzi `node --check`;
+- 213 unikalnych funkcji runtime i 183 unikalne identyfikatory HTML;
+- loader, build i manifest używają tej samej kolejności źródeł;
+- bootstrap rozwiązuje 12 modułów domenowych;
+- startup smoke wykonuje pełny przepływ pusty warsztat → starter → lot → wejścia wieloosiowe → powrót;
+- build źródłowy, jednoplikowy HTML, manifest i SHA-256 są deterministyczne i zgodne bajtowo.
 
-## Walidacja poprzedniego etapu
+## Blueprint v9 i Control Frame
 
-Przed rozpoczęciem Phase 1B uruchomiono pełny zestaw testów odziedziczony z Phase 1. Wszystkie testy przechodziły. Potwierdzono również poprawny build jednoplikowy i ZIP.
+Testowane są:
 
-Przegląd architektury ujawnił jednak, że poprzednia granica modelu była niepełna: `STATE.voxels` łączyło dane bloku z meshem Three.js. Phase 1B usuwa to sprzężenie i dodaje testy, które zabraniają jego powrotu.
+- pusty dokument i dowolny pierwszy blok;
+- Core w dowolnym miejscu, jego usunięcie i ponowne dodanie;
+- maksymalnie jeden Core;
+- rozłączony stan roboczy oraz blokowanie startu niegotowej konstrukcji;
+- zachowanie orientacji Core w v9;
+- migracje v3–v8 do v9 z historycznym `forward +X / up +Y`;
+- `CompiledCraft.controlFrame` zawierający forward, up, right, origin i źródło orientacji;
+- transformacja intencji pilota przez obrócony układ Core.
 
-## Wyniki statyczne i startowe
+## CraftModel, CraftHistory i CraftCompiler
 
-- 197 unikalnych funkcji runtime bez duplikatów.
-- 142 unikalne identyfikatory HTML.
-- 10 źródeł aplikacji w jednej testowanej kolejności.
-- Wszystkie bezpośrednie odwołania `getElementById` mają odpowiadające elementy.
-- Startup całej aplikacji przechodzi na stubach przeglądarki.
-- Bootstrap rozwiązuje siedem modułów domenowych: config, catalog, orientation, blueprint, craft-model, craft-history i state.
-- `game.js` nie zawiera już `STATE.voxels`.
-- `CraftModel` i `CraftHistory` nie odwołują się do Three.js, Cannon.js, DOM ani runtime lotu.
+- atomowe transakcje oraz brak mutacji po odrzuceniu;
+- niezmienność rekordów i snapshotów;
+- 600 deterministycznych operacji edytora;
+- pełny model 2500 bloków;
+- undo/redo, deduplikacja, rollback i budżet pamięci;
+- deterministyczna sygnatura, cache rewizji i diagnostyka spójności;
+- pełne `replace` 2500 bloków: około 8.4 ms w ostatnim przebiegu Node;
+- kompilacja 2500 części: około 52.7 ms w ostatnim przebiegu Node.
 
-## Testy CraftModel
+Czasy są pomiarem logiki w środowisku Node, nie gwarancją renderowania ani fizyki w przeglądarce.
 
-- Atomowe dodawanie pojedynczych i wieloblokowych planów.
-- Atomowe zastępowanie całej konstrukcji.
-- Brak częściowego zapisu przy błędzie walidacji.
-- Odrzucanie duplikatów, kolizji pozycji, nieznanych typów i błędnych orientacji.
-- Ochrona bloku Core.
-- Odrzucanie usunięcia rozcinającego konstrukcję.
-- Niezmienność rekordów, snapshotów i payloadów zdarzeń.
-- Rosnąca rewizja wyłącznie po przyjętych transakcjach.
-- Round-trip `CraftModel -> Blueprint document -> CraftModel`.
-- Migracja starszego dokumentu przez istniejący moduł Blueprint.
-- 600 deterministycznych losowych operacji dodawania i usuwania.
-- Pełna konstrukcja 2500 bloków.
-- Atomowe odrzucenie próby przekroczenia limitu.
-- Czas pełnego `replace` dla 2500 bloków w środowisku testowym wynosił około 9–11 ms; jest to wynik orientacyjny, nie gwarancja dla przeglądarki użytkownika.
+## Sterowanie
 
-## Testy CraftHistory
+- sześć osi: `pitch`, `yaw`, `roll`, `surge`, `sway`, `lift`;
+- W/S — przód/tył, Z/C — lewo/prawo, Space/Ctrl — góra/dół;
+- A/D i strzałki — poprawny yaw, Q/E — roll;
+- osobny profil użytkownika z odwracaniem i czułością każdej osi;
+- domyślna korekta historycznie odwróconego pitchu;
+- agregacja wielu jednoczesnych akcji;
+- Left Ctrl + S jako równoczesne dół + tył;
+- pasywny ciąg +Y nie ogranicza autorytetu wejść pilota;
+- neutralnie wyłączone thrustry poziome i skierowane w dół bez komendy.
 
-- Deduplicacja identycznych snapshotów.
-- Poprawne undo i redo.
-- Rollback undo/redo po nieudanym odtworzeniu modelu.
-- Czyszczenie redo po nowym commicie.
-- Izolacja snapshotów od późniejszych mutacji danych wejściowych.
-- Ograniczanie historii zgodnie z budżetem pamięci i limitem wpisów.
+## UI Workspace
 
-## Zachowane regresje gry
+Testy i audyt statyczny zabezpieczają:
 
-- 24 unikalne orientacje przestrzenne.
-- Poprawny czterokrotny cykl roll i symetria lustrzana.
-- Poprawna migracja dokumentów v3–v7.
-- Odrzucanie nieznanych przyszłych wersji oraz błędnych blueprintów.
-- Poprawny starter VTOL: 17 części, 28 kg, TWR około 1,223.
-- Zachowane odroczone obrażenia po `world.step()`.
-- Zachowane transakcyjne odrywanie gałęzi.
-- Zachowane liniowe lookupy sąsiadów i strukturalny sampling 30 Hz.
-- Zachowany limit 48 fizycznych odłamków i 480 części lotnych.
-- Zachowane warunki kontraktów, bramek, zawisu i integralności ładunku.
+- wspólny stan Build, Contracts, Telemetry i Controls;
+- zamykanie i ponowne otwieranie paneli;
+- minimalizację, przeciąganie i zmianę rozmiaru;
+- trwały zapis pozycji i rozmiaru;
+- migrację ustawień UI v1 do workspace v2;
+- automatyczne ukrycie panelu kontraktów w trybie lotu bez niszczenia preferencji użytkownika;
+- mobilny fallback bez pływających okien.
+
+## Zachowane regresje
+
+Przechodzą dotychczasowe testy orientacji, mirror, misji, kariery, payloadu, powierzchni sterowych, gimbali, obrażeń, wycieków, odrywania części, collision damage, stabilnego zawisu, limitów historii, debris i części lotnych.
 
 ## Build i wydanie
 
-- Jednoplikowy HTML przechodzi `node --check` po wyodrębnieniu osadzonego skryptu.
-- ZIP zawiera źródła, testy, dokumentację oraz moduły Phase 1B i nie zawiera katalogu `dist/`.
-- Generowanie SHA-256 działa.
-- Dwa niezależne buildy tych samych źródeł dały identyczny HTML i identyczny ZIP.
+- jednoplikowy HTML przechodzi kontrolę składni osadzonego kodu;
+- osadzone moduły są porównywane ze źródłami bajt po bajcie;
+- ZIP-owe źródła są porównywane z katalogiem roboczym;
+- ZIP zawiera odpowiadający mu jednoplikowy HTML i `SOURCE_MANIFEST.json`;
+- dwa niezależne buildy są deterministyczne;
+- generator nie dodaje już podwójnych wpisów z katalogu `release/`.
 
-## Ograniczenie testów
+## Ograniczenie walidacji
 
-Podjęto próbę prawdziwego testu Chromium, lecz środowisko wykonawcze zablokowało nawigację zarówno do `localhost`, jak i `file://` błędem administracyjnym. Raport nie deklaruje więc pełnego playtestu WebGL, działania GPU ani jakości sterowania w rzeczywistym locie.
-
-Do projektu pozostaje do dodania test Playwright uruchamiany lokalnie lub w CI bez tej blokady oraz długotrwały soak test fizyki.
+Nie wykonano wiarygodnego pełnego playtestu prawdziwego WebGL/GPU. Startup i interakcje są testowane na stubach, ale rzeczywisty lot, fokus wejścia, przeciąganie okien i rendering należy dodatkowo sprawdzić lokalnie w przeglądarce.

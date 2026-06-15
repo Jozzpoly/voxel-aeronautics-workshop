@@ -3,10 +3,16 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+RELEASE_ID = 'foundation-1c2-control-workspace'
+APP_VERSION = '0.4.0-foundation.1c2'
+SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1C2_Control_Workspace.html'
+ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1C2_Control_Workspace.zip'
+MANIFEST_NAME = 'SOURCE_MANIFEST.json'
 APP_SOURCES = (
     Path('src/foundation/kernel.js'),
     Path('src/foundation/config.js'),
@@ -15,12 +21,62 @@ APP_SOURCES = (
     Path('src/foundation/blueprint.js'),
     Path('src/foundation/craft_model.js'),
     Path('src/foundation/craft_history.js'),
+    Path('src/foundation/control_frame.js'),
+    Path('src/foundation/craft_compiler.js'),
+    Path('src/foundation/input_profile.js'),
+    Path('src/foundation/ui_workspace.js'),
+    Path('src/foundation/flight_control.js'),
     Path('src/foundation/state.js'),
     Path('src/foundation/bootstrap.js'),
     Path('src/game.js'),
 )
+MANIFEST_INPUTS = (
+    Path('index.html'),
+    Path('styles.css'),
+    Path('package.json'),
+    Path('tools/build_release.py'),
+    Path('tools/verify_release.py'),
+    *APP_SOURCES,
+)
 LOADER_BEGIN = '  <!-- BEGIN APP LOADER -->'
 LOADER_END = '  <!-- END APP LOADER -->'
+
+
+def sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def source_manifest(root: Path = ROOT) -> dict:
+    files = {}
+    for relative in MANIFEST_INPUTS:
+        files[relative.as_posix()] = sha256(root / relative)
+    return {
+        'releaseId': RELEASE_ID,
+        'appVersion': APP_VERSION,
+        'entrypoint': 'index.html',
+        'embeddedApplicationSources': [path.as_posix() for path in APP_SOURCES],
+        'files': files,
+    }
+
+
+def manifest_text(root: Path = ROOT) -> str:
+    return json.dumps(source_manifest(root), ensure_ascii=False, sort_keys=True, indent=2) + '\n'
+
+
+def ensure_source_manifest(root: Path = ROOT) -> Path:
+    destination = root / MANIFEST_NAME
+    content = manifest_text(root)
+    if not destination.exists() or destination.read_text(encoding='utf-8') != content:
+        destination.write_text(content, encoding='utf-8', newline='\n')
+    return destination
 
 
 def source_bundle(root: Path = ROOT) -> str:
@@ -43,6 +99,16 @@ def replace_loader(html: str, replacement: str) -> str:
 def build_single_html(root: Path = ROOT) -> str:
     html = (root / 'index.html').read_text(encoding='utf-8')
     css = (root / 'styles.css').read_text(encoding='utf-8').rstrip()
+    manifest = manifest_text(root).encode('utf-8')
+    provenance = (
+        f'<!-- RELEASE_ID: {RELEASE_ID} -->\n'
+        f'<!-- APP_VERSION: {APP_VERSION} -->\n'
+        f'<!-- SOURCE_MANIFEST_SHA256: {sha256_bytes(manifest)} -->\n'
+    )
+    if html.startswith('<!DOCTYPE html>\n'):
+        html = '<!DOCTYPE html>\n' + provenance + html[len('<!DOCTYPE html>\n'):]
+    else:
+        html = provenance + html
 
     link = '<link rel="stylesheet" href="styles.css" />'
     if link not in html:
@@ -81,8 +147,16 @@ def build_single_html(root: Path = ROOT) -> str:
     return replace_loader(html, inline)
 
 
-def write_zip(root: Path, destination: Path) -> None:
-    ignored_parts = {'dist', '__pycache__', '.pytest_cache', '.git', 'node_modules'}
+def _deterministic_info(name: str) -> zipfile.ZipInfo:
+    info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.external_attr = 0o100644 << 16
+    return info
+
+
+def write_zip(root: Path, destination: Path, single_file: Path | None = None) -> None:
+    ignored_parts = {'dist', 'release', '__pycache__', '.pytest_cache', '.git', 'node_modules'}
+    ensure_source_manifest(root)
     destination.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(destination, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for path in sorted(root.rglob('*')):
@@ -91,26 +165,25 @@ def write_zip(root: Path, destination: Path) -> None:
             if path.resolve() == destination.resolve():
                 continue
             archive.write(path, Path(root.name) / path.relative_to(root))
-
-
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open('rb') as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
-            digest.update(chunk)
-    return digest.hexdigest()
+        if single_file is not None:
+            release_path = (Path(root.name) / 'release' / single_file.name).as_posix()
+            archive.writestr(_deterministic_info(release_path), single_file.read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+            single_hash = f'{sha256(single_file)}  {single_file.name}\n'.encode('utf-8')
+            hash_path = (Path(root.name) / 'release' / 'SHA256.txt').as_posix()
+            archive.writestr(_deterministic_info(hash_path), single_hash, compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description='Build deterministic single-file and ZIP releases.')
-    parser.add_argument('--single', type=Path, default=ROOT / 'dist' / 'Voxel_Aeronautics_Workshop_Foundation_Phase_1B.html')
-    parser.add_argument('--zip', dest='zip_path', type=Path, default=ROOT / 'dist' / 'Voxel_Aeronautics_Workshop_Foundation_Phase_1B.zip')
+    parser = argparse.ArgumentParser(description='Build source-parity-verified single-file and ZIP releases.')
+    parser.add_argument('--single', type=Path, default=ROOT / 'dist' / SINGLE_NAME)
+    parser.add_argument('--zip', dest='zip_path', type=Path, default=ROOT / 'dist' / ZIP_NAME)
     parser.add_argument('--hashes', type=Path, default=ROOT / 'dist' / 'SHA256.txt')
     args = parser.parse_args()
 
+    ensure_source_manifest(ROOT)
     args.single.parent.mkdir(parents=True, exist_ok=True)
     args.single.write_text(build_single_html(ROOT), encoding='utf-8', newline='\n')
-    write_zip(ROOT, args.zip_path)
+    write_zip(ROOT, args.zip_path, args.single)
     args.hashes.parent.mkdir(parents=True, exist_ok=True)
     args.hashes.write_text(
         f'{sha256(args.single)}  {args.single.name}\n{sha256(args.zip_path)}  {args.zip_path.name}\n',

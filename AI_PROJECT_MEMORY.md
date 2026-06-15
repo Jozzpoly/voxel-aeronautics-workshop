@@ -1,132 +1,155 @@
 # AI PROJECT MEMORY — Voxel Aeronautics Workshop
 
-> Ten plik jest obowiązkowym punktem wejścia dla kolejnych agentów i sesji pracujących nad projektem.
+> Obowiązkowy punkt wejścia dla kolejnych sesji i agentów. Najpierw przeczytaj ten plik, potem `ARCHITECTURE.md`, `VALIDATION_REPORT.md` i testy.
 
 ## 1. Wizja produktu
 
 Voxel Aeronautics Workshop ma być przede wszystkim sandboxem inżynieryjnym, w którym gracz:
 
 1. buduje statek powietrzny blok po bloku;
-2. łączy sensory, kontrolery i urządzenia wykonawcze;
+2. rozmieszcza napęd, powierzchnie, sensory i urządzenia;
 3. programuje sposób sterowania;
 4. testuje maszynę i analizuje telemetrię;
 5. poprawia projekt;
 6. lata dla samej przyjemności latania.
 
-Kontrakty, ekonomia i progresja są systemami pomocniczymi. Nie mogą zagłuszyć głównej fantazji: **buduję, programuję, testuję i latam własnym airshipem**.
+Kontrakty, ekonomia i progresja są pomocnicze. Nie mogą zagłuszyć głównej fantazji: **buduję, programuję, testuję i latam własnym airshipem**.
 
-## 2. Kierunek techniczny
+## 2. Ważny feedback użytkownika
 
-Docelowo projekt potrzebuje:
+Użytkownik chce pełnej swobody rozpoczęcia konstrukcji. Nie wolno ponownie wymuszać Core w `0,0,0` ani automatycznie zajmować pierwszego/najniższego bloku.
 
-- kompilatora konstrukcji `Blueprint -> CompiledCraft`;
-- scalonych colliderów i wydajnego renderowania dużych konstrukcji;
-- oddzielnych wysp sztywnych brył dla mechanizmów ruchomych;
-- grafu sygnałów, sensorów, aktuatorów i mikrokontrolerów;
-- aerodynamiki opartej na odsłoniętych powierzchniach;
-- komór gazowych, balastu, napędu i telemetrii;
-- prostego świata stworzonego do długich lotów.
+Przykład wymagania: rakieta grubości jednego bloku i wysokości kilku bloków musi móc mieć thruster jako najniższy blok, a Core wyżej.
+
+Sterowanie oczekiwane przez użytkownika:
+
+- A = obrót w lewo, D = obrót w prawo;
+- W/S = osobna oś przód/tył;
+- Space = góra;
+- Left Ctrl = dół;
+- osie muszą działać jednocześnie, np. Left Ctrl + S.
 
 ## 3. Aktualny milestone
 
-**Foundation Phase 1B — CraftModel Boundary**
+**Foundation Phase 1C.2 — Control Frame, Input Profile & UI Workspace**
 
-Po walidacji Phase 1 usunięto najważniejsze fałszywe sprzężenie architektoniczne: rekordy bloków konstrukcji nie przechowują już obiektów Three.js.
+Ukończone moduły:
 
-Aktualne moduły fundamentu:
+- `foundation.config`;
+- `foundation.catalog`;
+- `foundation.orientation`;
+- `foundation.blueprint` v9 z migracjami v3–v8;
+- `foundation.craft-model`;
+- `foundation.craft-history`;
+- `foundation.control-frame`;
+- `foundation.craft-compiler`;
+- `foundation.input-profile`;
+- `foundation.ui-workspace`;
+- `foundation.flight-control`;
+- `foundation.state`;
+- `foundation.kernel`;
+- `foundation.bootstrap`.
 
-- `foundation.config` — stałe, limity i polityki;
-- `foundation.catalog` — definicje bloków i kontraktów;
-- `foundation.orientation` — 24 orientacje przestrzenne;
-- `foundation.blueprint` — czysty dokument, normalizacja, migracje i walidacja;
-- `foundation.craft-model` — autorytatywny, czysty model konstrukcji;
-- `foundation.craft-history` — ograniczona historia undo/redo oparta na snapshotach dokumentu;
-- `foundation.state` — fabryka niezależnego stanu aplikacji;
-- `foundation.kernel` — jawny loader zależności;
-- `foundation.bootstrap` — kontrolowany punkt startowy.
+## 4. Nienaruszalne reguły
 
-Warstwa renderowania warsztatu przechowuje meshe osobno w `STATE.workshop.meshesByKey`. Jest projekcją modelu, nie źródłem prawdy.
+1. `CraftModel` jest jedynym właścicielem konstrukcji warsztatowej.
+2. Rekord bloku nie może zawierać mesha, materiału, geometrii, body, shape ani DOM.
+3. Renderer jest projekcją modelu i można go odbudować z modelu.
+4. `CompiledCraft` jest jedyną zweryfikowaną reprezentacją wejściową dla startu lotu.
+5. Core nie jest związany z początkiem układu współrzędnych.
+6. Edytor pozwala na pusty, bez-Core i rozłączony stan roboczy.
+7. Lot wymaga dokładnie jednego Core i jednej połączonej wyspy.
+8. Maksymalnie jeden Core może istnieć w modelu.
+9. Zmiany wieloblokowe są atomowe.
+10. Odrzucona operacja nie zmienia rewizji ani historii.
+11. Historia należy do `CraftHistory`.
+12. Blueprint musi działać bez DOM, renderera i fizyki.
+13. Każda wersja zapisu ma jawne migracje.
+14. Sterowanie używa semantycznych osi `pitch/yaw/roll/surge/sway/lift`.
+15. Wejścia lotu mają pierwszeństwo nad skrótami edytora.
+16. Nie podnosić limitu 480 części lotnych bez collider compilera i benchmarku.
+17. Nie dodawać programowania statku bez debuggera sygnałów i budżetu wykonania.
+18. Po każdym etapie dostarczać działający ZIP źródeł, jednoplikowy HTML i raport testów.
+19. ZIP i jednoplikowy HTML muszą pochodzić z jednego buildu, mieć unikalną nazwę wydania i przechodzić test zgodności osadzonych źródeł.
+20. ZIP powinien zawierać kopię odpowiadającego mu jednoplikowego HTML oraz `SOURCE_MANIFEST.json`.
+21. Orientacja Command Core definiuje układ sterowania statku: forward, up i right. Pozycja Core nie definiuje kształtu statku.
+22. Profil wejścia gracza i layout UI są preferencjami użytkownika, nie częścią blueprintu statku.
+23. UI nie może ponownie dostawać wyjątków per panel; wszystkie główne okna korzystają z `foundation.ui-workspace`.
 
-## 4. Nienaruszalne reguły architektury
+## 5. Format i kompatybilność
 
-1. `CraftModel` jest jedynym właścicielem aktualnej konstrukcji warsztatowej.
-2. Rekord domenowy bloku nie może zawierać mesha, materiału, geometrii, body, shape ani referencji DOM.
-3. Renderowanie może odtwarzać widok z modelu; model nie może być odtwarzany z renderera.
-4. Zmiany wieloblokowe muszą być atomowe: pełny plan zostaje przyjęty albo model pozostaje bez zmian.
-5. Odrzucona operacja nie może zmieniać rewizji modelu ani historii.
-6. Operacje usuwania muszą chronić Core i spójność konstrukcji, chyba że przyszły jawny tryb narzędzia stanowi inaczej.
-7. Historia edycji należy do `CraftHistory`; runtime nie może ponownie utrzymywać luźnych tablic undo/redo.
-8. `game.js` nie może ponownie stać się właścicielem katalogów, formatu zapisu, orientacji ani generatora stanu.
-9. Dane domenowe nie mogą zależeć od DOM, renderera ani konkretnego ekranu UI.
-10. Blueprint musi dać się walidować i migrować bez uruchamiania sceny 3D.
-11. Każdy zapis musi mieć jedną wersję schematu i jawne reguły migracji.
-12. Build jednoplikowy i projekt źródłowy muszą powstawać z tych samych plików.
-13. Po każdym etapie musi istnieć działająca, testowalna i możliwa do uruchomienia wersja.
-14. Refaktoryzacja zachowania i rozwój gameplayu powinny być osobnymi zmianami, chyba że test dokładnie zabezpiecza oba aspekty.
-15. Nie podnosić limitu części lotnych bez benchmarku i scalenia colliderów.
-16. Nie dodawać programowania statku bez debuggera sygnałów i budżetu wykonania.
+Aktualny blueprint: **v9**.
 
-## 5. Obecne źródło prawdy
+- v9 zachowuje pusty warsztat, ruchomy Core i rozłączone WIP oraz zapisuje orientację Core;
+- orientacja Core definiuje `CompiledCraft.controlFrame`;
+- maksymalnie jeden Core;
+- gotowość do lotu sprawdza `CraftCompiler`;
+- v3–v7 zachowują historyczne założenie Core w `0,0,0` podczas migracji;
+- v3–v8 migrują Core do historycznej orientacji `forward +X / up +Y`;
+- przyszłe nieznane wersje są odrzucane.
 
-Kolejność plików startowych znajduje się w `tools/build_release.py` jako `APP_SOURCES` i jest testowana względem loadera w `index.html`.
+## 6. Sterowanie
 
-Polecenia:
+- W/S — `surge +/-`;
+- Z/C — `sway -/+`;
+- Space/Left Ctrl — `lift +/-`;
+- strzałki góra/dół — pitch; domyślny profil odwraca historycznie błędny znak;
+- A/D i strzałki lewo/prawo — yaw lewo/prawo;
+- Q/E — roll;
+- G — stabilizacja;
+- -/+ — pasywny ciąg silników skierowanych ku lokalnemu +Y; nie jest limitem wejść pilota.
 
-```bash
-python tests/run_all.py
-python tools/build_release.py
-python tools/serve.py
-```
+Każdą z sześciu osi można odwrócić i ustawić jej czułość w oknie Controls. `Left Ctrl + S` jest testowane jako równoczesne dół + tył. Nie wolno przywrócić konfliktu Ctrl+S w trybie lotu. Poziome i skierowane w dół thrustry mają być neutralnie wyłączone. Suwak ustala tylko pasywny ciąg +Y; nawet przy 0% bezpośrednie wejścia gracza muszą zachować pełną moc sterowania. Left Ctrl ma uruchamiać thrustry skierowane w dół, nie je wyłączać.
 
-Na Windows można użyć:
+## 7. Stan testów
 
-```text
-run_tests.bat
-run_game.bat
-```
+Przechodzą:
 
-## 6. Stan testów
+- składnia 15 źródeł aplikacji;
+- statyczna zgodność kolejności loadera i brak duplikatów ID/funkcji;
+- dwanaście rozwiązywanych modułów domenowych;
+- 24 orientacje;
+- blueprint v3–v9 i migracja orientacji Core;
+- pusty warsztat, ruchomy/usuwalny i orientowany Core;
+- `CompiledCraft.controlFrame`;
+- sześć osi wejścia, odwracanie i czułość;
+- transformacja intencji gracza przez orientację Core;
+- trwały, normalizowany workspace okien;
+- transakcje, historia i 600 losowych operacji;
+- 2500 bloków;
+- regresje misji, fizyki i uszkodzeń;
+- startup smoke;
+- bajtowa zgodność źródeł ZIP ↔ osadzone moduły HTML;
+- deterministyczny build i SHA-256;
+- brak duplikatów artefaktów w ZIP-ie.
 
-Aktualnie przechodzą:
+Nie ma wiarygodnego automatycznego playtestu prawdziwego WebGL. Próba uruchomienia systemowego Chromium w środowisku roboczym zakończyła się ograniczeniami procesu/DBus. Nie wolno twierdzić, że pełny lot GPU został przetestowany.
 
-- sprawdzenie składni 10 źródeł aplikacji;
-- statyczna kontrola 197 funkcji runtime i 142 identyfikatorów HTML;
-- test kernela i siedmiu rozwiązywanych modułów domenowych;
-- izolacja instancji stanu;
-- 24 orientacje i migracje orientacji legacy;
-- walidacja i migracja blueprintów v3–v7;
-- atomowe dodawanie, usuwanie i zastępowanie konstrukcji;
-- ochrona Core i spójności grafu konstrukcji;
-- niezmienność snapshotów oraz zdarzeń `CraftModel`;
-- 600 deterministycznych losowych operacji edytora;
-- pełny model 2500 bloków oraz atomowe odrzucanie przekroczenia limitu;
-- ograniczona, izolowana historia undo/redo z rollbackiem;
-- regresje fizyki, misji, uszkodzeń i UI;
-- smoke test uruchomienia całej aplikacji na stubach przeglądarki;
-- jednoplikowy build, ZIP, SHA-256 i powtarzalność dwóch niezależnych buildów.
+## 8. Najbliższy etap
 
-Nie ma jeszcze automatycznego testu prawdziwego WebGL. Środowisko wykonawcze blokowało nawigację Chromium do plików lokalnych i localhosta, dlatego nie wolno twierdzić, że wykonano pełny playtest renderera.
+**Foundation Phase 1D — Physics Boundary**
 
-## 7. Najbliższy etap
-
-**Foundation Phase 1C — CraftCompiler**
+Phase 1C.2 ustanowił granicę sterowania i UI. Nie rozbudowywać teraz paneli ani pojazdów przez dokładanie logiki do `game.js`; następny duży krok to wycięcie backendu fizyki.
 
 Priorytety:
 
-1. zdefiniować niezmienny kontrakt `CompiledCraft`;
-2. przenieść analizę masy, środka masy, bezwładności i funkcjonalnych modułów poza globalny `STATE`;
-3. kompilować czysty `CraftModel` do reprezentacji runtime bez meshów;
-4. zachować stabilne mapowanie `blockKey -> compiled indices` dla obrażeń i diagnostyki;
-5. dodać deterministyczne testy kompilacji oraz benchmarki 100/500/1000/2500 bloków;
-6. dopiero później wprowadzić interfejs backendu fizycznego i scalanie colliderów.
+1. porty świata, ciała, collidera, siły i kroku;
+2. adapter Cannon.js zachowujący obecne zachowanie;
+3. przeniesienie tworzenia compound body poza `game.js`;
+4. bezrendererowy harness fizyki;
+5. pomiar stabilności, kosztu i deterministyczności;
+6. decyzja cannon-es vs Rapier dopiero na danych;
+7. collider compiler jako osobny kolejny etap.
 
-## 8. Świadomie pozostawione ograniczenia
+## 9. Świadomy dług
 
-- Three.js, Cannon.js i Tailwind nadal są pobierane z przypiętych CDN-ów.
-- `game.js` nadal jest duży i zarządza sceną, UI, lotem, aerodynamiką i misjami.
-- `foundation.state` nadal tworzy część wektorów Three.js dla kompatybilności runtime; czysty model konstrukcji jest już od tej zależności wolny, lecz pełna granica stanu jeszcze nie.
-- Fizyka nadal używa jednego collidera na voxel.
-- Runtime lotu nadal jest budowany bezpośrednio przez funkcje w `game.js`.
-- Nie ma jeszcze `CraftCompiler`, abstrakcji backendu fizycznego, TypeScriptu ani Vite.
+- jeden collider na voxel;
+- limit 480 aktywnych części;
+- duży `game.js`;
+- częściowe zależności Three.js w stanie runtime;
+- biblioteki z CDN;
+- uproszczona aerodynamika kadłuba;
+- brak Vite/TypeScript/ESM;
+- brak programu sygnałowego, jointów i dużego świata.
 
-Te ograniczenia są jawne. Nie wolno ich przykrywać szybkim dodawaniem gameplayu.
+Nie przykrywać tych ograniczeń szybkim dodawaniem contentu.

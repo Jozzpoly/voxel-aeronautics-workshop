@@ -21,6 +21,8 @@ def main() -> None:
     run(sys.executable, 'tests/static_check.py')
     run('node', 'tests/test_foundation.js')
     run('node', 'tests/test_craft_model.js')
+    run('node', 'tests/test_craft_compiler.js')
+    run('node', 'tests/test_flight_control.js')
     run('node', 'tests/test_craft_history.js')
     run(sys.executable, 'tests/test_algorithms.py')
     run(sys.executable, 'tests/test_missions.py')

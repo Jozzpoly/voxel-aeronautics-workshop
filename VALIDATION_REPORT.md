@@ -1,72 +1,64 @@
-# Validation Report — Foundation Phase 1 → Phase 1B
+# Validation Report — Foundation Phase 1C.2
 
-## Cel
+## Zakres
 
-Zweryfikować poprzedni etap jak zewnętrzny pull request, zanim projekt otrzyma kolejne fundamenty. Walidacja obejmowała testy, build, zawartość wydania, granice modułów i ręczny przegląd właścicieli stanu.
+Walidacja objęła synchronizację przesłanej Phase 1C.1 z repozytorium, przegląd granic domenowych, wdrożenie Control Frame, sześciu osi wejścia i wspólnego systemu okien oraz pełny powtórny przebieg testów i buildów.
 
-## Stan wejściowy
+## Problemy rozwiązane w tym etapie
 
-Przed zmianami:
+### 1. Orientacja statku była ukrytym założeniem globalnym
 
-- cały odziedziczony zestaw testów przechodził;
-- startup smoke test przechodził;
-- jednoplikowy build oraz ZIP powstawały poprawnie;
-- moduły Config, Catalog, Orientation, Blueprint, State, Kernel i Bootstrap były realnie używane przez grę.
+Pozycja Core była już swobodna, ale runtime nadal zakładał jeden globalny kierunek przodu i góry. To nie wystarcza dla pionowych rakiet, obróconych kokpitów ani przyszłych wielorodzajowych pojazdów.
 
-Phase 1 nie był atrapą. Dostarczał działające granice dla konfiguracji, katalogów, orientacji, dokumentu zapisu i bootstrapa.
+Rozwiązanie: orientacja Command Core definiuje jawny `CraftControlFrame` z osiami forward/up/right oraz origin. `CraftCompiler` zapisuje go w niezmiennym `CompiledCraft`.
 
-## Znalezione problemy
+### 2. Preferencje gracza mieszały się z fizycznym znakiem sterowania
 
-### 1. Model konstrukcji nadal nie był czysty
+Odwrócenie osi nie powinno zmieniać blueprintu ani konfiguracji aktuatora. Dodano osobny, wersjonowany `InputProfile` z sześcioma osiami, odwracaniem i czułością. Domyślny profil koryguje zgłoszony odwrócony pitch.
 
-`STATE.voxels` przechowywało jednocześnie:
+### 3. Brakowało bocznej translacji
 
-- pozycję i typ bloku;
-- orientację oraz ustawienia sterowania;
-- mesh Three.js.
+Sterowanie posiada teraz pełne sześć stopni swobody: pitch, yaw, roll, surge, sway i lift. Z/C zasila `sway`, a monitor wejścia pokazuje wszystkie osie.
 
-W efekcie renderer pozostawał częścią modelu domenowego. Utrudniało to testowanie, przyszły CraftCompiler, narzędzia zewnętrzne, multiplayer oraz zmianę sposobu renderowania.
+### 4. Interfejs był zbiorem wyjątków per panel
 
-### 2. Operacje edytora nie miały jednego właściciela transakcji
+Build, Contracts, Telemetry i Controls korzystają teraz z jednego `foundation.ui-workspace`. Każde okno może zostać otwarte, zamknięte, zminimalizowane, przeciągnięte i przeskalowane, a layout jest normalizowany i zapisywany jako preferencja użytkownika.
 
-Dodawanie symetryczne, usuwanie i odtwarzanie blueprintu składały się z wielu ręcznych kroków wykonywanych przez runtime. Błąd w połowie operacji mógł w przyszłości rozjechać model, widok i historię.
+### 5. Pipeline wydania duplikował pliki
 
-### 3. Historia była strukturą runtime
+Generator ZIP skanował istniejący katalog `release/`, a później ponownie dodawał aktualny HTML i SHA. Katalog artefaktów został wyłączony ze źródeł paczki. Test deterministyczności i zgodności źródeł przechodzi bez ostrzeżeń o duplikatach.
 
-Undo/redo opierało się na luźnych tablicach stanu aplikacji. Nie miało samodzielnego kontraktu, izolacji snapshotów ani jawnego rollbacku po nieudanym odtworzeniu.
+## Wynik automatyczny
 
-### 4. Granica stanu jest nadal niepełna
+Wszystkie testy przechodzą:
 
-`foundation.state` wciąż tworzy wybrane obiekty Three.js potrzebne istniejącemu runtime. Nie blokuje to czystego modelu konstrukcji, ale pozostaje świadomym długiem do dalszego wydzielenia.
+- 15 źródeł aplikacji;
+- 213 funkcji runtime;
+- 183 unikalne ID HTML;
+- 12 modułów domenowych;
+- migracje blueprintów v3–v9;
+- orientowany Core i `CompiledCraft.controlFrame`;
+- sześć osi, profil wejścia i transformacja przez Control Frame;
+- 600 losowych operacji CraftModel;
+- model i kompilacja 2500 bloków;
+- regresje misji, fizyki, obrażeń i UI;
+- interakcyjny startup smoke;
+- deterministyczny HTML, ZIP, manifest i SHA-256.
 
-## Wprowadzone korekty
-
-- Dodano autorytatywny `foundation.craft-model` bez zależności od renderera, fizyki i DOM.
-- Dodano `foundation.craft-history` z ograniczonym undo/redo i rollbackiem.
-- Usunięto `STATE.voxels`.
-- Meshe warsztatu przeniesiono do `STATE.workshop.meshesByKey`.
-- Widok warsztatu jest aktualizowany ze zdarzeń modelu i może zostać w całości odbudowany z modelu.
-- Dodawanie wieloblokowe oraz zastępowanie konstrukcji są atomowymi transakcjami.
-- Usuwanie Core lub bloku rozcinającego konstrukcję jest odrzucane przed zmianą modelu.
-- Blueprint jest generowany bezpośrednio z czystego modelu.
-- Dodano statyczne i dynamiczne testy zabraniające powrotu starego sprzężenia.
-
-## Wynik po zmianach
-
-- Wszystkie dotychczasowe regresje przechodzą.
-- Wszystkie nowe testy CraftModel i CraftHistory przechodzą.
-- 600 deterministycznych operacji edytora nie naruszyło spójności modelu.
-- Model 2500 bloków jest przyjmowany atomowo.
-- Próba 2501 bloków jest odrzucana bez częściowej mutacji.
-- Startup przechodzi z 10 źródłami aplikacji.
-- Dwa niezależne buildy dały bajtowo identyczny HTML i ZIP.
+Ostatni przebieg zmierzył około 8.4 ms dla pełnego `replace` 2500 bloków oraz około 52.7 ms dla kompilacji 2500 części w Node.
 
 ## Ocena
 
-**Phase 1B jest wystarczająco stabilnym fundamentem do rozpoczęcia CraftCompiler, ale nie do scalania colliderów ani zmiany fizyki.**
+**Phase 1C.2 jest gotowa do pracy jako baza dla Foundation Phase 1D — Physics Boundary.**
 
-Najważniejsza granica została naprawiona: dane konstrukcji są teraz niezależne od jej wizualizacji. Następna zmiana powinna skompilować ten model do niezmiennej reprezentacji lotu, zanim runtime fizyczny zostanie przebudowany.
+Nie należy jeszcze podnosić limitu 480 aktywnych części ani wymieniać Cannon.js bez neutralnego interfejsu backendu, harnessu fizyki i benchmarków. Runtime nadal tworzy jeden collider na voxel i nadal skupia zbyt wiele odpowiedzialności w `game.js`.
 
 ## Niewykonana walidacja
 
-Nie wykonano pełnego testu prawdziwego WebGL ani ręcznego długiego lotu, ponieważ środowisko zablokowało Chromium dla `localhost` i `file://`. Ta luka jest jawna i pozostaje obowiązkowym testem po uruchomieniu projektu na komputerze użytkownika.
+Nie udało się przeprowadzić wiarygodnego, automatycznego playtestu prawdziwego WebGL/GPU w środowisku roboczym. Startup smoke nie zastępuje lokalnego sprawdzenia:
+
+- kierunku pitch/yaw/roll z rzeczywistą kamerą;
+- różnych orientacji Core;
+- przeciągania i skalowania okien przy różnych rozdzielczościach;
+- fokusu klawiatury między viewportem a kontrolkami;
+- długiego lotu i stabilności fizyki.

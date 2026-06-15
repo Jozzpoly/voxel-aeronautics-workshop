@@ -1,17 +1,37 @@
-# Architektura — Foundation Phase 1B
+# Architektura — Foundation Phase 1C.2
 
-## Cel
+## Cel etapu
 
-Celem etapu było stworzenie rzeczywistej granicy między:
+Phase 1C ustanawia stabilną granicę między trzema różnymi stanami:
 
-- danymi konstrukcji;
-- historią edycji;
-- wizualizacją warsztatu;
-- runtime lotu.
+1. **Blueprint / CraftModel** — to, co gracz może swobodnie edytować i zapisać;
+2. **CompiledCraft** — zweryfikowany, deterministyczny opis maszyny;
+3. **Flight Runtime** — obiekty Three.js i Cannon.js używane podczas lotu.
 
-Nie chodziło o przeniesienie funkcji do nowych plików, lecz o ustanowienie jednego autorytatywnego modelu, który może później zasilać kompilator konstrukcji, renderer, fizykę, narzędzia i multiplayer.
+Najważniejsza korekta projektowa: poprawność stanu roboczego nie jest tym samym co gotowość do lotu.
 
-## Obecny przepływ zależności
+## Przepływ danych
+
+```text
+Blueprint JSON
+    │ normalize / migrate
+    ▼
+CraftModel
+    │ snapshot + revision
+    ▼
+CraftCompiler
+    │ immutable CompiledCraft
+    ▼
+Runtime adapter w game.js
+    ├─ Three.js visuals
+    ├─ Cannon.js body/shapes
+    ├─ damage runtime
+    └─ flight telemetry
+```
+
+Renderer i fizyka nigdy nie są źródłem prawdy dla blueprintu.
+
+## Kierunek zależności
 
 ```text
 foundation.kernel
@@ -21,6 +41,11 @@ foundation.kernel
    ├─ foundation.blueprint
    ├─ foundation.craft-model
    ├─ foundation.craft-history
+   ├─ foundation.control-frame
+   ├─ foundation.craft-compiler
+   ├─ foundation.input-profile
+   ├─ foundation.ui-workspace
+   ├─ foundation.flight-control
    └─ foundation.state
             │
             ▼
@@ -30,45 +55,32 @@ foundation.kernel
           game.js
 ```
 
-`game.js` nadal zarządza sceną, lotem, misjami i UI, ale nie jest już właścicielem danych konstrukcji ani stosów historii.
+Fundament nie może importować `game.js` ani zależeć od sceny.
 
-## Moduły
+## `foundation.blueprint`
 
-### `foundation.config`
+Blueprint v9 jest czystym dokumentem i może reprezentować:
 
-Właściciel limitów, kluczy zapisów, parametrów fizyki, grup kolizji, enumów i polityki pamięci. Wynik jest głęboko zamrożony.
+- pusty warsztat;
+- konstrukcję bez Core;
+- Core w dowolnej poprawnej pozycji;
+- chwilowo rozłączone wyspy konstrukcji;
+- maksymalnie jeden Core.
 
-### `foundation.catalog`
+Takie dokumenty są poprawnymi **stanami edytora**, lecz nie muszą być gotowe do lotu.
 
-Właściciel danych bloków i kontraktów. Waliduje identyfikatory oraz zależności kontraktów.
+Dla v3–v7 zachowane są historyczne reguły pozycji i spójności. Dla v3–v8 zachowana jest historyczna orientacja Core:
 
-### `foundation.orientation`
+- Core w `0,0,0` dla v3–v7;
+- automatyczne dodanie Core, gdy stary zapis go nie zawierał;
+- wymagana spójność konstrukcji dla v3–v7;
+- Core `forward +X / up +Y` dla v3–v8.
 
-Generuje dokładnie 24 ortogonalne orientacje, obsługuje legacy oraz mapowanie `forward/up`.
+Normalizacja zawsze zwraca dokument v9.
 
-### `foundation.blueprint`
+## `foundation.craft-model`
 
-Granica dokumentu zapisu. Odpowiada za:
-
-- kanoniczny format;
-- sortowanie;
-- migracje v3–v7;
-- odrzucanie przyszłych wersji;
-- granice siatki;
-- pojedynczy Core w `0,0,0`;
-- brak duplikatów;
-- całkowite współrzędne;
-- spójność konstrukcji;
-- normalizację orientacji i sterowania;
-- klonowanie oraz sygnatury.
-
-Nie zna DOM, renderera ani fizyki.
-
-### `foundation.craft-model`
-
-Autorytatywny stan edytowanej konstrukcji.
-
-Przechowuje zamrożone rekordy:
+`CraftModel` jest jedynym właścicielem aktualnej konstrukcji warsztatowej. Przechowuje wyłącznie zamrożone rekordy domenowe:
 
 ```text
 {
@@ -81,138 +93,154 @@ Przechowuje zamrożone rekordy:
 }
 ```
 
-Nie przechowuje:
+Model:
 
-- meshy;
-- materiałów;
-- wektorów Three.js;
-- ciał Cannon.js;
-- elementów DOM.
+- pozwala zacząć od dowolnego bloku;
+- pozwala na zero lub jeden Core;
+- pozwala przesuwać Core przez usunięcie i ponowne ustawienie;
+- pozwala zachować rozłączony stan roboczy;
+- pilnuje granic, typów, duplikatów i limitu bloków;
+- wykonuje operacje wieloblokowe atomowo;
+- emituje jedno zdarzenie na przyjętą transakcję;
+- posiada rewizję rosnącą wyłącznie po realnej zmianie.
 
-Zapewnia:
+Spójność pozostaje dostępna jako diagnostyka `isContiguous()`, ale jej wymaganie należy do kompilacji lotnej.
 
-- lookup po kluczu pozycji;
-- niezmienne listy i snapshoty;
-- sprawdzanie sąsiedztwa i spójności;
-- atomowe `addMany`;
-- bezpieczne `remove` chroniące przed rozcięciem konstrukcji;
-- atomowe `replace`;
-- import dokumentu;
-- eksport dokumentu;
-- zdarzenia `added/removed/updated`;
-- licznik rewizji.
+## `foundation.craft-history`
 
-Nieudana operacja nie zmienia modelu ani rewizji.
+Historia przechowuje izolowane snapshoty dokumentów i odpowiada za:
 
-### `foundation.craft-history`
+- undo / redo;
+- deduplikację;
+- limit liczby wpisów;
+- limit sumy części;
+- rollback, gdy odtworzenie nie powiedzie się.
 
-Czysty właściciel undo/redo.
+Runtime nie utrzymuje równoległych, luźnych stosów historii.
 
-- klonuje snapshoty przed zapisaniem;
-- deduplikuje identyczne stany;
-- ogranicza liczbę snapshotów;
-- ogranicza sumę przechowywanych części;
-- izoluje zwracane dokumenty od wewnętrznych stosów;
-- pozwala wycofać operację historii, gdy odtworzenie dokumentu zawiedzie.
+## `foundation.craft-compiler`
 
-### `foundation.state`
+### Kontrakt wejścia
 
-Tworzy niezależne instancje aplikacji. Każda instancja otrzymuje osobny:
+Kompilator przyjmuje:
 
 - `CraftModel`;
-- `CraftHistory`;
-- widok warsztatu;
-- stan lotu;
-- mapy i sety wejścia;
-- stan misji, kariery i kamery.
+- snapshot `{ revision, blocks }`;
+- dokument lub listę bloków.
 
-Część runtime nadal używa typów Three.js. To jawny dług przeznaczony do dalszego wycinania, nie część modelu konstrukcji.
+Dla modelu cache jest kluczowany obiektem i rewizją.
 
-## Model i widok warsztatu
+### Walidacja gotowości do lotu
 
-```text
-CraftModel
-   │ zdarzenie zmiany
-   ▼
-Workshop View Adapter w game.js
-   ├─ meshesByKey
-   └─ rootMeshes dla raycastingu
-```
+`CompiledCraft.ready` jest prawdziwe wyłącznie, gdy:
 
-Model jest źródłem prawdy. Widok jest projekcją.
+- istnieje co najmniej jeden blok;
+- istnieje dokładnie jeden Core;
+- wszystkie części są poprawne i unikalne;
+- wszystkie części należą do jednej połączonej wyspy;
+- limit siatki i bloków nie jest przekroczony.
 
-Przy zwykłej zmianie widok aktualizuje tylko dodane, usunięte lub zmienione bloki. Po aktualizacji sprawdzana jest zgodność liczby i kluczy. Jeżeli aktualizacja przyrostowa zawiedzie, wszystkie meshe warsztatu są odbudowywane z `CraftModel`.
+Edytor nie musi spełniać tych reguł w każdej klatce. Start musi.
 
-Nie istnieje już `STATE.voxels` łączące rekord bloku z meshem.
+### Zawartość artefaktu
 
-## Transakcje edycji
+`CompiledCraft` zawiera:
 
-Symetryczne rozmieszczenie kilku bloków jest pojedynczą operacją:
+- `format`, `sourceRevision`, `signature`;
+- `ready`, `errors`, `warnings`;
+- `blockCount`, `connectedCount`;
+- `coreIndex`, `coreKey`, `corePosition`;
+- `controlFrame` z forward/up/right i źródłem orientacji;
+- masę, ciężar, paliwo, opór, COM i bezwładność;
+- `keyToIndex`, `adjacency`;
+- kanoniczne części z liczbowymi bazami orientacji;
+- lokalne offsety, pełne siły i momenty;
+- `functionalByType`;
+- referencyjny `colliderPlan`.
 
-```text
-plan rozmieszczenia
-   │
-   ▼
-CraftModel.validateAddMany()
-   │
-   ├─ błąd → brak zmian
-   │
-   ▼
-CraftModel.addMany()
-   │
-   ▼
-jedno zdarzenie + jedna historia
-```
+Cały wynik jest głęboko zamrożony. Kompilator nie tworzy wektorów Three.js, body Cannon.js ani elementów DOM.
 
-To usuwa wcześniejsze ryzyko częściowo zastosowanego planu.
+### Determinizm
 
-Usuwanie działa analogicznie: model najpierw sprawdza wynikową spójność, a dopiero potem zatwierdza zmianę.
+Kolejność części jest kanoniczna. Ta sama konstrukcja niezależnie od kolejności wejściowej produkuje tę samą sygnaturę i układ indeksów.
 
-## Cykl dokumentu
+## Adapter `CompiledCraft -> Flight Runtime`
 
-```text
-CraftModel
-   │ toDocument(settings)
-   ▼
-Blueprint document
-   │ JSON / localStorage / plik
-   ▼
-Blueprint.normalize()
-   │
-   ▼
-CraftModel.replace()
-```
+`buildCraftSnapshot()` jest obecnie przejściowym adapterem:
 
-Każde wejście zewnętrzne przechodzi przez `Blueprint.normalize()`.
+- bierze wyłącznie wynik `CraftCompiler`;
+- konwertuje neutralne tablice liczbowe na `THREE.Vector3`;
+- nie odczytuje meshów jako danych konstrukcji;
+- przekazuje rzeczywistą pozycję Core do mocowania payloadu;
+- buduje istniejący runtime bez zmiany modelu lotu.
 
-## Build
+Tworzenie body i colliderów nadal znajduje się w `game.js`. To główny zakres Phase 1D.
 
-`tools/build_release.py` posiada jedyną uporządkowaną listę `APP_SOURCES`.
+## `foundation.control-frame`, `foundation.input-profile` i `foundation.flight-control`
 
-Buduje z tych samych źródeł:
+Command Core przechowuje jedną z 24 baz orientacji. Kompilator wyprowadza z niej `forward`, `up` i `right`. Intencja gracza jest najpierw przetwarzana przez profil wejścia, a następnie transformowana z układu Core do lokalnych osi bryły.
 
-- jednoplikowy HTML;
-- ZIP projektu;
-- sumy SHA-256.
-
-Dwa następujące po sobie buildy zostały porównane bajt po bajcie i dały identyczny HTML oraz ZIP.
-
-## Dozwolony kierunek zależności
+Warstwa wejścia operuje na semantycznych akcjach:
 
 ```text
-config <- catalog
-config <- orientation
-config + catalog + orientation <- blueprint
-config + catalog + orientation + blueprint <- craft-model
-config + blueprint <- craft-history
-orientation + craft-model + craft-history <- state
-foundation <- game.js
+pitch+ / pitch-
+yaw+ / yaw-
+roll+ / roll-
+surge+ / surge-
+sway+ / sway-
+lift+ / lift-
 ```
 
-Fundament nie może importować `game.js`.
+Mapowanie klawiszy jest oddzielone od stanu pilota. Dzięki temu klawiatura, przyciski mobilne, przyszły gamepad i mikrokontroler mogą zasilać te same osie.
 
-## Następna granica
+`applyTranslationMix()` miesza lokalny kierunek thrustera z żądaniem:
 
-`CraftCompiler` powinien przyjmować snapshot `CraftModel` lub dokument blueprintu i produkować niezmienny `CompiledCraft` zawierający masę, COM, bezwładność, graf sąsiedztwa, urządzenia funkcjonalne, punkty sił oraz plan colliderów.
+- `surge` — lokalne przód / tył;
+- `sway` — lokalne lewo / prawo;
+- `lift` — lokalne góra / dół.
 
-Dopiero po tej granicy należy oddzielać backend fizyki i implementować scalanie colliderów.
+Suwak mocy ustala wyłącznie pasywny ciąg silników skierowanych ku lokalnemu +Y. Nie jest limitem mocy dostępnej dla wejść pilota. Poziome i skierowane w dół thrustry są neutralnie wyłączone, natomiast zgodna komenda translacji lub obrotu może zwiększyć dowolny thruster aż do 100%. Komenda przeciwna redukuje istniejący pasywny ciąg do zera. Dzięki temu Left Ctrl aktywuje silniki skierowane w dół, a jednocześnie wygasza skierowane w górę. Jest to etap przejściowy przed pełnym grafem sterowania i konfigurowalnym mikserem.
+
+
+## `foundation.ui-workspace`
+
+Build, Contracts, Telemetry i Controls są projekcjami jednego wersjonowanego stanu okien. Stan przechowuje otwarcie, minimalizację, pozycję i rozmiar. Desktop renderuje pływające, przeciągane i skalowalne panele; mobile może pokazywać ten sam stan jako arkusze. Profil wejścia i workspace są preferencjami użytkownika, nie częścią blueprintu.
+
+## Ważne inwarianty
+
+1. `CraftModel` jest źródłem prawdy edytora.
+2. `CompiledCraft` jest źródłem prawdy dla uruchomienia lotu.
+3. Meshe i collidery nie trafiają do dokumentów domenowych.
+4. Core nie ma specjalnej pozycji; ma specjalną rolę.
+5. Edytor dopuszcza niegotowe stany robocze.
+6. Start wymaga dokładnie jednego Core i jednej wyspy.
+7. Każda zmiana formatu ma wersję i migrację.
+8. Sterowanie używa semantycznych osi, nie rozproszonych warunków klawiatury.
+9. Sterowanie lotem ma pierwszeństwo nad skrótami edytora.
+10. Nie podnosić limitu lotu przed benchmarkiem i collider compilerem.
+11. Pasywny ciąg i bezpośrednia autoryteta pilota są oddzielnymi pojęciami.
+12. Każdy artefakt wydania musi mieć weryfikowalną zgodność źródeł ZIP ↔ single HTML.
+13. Orientacja Core definiuje Control Frame, ale profil wejścia pozostaje preferencją użytkownika.
+14. Wszystkie główne okna używają wspólnego `UIWorkspace`.
+
+## Świadomy dług
+
+- `game.js` nadal jest duży.
+- `foundation.state` nadal posiada część obiektów Three.js dla kompatybilności.
+- runtime lotu nadal tworzy collider na każdy voxel.
+- `CompiledCraft.colliderPlan` jest na razie referencyjny, nie zoptymalizowany.
+- aerodynamika kadłuba nadal sumuje uproszczone `dragArea`.
+- Three.js, Cannon.js i Tailwind pochodzą z CDN.
+- brak prawdziwego automatycznego testu WebGL w obecnym środowisku.
+
+## Następna granica — Foundation Phase 1D
+
+Physics Boundary powinien:
+
+1. zdefiniować minimalne porty świata, ciała, collidera i siły;
+2. przenieść budowę compound body poza `game.js`;
+3. zachować Cannon.js jako adapter referencyjny;
+4. uruchamiać bezrendererowe kroki fizyki w testach;
+5. mierzyć stabilność i koszt 100/500/1000/2500 części;
+6. przygotować bezpieczny punkt porównania dla cannon-es i Rapier;
+7. dopiero potem umożliwić scalanie colliderów.

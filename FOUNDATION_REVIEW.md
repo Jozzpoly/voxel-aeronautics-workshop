@@ -1,92 +1,100 @@
-# Foundation Review — Phase 1B
+# Foundation Review — Phase 1C.1 Hotfix
 
 ## Decyzja jakościowa
 
-Milestone jest dobrym, stabilnym punktem do dalszego rozwoju. Poprzedni etap został zweryfikowany przed rozpoczęciem prac, a następnie usunięto największą pozostałą fałszywą granicę: połączenie danych voxelowych z obiektami renderera.
+Phase 1C jest dobrym punktem bazowym do rozpoczęcia granicy backendu fizycznego. Nie jest jeszcze zakończeniem fundamentów i nie uzasadnia podniesienia limitu części lotnych.
 
-Nie oznacza to końca przebudowy fundamentów. `CraftCompiler`, adapter fizyki i scalanie colliderów nadal nie istnieją.
+Najważniejsze osiągnięcie nie polega tylko na dodaniu nowego pliku. Projekt posiada teraz trzy jawne poziomy danych:
 
-## Co zostało zweryfikowane przed zmianami
+```text
+CraftModel → CompiledCraft → Flight Runtime
+```
 
-- wszystkie testy Foundation Phase 1 przechodziły;
-- kolejność modułów w `index.html` i buildzie była zgodna;
-- migracje blueprintów v3–v7 działały;
-- startup na stubach przechodził;
-- jednoplikowy build i ZIP były poprawne;
-- misje, uszkodzenia i limit solvera nie miały regresji.
+Dzięki temu dalsze zmiany fizyki nie muszą ponownie mieszać blueprintu, sceny i solvera.
 
-Walidacja potwierdziła również, że poprzedni etap nie był atrapą. `game.js` rzeczywiście korzystał z modułów konfiguracji, katalogu, orientacji, blueprintu i stanu.
+## Co zostało zweryfikowane
 
-## Najważniejszy problem znaleziony podczas review
+- cały zestaw Phase 1B przechodził przed zmianami;
+- model i widok były rzeczywiście rozdzielone;
+- historia była atomowa i ograniczona;
+- build był powtarzalny;
+- migracje starszych zapisów działały;
+- po zmianach wszystkie wcześniejsze regresje nadal przechodzą.
 
-`STATE.voxels` przechowywało jednocześnie:
+## Co poprawiono właściwie
 
-- typ i konfigurację bloku;
-- pozycję;
-- orientację;
-- mesh Three.js.
+### Core ma rolę, a nie zarezerwowaną pozycję
 
-W rezultacie operacja domenowa, taka jak usuwanie bloku, musiała tymczasowo usuwać mesh ze sceny, zmieniać mapę, sprawdzać spójność, a następnie ewentualnie odtwarzać wszystko przy błędzie.
+Można rozpocząć od dowolnego bloku. Test zawiera dokładnie przypadek jednoblokowej rakiety: thruster na `0,0,0`, kadłub/paliwo wyżej i Core na `0,2,0`.
 
-To uniemożliwiało bezpieczne użycie konstrukcji przez kompilator, serwer, narzędzia lub testy bez renderera.
+### Stan roboczy i statek lotny są rozdzielone
 
-## Co naprawdę poprawiono
+Pusty, bez-Core lub rozłączony projekt można zachować. Nie oznacza to jednak zgody na start. `CraftCompiler` dostarcza jawne błędy `empty-craft`, `missing-core` i `disconnected`.
 
-### Model jest autorytatywny
+To lepszy model UX niż wymuszanie kompletności po każdej operacji.
 
-`CraftModel` zawiera wyłącznie czyste rekordy bloków. Nie ma w nim `THREE`, `CANNON`, DOM ani meshy.
+### Kompilator jest czysty i deterministyczny
 
-### Operacje są atomowe
+`CompiledCraft` jest zamrożony, kanonicznie sortowany i ma stabilną sygnaturę. Kompilacja tej samej rewizji jest cache’owana. Model 2500 bloków kompiluje się w dziesiątkach milisekund w Node, więc warstwa danych nadal nie jest głównym wąskim gardłem.
 
-Symetryczny plan kilku bloków jest walidowany i zatwierdzany jako całość. Nie istnieje już ścieżka, w której część planu zostaje dodana, a kolejna część zawodzi.
+### Sterowanie ma semantykę urządzeń
 
-Usuwanie bloku najpierw sprawdza wynikową konstrukcję. Odrzucona operacja nie modyfikuje modelu, widoku ani rewizji.
+Input nie jest już luźnym zbiorem warunków w `keydown`. Osie `surge` i `lift` są oddzielone od `pitch/yaw/roll`.
 
-### Widok jest projekcją
+Suwak jest teraz wyłącznie pasywnym ciągiem silników skierowanych ku lokalnemu +Y. Nie ogranicza mocy dostępnej dla wejść pilota.
 
-Meshe warsztatu są utrzymywane osobno. Zdarzenia modelu opisują `added`, `removed` i `updated`.
+Poziome i skierowane w dół thrustry nie pracują neutralnie. W/S, Space/Ctrl i sterowanie obrotowe mogą jednak uruchomić zgodne silniki do pełnej mocy nawet przy suwaku 0%. Komenda przeciwna wygasza pasywny ciąg zamiast odwracać znak silnika.
 
-Po każdej aktualizacji sprawdzana jest zgodność kluczy. W razie błędu widok jest odbudowywany z modelu.
+## Błędy wykryte dzięki dokładniejszej walidacji
 
-### Historia ma właściciela
+### Zmienna poza zakresem przy Launch
 
-Undo/redo nie jest już zestawem publicznych tablic manipulowanych w wielu funkcjach. `CraftHistory` odpowiada za klonowanie, limity, deduplikację i rollback.
+`setMode()` używał `snapshot.parts.length` bez lokalnego `snapshot`. Problem nie był widoczny w dawnym startup smoke, ponieważ test nie klikał Launch. Został naprawiony, a smoke test wykonuje teraz realną ścieżkę startu.
 
-### Skala modelu została sprawdzona
+### Konflikt Left Ctrl + S
 
-Test pełnych 2500 bloków przechodzi. W tym środowisku atomowa wymiana modelu trwała około 9–11 ms. To nie jest benchmark renderera ani fizyki, ale potwierdza, że warstwa danych nie jest obecnym wąskim gardłem.
+Skrót Ctrl+S przechwytywał kombinację dół + tył. Wejścia lotu otrzymały priorytet przed skrótami edytora.
+
+### Błędne utożsamienie pasywnego ciągu z limitem
+
+Phase 1C potraktował suwak jako `powerLimit`, choć użytkownik oczekiwał wyłącznie mocy pasywnej. To ograniczało W/S/Space/Ctrl i maskowało błąd kierunku silników pionowych. Hotfix usuwa limit z miksera: baza pasywna pozostaje zależna od suwaka, ale bezpośrednia komenda ma własny pełny zakres mocy.
+
+### Neutralnie aktywne silniki kierunkowe
+
+Stary model uruchamiał globalną moc na każdym thrusterze niezależnie od orientacji. Poziome i skierowane w dół silniki mogły spalać paliwo i wzajemnie się znosić bez komendy. Neutralny command zależy teraz od osi silnika.
 
 ## Co nadal jest słabe
 
-### Brak CraftCompiler
+### Backend fizyki nadal przecieka do runtime
 
-`buildCraftSnapshot()` nadal znajduje się w `game.js` i tworzy dane analizy z użyciem Three.js. Analiza i lot nadal nie korzystają z jednego niezmiennego artefaktu kompilacji.
-
-### Brak granicy backendu fizycznego
-
-Kod bezpośrednio tworzy `CANNON.Body`, `CANNON.Box` i wywołuje `world.step`.
+`game.js` nadal tworzy `CANNON.Body`, `CANNON.Box`, obsługuje kontakty i wywołuje `world.step()`.
 
 ### Jeden collider na voxel
 
-Model danych obsługuje 2500 bloków, ale aktywny lot pozostaje ograniczony do 480 części. Limit jest nadal konieczny.
+`CompiledCraft.colliderPlan` dokumentuje stan referencyjny, ale nie optymalizuje go. Limit 480 części pozostaje konieczny.
 
-### Duży runtime
+### Niepełny test integracyjny
 
-`game.js` nadal zawiera scenę, UI, misje, analizę, fizykę i runtime uszkodzeń. Zmniejszyła się jego własność danych, ale nie został jeszcze rozbity wykonawczo.
+Startup smoke dobrze testuje logikę UI i wejścia, ale nie renderuje prawdziwego WebGL ani nie mierzy rzeczywistego lotu. Kierunek A/D należy jeszcze potwierdzić lokalnie z docelową kamerą.
 
-### Zależności CDN
+### Globalny układ osi jest nadal sztywny
 
-Three.js, Cannon.js i Tailwind nadal wymagają internetu. Nie wykonano pełnego playtestu WebGL w tym środowisku z powodu blokady nawigacji i zewnętrznych zależności.
+`surge` odpowiada lokalnemu X konstrukcji, a `lift` lokalnemu Y. To dobra baza, lecz przyszły Command Core lub kontroler powinien jawnie definiować ramę odniesienia pojazdu, szczególnie dla nietypowych rakiet i pionowych airshipów.
 
-## Czy można teraz dodawać gameplay?
+### Analiza napędu pozostaje uproszczona
 
-Tylko drobne poprawki regresji. Duże systemy gameplayowe powinny poczekać na:
+Nie istnieją jeszcze autobusy silników, grupy urządzeń, krzywe śmigieł ani pełny mikser użytkownika. Obecny model jest poprawniejszy, ale nadal przejściowy.
 
-1. `CraftCompiler`;
-2. interfejs backendu fizycznego;
-3. kompilator colliderów;
-4. pomiary runtime dużych konstrukcji.
+## Czy można dodawać gameplay?
 
-## Następna decyzja
+Nadal tylko małe, izolowane poprawki. Następny poważny etap powinien dotyczyć Physics Boundary. Programowanie, jointy i rozbudowany świat powinny poczekać na stabilny adapter solvera i collider compiler.
 
-Kolejny etap powinien utworzyć `CompiledCraft`, ale nie powinien jeszcze zmieniać zachowania lotu. Najpierw trzeba uzyskać pełną zgodność wyników obecnego `buildCraftSnapshot()` z nowym kompilatorem, a dopiero potem przełączyć runtime.
+## Rekomendacja
+
+Przejść do Phase 1D bez zmiany balansu:
+
+1. opisać minimalny port fizyki na podstawie realnych użyć;
+2. zaimplementować adapter Cannon.js;
+3. przenieść budowę body poza `game.js`;
+4. uzyskać headless physics harness;
+5. dopiero wtedy benchmarkować i scalać collidery.

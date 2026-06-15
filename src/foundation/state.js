@@ -3,8 +3,8 @@
 
   window.VAW.define(
     'foundation.state',
-    ['foundation.orientation', 'foundation.craft-model', 'foundation.craft-history'],
-    (orientation, CraftModel, CraftHistory) => {
+    ['foundation.orientation', 'foundation.craft-model', 'foundation.craft-history', 'foundation.input-profile', 'foundation.ui-workspace'],
+    (orientation, CraftModel, CraftHistory, InputProfile, UIWorkspace) => {
       function createInitialState() {
         return {
           mode: 'BUILD',
@@ -26,6 +26,7 @@
             fuelMax: 0,
             com: new THREE.Vector3(),
             analysis: null,
+            compiled: null,
             thrusterTorqueMax: new THREE.Vector3(),
             gyroCount: 0,
             blockCount: 0,
@@ -78,7 +79,8 @@
             pinchStartCenterX: 0,
             pinchStartCenterY: 0,
             touchAction: 'place',
-            controlActions: new Set()
+            controlActions: new Set(),
+            profile: InputProfile.createDefault()
           },
           history: CraftHistory.create(),
           career: {
@@ -111,7 +113,9 @@
           thrusterPower: 0.7,
           balloonPower: 0.7,
           stabilityAssist: 0.18,
-          pilot: { pitch: 0, yaw: 0, roll: 0, stabilize: false },
+          controlIntent: { pitch: 0, yaw: 0, roll: 0, surge: 0, sway: 0, lift: 0 },
+          pilot: { pitch: 0, yaw: 0, roll: 0, surge: 0, sway: 0, lift: 0, stabilize: false },
+          uiWorkspace: UIWorkspace.createDefault(),
           uiCollapsed: false,
           contractPanelCollapsed: true,
           statusText: 'DRYDOCK',
