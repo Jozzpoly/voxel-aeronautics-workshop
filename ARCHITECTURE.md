@@ -1,8 +1,8 @@
-# Architektura — Foundation Phase 1D.3B.1
+# Architektura — Foundation Phase 1D.3C
 
 ## Cel etapu
 
-Phase 1D.3B.1 porządkuje warstwę aplikacyjną bez zmiany kontraktów domenowych i fizycznych. `src/game.js` pozostaje composition rootem, ale nie jest już magazynem wszystkich podsystemów.
+Phase 1D.3C zachowuje modularny game shell i rozszerza runtime assembly o pierwszy zweryfikowany mechanical constraint. `src/game.js` pozostaje composition rootem, natomiast tworzenie body, colliderów i constraints należy do `runtime.assembly-builder` oraz Physics Portu.
 
 Nadal obowiązują trzy główne stany:
 
@@ -31,8 +31,9 @@ runtime.assembly-builder
     ├─ runtime.physics-port
     │      ├─ runtime.cannon-physics-backend
     │      └─ runtime.headless-physics-backend
-    ├─ stable body/collider/part maps
-    └─ transactional lifecycle
+    ├─ stable body/collider/part/constraint maps
+    ├─ hinge runtime commands through Physics Port
+    └─ transactional, retry-safe lifecycle
 ```
 
 Renderer i fizyka nigdy nie są źródłem prawdy blueprintu.
@@ -332,7 +333,9 @@ Mechanizm działa best-effort: wymaga wsparcia, bezpiecznego kontekstu, zgody u�
 - aerodynamika kadłuba nadal sumuje uproszczone `dragArea`.
 - produkcyjne Three.js, Cannon.js i Tailwind pochodzą z CDN; testowy Cannon 0.6.2 jest vendored wyłącznie pod harness;
 - brak prawdziwego automatycznego testu WebGL/GPU w obecnym środowisku;
-- benchmark real Cannon nie obejmuje jeszcze masowych aktywnych kontaktów ani constraints.
+- benchmark real Cannon nie obejmuje jeszcze masowych aktywnych kontaktów w rozbudowanych articulated assemblies.
+- gameplay planner nadal emituje jedną rigid island i zero constraints.
+- soft hinge limits są controller-based, nie natywnym hard stopem.
 
 ## Historyczna granica zaplanowana po 1D.2F — wykonana w 1D.3A
 
@@ -340,7 +343,7 @@ Mechanizm działa best-effort: wymaga wsparcia, bezpiecznego kontekstu, zgody u�
 - stabilne mapowanie collider → part używa `blockId`;
 - dodano headless scenariusze dynamiki i soak;
 - zapisano benchmark kosztu budowy na backendzie testowym;
-- automatyczny benchmark prawdziwego solvera wykonano w 1D.3B; constraint spike pozostaje zakresem 1D.3C.
+- automatyczny benchmark prawdziwego solvera wykonano w 1D.3B; real-Cannon hinge capability spike wykonano w 1D.3C.
 
 
 ## Phase 1D.2F — trwała tożsamość bloków
@@ -502,7 +505,7 @@ Warstwa gameplayu przesuwa następnie lokalne pozycje części i visuals o ten s
 - rollback;
 - mapowanie `constraintId`.
 
-Neutralne deskryptory `hinge`, `motor`, `limit`, `friction` i `servo` zostaną zdefiniowane dopiero po 1D.3C capability spike.
+Phase 1D.3C definiuje minimalny neutralny `hinge` oraz oddzielne runtime commands `free`, `motor` i `servo`. Inne joint types pozostają poza publicznym kontraktem do osobnych spikeów.
 
 ## `runtime.headless-physics-backend`
 
@@ -563,7 +566,7 @@ Diagonalna bezwładność jest wyrażona w lokalnej ramie body. Headless transfo
 39. Test stubowy nie wystarcza do potwierdzenia semantyki adaptera; kluczowe scenariusze muszą przechodzić na real Cannon.
 40. Vendored Cannon pozostaje zależnością testową z zachowaną licencją i nie może niejawnie wejść do produkcyjnego buildu.
 
-## Następna granica — Phase 1D.3C
+## Historyczna granica — Phase 1D.3C
 
 1. zbudować dwa body połączone realnym free hinge;
 2. zmierzyć limit, tarcie, drift i zachowanie kolizji;
@@ -593,9 +596,9 @@ Z monolitycznego pliku wydzielono odpowiedzialności, które posiadały stabilne
 
 `src/game.js` zmniejszył się z 4697 do 2358 linii. Limit regresyjny wynosi obecnie 2500 linii i 120 kB.
 
-### Dlaczego flight i integrity nie zostały jeszcze rozdzielone
+### Dlaczego flight i integrity nie zostały rozdzielone w 1D.3B.1
 
-Aktualny runtime nadal ma pojedyncze `STATE.flight.body`. Wydzielenie publicznych modułów `flight-session` i `flight-integrity` przed joint spike utrwaliłoby założenie single-body w ich API. Do czasu Phase 1D.3C pozostają one w composition root jako jeden kontrolowany obszar. Po ustaleniu modelu constraints i wielu body należy wydzielić je wokół `RuntimeAssembly`, nie wokół pojedynczego Cannon body.
+W 1D.3B.1 runtime nadal opierał część integracji na pojedynczym `STATE.flight.body`. Wydzielenie publicznych modułów `flight-session` i `flight-integrity` przed joint spike utrwaliłoby założenie single-body w ich API, dlatego pozostawiono je w composition root jako jeden kontrolowany obszar. Phase 1D.3C potwierdziła już model wielu body i constraints. Następnym krokiem jest wydzielenie tych modułów wokół całego `RuntimeAssembly`, a nie wokół pojedynczego Cannon body.
 
 ### Kanoniczny source inventory
 
@@ -634,3 +637,76 @@ Regresja wykryta podczas code review pokazała, że composition root odwoływał
 - zakazu wycieku prywatnych nazw lifecycle do entrypointu.
 
 `tests/source_inventory.py` udostępnia spójny widok wszystkich źródeł, a startup smoke wykonuje również `fullscreenchange` i `pagehide`.
+
+
+## Phase 1D.3C — Minimalny mechanical constraint
+
+Physics Port deklaruje capability per typ:
+
+```text
+capabilities.constraints.hinge = true | false
+```
+
+`ConstraintPlan` pozostaje immutable i zawiera identyfikację body, lokalne pivoty/osie, collision policy, solver force, friction i opcjonalne soft limits. Mutable sterowanie jest oddzielne:
+
+```text
+setConstraintControl(constraintId, { mode: free | motor | servo, ... })
+getConstraintState(constraintId)
+removeConstraint(constraintId)
+```
+
+Native `CANNON.HingeConstraint` nie opuszcza backendu. `AssemblyBuilder` wykonuje capability preflight przed alokacją body, weryfikuje plan, buduje constraints po body i usuwa constraints przed body. Cleanup, który częściowo zawiedzie, pozostawia `cleanupPending` oraz wszystkie retry handles; assembly nie może fałszywie zgłosić `disposed`.
+
+### Geometria
+
+- `pivotA` i `pivotB` są lokalne dla swoich body;
+- ich world-space pozycje muszą się pokrywać przed dodaniem constraintu;
+- `axisA` i `axisB` muszą po transformacji wskazywać ten sam kierunek;
+- angle zero jest orientacją z chwili utworzenia;
+- angle unwrapping zakłada zmianę mniejszą niż π pomiędzy kolejnymi próbkami.
+
+### Ograniczenia Cannona
+
+Cannon.js 0.6.2 nie udostępnia natywnego asymetrycznego hard stopu hinge. `limits` są kontrolerem silnikowym z testowanym overshootem. `collideConnected` jest ustawiane jawnie na obiekcie natywnym, ponieważ sama opcja konstruktora nie zapewnia wymaganego zachowania.
+
+## Foundation convergence przed sublevelami i control busem
+
+Docelowy przepływ musi rozdzielić:
+
+```text
+Blueprint
+  -> structural graph
+  -> rigid islands / assembly spaces
+  -> mechanical graph
+  -> device endpoints
+  -> signal graph
+  -> deterministic ControlRuntime
+  -> actuator commands
+  -> RuntimeAssembly / Physics Port
+```
+
+### Assembly space / sublevel
+
+Sublevel w VAW jest stabilną lokalną przestrzenią assembly, a nie drugim blueprintem. Przechowuje jawny transform do świata i mapowanie urządzeń/bloków do rigid islands. Split, detach i dock zmieniają runtime ownership, lecz nie mogą losowo zmieniać `blockId` ani endpoint identity.
+
+### Device ports
+
+Publiczny endpoint powinien być adresowany jako `{ blockId, portId }`. Catalog portów pozostaje pure data. Input profile użytkownika mapuje fizyczne klawisze na semantyczne akcje; craft control bindings mapują te akcje lub inne źródła na urządzenia i należą do blueprintu.
+
+### Signal transport
+
+Direct link, cable, bus, wireless i joint pass-through są transportem/prezentacją jednej semantyki signal graphu. Mogą wnosić koszt, zasięg, latency lub failure, lecz nie zmieniają typów portów ani kolejności ewaluacji.
+
+### Deterministic control tick
+
+Control runtime działa w stałym ticku niezależnym od render FPS, ma ograniczony budżet i deterministyczną kolejność. Pierwsza wersja używa scalar oraz boolean/event. Feedback wymaga jawnego Delay/Memory; arbitralny JavaScript nie trafia do blueprintu.
+
+Szczegółowe bramki opisują `FOUNDATION_READINESS_REVIEW.md` i `PROGRAMMABLE_MACHINE_RESEARCH.md`.
+
+## Następna granica — Phase 1D.3D
+
+- assembly-centric `game.flight-session`;
+- assembly-aware `game.flight-integrity`;
+- usunięcie publicznych założeń jednego `STATE.flight.body`;
+- powtarzany multi-body launch/cleanup bez wycieków;
+- następnie rigid-island/mechanical compiler.

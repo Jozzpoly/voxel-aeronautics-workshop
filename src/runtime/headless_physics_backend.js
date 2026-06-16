@@ -309,10 +309,32 @@
       world.steps += 1;
     }
 
+    function createConstraint(value = {}) {
+      const descriptor = PhysicsPort.normalizeConstraintDescriptor(value);
+      throw new Error(`Headless deterministic backend does not support ${descriptor.kind} constraints.`);
+    }
+
+    function addConstraint() {
+      throw new Error('Headless deterministic backend does not support constraints.');
+    }
+
+    function removeConstraint() {
+      return false;
+    }
+
+    function setConstraintControl() {
+      throw new Error('Headless deterministic backend does not support constraint control.');
+    }
+
+    function getConstraintState() {
+      throw new Error('Headless deterministic backend does not support constraint state.');
+    }
+
     function create() {
       return Object.freeze(PhysicsPort.assertBackend({
         id: 'headless-deterministic',
         version: '1',
+        capabilities: Object.freeze({ constraints: Object.freeze({ hinge: false }) }),
         createWorld,
         createBody,
         addBody,
@@ -334,7 +356,12 @@
         vectorToWorldFrame,
         vectorToLocalFrame,
         pointToWorldFrame,
-        getPointVelocity
+        getPointVelocity,
+        createConstraint,
+        addConstraint,
+        removeConstraint,
+        setConstraintControl,
+        getConstraintState
       }));
     }
 

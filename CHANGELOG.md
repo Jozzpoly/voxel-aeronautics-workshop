@@ -1,5 +1,19 @@
 # Changelog
 
+## Foundation Phase 1D.3C — Joint Capability & Foundation Readiness
+
+- Added a hinge-only Physics Port constraint contract and backend capability negotiation.
+- Added native Cannon free hinge, motor, servo, passive friction and tested soft limits.
+- Added stable constraint maps and runtime command/state APIs without mutating mechanical plans.
+- Added axis/pivot/world-membership preflight and explicit connected-body collision policy.
+- Made constraint and full assembly cleanup retry-safe, including transient disposal failure.
+- Added a 12,000-step real-Cannon joint soak and lifecycle/rollback coverage.
+- Added release identity parity across package, build, manifest, runtime config and HTML.
+- Added ADR 0027, proposed ADR 0028, a whole-project foundation readiness review and programmable-machine research direction.
+- Added canonical `PROJECT_VISION.md`, documentation contract test and release-package presence checks.
+- Version `0.6.2-foundation.1d3c`.
+- Release id `foundation-1d3c-joint-capability`.
+
 ## Foundation Phase 1D.3B.1 — Modular Game Shell & Explicit Composition Boundaries
 
 - Split stable application responsibilities from the 4697-line `game.js` into nine `game.*` modules.

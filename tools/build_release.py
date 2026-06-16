@@ -8,12 +8,12 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE_ID = 'foundation-1d3b1-modular-game-shell'
-APP_VERSION = '0.6.1-foundation.1d3b1'
-SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3B1_Modular_Game_Shell.html'
-ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3B1_Modular_Game_Shell.zip'
+RELEASE_ID = 'foundation-1d3c-joint-capability'
+APP_VERSION = '0.6.2-foundation.1d3c'
+SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3C_Joint_Capability.html'
+ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3C_Joint_Capability.zip'
 MANIFEST_NAME = 'SOURCE_MANIFEST.json'
-ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_Phase_1D3B1_MODULAR_GAME_SHELL_READY_TO_PUSH'
+ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_Phase_1D3C_JOINT_CAPABILITY_READY_TO_PUSH'
 APP_SOURCES = (
     Path('src/foundation/kernel.js'),
     Path('src/foundation/config.js'),

@@ -48,7 +48,7 @@ const plan = {
 
 assert.deepStrictEqual(AssemblyBuilder.validatePlan(plan).bodyIds.size, 2);
 const rollbackWorld = Physics.createWorld({ gravity: { x: 0, y: 0, z: 0 } });
-assert.throws(() => AssemblyBuilder.build({ plan, physics: Physics, world: rollbackWorld }), /constraintBuilder/);
+assert.throws(() => AssemblyBuilder.build({ plan, physics: Physics, world: rollbackWorld }), /does not support hinge constraints/);
 assert.strictEqual(rollbackWorld.bodies.length, 0, 'Failed assembly construction must roll back every body.');
 
 const world = Physics.createWorld({ gravity: { x: 0, y: 0, z: 0 } });
@@ -141,12 +141,17 @@ const cleanupPhysics = {
 const cleanupWorld = cleanupPhysics.createWorld({ gravity: { x: 0, y: 0, z: 0 } });
 let originalBuildError = null;
 try {
-  AssemblyBuilder.build({ plan, physics: cleanupPhysics, world: cleanupWorld });
+  AssemblyBuilder.build({
+    plan,
+    physics: cleanupPhysics,
+    world: cleanupWorld,
+    constraintBuilder() { throw new Error('synthetic constraint construction failure'); }
+  });
 } catch (error) {
   originalBuildError = error;
 }
 assert(originalBuildError);
-assert.match(originalBuildError.message, /constraintBuilder/, 'Rollback must preserve the original construction failure.');
+assert.match(originalBuildError.message, /synthetic constraint construction failure/, 'Rollback must preserve the original construction failure.');
 assert(Array.isArray(originalBuildError.cleanupErrors));
 assert(originalBuildError.cleanupErrors.length >= 1);
 assert.strictEqual(cleanupWorld.bodies.length, 0);

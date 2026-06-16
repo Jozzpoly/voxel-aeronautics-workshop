@@ -1,79 +1,70 @@
-# Voxel Aeronautics Workshop — Foundation Phase 1D.3B.1
+# Voxel Aeronautics Workshop — Foundation Phase 1D.3C
 
-**Modular Game Shell & Explicit Composition Boundaries**
+Browserowy sandbox inżynieryjno-lotniczy skupiony na budowaniu, ręcznym sterowaniu, programowaniu urządzeń i obserwowaniu prawdziwej fizyki maszyny.
 
-Voxel Aeronautics Workshop to desktopowy voxelowy sandbox inżynieryjny:
+## Aktualny stan
 
-> **buduję, programuję, testuję i latam własną fizyczną maszyną.**
+Phase 1D.3C dostarcza pierwszy zweryfikowany mechanizm wielobryłowy:
 
-## Co wnosi Phase 1D.3B.1
+- dwa lub więcej body w `RuntimeAssembly`;
+- minimalny hinge-only kontrakt Physics Portu;
+- free hinge, motor, servo, pasywne tarcie i miękkie limity;
+- stabilne `constraintById`;
+- atomowy lifecycle i retry-safe cleanup;
+- prawdziwy Cannon.js 0.6.2 w automatycznym teście jointów;
+- zachowane granice `CompiledCraft -> RuntimeAssemblyPlan -> AssemblyBuilder -> Physics Port`;
+- zachowany modularny game shell z `game.js` jako composition rootem.
 
-### Poważna restrukturyzacja `game.js`
-
-`src/game.js` został zmniejszony z 4697 do 2358 linii. Pozostaje composition rootem, natomiast niezależne odpowiedzialności trafiły do `src/game/`:
-
-- `scene_environment.js` — scena, renderer, świat i statyczne środowisko;
-- `career_service.js` — kariera i persistence;
-- `workspace_controller.js` — panele, z-order i preferencje UI;
-- `input_settings_controller.js` — rebindy i Flight Focus;
-- `orientation_service.js` — helpery orientacji;
-- `module_visual_factory.js` — wizualne modele bloków;
-- `engineering_analysis.js` — analiza konstrukcji i telemetry UI;
-- `blueprint_controller.js` — save/load/import/export/history;
-- `mission_controller.js` — kontrakty, markery, HUD i debrief.
-
-Moduły deklarują zależności przez kernel albo otrzymują je jawnie w `create(...)`. Nie importują composition root i nie czytają `window.VAW_RUNTIME`.
-
-### Zachowane granice runtime
-
-- główne body i collidery nadal tworzy wyłącznie `runtime.assembly-builder`;
-- fizyka nadal przechodzi przez Physics Port;
-- `CraftModel` pozostaje źródłem prawdy warsztatu;
-- format blueprintu i zachowanie gameplayu nie zostały zmienione;
-- flight/damage/integrity pozostają razem do czasu joint spike, aby nie utrwalić błędnego API single-body.
-
-### Lepsze testy i delivery
-
-- jeden `APP_SOURCES` określa kolejność loadera, manifestu, single HTML, ZIP-a i testów;
-- test architektury pilnuje właścicieli funkcji, kolejności źródeł, rozmiaru `game.js` i granicy Assembly Buildera;
-- test usług sprawdza karierę i migrację workspace;
-- startup smoke obejmuje interakcję oraz `fullscreenchange` i `pagehide`;
-- build pozostaje deterministyczny i przechodzi `sourceParity: ok`.
+Nie ma jeszcze graczowych bearingów ani subleveli. Gameplay planner nadal emituje jedno body i zero constraintów. 1D.3C jest dowodem możliwości backendu i kontraktu runtime.
 
 ## Uruchomienie
 
-Windows:
+Najprościej:
 
-```text
-run_game.bat
-```
-
-Linux/macOS:
-
-```bash
-./run_game.sh
-```
-
-lub:
-
-```bash
+```powershell
 python tools/serve.py
 ```
 
-## Testy i build
+Następnie otwórz adres wypisany w terminalu. Można też użyć `run_game.bat` albo jednoplikowego HTML z katalogu `release/` lub `dist/` po buildzie.
 
-```bash
+## Testy
+
+```powershell
 python tests/run_all.py
+```
+
+Bateria obejmuje:
+
+- domenę, migracje, historię i kompilator;
+- mass properties oraz Physics Port;
+- deterministic headless harness;
+- real-Cannon free dynamics, kontakty, payload/recenter i benchmark;
+- real-Cannon hinge/motor/servo/limits/collision/lifecycle soak;
+- modularne granice game shell;
+- release identity oraz deterministyczny ZIP/single HTML z source parity.
+
+## Build wydania
+
+```powershell
 python tools/build_release.py
 python tools/verify_release.py
 ```
 
-## Następny kierunek
+Pełny ZIP jest źródłem prawdy dla aktualizacji repozytorium. Single HTML służy do szybkiego uruchomienia i prezentacji.
 
-1. Phase 1D.3C: joint capability spike — dwa body, free hinge, motor i servo;
-2. neutralne Physics Port constraints na podstawie wyników spike;
-3. wydzielenie `flight-session` i `flight-integrity` pod model multi-body;
-4. Phase 1E: Per-Block Control Bus;
-5. sensory, logika, live scope i PID.
+## Najważniejsze dokumenty
 
-Przeczytaj kolejno `AI_PROJECT_MEMORY.md`, `ARCHITECTURE.md`, `ROADMAP_NEXT.md`, `PHASE_1D3B1_REPORT.md`, `VALIDATION_REPORT.md`, `TEST_REPORT.md` i `DELIVERY_WORKFLOW.md`.
+1. `AI_PROJECT_MEMORY.md`
+2. `PROJECT_VISION.md`
+3. `ARCHITECTURE.md`
+4. `FOUNDATION_READINESS_REVIEW.md`
+5. `PROGRAMMABLE_MACHINE_RESEARCH.md`
+6. `ROADMAP_NEXT.md`
+7. `PHASE_1D3C_REPORT.md`
+8. `VALIDATION_REPORT.md`
+9. `TEST_REPORT.md`
+10. `DELIVERY_WORKFLOW.md`
+
+## Następna praca
+
+Najpierw **Phase 1D.3D — Assembly-Centric Flight Lifecycle**. Potem rigid-island/mechanical compiler, assembly-space/sublevel identity, typed device ports i deterministic control kernel. Dopiero na tym fundamencie powstaje finalny Per-Block Control Bus, kable lub wireless oraz edytor zachowań.

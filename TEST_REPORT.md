@@ -1,92 +1,99 @@
-# Test Report — Phase 1D.3B.1
+# Test Report — Foundation Phase 1D.3C
 
-## Wynik końcowy
+## Komenda
 
-```bash
+```text
 python tests/run_all.py
 ```
 
-**PASS — wszystkie testy rdzenia przeszły po restrukturyzacji.**
-
-Startup smoke:
+## Wynik końcowy
 
 ```text
-STARTUP_OK {
-  ids: 160,
-  elements: 544,
-  modules: 29,
-  sources: 32,
-  interaction: 'ok',
-  lifecycle: 'ok'
-}
+All core tests passed.
 ```
 
-## Bazowy test przed zmianami
+## Nowe pokrycie 1D.3C
 
-Pełna bateria z dostarczonego ZIP-a Phase 1D.3B została uruchomiona przed modyfikacją i zakończyła się `All core tests passed.`. Log bazowy został zachowany podczas pracy.
+### Hinge capability na prawdziwym Cannon.js 0.6.2
 
-## Nowe pokrycie 1D.3B.1
+- dwa body z oddzielnymi mass properties;
+- free hinge i pivot drift;
+- motor target `1.5 rad/s`, measured `1.5 rad/s`;
+- servo target `-0.5 rad`, measured `-0.5 rad`;
+- passive friction;
+- soft limits `[-0.3, 0.3]`, observed `[-0.317613, 0.316210]`;
+- `collideConnected=false`: 0 kontaktów;
+- `collideConnected=true`: kontakty potwierdzone;
+- 12 000 kroków soak;
+- max free pivot drift `0.004689`;
+- max soak pivot drift `0.076684`;
+- finite body state.
 
-### `tests/test_game_architecture.py`
+### Lifecycle i kontrakty
 
-- dokładna lista dziewięciu modułów `game.*`;
-- każdy moduł definiuje właściwą nazwę dokładnie raz;
-- brak `window.VAW_RUNTIME` i zależności od `src/game.js` w modułach;
-- wszystkie moduły są ładowane przed bootstrapem;
-- `src/game.js` jest ostatnim źródłem i composition rootem;
-- `game.js <= 2500` linii i `<= 120000` bajtów;
-- kluczowe funkcje mają jednego właściciela;
-- entrypoint jawnie komponuje wszystkie moduły;
-- `buildFlightBody()` deleguje do `AssemblyBuilder` i nie tworzy głównego body/colliderów bezpośrednio;
-- moduły prezentacji nie tworzą body/colliderów;
-- composition root nie sięga do `autosaveTimer`, `workspaceSaveTimer` ani `keyboardLockActive`;
-- lifecycle używa publicznych metod modułów.
+- backend capability refusal przed alokacją body;
+- invalid pivot/axis preflight i rollback;
+- world membership preflight;
+- synthetic joint construction failure bez wycieku;
+- constraint removal backend-first/state-second;
+- retry po `false`;
+- body removal blocked przez aktywny constraint;
+- retry-safe full assembly disposal z `cleanupPending`;
+- mechanical plan i signal links nie są mutowane przez runtime control;
+- natywny `CANNON.HingeConstraint` pozostaje wyłącznie w backendzie.
 
-### `tests/test_game_services.js`
+### Dokumentacja jako testowany kontrakt
 
-- normalizacja i upper clamp danych kariery;
-- fallback z zablokowanego kontraktu;
-- odrzucenie nieznanych kontraktów;
-- persistence kariery;
-- migracja legacy contract-panel preference;
-- persistence workspace i profilu input.
+`tests/test_documentation_contract.py` wymaga obecności i wzajemnej zgodności:
 
-### Startup smoke lifecycle
+- `PROJECT_VISION.md`;
+- foundation readiness review i research systemu programowania;
+- aktualnej fazy 1D.3C i następnej bramki 1D.3D;
+- ADR 0027/0028;
+- release/delivery workflow.
 
-Smoke uruchamia teraz nie tylko interakcję build/flight/input, ale również:
+Test release ZIP wymaga także spakowania nowych dokumentów i testów, więc nie mogą zniknąć z dostawy mimo zielonego runtime.
 
-- `fullscreenchange`;
-- `pagehide`;
-- flush blueprint autosave;
-- flush workspace preferences;
-- cleanup Flight Focus bez wycieku prywatnego stanu.
+### Release identity
 
-### Source inventory
+Nowy test wymaga zgodności:
 
-`tests/source_inventory.py` importuje `APP_SOURCES` z buildu. Static checks, mission checks i audit regressions agregują wszystkie moduły game shell, nie tylko `src/game.js`.
+```text
+package.json version
+= tools/build_release.py APP_VERSION
+= SOURCE_MANIFEST.json appVersion
+= foundation.config APP_VERSION
+```
 
-## Zachowane pokrycie 1D.3B
+oraz analogicznej zgodności `RELEASE_ID`. Test wykrył i zamknął niespójność znalezioną podczas końcowego review.
 
-Nadal przechodzą:
+## Zachowane pokrycie
 
-- real Cannon.js 0.6.2: free fall, torque, rotated inertia, offset thrust, real contact, payload/recenter, 12000 kroków soak, lifecycle i benchmark;
-- deterministic headless harness;
-- RuntimeAssemblyPlan i Assembly Builder contracts;
-- mass properties;
-- CraftModel, historia i CraftCompiler;
-- input profile, Flight Focus i guided vertical controls;
-- misje, lądowanie, payload, damage, detach i fuel leaks;
-- workspace, save migrations i blueprint parity;
-- deterministyczny build, embedded source parity i ZIP parity.
+- blueprint v3-v10 migration i future-version rejection;
+- CraftModel atomicity/history/stress;
+- compiler readiness/cache/work cap;
+- mass properties i rotated inertia;
+- deterministic headless free flight;
+- real Cannon free fall, torque, contacts, payload/detach/recenter;
+- 100/500/1000/2500 collider benchmark;
+- 50 lifecycle cycles;
+- six-axis/rebindable input i Flight Focus;
+- mission, landing, damage, debris i structural regressions;
+- game shell module ownership i lifecycle;
+- deterministic ZIP/single HTML/source parity;
+- startup smoke z `fullscreenchange` i `pagehide`.
 
-## Ostatni automatyczny benchmark kontrolny
+## Niezależna walidacja dostawy
 
-Wartości są zależne od maszyny i służą wyłącznie jako regresyjny punkt kontrolny. W ostatnim pełnym przebiegu real Cannon ukończył benchmark 100/500/1000/2500 colliderów, 12000 kroków soak i 50 cykli lifecycle bez pozostawionych body.
+- finalny ZIP rozpakowano do czystego katalogu i uruchomiono z niego pełne `tests/run_all.py`;
+- finalny patch zastosowano do czystego baseline 1D.3B.1 i ponownie uruchomiono pełną baterię;
+- oba scenariusze zakończyły się `All core tests passed.`;
+- patch przechodzi `git diff --check`.
 
 ## Ograniczenia testów
 
-- startup smoke używa stubów DOM/WebGL i nie zastępuje prawdziwego renderera;
-- real-Cannon benchmark pustego świata nie reprezentuje tysiąca aktywnych kontaktów;
-- brak jointów, więc nie ma jeszcze testów constraint drift, motor ani servo;
-- manualny playtest przeglądarkowy nadal jest wymagany przed mergem szerokiej zmiany UI/flight;
-- produkcyjne biblioteki aplikacji są ładowane zgodnie z `index.html`.
+- headless backend nie rozwiązuje kontaktów ani constraints;
+- brak automatycznego WebGL/GPU flight testu w prawdziwej przeglądarce;
+- performance values zależą od hosta i nie są twardym CI threshold;
+- soft limits nie są natywnymi hard stops;
+- gameplay planner nadal nie generuje jointów z blueprintu.

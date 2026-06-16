@@ -1,5 +1,5 @@
 {
-  "appVersion": "0.6.1-foundation.1d3b1",
+  "appVersion": "0.6.2-foundation.1d3c",
   "embeddedApplicationSources": [
     "src/foundation/kernel.js",
     "src/foundation/config.js",
@@ -36,13 +36,13 @@
   ],
   "entrypoint": "index.html",
   "files": {
-    "index.html": "2348b5ce23dc3f0106be534b68d9f851d50a785e1f213e97402acc3f71899bb8",
-    "package.json": "b6c3f9cd1ac1aa6d0b3f4bfd580b33b0bd947775f31043d47b7b0ed3fde717d6",
+    "index.html": "fe09e81663609c971a2ec8b28aea9a0adf7d45a8beaa1bbe220fe5bc89165643",
+    "package.json": "3a82ae0de0a1950cb8659981e572e181618b0e97491f83d05f22fef89c93ce92",
     "src/foundation/aerostatics.js": "e37234a1b8b92561a6d73e9c8f734c16afc8f1d421845e24bd21a210c1b51f4f",
     "src/foundation/blueprint.js": "32c005c71e940082451a12c0b043ba804cdad6340349834977fdd468a7fb7842",
     "src/foundation/bootstrap.js": "c3778785b698ce6f477c1c14ae70d07b26850f1ad4391848b6d4b54288b494df",
     "src/foundation/catalog.js": "706e15203a8481d9f28e28f36696d34b214701cbd5beb99202f752868fce5023",
-    "src/foundation/config.js": "55e889decf71bb06fef4f780f51eca469ca085bc25f204e7e862b6993e6386be",
+    "src/foundation/config.js": "70aa738f931c31c3dfe0be1946db1624f597cb99d64207541e26bcc080da5e6b",
     "src/foundation/control_frame.js": "11557b116b7130e599f85db62ef9a9bc0d16619715ac3d191c0f4afe8c452f7e",
     "src/foundation/craft_compiler.js": "2853f2d9b437870d3861315d75d3a31009c8f184b3ab60300cd744a687edded5",
     "src/foundation/craft_history.js": "a5365c702c39dd63ba64f1f3e331ad552442a92cd2613a6f4cfb418e507ce081",
@@ -66,13 +66,13 @@
     "src/game/orientation_service.js": "ba679148194691f8692183ad487cbc9c7777f641ee48ccfa752f1079d5c716fd",
     "src/game/scene_environment.js": "3dfd3a91fdbf1925293717d1f0839ea7fac02e3c3d28713336196049987056e7",
     "src/game/workspace_controller.js": "ead4b436a8e7dd38a1e328156b8fc3d9b6884d7bde846857703c267f95a93919",
-    "src/runtime/assembly_builder.js": "406b7c8b537ee88c482ebd717abf46dd8dcddfdab234821f3f184adedea3d8f6",
-    "src/runtime/cannon_physics_backend.js": "37e12255e64f2416453a3caa14c37d50429d1cd6df5a16111fb5976cd3594bc8",
-    "src/runtime/headless_physics_backend.js": "767eacf4ee45b43abe58c6bddec31868e13f4b14777c5a29a1015ef535f8eb64",
-    "src/runtime/physics_port.js": "b9755577bad461a7758779e02d00bd0d42807fd78f7ccf3e44e23fd124892ec2",
+    "src/runtime/assembly_builder.js": "f8062f9ebe17f66d511e15824d85860298c3419dfdd31c134418f2edf123a97b",
+    "src/runtime/cannon_physics_backend.js": "eb7575234317400099b8b5fdf26ccb07c92cf5962c60c84a794586f5c11d2c18",
+    "src/runtime/headless_physics_backend.js": "a17d60cb81aea746d71eec5cfa93e579c6eaf521a8d305406fdbe4a14d300954",
+    "src/runtime/physics_port.js": "37d1d2fac961a49987b4b232cea30c9f443da077e4412f916103129a147f4e76",
     "styles.css": "6283421d321ee24a721539c3173113d77b04412c091564b74c9de1b17ed5c998",
-    "tools/build_release.py": "c0c2bfdaae16eefaa9f2b7a02e9640af98510011a00faa642cd1de98372070d1",
+    "tools/build_release.py": "9da8361ddea1656012dbf3c06b01e861f5c2dd9b34bf9b54a0a47f4e1ff14385",
     "tools/verify_release.py": "52cf308017ba860da8c0534644d2a5dc2536aec0a09771c27cb1b40c17fe6dd1"
   },
-  "releaseId": "foundation-1d3b1-modular-game-shell"
+  "releaseId": "foundation-1d3c-joint-capability"
 }

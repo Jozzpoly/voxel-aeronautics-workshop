@@ -1,10 +1,10 @@
-# Push Instructions — Phase 1D.3B.1
+# Push Instructions — Phase 1D.3C
 
 ## Źródło prawdy
 
 Użyj pełnego ZIP-a:
 
-`Voxel_Aeronautics_Workshop_Foundation_Phase_1D3B1_Modular_Game_Shell.zip`
+`Voxel_Aeronautics_Workshop_Foundation_Phase_1D3C_Joint_Capability.zip`
 
 Single HTML służy do szybkiego testu i prezentacji. Patch służy do audytu różnic.
 
@@ -26,7 +26,7 @@ python tools/verify_release.py
 git status
 git diff --stat
 git add -A
-git commit -m "Foundation 1D.3B.1: modularize game shell and composition boundaries"
+git commit -m "Foundation 1D.3C: add hinge contract and foundation readiness review"
 git fetch origin
 git rebase origin/main
 python tests/run_all.py

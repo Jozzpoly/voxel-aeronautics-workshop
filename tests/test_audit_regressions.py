@@ -182,7 +182,7 @@ for element_id in ('workspace-toolbar', 'contract-panel'):
 for removed_id in ('btn-ui-contracts', 'mobile-topbar', 'mobile-controls', 'btn-touch-place'):
     assert f'id="{removed_id}"' not in HTML
 assert 'id="desktop-required"' in HTML
-assert 'Foundation Phase 1D.3B.1' in HTML
+assert 'Foundation Phase 1D.3C' in HTML
 assert 'Foundation Phase 1D.2B • Mission + Balloon Control Fix' not in HTML
 assert re.search(r'id="contract-panel"[^>]*\shidden', HTML)
 assert 'btn-contract-panel-open' not in HTML and 'btn-contract-panel-close' not in HTML
@@ -256,3 +256,15 @@ assert 'event.otherBody' in collision_callback
 assert 'event.relativePoint' in collision_callback
 assert 'normalizeCollisionEvent' in ALL_JS
 print({'physics_collision_event_boundary': 'ok'})
+
+# Mechanical constraints remain behind RuntimeAssembly + Physics Port. The game shell may consume
+# RuntimeAssembly state later, but it must not construct native Cannon joints or use the experimental seam.
+CANNON_BACKEND = (ROOT / 'src/runtime/cannon_physics_backend.js').read_text(encoding='utf-8')
+GAME_SOURCES = '\n'.join(path.read_text(encoding='utf-8') for path in [ROOT / 'src/game.js', *(ROOT / 'src/game').glob('*.js')])
+assert 'new CANNON.HingeConstraint' in CANNON_BACKEND
+assert 'new CANNON.HingeConstraint' not in GAME_SOURCES
+assert 'constraintBuilder' not in GAME_SOURCES
+assert 'Physics.createConstraint(' not in GAME_SOURCES
+assert 'Physics.addConstraint(' not in GAME_SOURCES
+assert 'Physics.removeConstraint(' not in GAME_SOURCES
+print({'hinge_physics_port_boundary': 'ok', 'experimental_constraint_seam_isolated': 'ok'})

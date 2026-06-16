@@ -1,100 +1,72 @@
-# Validation Report — Phase 1D.3B.1
+# Validation Report — Foundation Phase 1D.3C
 
-## Automatyczna walidacja
+## Źródło prawdy
 
-```bash
-python tests/run_all.py
-python tools/build_release.py
-python tools/verify_release.py
-```
+Praca została wykonana na pełnym ZIP-ie Phase 1D.3B.1, zgodnym z najnowszym commitem `main` tej fazy. Repozytorium GitHub nie zostało zmodyfikowane przez agenta.
 
-Wymagane:
+## Bazowa walidacja
 
-- `All core tests passed.`;
-- startup smoke: `modules: 29`, `sources: 32`, `interaction: ok`, `lifecycle: ok`;
-- real-Cannon harness bez wyjątku;
-- `sourceParity: ok`;
-- deterministyczny single HTML i ZIP;
-- test architektury z `game_js_lines <= 2500` i `game_js_bytes <= 120000`.
-
-## Kontrola game shell
-
-Sprawdź, że:
-
-1. `src/game.js` jest ostatni w `APP_SOURCES` i loaderze `index.html`;
-2. wszystkie `src/game/*.js` są przed `foundation/bootstrap.js`;
-3. moduły nie zawierają `window.VAW_RUNTIME`;
-4. `game.js` jawnie wymaga wszystkich modułów `game.*`;
-5. `buildFlightBody()` używa `AssemblyBuilder.build(...)`;
-6. `pagehide` wywołuje `flushPendingAutosave()` oraz `flushPendingSave()`;
-7. `fullscreenchange` jest delegowany do `handleFullscreenChange()`;
-8. nie istnieją ręczne, rozbieżne listy źródeł w testach.
-
-## Manualny browser playtest
-
-Uruchom:
-
-```bash
-python tools/serve.py
-```
-
-Następnie sprawdź:
-
-### Workshop
-
-- start od pustego warsztatu;
-- wybór wszystkich narzędzi;
-- placement, symmetry, orientation i roll;
-- undo/redo;
-- save/load/import/export;
-- przeciąganie, zamykanie, minimalizowanie i reset paneli;
-- reload zachowuje workspace i input profile.
-
-### Input lifecycle
-
-- rebind klawisza i reset profilu;
-- Flight Focus enter/exit;
-- wyjście z fullscreen nie pozostawia aktywnego sterowania;
-- utrata focusu i zmiana karty zerują akcje;
-- zamknięcie/odświeżenie strony nie zgłasza `ReferenceError` z timerów.
-
-### Flight
-
-- starter craft wchodzi do lotu;
-- wszystkie osie, passive thrust i Balloon power działają;
-- powrót do warsztatu i ponowny lot nie pozostawiają body/listenerów;
-- damage, debris, detach i payload działają jak w 1D.3B;
-- misje, markery, HUD i debrief działają bez regresji.
-
-### Engineering analysis
-
-- COM, thrust/lift markers i warnings aktualizują się po zmianie konstrukcji;
-- launch readiness odpowiada kompilatorowi;
-- analiza loaded payload pozostaje zgodna z runtime.
-
-## Hermetyczny real-Cannon harness
-
-```bash
-node --expose-gc tests/test_real_cannon_harness.js
-```
-
-Cannon.js 0.6.2 dla testów znajduje się w `tests/vendor/cannon-0.6.2/` wraz z licencją.
-
-## Manualny physics browser harness
+Przed zmianami:
 
 ```text
-http://127.0.0.1:8765/tests/browser_runtime_harness.html
+python tests/run_all.py
+All core tests passed.
 ```
 
-Strona powinna ustawić `data-status="pass"`.
+## Walidacja po zmianach
 
-## Kryterium merge
+- pełne `python tests/run_all.py`: PASS;
+- syntax check wszystkich źródeł: PASS;
+- static architecture checks: PASS;
+- real Cannon parity: PASS;
+- joint capability spike: PASS;
+- 12 000 joint soak steps: PASS;
+- retry-safe assembly disposal: PASS;
+- release identity parity: PASS;
+- documentation contract i obecność direction docs w ZIP-ie: PASS;
+- deterministic release build: PASS;
+- embedded/ZIP source parity: PASS;
+- pełna bateria po ponownym rozpakowaniu finalnego ZIP-a: PASS;
+- patch zastosowany do czystego baseline 1D.3B.1 i pełna bateria: PASS;
+- `git diff --check`: PASS;
+- startup smoke: PASS.
 
-Merge dopiero po:
+## Manualny code review
 
-1. zielonej baterii automatycznej;
-2. `verify_release.py` z source parity;
-3. manualnym smoke warsztatu, lotu, workspace i Flight Focus;
-4. braku błędów lifecycle w konsoli;
-5. potwierdzeniu, że główny craft body nadal tworzy Assembly Builder;
-6. sprawdzeniu `git diff --stat` i braku plików tymczasowych.
+Sprawdzono:
+
+- granicę planner/builder/Physics Port/backend;
+- brak natywnych jointów w game shell;
+- oddzielenie mechanical plan od runtime command;
+- walidację axes/pivots/world membership;
+- rollback po create/add/remove failures;
+- constraint-before-body cleanup;
+- zachowanie map po transient failure;
+- ograniczenia soft limits i angle unwrapping;
+- pozostałe założenia single-body w `STATE.flight`;
+- manifest źródeł, wersje, dokumentację i roadmapę;
+- cały kierunek sublevel/device/signal/control przed Phase 1E;
+- kanoniczną wizję produktu, anti-goals i zgodność pamięci z roadmapą.
+
+## Znalezisko wydaniowe
+
+Review wykrył, że package, build i manifest miały wersję 1D.3C, podczas gdy runtime config oraz HTML nadal identyfikowały 1D.3B.1. Wersje zostały ujednolicone, a regresję blokuje `tests/test_release_identity.py`.
+
+## Foundation readiness
+
+Nie znaleziono nierozwiązanego release blockera. Projekt może kontynuować bez restartu. Przed finalnym systemem kabli/programowania wymagane są jednak bramki opisane w `FOUNDATION_READINESS_REVIEW.md`:
+
+1. assembly-centric flight lifecycle;
+2. rigid-island/mechanical compiler;
+3. assembly-space/sublevel identity;
+4. typed device ports;
+5. deterministic control runtime.
+
+## Świadome ograniczenia
+
+- graczowy planner nadal jedno-body;
+- brak player-facing joint blocks;
+- limity hinge są miękkie;
+- brak browser/WebGL CI;
+- one-collider-per-voxel i limit 480;
+- produkcyjne biblioteki z CDN.

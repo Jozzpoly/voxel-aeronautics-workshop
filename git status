@@ -1,0 +1,47 @@
+warning: in the working copy of 'AI_PROJECT_MEMORY.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'ARCHITECTURE.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'CHANGELOG.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'DELIVERY_WORKFLOW.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'PUSH_INSTRUCTIONS.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'ROADMAP_NEXT.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'SOURCE_MANIFEST.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'TEST_REPORT.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'VALIDATION_REPORT.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'index.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'package.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'release/SHA256.txt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/foundation/config.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/runtime/assembly_builder.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/runtime/cannon_physics_backend.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/runtime/headless_physics_backend.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/runtime/physics_port.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/run_all.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_assembly_builder.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_audit_regressions.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_release_build.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tools/build_release.py', LF will be replaced by CRLF the next time Git touches it
+ AI_PROJECT_MEMORY.md                    | 175 [32m+++++++++++++[m[31m--------[m
+ ARCHITECTURE.md                         |  96 [32m++++++++++[m[31m--[m
+ CHANGELOG.md                            |  14 [32m++[m
+ DELIVERY_WORKFLOW.md                    |  24 [32m+++[m
+ PUSH_INSTRUCTIONS.md                    |   6 [32m+[m[31m-[m
+ README.md                               | 103 [32m++++++[m[31m-------[m
+ ROADMAP_NEXT.md                         | 137 [32m+++++++++[m[31m--------[m
+ SOURCE_MANIFEST.json                    |  20 [32m+[m[31m--[m
+ TEST_REPORT.md                          | 135 [32m+++++++++[m[31m--------[m
+ VALIDATION_REPORT.md                    | 156 [32m++++++++[m[31m-----------[m
+ index.html                              |   4 [32m+[m[31m-[m
+ package.json                            |   4 [32m+[m[31m-[m
+ release/SHA256.txt                      |   2 [32m+[m[31m-[m
+ src/foundation/config.js                |   4 [32m+[m[31m-[m
+ src/runtime/assembly_builder.js         | 170 [32m++++++++++++++++++[m[31m---[m
+ src/runtime/cannon_physics_backend.js   | 261 [32m+++++++++++++++++++++++++++++++[m[31m-[m
+ src/runtime/headless_physics_backend.js |  29 [32m+++[m[31m-[m
+ src/runtime/physics_port.js             | 119 [32m++++++++++++++[m[31m-[m
+ tests/run_all.py                        |   3 [32m+[m
+ tests/test_assembly_builder.js          |  11 [32m+[m[31m-[m
+ tests/test_audit_regressions.py         |  14 [32m+[m[31m-[m
+ tests/test_release_build.py             |   6 [32m+[m
+ tools/build_release.py                  |  10 [32m+[m[31m-[m
+ 23 files changed, 1105 insertions(+), 398 deletions(-)

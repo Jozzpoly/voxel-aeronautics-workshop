@@ -134,6 +134,7 @@
       }
 
       const constraintIds = new Set();
+      const normalizedConstraints = new Map();
       for (const constraint of plan.constraints) {
         if (!constraint || typeof constraint !== 'object') throw new TypeError('Assembly constraint plan must be an object.');
         const constraintId = requireId(constraint.constraintId, 'Assembly constraintId');
@@ -144,7 +145,9 @@
           throw new Error(`Constraint ${constraintId} references a missing body.`);
         }
         if (bodyAId === bodyBId) throw new Error(`Constraint ${constraintId} cannot connect a body to itself.`);
+        const normalizedConstraint = PhysicsPort.normalizeConstraintPlan(constraint);
         constraintIds.add(constraintId);
+        normalizedConstraints.set(constraintId, normalizedConstraint);
       }
 
       if (plan.blockIdToBodyId && typeof plan.blockIdToBodyId === 'object') {
@@ -158,25 +161,37 @@
         });
       }
 
-      return { bodyIds, colliderIds, blockIds, constraintIds };
+      return { bodyIds, colliderIds, blockIds, constraintIds, normalizedConstraints };
     }
 
     function build(options = {}) {
       const physics = PhysicsPort.assertBackend(options.physics);
       const plan = options.plan;
-      validatePlan(plan);
+      const validation = validatePlan(plan);
       const world = options.world || null;
+      if (plan.constraints.length && typeof options.constraintBuilder !== 'function') {
+        if (!world) throw new Error('Assembly constraints require a physics world.');
+        for (const constraintPlan of plan.constraints) {
+          const normalized = validation.normalizedConstraints.get(constraintPlan.constraintId);
+          if (!PhysicsPort.supportsConstraint(physics, normalized.kind)) {
+            throw new Error(`Physics backend ${physics.id} does not support ${normalized.kind} constraints.`);
+          }
+        }
+      }
       const bodyById = new Map();
       const colliderById = new Map();
       const colliderByBlockId = new Map();
       const partByBlockId = new Map();
       const constraintById = new Map();
+      const removedConstraints = new WeakSet();
       const unsubscribe = [];
       const addedBodies = [];
       let disposed = false;
+      let cleanupPending = false;
 
       function assertActive() {
         if (disposed) throw new Error('Runtime assembly has been disposed.');
+        if (cleanupPending) throw new Error('Runtime assembly cleanup is incomplete; retry dispose() before further use.');
       }
 
       function removeCollider(colliderId) {
@@ -227,33 +242,100 @@
         });
       }
 
+      function disposeRuntimeConstraint(runtimeConstraint) {
+        if (!runtimeConstraint || removedConstraints.has(runtimeConstraint)) return false;
+        const removed = runtimeConstraint.dispose?.();
+        if (removed === false) return false;
+        removedConstraints.add(runtimeConstraint);
+        return true;
+      }
+
+      function removeConstraint(constraintId) {
+        assertActive();
+        const runtimeConstraint = constraintById.get(constraintId);
+        if (!runtimeConstraint || removedConstraints.has(runtimeConstraint)) return false;
+        if (!disposeRuntimeConstraint(runtimeConstraint)) return false;
+        constraintById.delete(constraintId);
+        return true;
+      }
+
+      function setConstraintControl(constraintId, control) {
+        assertActive();
+        const runtimeConstraint = constraintById.get(constraintId);
+        if (!runtimeConstraint || removedConstraints.has(runtimeConstraint)) throw new Error(`Unknown assembly constraint: ${constraintId}`);
+        if (typeof runtimeConstraint.setControl !== 'function') {
+          throw new Error(`Assembly constraint ${constraintId} does not expose runtime control.`);
+        }
+        return runtimeConstraint.setControl(control);
+      }
+
+      function getConstraintState(constraintId) {
+        assertActive();
+        const runtimeConstraint = constraintById.get(constraintId);
+        if (!runtimeConstraint || removedConstraints.has(runtimeConstraint)) throw new Error(`Unknown assembly constraint: ${constraintId}`);
+        if (typeof runtimeConstraint.getState !== 'function') {
+          throw new Error(`Assembly constraint ${constraintId} does not expose runtime state.`);
+        }
+        return runtimeConstraint.getState();
+      }
+
       function cleanup(throwOnError) {
-        if (disposed) return { changed: false, errors: [] };
-        disposed = true;
+        if (disposed) return { changed: false, complete: true, errors: [] };
+        cleanupPending = true;
         const errors = [];
+
+        const failedStops = [];
         for (const stop of unsubscribe.splice(0).reverse()) {
-          try { stop(); } catch (error) { errors.push(error); }
+          try { stop(); } catch (error) { errors.push(error); failedStops.unshift(stop); }
         }
-        for (const runtimeConstraint of [...constraintById.values()].reverse()) {
-          try { runtimeConstraint.dispose?.(); } catch (error) { errors.push(error); }
+        unsubscribe.push(...failedStops);
+
+        for (const [constraintId, runtimeConstraint] of [...constraintById.entries()].reverse()) {
+          try {
+            if (!disposeRuntimeConstraint(runtimeConstraint)) {
+              errors.push(new Error(`Constraint cleanup failed: ${constraintId}`));
+              continue;
+            }
+            constraintById.delete(constraintId);
+          } catch (error) { errors.push(error); }
         }
-        constraintById.clear();
-        if (world) {
-          for (const runtimeBody of addedBodies.splice(0).reverse()) {
-            try { physics.removeBody(world, runtimeBody.body); } catch (error) { errors.push(error); }
+
+        if (constraintById.size === 0) {
+          if (world) {
+            for (let index = addedBodies.length - 1; index >= 0; index -= 1) {
+              const runtimeBody = addedBodies[index];
+              try {
+                const removed = physics.removeBody(world, runtimeBody.body);
+                if (removed === false) {
+                  errors.push(new Error(`Body cleanup failed: ${runtimeBody.bodyId}`));
+                  continue;
+                }
+                addedBodies.splice(index, 1);
+              } catch (error) { errors.push(error); }
+            }
+          } else {
+            addedBodies.length = 0;
           }
         }
-        bodyById.clear();
-        colliderById.clear();
-        colliderByBlockId.clear();
-        partByBlockId.clear();
+
+        const complete = unsubscribe.length === 0 && constraintById.size === 0 && addedBodies.length === 0;
+        if (complete) {
+          bodyById.clear();
+          colliderById.clear();
+          colliderByBlockId.clear();
+          partByBlockId.clear();
+          disposed = true;
+          cleanupPending = false;
+        }
+
         if (throwOnError && errors.length) {
           const aggregate = typeof AggregateError === 'function'
             ? new AggregateError(errors, 'Runtime assembly cleanup failed.')
             : Object.assign(new Error('Runtime assembly cleanup failed.'), { errors });
+          Object.defineProperty(aggregate, 'cleanupComplete', { value: complete, enumerable: true });
           throw aggregate;
         }
-        return { changed: true, errors };
+        return { changed: true, complete, errors };
       }
 
       function dispose() {
@@ -275,8 +357,12 @@
         removeColliderByBlockId,
         setBodyMassProperties,
         recenterBody,
+        removeConstraint,
+        setConstraintControl,
+        getConstraintState,
         dispose,
-        get disposed() { return disposed; }
+        get disposed() { return disposed; },
+        get cleanupPending() { return cleanupPending; }
       };
 
       try {
@@ -341,15 +427,53 @@
         }
 
         if (plan.constraints.length) {
-          if (typeof options.constraintBuilder !== 'function') {
-            throw new Error('Assembly contains constraints but no constraintBuilder was provided.');
-          }
           for (const constraintPlan of plan.constraints) {
             const bodyA = bodyById.get(constraintPlan.bodyAId).body;
             const bodyB = bodyById.get(constraintPlan.bodyBId).body;
-            const built = options.constraintBuilder({ constraintPlan, bodyA, bodyB, physics, world, runtime });
-            if (!built) throw new Error(`Constraint builder returned no runtime for ${constraintPlan.constraintId}.`);
-            constraintById.set(constraintPlan.constraintId, built);
+            let built;
+            if (typeof options.constraintBuilder === 'function') {
+              built = options.constraintBuilder({ constraintPlan, bodyA, bodyB, physics, world, runtime });
+              if (!built || typeof built !== 'object') throw new Error(`Constraint builder returned no runtime object for ${constraintPlan.constraintId}.`);
+            } else {
+              const normalized = validation.normalizedConstraints.get(constraintPlan.constraintId);
+              let backendConstraint = null;
+              let constraintAdded = false;
+              try {
+                backendConstraint = physics.createConstraint({ ...normalized, bodyA, bodyB });
+                if (!backendConstraint) throw new Error(`Physics backend returned no constraint for ${constraintPlan.constraintId}.`);
+                const added = physics.addConstraint(world, backendConstraint);
+                if (added === false) throw new Error(`Physics backend rejected constraint ${constraintPlan.constraintId}.`);
+                constraintAdded = true;
+              } catch (error) {
+                if (backendConstraint && constraintAdded) {
+                  try {
+                    const removed = physics.removeConstraint(world, backendConstraint);
+                    if (removed === false) throw new Error(`Constraint rollback failed: ${constraintPlan.constraintId}`);
+                  } catch (cleanupError) {
+                    if (error && typeof error === 'object') {
+                      Object.defineProperty(error, 'constraintCleanupError', { value: cleanupError, enumerable: false });
+                    }
+                  }
+                }
+                throw error;
+              }
+              built = {
+                constraintId: constraintPlan.constraintId,
+                plan: constraintPlan,
+                constraint: backendConstraint,
+                bodyA,
+                bodyB,
+                setControl(control) { return physics.setConstraintControl(backendConstraint, control); },
+                getState() { return physics.getConstraintState(backendConstraint); },
+                dispose() { return physics.removeConstraint(world, backendConstraint); }
+              };
+            }
+            const runtimeConstraint = Object.freeze({
+              ...built,
+              constraintId: constraintPlan.constraintId,
+              plan: constraintPlan
+            });
+            constraintById.set(constraintPlan.constraintId, runtimeConstraint);
           }
         }
 

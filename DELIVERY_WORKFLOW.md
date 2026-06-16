@@ -91,3 +91,27 @@ Przed rozpoczęciem kolejnego etapu agent powinien sprawdzić aktualny `main` re
 5. potwierdzić `sourceParity: ok`.
 
 Nie utrzymywać ręcznej kopii listy źródeł w testach. Testy powinny korzystać z `tests/source_inventory.py`.
+
+## 8. Spójność tożsamości wydania
+
+Każde wydanie utrzymuje jedną wartość wersji i release id w:
+
+- `package.json`;
+- `tools/build_release.py`;
+- `SOURCE_MANIFEST.json`;
+- `foundation.config`;
+- brandingu `index.html`.
+
+`tests/test_release_identity.py` jest obowiązkową częścią głównej baterii. Sam zielony `sourceParity` nie wystarcza, gdy runtime zgłasza starą wersję.
+
+## 9. Foundation gate przed dużym nowym systemem
+
+Przed sublevelami, systemem programowania, multiplayerem lub zmianą backendu dostawa musi zawierać:
+
+1. review wpływu na istniejące source-of-truth i lifecycle;
+2. jawne ADR lub direction document;
+3. aktualizację `AI_PROJECT_MEMORY.md`, `ARCHITECTURE.md` i `ROADMAP_NEXT.md`;
+4. testy granic, migracji i cleanupu;
+5. listę rzeczy świadomie niezaimplementowanych.
+
+Research innych gier jest materiałem decyzyjnym. Nie wolno kopiować ich API bez dopasowania do browserowego runtime i reguł VAW.
