@@ -1,20 +1,21 @@
 from pathlib import Path
 import re, collections, subprocess, sys
 ROOT=Path(__file__).resolve().parents[1]
-source_files=[
- ROOT/'src/foundation/kernel.js', ROOT/'src/foundation/config.js', ROOT/'src/foundation/catalog.js',
- ROOT/'src/foundation/orientation.js', ROOT/'src/foundation/blueprint.js', ROOT/'src/foundation/craft_model.js', ROOT/'src/foundation/craft_history.js', ROOT/'src/foundation/control_frame.js', ROOT/'src/foundation/mass_properties.js', ROOT/'src/foundation/craft_compiler.js', ROOT/'src/foundation/runtime_assembly.js', ROOT/'src/foundation/input_profile.js', ROOT/'src/foundation/ui_workspace.js', ROOT/'src/foundation/mission_evaluator.js', ROOT/'src/foundation/aerostatics.js', ROOT/'src/foundation/flight_control.js', ROOT/'src/foundation/state.js',
- ROOT/'src/runtime/physics_port.js', ROOT/'src/runtime/cannon_physics_backend.js', ROOT/'src/runtime/headless_physics_backend.js', ROOT/'src/runtime/assembly_builder.js',
- ROOT/'src/foundation/bootstrap.js', ROOT/'src/game.js'
-]
+sys.path.insert(0, str(ROOT / 'tools'))
+from build_release import APP_SOURCES
+source_files=[ROOT/path for path in APP_SOURCES]
 sources={path:path.read_text(encoding='utf-8') for path in source_files}
 js='\n'.join(sources.values())
-game=sources[ROOT/'src/game.js']
+game_paths=[path for path in source_files if path == ROOT/'src/game.js' or path.parent == ROOT/'src/game']
+game='\n'.join(sources[path] for path in game_paths)
 html=(ROOT/'index.html').read_text(encoding='utf-8')
 errors=[]
-functions=re.findall(r'\bfunction\s+([A-Za-z_$][\w$]*)\s*\(',game)
-dups=[name for name,count in collections.Counter(functions).items() if count>1]
-if dups: errors.append(f'Duplicate game functions: {dups}')
+functions=[]
+for path in game_paths:
+ file_functions=re.findall(r'\bfunction\s+([A-Za-z_$][\w$]*)\s*\(',sources[path])
+ functions.extend(file_functions)
+ dups=[name for name,count in collections.Counter(file_functions).items() if count>1]
+ if dups: errors.append(f'Duplicate functions in {path.relative_to(ROOT)}: {dups}')
 ids=re.findall(r'id=["\']([^"\']+)',html)
 dup_ids=[name for name,count in collections.Counter(ids).items() if count>1]
 if dup_ids: errors.append(f'Duplicate HTML ids: {dup_ids}')
@@ -46,7 +47,10 @@ if 'STATE.voxels' in game: errors.append('Legacy STATE.voxels coupling still exi
 if 'meshesByKey' not in game: errors.append('Workshop view map is missing')
 for expected in [
  'foundation.config', 'foundation.catalog', 'foundation.orientation',
- 'foundation.blueprint', 'foundation.craft-model', 'foundation.craft-history', 'foundation.control-frame', 'foundation.mass-properties', 'foundation.craft-compiler', 'foundation.runtime-assembly', 'foundation.input-profile', 'foundation.ui-workspace', 'foundation.mission-evaluator', 'foundation.aerostatics', 'foundation.flight-control', 'foundation.state', 'runtime.physics-port', 'runtime.cannon-physics-backend', 'runtime.headless-physics-backend', 'runtime.assembly-builder'
+ 'foundation.blueprint', 'foundation.craft-model', 'foundation.craft-history', 'foundation.control-frame', 'foundation.mass-properties', 'foundation.craft-compiler', 'foundation.runtime-assembly', 'foundation.input-profile', 'foundation.ui-workspace', 'foundation.mission-evaluator', 'foundation.aerostatics', 'foundation.flight-control', 'foundation.state', 'runtime.physics-port', 'runtime.cannon-physics-backend', 'runtime.headless-physics-backend', 'runtime.assembly-builder',
+ 'game.scene-environment', 'game.career-service', 'game.workspace-controller',
+ 'game.input-settings-controller', 'game.orientation-service', 'game.module-visual-factory',
+ 'game.engineering-analysis', 'game.blueprint-controller', 'game.mission-controller'
 ]:
  if not re.search(r"window\.VAW\.define\(\s*['\"]" + re.escape(expected) + r"['\"]", js): errors.append(f'Missing module definition: {expected}')
 

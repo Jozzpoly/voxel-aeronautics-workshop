@@ -8,12 +8,12 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE_ID = 'foundation-1d3b-real-cannon-parity'
-APP_VERSION = '0.6.0-foundation.1d3b'
-SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3B_Real_Cannon_Parity.html'
-ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3B_Real_Cannon_Parity.zip'
+RELEASE_ID = 'foundation-1d3b1-modular-game-shell'
+APP_VERSION = '0.6.1-foundation.1d3b1'
+SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3B1_Modular_Game_Shell.html'
+ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3B1_Modular_Game_Shell.zip'
 MANIFEST_NAME = 'SOURCE_MANIFEST.json'
-ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_Phase_1D3B_REAL_CANNON_PARITY_READY_TO_PUSH'
+ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_Phase_1D3B1_MODULAR_GAME_SHELL_READY_TO_PUSH'
 APP_SOURCES = (
     Path('src/foundation/kernel.js'),
     Path('src/foundation/config.js'),
@@ -36,6 +36,15 @@ APP_SOURCES = (
     Path('src/runtime/cannon_physics_backend.js'),
     Path('src/runtime/headless_physics_backend.js'),
     Path('src/runtime/assembly_builder.js'),
+    Path('src/game/scene_environment.js'),
+    Path('src/game/career_service.js'),
+    Path('src/game/workspace_controller.js'),
+    Path('src/game/input_settings_controller.js'),
+    Path('src/game/orientation_service.js'),
+    Path('src/game/module_visual_factory.js'),
+    Path('src/game/engineering_analysis.js'),
+    Path('src/game/blueprint_controller.js'),
+    Path('src/game/mission_controller.js'),
     Path('src/foundation/bootstrap.js'),
     Path('src/game.js'),
 )

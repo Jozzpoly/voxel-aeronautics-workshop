@@ -55,7 +55,8 @@
     missionEvaluation: 'phase-1d2b-multi-pad-ground-state',
     aerostatics: 'altitude-lift-damped-settling-v2',
     platform: 'desktop-keyboard-mouse-v1',
-    workspaceState: 'version-3-z-order'
+    workspaceState: 'version-3-z-order',
+    gameShell: 'explicit-composition-v1'
   });
   const runtime = Object.freeze({ Config, Catalog, Orientation, Blueprint, CraftModel, CraftHistory, ControlFrame, MassProperties, CraftCompiler, RuntimeAssembly, AssemblyBuilder, HeadlessPhysicsBackend, InputProfile, UIWorkspace, MissionEvaluator, Aerostatics, FlightControl, State, PhysicsPort, Physics, Capabilities });
   Object.defineProperty(window, 'VAW_RUNTIME', {

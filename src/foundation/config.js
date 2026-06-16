@@ -9,8 +9,8 @@
       return Object.freeze(value);
     }
 
-    const APP_VERSION = '0.6.0-foundation.1d3b';
-    const RELEASE_ID = 'foundation-1d3b-real-cannon-parity';
+    const APP_VERSION = '0.6.1-foundation.1d3b1';
+    const RELEASE_ID = 'foundation-1d3b1-modular-game-shell';
     const GRID = { halfExtent: 18, minY: 0, maxY: 20, maxBlocks: 2500 };
     const SAVE_VERSION = 10;
     const SAVE_KEY = 'voxel-aeronautics-blueprint-v10';

@@ -7,18 +7,7 @@ from collections import deque
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE_FILES = [
-    ROOT / 'src/foundation/config.js',
-    ROOT / 'src/foundation/catalog.js',
-    ROOT / 'src/foundation/orientation.js',
-    ROOT / 'src/foundation/blueprint.js',
-    ROOT / 'src/foundation/state.js',
-    ROOT / 'src/foundation/aerostatics.js',
-    ROOT / 'src/foundation/input_profile.js',
-    ROOT / 'src/foundation/flight_control.js',
-    ROOT / 'src/game.js',
-]
-GAME = '\n'.join(path.read_text(encoding='utf-8') for path in SOURCE_FILES)
+from source_inventory import ALL_JS as GAME
 HTML = (ROOT / 'index.html').read_text(encoding='utf-8')
 
 EXPECTED_CONTRACTS = [

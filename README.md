@@ -1,77 +1,44 @@
-# Voxel Aeronautics Workshop — Foundation Phase 1D.3B
+# Voxel Aeronautics Workshop — Foundation Phase 1D.3B.1
 
-**Real-Cannon Parity & Runtime Contract Hardening**
+**Modular Game Shell & Explicit Composition Boundaries**
 
-Voxel Aeronautics Workshop to desktopowy voxelowy sandbox inżynieryjny. Główna fantazja projektu:
+Voxel Aeronautics Workshop to desktopowy voxelowy sandbox inżynieryjny:
 
 > **buduję, programuję, testuję i latam własną fizyczną maszyną.**
 
-Sandbox i ręczne latanie są pełnoprawnym rdzeniem. Kontrakty pomagają testować projekty, ale nie definiują całej gry.
+## Co wnosi Phase 1D.3B.1
 
-## Co wnosi Phase 1D.3B
+### Poważna restrukturyzacja `game.js`
 
-### Automatyczna walidacja na prawdziwym Cannon.js
+`src/game.js` został zmniejszony z 4697 do 2358 linii. Pozostaje composition rootem, natomiast niezależne odpowiedzialności trafiły do `src/game/`:
 
-Główna bateria uruchamia lokalnie Cannon.js 0.6.2 i sprawdza:
+- `scene_environment.js` — scena, renderer, świat i statyczne środowisko;
+- `career_service.js` — kariera i persistence;
+- `workspace_controller.js` — panele, z-order i preferencje UI;
+- `input_settings_controller.js` — rebindy i Flight Focus;
+- `orientation_service.js` — helpery orientacji;
+- `module_visual_factory.js` — wizualne modele bloków;
+- `engineering_analysis.js` — analiza konstrukcji i telemetry UI;
+- `blueprint_controller.js` — save/load/import/export/history;
+- `mission_controller.js` — kontrakty, markery, HUD i debrief.
 
-- free fall i jawne mass properties;
-- torque oraz rotated asymmetric inertia;
-- offset thrust;
-- payload detach i recenter podczas obrotu;
-- prawdziwe zdarzenia kontaktowe;
-- 12 000 kroków soak;
-- build/step benchmark do 2500 colliderów;
-- 50 cykli lifecycle i brak pozostawionych body.
+Moduły deklarują zależności przez kernel albo otrzymują je jawnie w `create(...)`. Nie importują composition root i nie czytają `window.VAW_RUNTIME`.
 
-Testowa kopia Cannon znajduje się w `tests/vendor/` i nie zmienia produkcyjnego loadera aplikacji.
+### Zachowane granice runtime
 
-### Twardszy Runtime Assembly Builder
+- główne body i collidery nadal tworzy wyłącznie `runtime.assembly-builder`;
+- fizyka nadal przechodzi przez Physics Port;
+- `CraftModel` pozostaje źródłem prawdy warsztatu;
+- format blueprintu i zachowanie gameplayu nie zostały zmienione;
+- flight/damage/integrity pozostają razem do czasu joint spike, aby nie utrwalić błędnego API single-body.
 
-Builder teraz:
+### Lepsze testy i delivery
 
-- weryfikuje cały plan przed pierwszą alokacją;
-- odrzuca duplikaty i błędne cross-reference;
-- chroni zastrzeżone metadane assembly;
-- mutuje mapy dopiero po sukcesie backendu;
-- zachowuje pierwotny błąd podczas rollbacku;
-- raportuje błędy cleanup osobno;
-- utrzymuje stabilne mapy `bodyId`, `colliderId` i `blockId`.
-
-`game.js` nadal zleca fizyczne assembly builderowi i nie został w tej fazie przebudowany.
-
-### Wiarygodniejsze mass properties i backend parity
-
-- wadliwe masy, wektory i half-extents nie są już cicho naprawiane;
-- runtime planner wymaga jawnych trwałych ID i skończonych danych;
-- STATIC/DYNAMIC synchronizuje się po zmianie masy;
-- headless stosuje diagonalną bezwładność w lokalnej ramie body;
-- naprawiono zwrot point velocity w real Cannon.
-
-### Twardy limit pracy kompilatora
-
-Po przekroczeniu limitu CraftCompiler zgłasza `block-limit`, ale nie przetwarza rekordu ponad `GRID.maxBlocks`.
-
-## Czego ten etap jeszcze nie kończy
-
-- Nie ma graczowych jointów ani podziału blueprintu na rigid islands.
-- Physics Port nie posiada jeszcze finalnego API constraints.
-- Benchmark pustego świata nie obejmuje kosztu tysięcy aktywnych kontaktów.
-- `game.js` nadal zarządza wizualizacją, uszkodzeniami i gameplayowym part state.
-- Payload nadal korzysta z tymczasowego mocowania misyjnego.
-- Produkcyjny runtime nadal ładuje zależności zgodnie z `index.html`.
-
-## Obecne sterowanie
-
-- `W / S` — przód / tył;
-- `Z / C` — translacja w lewo / prawo;
-- `Space / Left Ctrl` — góra / dół;
-- `↑ / ↓` — pitch;
-- `A / D` lub `← / →` — yaw;
-- `Q / E` — roll;
-- `− / +` — Passive vertical thrust;
-- `, / .` — Balloon power;
-- `G` — stabilizacja;
-- `F` — powrót do warsztatu.
+- jeden `APP_SOURCES` określa kolejność loadera, manifestu, single HTML, ZIP-a i testów;
+- test architektury pilnuje właścicieli funkcji, kolejności źródeł, rozmiaru `game.js` i granicy Assembly Buildera;
+- test usług sprawdza karierę i migrację workspace;
+- startup smoke obejmuje interakcję oraz `fullscreenchange` i `pagehide`;
+- build pozostaje deterministyczny i przechodzi `sourceParity: ok`.
 
 ## Uruchomienie
 
@@ -93,8 +60,6 @@ lub:
 python tools/serve.py
 ```
 
-Po podmianie wydania użyj `Ctrl+Shift+R`.
-
 ## Testy i build
 
 ```bash
@@ -103,20 +68,12 @@ python tools/build_release.py
 python tools/verify_release.py
 ```
 
-Sam real-Cannon harness:
-
-```bash
-node --expose-gc tests/test_real_cannon_harness.js
-```
-
-Browser harness znajduje się w `tests/browser_runtime_harness.html` i powinien być otwierany przez lokalny serwer.
-
-## Następny zdecydowany kierunek
+## Następny kierunek
 
 1. Phase 1D.3C: joint capability spike — dwa body, free hinge, motor i servo;
-2. na podstawie spike: neutralne Physics Port constraints;
-3. Phase 1E: pierwszy grywalny Per-Block Control Bus;
-4. sensory, podstawowa logika, live scope i PID;
-5. pełnoprawne Free Bearing, Rotary Motor i Servo Bearing.
+2. neutralne Physics Port constraints na podstawie wyników spike;
+3. wydzielenie `flight-session` i `flight-integrity` pod model multi-body;
+4. Phase 1E: Per-Block Control Bus;
+5. sensory, logika, live scope i PID.
 
-Szczegóły znajdują się w `ROADMAP_NEXT.md`, `ARCHITECTURE.md`, `PHASE_1D3B_REPORT.md` i `CODE_REVIEW_REPORT.md`.
+Przeczytaj kolejno `AI_PROJECT_MEMORY.md`, `ARCHITECTURE.md`, `ROADMAP_NEXT.md`, `PHASE_1D3B1_REPORT.md`, `VALIDATION_REPORT.md`, `TEST_REPORT.md` i `DELIVERY_WORKFLOW.md`.

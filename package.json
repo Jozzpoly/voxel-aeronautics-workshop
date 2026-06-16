@@ -1,8 +1,8 @@
 {
   "name": "voxel-aeronautics-workshop",
-  "version": "0.6.0-foundation.1d3b",
+  "version": "0.6.1-foundation.1d3b1",
   "private": true,
-  "description": "Desktop voxel airship engineering sandbox — rebindable input, persistent block identities, production assembly building, automated real-Cannon parity, deterministic headless physics, strict runtime contracts, guided controls, and multi-pad missions.",
+  "description": "Desktop voxel airship engineering sandbox — rebindable input, persistent block identities, production assembly building, automated real-Cannon parity, deterministic headless physics, strict runtime contracts, an explicitly composed modular game shell, guided controls, and multi-pad missions.",
   "scripts": {
     "test": "python tests/run_all.py",
     "build": "python tools/build_release.py",

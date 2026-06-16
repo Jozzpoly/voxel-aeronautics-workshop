@@ -79,3 +79,15 @@ Nie używać `git push --force` jako standardowego rozwiązania non-fast-forward
 ## 6. Weryfikacja bazowej wersji
 
 Przed rozpoczęciem kolejnego etapu agent powinien sprawdzić aktualny `main` repozytorium i oprzeć pracę na jego najnowszym commicie albo na jawnie wskazanej przez użytkownika nowszej paczce. Nie wolno zakładać, że luźny katalog z wcześniejszej sesji jest aktualniejszy od zweryfikowanego ZIP-a lub repozytorium.
+
+## 7. Wydania z wieloma modułami aplikacji
+
+`tools/build_release.py::APP_SOURCES` jest kanonicznym manifestem kolejności źródeł. Dodając lub usuwając moduł należy jednocześnie:
+
+1. zaktualizować `APP_SOURCES`;
+2. zaktualizować loader w `index.html` w tej samej kolejności;
+3. uruchomić `tests/test_game_architecture.py` i pełne `tests/run_all.py`;
+4. zbudować single HTML i ZIP;
+5. potwierdzić `sourceParity: ok`.
+
+Nie utrzymywać ręcznej kopii listy źródeł w testach. Testy powinny korzystać z `tests/source_inventory.py`.

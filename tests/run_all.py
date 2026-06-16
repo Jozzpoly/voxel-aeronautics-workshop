@@ -33,6 +33,8 @@ def main() -> None:
     run('node', 'tests/test_craft_compiler.js')
     run('node', 'tests/test_flight_control.js')
     run('node', 'tests/test_craft_history.js')
+    run('node', 'tests/test_game_services.js')
+    run(sys.executable, 'tests/test_game_architecture.py')
     run(sys.executable, 'tests/test_algorithms.py')
     run(sys.executable, 'tests/test_missions.py')
     run(sys.executable, 'tests/test_audit_regressions.py')

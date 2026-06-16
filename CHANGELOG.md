@@ -1,5 +1,21 @@
 # Changelog
 
+## Foundation Phase 1D.3B.1 — Modular Game Shell & Explicit Composition Boundaries
+
+- Split stable application responsibilities from the 4697-line `game.js` into nine `game.*` modules.
+- Reduced `game.js` to 2358 lines and 108210 bytes while preserving behavior.
+- Established `src/game.js` as the final explicit composition root.
+- Added scene, career, workspace, input settings, orientation, visual factory, engineering analysis, blueprint and mission owners.
+- Kept flight, damage and integrity together until the multi-body joint spike defines their correct API.
+- Made `APP_SOURCES` the canonical source inventory for loader, tests, manifest, single HTML and ZIP.
+- Added game service tests and architectural ownership/size/dependency guardrails.
+- Extended startup smoke with `fullscreenchange` and `pagehide` lifecycle execution.
+- Fixed post-extraction private-state leaks for autosave, workspace save and Flight Focus by adding explicit lifecycle methods.
+- Preserved CraftModel, Assembly Builder and Physics Port boundaries.
+- Added ADR 0026 and expanded project memory, architecture, roadmap, validation and delivery documentation.
+- Version `0.6.1-foundation.1d3b1`.
+- Release id `foundation-1d3b1-modular-game-shell`.
+
 ## Foundation Phase 1D.3B — Real-Cannon Parity & Runtime Contract Hardening
 
 - Added automated real-Cannon 0.6.2 parity tests without network dependency.

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Voxel Aeronautics Workshop — Foundation Phase 1D.3B Real-Cannon Parity</title>
+  <title>Voxel Aeronautics Workshop — Foundation Phase 1D.3B.1 Modular Game Shell</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
   <script src="https://unpkg.com/cannon@0.6.2/build/cannon.min.js"></script>
@@ -34,7 +34,7 @@
     <div class="workspace-panel-handle"><span>BUILD WORKSPACE</span><span class="workspace-panel-actions"><button type="button" data-panel-minimize="build" aria-label="Minimize build panel">—</button><button type="button" data-panel-close="build" aria-label="Close build panel">×</button></span></div>
     <div class="workspace-panel-scroll" data-panel-scroll="build" tabindex="0" role="region" aria-label="Build workspace content">
     <div class="flex items-center justify-between mb-1 gap-2">
-      <div><h1 class="text-xl font-black text-white">Voxel Aeronautics Workshop</h1><div class="text-[10px] uppercase tracking-[0.18em] text-sky-300">Foundation Phase 1D.3B • Real-Cannon Parity</div></div>
+      <div><h1 class="text-xl font-black text-white">Voxel Aeronautics Workshop</h1><div class="text-[10px] uppercase tracking-[0.18em] text-sky-300">Foundation Phase 1D.3B.1 • Modular Game Shell</div></div>
       <span id="ui-mode" class="chip text-amber-300">BUILD</span>
     </div>
     <p class="text-xs text-gray-400 mb-3">
@@ -302,7 +302,7 @@
       </div>
     </div>
 
-    
+
   </div>
 
   <div id="mission-hud" class="mission-hud" hidden>
@@ -424,6 +424,15 @@
         'src/runtime/cannon_physics_backend.js',
         'src/runtime/headless_physics_backend.js',
         'src/runtime/assembly_builder.js',
+        'src/game/scene_environment.js',
+        'src/game/career_service.js',
+        'src/game/workspace_controller.js',
+        'src/game/input_settings_controller.js',
+        'src/game/orientation_service.js',
+        'src/game/module_visual_factory.js',
+        'src/game/engineering_analysis.js',
+        'src/game/blueprint_controller.js',
+        'src/game/mission_controller.js',
         'src/foundation/bootstrap.js',
         'src/game.js'
       ];

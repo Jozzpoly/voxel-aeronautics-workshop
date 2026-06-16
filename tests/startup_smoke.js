@@ -12,14 +12,21 @@ class El{
  querySelectorAll(sel){return query(sel,this)} querySelector(sel){return this.querySelectorAll(sel)[0]||null}
  set innerHTML(v){this._innerHTML=String(v)} get innerHTML(){return this._innerHTML}
  getBoundingClientRect(){return {left:0,top:0,width:1280,height:720,right:1280,bottom:720}}
- setAttribute(k,v){this[k]=v} getContext(){return {}} 
+ setAttribute(k,v){this[k]=v} getContext(){return {}}
 }
 const elements=new Map();
 for(const [id,tag] of ids){const e=new El(tag,id);elements.set(id,e)}
 const body=new El('body','body'), head=new El('head','head');
 function descendants(root){const out=[];const walk=e=>{for(const c of e.children){out.push(c);walk(c)}};walk(root);return out}
 function query(sel,root=null){let pool=root?descendants(root):all;if(sel.startsWith('.'))return pool.filter(e=>e.classList.contains(sel.slice(1)) || e.className.split(/\s+/).includes(sel.slice(1)));if(sel.startsWith('#')){const e=elements.get(sel.slice(1));return e?[e]:[]}if(sel==='button')return pool.filter(e=>e.tagName==='BUTTON');return []}
-const document={body,head,hidden:false,createElement:t=>new El(t),getElementById:id=>elements.get(id)||null,querySelectorAll:s=>query(s),querySelector:s=>query(s)[0]||null,addEventListener(){},removeEventListener(){}};
+const documentListeners=new Map();
+const document={
+ body,head,hidden:false,fullscreenElement:null,
+ createElement:t=>new El(t),getElementById:id=>elements.get(id)||null,querySelectorAll:s=>query(s),querySelector:s=>query(s)[0]||null,
+ addEventListener(type,fn){if(!documentListeners.has(type))documentListeners.set(type,[]);documentListeners.get(type).push(fn)},
+ removeEventListener(type,fn){if(documentListeners.has(type))documentListeners.set(type,documentListeners.get(type).filter(x=>x!==fn))},
+ dispatchEvent(event={}){event.type=event.type||'event';for(const fn of documentListeners.get(event.type)||[])fn(event);return true}
+};
 for(const e of elements.values())body.appendChild(e);
 const windowListeners=new Map();
 global.window=global;global.document=document;global.navigator={userAgent:'smoke'};global.innerWidth=1280;global.innerHeight=720;global.devicePixelRatio=1;global.performance={now:()=>0};global.localStorage={getItem:()=>null,setItem(){},removeItem(){}};global.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}});global.addEventListener=(type,fn)=>{if(!windowListeners.has(type))windowListeners.set(type,[]);windowListeners.get(type).push(fn)};global.removeEventListener=(type,fn)=>{if(windowListeners.has(type))windowListeners.set(type,windowListeners.get(type).filter(x=>x!==fn))};global.dispatchWindowEvent=(type,event={})=>{event.type=type;event.key=event.key||'';event.code=event.code||'';event.ctrlKey=!!event.ctrlKey;event.metaKey=!!event.metaKey;event.shiftKey=!!event.shiftKey;event.repeat=!!event.repeat;event.preventDefault=event.preventDefault||(()=>{event.defaultPrevented=true});for(const fn of windowListeners.get(type)||[])fn(event);return event};global.URL={createObjectURL:()=>'',revokeObjectURL(){}};global.Blob=class{};global.FileReader=class{readAsText(){}};global.alert=()=>{};global.confirm=()=>true;global.setTimeout=(fn)=>0;global.clearTimeout=()=>{};
@@ -96,5 +103,7 @@ try{
  elements.get('btn-build').click();
  elements.get('btn-clear').click();
  assert(elements.get('ui-blocks').textContent==='0','New blueprint must return to a truly empty workspace.');
- console.log('STARTUP_OK', {ids:ids.length,elements:all.length,modules:global.VAW.inspect().initialized.length,sources:sourceFiles.length,interaction:'ok'});
+ document.dispatchEvent({type:'fullscreenchange'});
+ dispatchWindowEvent('pagehide');
+ console.log('STARTUP_OK', {ids:ids.length,elements:all.length,modules:global.VAW.inspect().initialized.length,sources:sourceFiles.length,interaction:'ok',lifecycle:'ok'});
 }catch(e){console.error(e.stack||e);process.exit(1)}

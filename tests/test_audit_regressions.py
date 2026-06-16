@@ -6,44 +6,10 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-GAME = (ROOT / 'src' / 'game.js').read_text(encoding='utf-8')
-FOUNDATION = '\n'.join(path.read_text(encoding='utf-8') for path in sorted((ROOT / 'src/foundation').glob('*.js')))
-RUNTIME = '\n'.join(path.read_text(encoding='utf-8') for path in sorted((ROOT / 'src/runtime').glob('*.js')))
-ALL_JS = FOUNDATION + '\n' + RUNTIME + '\n' + GAME
+from source_inventory import ALL_JS, FOUNDATION, GAME, RUNTIME, function_source
 HTML = (ROOT / 'index.html').read_text(encoding='utf-8')
 CSS = (ROOT / 'styles.css').read_text(encoding='utf-8').rstrip()
 
-
-def function_source(name: str) -> str:
-    start = GAME.index(f'function {name}(')
-    brace = GAME.index('{', start)
-    depth = 0
-    quote = None
-    escaped = False
-    template_depth = 0
-    for i in range(brace, len(GAME)):
-        ch = GAME[i]
-        if quote:
-            if escaped:
-                escaped = False
-            elif ch == '\\':
-                escaped = True
-            elif ch == quote and template_depth == 0:
-                quote = None
-            elif quote == '`' and ch == '$' and i + 1 < len(GAME) and GAME[i + 1] == '{':
-                template_depth += 1
-            elif quote == '`' and ch == '}' and template_depth:
-                template_depth -= 1
-            continue
-        if ch in "'\"`":
-            quote = ch
-        elif ch == '{':
-            depth += 1
-        elif ch == '}':
-            depth -= 1
-            if depth == 0:
-                return GAME[start:i + 1]
-    raise AssertionError(f'unclosed function {name}')
 
 
 # The project HTML and one-file release must come from one source of truth.
@@ -188,7 +154,7 @@ validate = function_source('normalizeBlueprintData')
 assert 'Blueprint.normalize(data)' in validate
 assert 'dataVersion > SAVE_VERSION' in ALL_JS
 normalize = function_source('normalizeCareerData')
-for token in ('knownContractIds()', 'THREE.MathUtils.clamp', 'source.completed?.[contract.id] === true'):
+for token in ('knownContractIds()', 'clamp(', 'source.completed?.[contract.id] === true'):
     assert token in normalize
 
 assert 'STATE.voxels' not in GAME
@@ -216,7 +182,7 @@ for element_id in ('workspace-toolbar', 'contract-panel'):
 for removed_id in ('btn-ui-contracts', 'mobile-topbar', 'mobile-controls', 'btn-touch-place'):
     assert f'id="{removed_id}"' not in HTML
 assert 'id="desktop-required"' in HTML
-assert 'Foundation Phase 1D.3B' in HTML
+assert 'Foundation Phase 1D.3B.1' in HTML
 assert 'Foundation Phase 1D.2B • Mission + Balloon Control Fix' not in HTML
 assert re.search(r'id="contract-panel"[^>]*\shidden', HTML)
 assert 'btn-contract-panel-open' not in HTML and 'btn-contract-panel-close' not in HTML

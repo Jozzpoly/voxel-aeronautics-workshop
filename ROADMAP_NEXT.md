@@ -1,4 +1,4 @@
-# Roadmap po Foundation Phase 1D.3B
+# Roadmap po Foundation Phase 1D.3B.1
 
 ## Kierunek produktu
 
@@ -10,24 +10,17 @@ buduj -> steruj ręcznie lub programuj -> obserwuj fizykę -> przebuduj
 
 Kontrakty uczą i inspirują. Nie mogą zastąpić swobodnego budowania, sterowania każdym urządzeniem i tworzenia mechanizmów wielobryłowych.
 
-## Ukończone — Phase 1D.3B
+## Ukończone — Phase 1D.3B.1
 
-- prawdziwy Cannon.js 0.6.2 jest vendored wyłącznie do testów i uruchamiany automatycznie z Node;
-- browser runtime harness nie wymaga już CDN dla Cannon;
-- real-Cannon free fall, inertia parity, rotated inertia i torque response;
-- offset thrust tworzący translację i obrót;
-- payload removal oraz recenter podczas translacji i rotacji;
-- prawdziwe zdarzenia kontaktowe normalizowane przez Physics Port;
-- 12 000 kroków real-Cannon soak;
-- pomiary build i `world.step` dla 100/500/1000/2500 colliderów;
-- 50 cykli build/dispose z kontrolą pozostawionych body i pamięci;
-- synchronizacja typu STATIC/DYNAMIC po zmianie masy w obu backendach;
-- poprawiona bezwładność obróconej bryły w headless;
-- pełna walidacja planu przed alokacją body/colliderów;
-- atomowe usuwanie colliderów i rollback zachowujący pierwotny błąd;
-- rygorystyczne wejście mass properties i RuntimeAssemblyPlan;
-- twardy limit pracy CraftCompiler do `GRID.maxBlocks`;
-- zachowana granica: `game.js` nie składa fizycznego assembly.
+- `game.js` zmniejszony z 4697 do 2358 linii i z około 220 kB do około 108 kB;
+- dziewięć jawnych modułów `game.*` z dependency injection;
+- scena, kariera, workspace, input settings, orientacja, modele bloków, analiza, blueprinty i misje mają pojedynczych właścicieli;
+- `game.js` jest ostatnim composition rootem, a moduły nie czytają `window.VAW_RUNTIME`;
+- wspólne `APP_SOURCES` zasila loader, source manifest, single HTML, ZIP i testy;
+- nowe testy usług i granic game shell;
+- limit przeciw ponownemu rozrostowi `game.js`;
+- lifecycle `pagehide` i `fullscreenchange` jest delegowany przez jawne API modułów;
+- zachowane Assembly Builder, Physics Port, real Cannon parity i wszystkie wcześniejsze zachowania gry.
 
 ## Phase 1D.3C — Joint Capability Spike
 
@@ -42,26 +35,28 @@ Scenariusze:
 - powered hinge z `targetSpeed` i `maxTorque`;
 - servo z `targetAngle`, limitem prędkości i momentu;
 - włączanie/wyłączanie kolizji między połączonymi podzespołami;
-- długi soak bez driftu prowadzącego do eksplozji solvera;
-- bezpieczne usunięcie constraintu;
-- bezpieczne usunięcie jednego body;
-- rollback, gdy konstrukcja constraintu nie powiedzie się;
+- długi soak bez eksplozji solvera;
+- bezpieczne usunięcie constraintu i body;
+- rollback przy błędzie konstrukcji constraintu;
 - sygnał sterujący odseparowany od mechanical graph.
 
-Wynik spike ma określić minimalny neutralny kontrakt Physics Port dla hinge/motor/servo. Nie wolno przed wynikiem tworzyć ogólnego „API do wszystkich jointów”.
+Wynik spike ma określić minimalny neutralny kontrakt Physics Port. Nie tworzyć wcześniej ogólnego „API do wszystkich jointów”.
+
+## Refaktor po joint spike
+
+Gdy model wielu body będzie znany:
+
+1. wydzielić `game.flight-session` jako właściciela start/stop i RuntimeAssembly lifecycle;
+2. wydzielić `game.flight-integrity` jako właściciela damage, detach, payload i debris;
+3. wydzielić `game.camera-controller`;
+4. rozważyć `game.workshop-controller`, ale bez przenoszenia źródła prawdy z `CraftModel`;
+5. pozostawić `src/game.js` jako cienką kompozycję, event routing i główną pętlę.
+
+Nie należy teraz wydzielać publicznego API flight/integrity opartego na pojedynczym `STATE.flight.body`.
 
 ## Decyzja o Collider Compilerze
 
-Real-Cannon benchmark pustego świata pokazał, że koszt samej budowy compound body rośnie mocno:
-
-| Collidery | Mediana build | Mediana step | P99 step |
-|---:|---:|---:|---:|
-| 100 | 3.101 ms | 0.0131 ms | 0.0217 ms |
-| 500 | 26.888 ms | 0.0622 ms | 0.0791 ms |
-| 1000 | 85.201 ms | 0.1260 ms | 0.1524 ms |
-| 2500 | 482.791 ms | 0.3292 ms | 0.3744 ms |
-
-To uzasadnia dalszy pomiar i prototyp greedy merge, ale **nie** uzasadnia jeszcze podniesienia limitu 480 części. `world.step` był mierzony bez aktywnych kontaktów między tysiącami shape’ów. Przed zmianą limitu potrzebne są scenariusze z podłożem, przeszkodami, uszkodzeniami i jointami.
+Real-Cannon benchmark pustego świata pokazuje silny wzrost kosztu budowy compound body. Nie uzasadnia to podniesienia limitu 480 części. Przed zmianą limitu potrzebne są scenariusze z podłożem, przeszkodami, uszkodzeniami i jointami oraz prototyp greedy merge.
 
 ## Phase 1E — Per-Block Control Bus
 
@@ -75,59 +70,26 @@ Pierwsza wersja grywalna:
 - pilot axes i custom actions jako źródła sygnału;
 - konfiguracja zapisywana i migrowana w blueprintcie;
 - odłączony lub uszkodzony blok zachowuje tożsamość konfiguracji;
-- diagnostyka brakujących endpointów po usunięciu bloku.
-
-Obecny mikser pozostaje domyślny, aby prosty statek działał natychmiast.
+- diagnostyka brakujących endpointów.
 
 ## Phase 1E.1 — Sensors, Logic & Scope
 
-Minimalne sensory:
+Minimalne sensory: altitude, vertical speed, angular velocity, orientation, fuel, health i actuator output.
 
-- altitude;
-- vertical speed;
-- local/world angular velocity;
-- orientation i attitude error;
-- fuel, health i effective actuator output.
+Minimalne węzły: Constant, Add/Subtract, Multiply, Clamp, Compare/Switch, Integrator i PID.
 
-Minimalne węzły:
-
-- Constant;
-- Add/Subtract;
-- Multiply;
-- Clamp;
-- Compare/Switch;
-- Integrator;
-- PID.
-
-Live Scope obserwuje prawdziwe sygnały control busu. Pierwszy demonstrator to regulacja wysokości grupy wybranych thrusterów, nie hardkodowany globalny autopilot.
+Live Scope obserwuje prawdziwe sygnały control busu.
 
 ## Phase 1F — Articulated Assemblies
 
-Pierwsze bloki gracza:
+Pierwsze bloki gracza: Free Bearing, Rotary Motor i Servo Bearing.
 
-- Free Bearing;
-- Rotary Motor;
-- Servo Bearing.
-
-Kompilator:
-
-1. rozpoznaje sztywne krawędzie i joint edges;
-2. dzieli projekt na rigid islands;
-3. liczy osobne mass properties;
-4. tworzy `ConstraintPlan[]`;
-5. wykrywa rigid bypass wokół jointa;
-6. mapuje porty sterujące do konkretnego constraintu;
-7. zachowuje stabilne `blockId`, `bodyId` i joint identity.
-
-Następnie: wały, przekładnie, pistony, wirniki, obrotowe gondole, składane skrzydła i docking.
+Kompilator dzieli projekt na rigid islands, tworzy `ConstraintPlan[]`, wykrywa rigid bypass i zachowuje stabilne `blockId`, `bodyId` oraz joint identity.
 
 ## Rzeczy świadomie odłożone
 
 - pełny tensor 3×3 przy obecnym Cannon;
-- zaawansowany crossflow drag i środek oporu kadłuba;
+- zaawansowany crossflow drag;
 - tuning scale height;
-- pozornie precyzyjne predykcje czasu lotu;
 - duży system kampanii;
 - multiplayer.
-
-Żadna z tych rzeczy nie wyprzedza joint spike i Per-Block Control Bus bez konkretnego problemu blokującego.
