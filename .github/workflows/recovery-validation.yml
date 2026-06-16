@@ -16,6 +16,8 @@ jobs:
   baseline:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      RECOVERY_ARTIFACT_DIR: /tmp/vaw-recovery-artifacts
     steps:
       - name: Checkout recovery branch
         uses: actions/checkout@v4
@@ -32,48 +34,53 @@ jobs:
 
       - name: Record environment
         run: |
-          mkdir -p recovery-artifacts/logs
-          python --version | tee recovery-artifacts/logs/environment.txt
-          node --version | tee -a recovery-artifacts/logs/environment.txt
-          git rev-parse HEAD | tee -a recovery-artifacts/logs/environment.txt
-          git status --short --branch | tee -a recovery-artifacts/logs/environment.txt
+          mkdir -p "$RECOVERY_ARTIFACT_DIR/logs"
+          python --version | tee "$RECOVERY_ARTIFACT_DIR/logs/environment.txt"
+          node --version | tee -a "$RECOVERY_ARTIFACT_DIR/logs/environment.txt"
+          git rev-parse HEAD | tee -a "$RECOVERY_ARTIFACT_DIR/logs/environment.txt"
+          git status --short --branch | tee -a "$RECOVERY_ARTIFACT_DIR/logs/environment.txt"
 
       - name: Compile Python baseline
         run: |
           set -o pipefail
-          python -m compileall . 2>&1 | tee recovery-artifacts/logs/compileall.log
+          python -m compileall . 2>&1 | tee "$RECOVERY_ARTIFACT_DIR/logs/compileall.log"
 
       - name: Run full baseline suite
         run: |
           set -o pipefail
-          python -u tests/run_all.py 2>&1 | tee recovery-artifacts/logs/run_all.log
+          python -u tests/run_all.py 2>&1 | tee "$RECOVERY_ARTIFACT_DIR/logs/run_all.log"
 
       - name: Build release baseline
         run: |
           set -o pipefail
-          python tools/build_release.py 2>&1 | tee recovery-artifacts/logs/build_release.log
+          python tools/build_release.py 2>&1 | tee "$RECOVERY_ARTIFACT_DIR/logs/build_release.log"
 
       - name: Verify release baseline
         run: |
           set -o pipefail
-          python tools/verify_release.py 2>&1 | tee recovery-artifacts/logs/verify_release.log
+          python tools/verify_release.py 2>&1 | tee "$RECOVERY_ARTIFACT_DIR/logs/verify_release.log"
 
       - name: Check whitespace
         run: |
           set -o pipefail
-          git diff --check 2>&1 | tee recovery-artifacts/logs/git_diff_check.log
+          git diff --check 2>&1 | tee "$RECOVERY_ARTIFACT_DIR/logs/git_diff_check.log"
 
-      - name: Copy repository snapshot
+      - name: Copy clean repository snapshot
         if: always()
         run: |
-          mkdir -p recovery-artifacts/repository
-          rsync -a --exclude='.git' --exclude='recovery-artifacts' ./ recovery-artifacts/repository/
+          mkdir -p "$RECOVERY_ARTIFACT_DIR/repository"
+          rsync -a \
+            --exclude='.git' \
+            --exclude='recovery-artifacts' \
+            --exclude='__pycache__' \
+            --exclude='*.pyc' \
+            ./ "$RECOVERY_ARTIFACT_DIR/repository/"
 
       - name: Upload recovery snapshot and logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: vaw-recovery-baseline-${{ github.sha }}
-          path: recovery-artifacts
+          name: vaw-recovery-final-${{ github.sha }}
+          path: /tmp/vaw-recovery-artifacts
           if-no-files-found: error
           retention-days: 7
