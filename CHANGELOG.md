@@ -1,5 +1,20 @@
 # Changelog
 
+## Foundation Phase 1D.3A — Runtime Assembly Builder & Deterministic Headless Harness Core
+
+- Added production `runtime.assembly-builder` and integrated it into flight body creation.
+- Added multi-body construction, stable body/collider/part maps, transactional rollback and idempotent disposal.
+- Added shared `foundation.mass-properties` for compilation, loaded payloads and runtime detach.
+- Moved recenter kinematics and point velocity behind Physics Port.
+- Added deterministic headless free-flight backend without DOM or WebGL.
+- Added free-fall, exact-hover, torque, offset-thrust, inertia-parity and 12,000-step soak tests.
+- Added architecture benchmark for 100/500/1000/2500 headless colliders.
+- Added manual real-Cannon browser harness and explicit limitation reporting.
+- Added regression guards preventing `game.js` from rebuilding the main craft body or colliders.
+- Added ADR 0024 and updated the roadmap toward real-Cannon parity, joint capability spike and Per-Block Control Bus.
+- Version `0.5.9-foundation.1d3a`.
+- Release id `foundation-1d3a-runtime-assembly-builder`.
+
 ## Foundation Phase 1D.2F — Runtime Assembly Foundation
 
 - Added blueprint v10 with persistent `blockId` independent from grid coordinates.

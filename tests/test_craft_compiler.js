@@ -15,6 +15,7 @@ for (const relative of [
   'src/foundation/blueprint.js',
   'src/foundation/craft_model.js',
   'src/foundation/control_frame.js',
+  'src/foundation/mass_properties.js',
   'src/foundation/craft_compiler.js'
 ]) {
   vm.runInThisContext(fs.readFileSync(path.join(ROOT, relative), 'utf8'), { filename: relative });

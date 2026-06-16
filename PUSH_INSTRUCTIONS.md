@@ -1,18 +1,14 @@
-# Push Instructions — Phase 1D.2F
+# Push Instructions — Phase 1D.3A
 
-## Który plik jest źródłem prawdy
+## Źródło prawdy
 
-Do aktualizacji repozytorium używaj pełnego ZIP-a źródłowego:
+Do aktualizacji repozytorium używaj pełnego ZIP-a:
 
-`VAW_Phase_1D2F_Runtime_Assembly_Foundation_Source.zip`
+`VAW_Phase_1D3A_Runtime_Assembly_Builder_Source.zip`
 
-Jednoplikowy HTML służy do szybkiego uruchomienia i prezentacji. Nie zastępuje źródeł repozytorium.
+Jednoplikowy HTML służy do uruchomienia i prezentacji. Patch służy do audytu. Repozytorium aktualizujemy z pełnej paczki źródłowej.
 
-## Bezpieczna aktualizacja krok po kroku
-
-### 1. Zsynchronizuj lokalne `main`
-
-W katalogu repozytorium:
+## 1. Zsynchronizuj lokalne `main`
 
 ```powershell
 git checkout main
@@ -21,15 +17,19 @@ git fetch origin
 git pull --rebase origin main
 ```
 
-Jeżeli `git status` pokazuje niezatwierdzone własne zmiany, najpierw je commituj albo schowaj przez `git stash`. Nie kopiuj wydania na brudny working tree.
+Working tree powinien być czysty. Własne zmiany najpierw commituj albo schowaj przez `git stash`.
 
-### 2. Rozpakuj paczkę poza repo
+## 2. Rozpakuj paczkę poza repo
 
-Rozpakuj ZIP do osobnego katalogu. Następnie skopiuj **zawartość katalogu projektu** do katalogu repozytorium, zastępując istniejące pliki.
+W ZIP-ie znajduje się katalog:
 
-Nie usuwaj ani nie nadpisuj katalogu `.git`.
+```text
+Voxel_Aeronautics_Workshop_Phase_1D3A_RUNTIME_ASSEMBLY_BUILDER_READY_TO_PUSH
+```
 
-### 3. Zweryfikuj projekt
+Skopiuj **jego zawartość** do katalogu repozytorium, zastępując istniejące pliki. Nie usuwaj i nie nadpisuj `.git`.
+
+## 3. Uruchom testy
 
 ```powershell
 python tests/run_all.py
@@ -37,71 +37,69 @@ python tools/build_release.py
 python tools/verify_release.py
 ```
 
-Wymagane są wszystkie zielone testy oraz `sourceParity: ok`.
+Wymagane są wszystkie zielone testy i source parity `ok`.
 
-### 4. Wykonaj manualną checklistę
+## 4. Wykonaj manualną checklistę
 
 Przejdź `VALIDATION_REPORT.md`, szczególnie:
 
-- aktualizacja Passive vertical thrust suwakiem i klawiszami;
-- marker progu zawisu obu regulatorów;
-- jednoczesne `Left Ctrl` z `−/+` i `,/.` w Flight Focus;
-- zapis i migracja bindingów;
-- Hover License;
-- zachowanie balonów.
+- wielokrotny start i powrót do warsztatu;
+- asymetryczna bezwładność;
+- detach podczas obrotu;
+- brak niewidzialnych colliderów;
+- payload i recenter;
+- browser runtime harness z prawdziwym Cannon.js.
 
 Przed playtestem użyj `Ctrl+Shift+R`.
 
-### 5. Sprawdź diff i utwórz commit
+## 5. Sprawdź diff i commit
 
 ```powershell
 git status
 git diff --stat
 git diff
 git add -A
-git commit -m "Foundation 1D.2F: establish runtime assembly foundation"
+git commit -m "Foundation 1D.3A: integrate runtime assembly builder and headless harness"
 ```
 
-### 6. Zsynchronizuj się ponownie przed pushem
-
-To chroni przed sytuacją, w której ktoś dodał commit na GitHubie podczas Twojego testowania:
+## 6. Zsynchronizuj się ponownie
 
 ```powershell
 git fetch origin
 git rebase origin/main
 ```
 
-Jeżeli rebase zmienił pliki projektu, ponownie uruchom:
+Po konflikcie lub zmianach z rebase ponownie uruchom co najmniej:
 
 ```powershell
 python tests/run_all.py
 ```
 
-### 7. Push aktualnej gałęzi na `main`
+## 7. Push
 
 ```powershell
 git push origin HEAD:main
 ```
 
-## Gdy rebase zgłosi konflikt
+## Konflikt podczas rebase
 
 ```powershell
 git status
 ```
 
-Popraw wskazane pliki, a potem:
+Popraw pliki, następnie:
 
 ```powershell
 git add -A
 git rebase --continue
 ```
 
-Powtarzaj do komunikatu o pomyślnym zakończeniu rebase. Gdy trzeba wrócić do stanu sprzed operacji:
+Aby anulować:
 
 ```powershell
 git rebase --abort
 ```
 
-Nie używaj `git push --force` do zwykłej publikacji wydania.
+Nie używaj `git push --force` do zwykłej publikacji.
 
-Repozytorium nie zostało zmienione automatycznie przez agenta. Publikację wykonuje użytkownik lokalnie z pełnej paczki źródłowej.
+Repozytorium nie zostało automatycznie zmienione przez agenta. Publikację wykonujesz lokalnie z pełnego ZIP-a.

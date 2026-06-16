@@ -245,6 +245,15 @@
         return body.pointToWorldFrame(vec3(point));
       }
 
+      function getPointVelocity(body, localPoint) {
+        if (!body) throw new TypeError('Body is required.');
+        const worldOffset = vectorToWorldFrame(body, localPoint);
+        const rotational = vec3();
+        const result = vec3();
+        body.angularVelocity.cross(worldOffset, rotational);
+        return body.velocity.vadd(rotational, result);
+      }
+
       const backend = {
         id: 'cannon',
         version: String(CANNON.version || '0.6.x/unknown'),
@@ -268,7 +277,8 @@
         addTorque,
         vectorToWorldFrame,
         vectorToLocalFrame,
-        pointToWorldFrame
+        pointToWorldFrame,
+        getPointVelocity
       };
       return Object.freeze(PhysicsPort.assertBackend(backend));
     }

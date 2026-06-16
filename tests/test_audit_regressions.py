@@ -83,7 +83,8 @@ assert re.search(r'structuralCheckInterval:\s*1\s*/\s*30', ALL_JS)
 
 # Collider mutation happens only after world.step.
 assert re.search(r'Physics\.step\(world, PHYSICS\.fixedDt\);\s*processPendingImpacts\(\);\s*updateMission', GAME)
-callback = GAME[GAME.index('Physics.addCollisionListener(body, event =>'):GAME.index('Physics.addBody(world, body);', GAME.index('Physics.addCollisionListener(body, event =>'))]
+callback_start = GAME.index('collisionListener: ({ body: collidedBody, event }) => {')
+callback = GAME[callback_start:GAME.index('body = assemblyRuntime.rootBody;', callback_start)]
 assert 'applyImpactDamage(' not in callback
 
 # Debris must be bounded and isolated from debris-debris collision storms.
@@ -215,7 +216,7 @@ for element_id in ('workspace-toolbar', 'contract-panel'):
 for removed_id in ('btn-ui-contracts', 'mobile-topbar', 'mobile-controls', 'btn-touch-place'):
     assert f'id="{removed_id}"' not in HTML
 assert 'id="desktop-required"' in HTML
-assert 'Foundation Phase 1D.2F' in HTML
+assert 'Foundation Phase 1D.3A' in HTML
 assert 'Foundation Phase 1D.2B • Mission + Balloon Control Fix' not in HTML
 assert re.search(r'id="contract-panel"[^>]*\shidden', HTML)
 assert 'btn-contract-panel-open' not in HTML and 'btn-contract-panel-close' not in HTML
@@ -263,8 +264,25 @@ assert 'elapsed - STATE.mission.lastGroundContact < 0.3' not in GAME
 assert 'return lowestWorldY - TEST_RANGE.groundY;' in function_source('estimateCraftGroundClearance')
 print({'state_based_landing': 'ok', 'collision_event_not_required_for_dwell': 'ok', 'landing_hysteresis': 'ok'})
 
+# Runtime assembly construction is a real boundary: game.js consumes AssemblyBuilder instead of
+# rebuilding craft bodies and colliders through the physics backend.
+build_flight = function_source('buildFlightBody')
+assert 'AssemblyBuilder.build({' in build_flight
+assert 'assemblyRuntime.colliderByBlockId.get' in build_flight
+assert 'Physics.createBody({' not in build_flight
+assert 'Physics.addBoxCollider(' not in build_flight
+recenter = function_source('recenterCraftBody')
+assert 'assemblyRuntime.recenterBody' in recenter
+assert 'assemblyRuntime.setBodyMassProperties' in recenter
+assert 'body.angularVelocity.cross' not in function_source('pointVelocityWorld')
+assert 'Physics.getPointVelocity(body, localPoint)' in function_source('pointVelocityWorld')
+assert 'runtime.headless-physics-backend' in ALL_JS
+assert 'runtime.assembly-builder' in ALL_JS
+print({'assembly_builder_boundary': 'ok', 'recenter_physics_boundary': 'ok', 'headless_backend_registered': 'ok'})
+
 # Runtime collision callbacks expose a backend-neutral event instead of Cannon contact internals.
-collision_callback = GAME[GAME.index('Physics.addCollisionListener(body, event =>'):GAME.index('Physics.addBody(world, body);', GAME.index('Physics.addCollisionListener(body, event =>'))]
+collision_callback_start = GAME.index('collisionListener: ({ body: collidedBody, event }) => {')
+collision_callback = GAME[collision_callback_start:GAME.index('body = assemblyRuntime.rootBody;', collision_callback_start)]
 assert 'event.contact' not in collision_callback
 assert 'event.body' not in collision_callback
 assert 'event.impactSpeed' in collision_callback

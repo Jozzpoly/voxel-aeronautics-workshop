@@ -1,4 +1,4 @@
-# Validation Report — Phase 1D.2F
+# Validation Report — Phase 1D.3A
 
 ## Automatyczna walidacja
 
@@ -8,58 +8,96 @@ python tools/build_release.py
 python tools/verify_release.py
 ```
 
-Wymagane: wszystkie testy zielone oraz source parity `ok`.
+Wymagane:
+
+- `All core tests passed.`;
+- startup smoke `modules: 20`, `sources: 23`;
+- `sourceParity: ok`;
+- deterministyczny build.
 
 ## Manualny playtest przed mergem
 
-### Migracja i zapis
+### 1. Podstawowy sandbox
 
-1. Uruchom istniejący zapis v9.
-2. Potwierdź poprawny wygląd statku.
-3. Zapisz, odśwież i ponownie wczytaj.
-4. W konsoli nie może być błędu blueprint v10.
-5. Undo/redo oraz symmetry placement nadal działają.
+1. Otwórz pusty warsztat.
+2. Zbuduj prosty pionowy statek oraz asymetryczną konstrukcję.
+3. Uruchom lot, użyj wszystkich osi i obu regulatorów mocy.
+4. Wróć do warsztatu kilka razy.
+5. Konsola nie może pokazywać pozostawionych body, błędów listenerów ani stale colliderów.
 
-### Budowanie
+### 2. Assembly lifecycle
 
-1. Zacznij od pustego warsztatu i dowolnego bloku.
-2. Dodaj, usuń i przenieś Command Core.
-3. Umieść bloki z symmetry X/Z/XZ.
-4. Usuń i przywróć części przez undo/redo.
-5. Zbuduj cienką rakietę szerokości jednego voxela.
+1. Uruchom statek.
+2. Wróć do warsztatu.
+3. Powtórz co najmniej 20 razy.
+4. Zwróć uwagę na spadki wydajności, powielone callbacki kolizji i wielokrotne komunikaty impact.
 
-### Mass properties
+### 3. Mass properties i recenter
 
-1. Zbuduj długi statek z ciężarem przesuniętym na bok.
+1. Zbuduj długi statek z ciężarem po jednej stronie.
 2. Porównaj reakcję pitch/yaw/roll z panelem engineering analysis.
-3. Dodaj payload i potwierdź zmianę sterowności.
-4. Oderwij boczną część podczas obrotu.
-5. Statek nie może skoczyć, dostać NaN ani zachować starej bezwładności.
+3. Uruchom kontrakt z payloadem.
+4. Oderwij boczną część podczas translacji.
+5. Powtórz podczas wyraźnego obrotu.
+6. Statek nie może teleportować się, dostać sztucznego kopa, NaN ani zachować starej bezwładności.
 
-### Vertical support
+### 4. Damage i collider removal
 
-1. Potwierdź odczyt `Vertical support: X.XX× weight`.
-2. Zmieniaj oba suwaki i sprawdź natychmiastową aktualizację.
-3. Balloon guidance musi mówić, że próg dotyczy launch level.
-4. W locie wzrost wysokości nadal osłabia balony.
+1. Doprowadź do utraty pojedynczego zewnętrznego bloku.
+2. Sprawdź, czy debris odłącza się tylko raz.
+3. Uderz ponownie w miejsce po utraconym bloku.
+4. Niewidzialny collider nie może pozostać w głównym body.
+5. Utrata gałęzi nie może pozostawić mapy `blockId` wskazującej nieaktywny collider.
 
-### Granice lotu
+### 5. Payload
 
-1. Opuść range po X/Z i sprawdź poprawne zakończenie.
-2. Przekrocz skonfigurowane 160 m wysokości.
-3. Nie może istnieć inny, ukryty limit Y.
+1. Uruchom Courier i Heavy-Lift.
+2. Potwierdź zmianę sterowności po dołączeniu payloadu.
+3. Uszkodź i odłącz payload.
+4. Recenter po utracie payloadu nie może zmienić świata w sposób skokowy.
+5. Misja i HUD muszą zareagować na cargo integrity.
 
-### Regresje
+### 6. Browser Runtime Harness
 
-- ręczne sterowanie wszystkimi osiami;
+Uruchom lokalny serwer:
+
+```bash
+python tools/serve.py
+```
+
+Otwórz:
+
+```text
+http://127.0.0.1:8765/tests/browser_runtime_harness.html
+```
+
+Strona powinna zakończyć się `PASS` i pokazać wyniki:
+
+- real Cannon free fall;
+- inertia parity;
+- recenter position/velocity;
+- lifecycle disposal.
+
+Brak internetu może uniemożliwić pobranie Cannon.js z CDN. Taki przypadek jest ograniczeniem środowiska, nie wynikiem testu.
+
+### 7. Regresje
+
+- migracja blueprintu v9 → v10;
+- symmetry i undo/redo;
 - Flight Focus;
-- sandbox;
+- Sandbox Test;
 - Hover License na obu padach;
 - gate course;
-- payload i cargo damage;
+- cargo damage;
 - panel close/reopen/resize;
-- powrót do warsztatu po awarii.
+- guidance obu pionowych regulatorów.
 
 ## Kryterium merge
 
-Merge dopiero po zielonej baterii automatycznej i manualnym potwierdzeniu migracji v9, asymetrycznej bezwładności, payloadu, detach oraz podstawowego sandboxu.
+Merge dopiero po:
+
+1. zielonej baterii automatycznej;
+2. manualnym sandbox lifecycle;
+3. detach podczas rotacji bez skoku;
+4. braku ghost colliderów;
+5. PASS browser harnessu w środowisku z dostępnym Cannon.js.

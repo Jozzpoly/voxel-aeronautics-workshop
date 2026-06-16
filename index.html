@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Voxel Aeronautics Workshop — Foundation Phase 1D.2F Runtime Assembly Foundation</title>
+  <title>Voxel Aeronautics Workshop — Foundation Phase 1D.3A Runtime Assembly Builder</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
   <script src="https://unpkg.com/cannon@0.6.2/build/cannon.min.js"></script>
@@ -34,7 +34,7 @@
     <div class="workspace-panel-handle"><span>BUILD WORKSPACE</span><span class="workspace-panel-actions"><button type="button" data-panel-minimize="build" aria-label="Minimize build panel">—</button><button type="button" data-panel-close="build" aria-label="Close build panel">×</button></span></div>
     <div class="workspace-panel-scroll" data-panel-scroll="build" tabindex="0" role="region" aria-label="Build workspace content">
     <div class="flex items-center justify-between mb-1 gap-2">
-      <div><h1 class="text-xl font-black text-white">Voxel Aeronautics Workshop</h1><div class="text-[10px] uppercase tracking-[0.18em] text-sky-300">Foundation Phase 1D.2F • Runtime Assembly Foundation</div></div>
+      <div><h1 class="text-xl font-black text-white">Voxel Aeronautics Workshop</h1><div class="text-[10px] uppercase tracking-[0.18em] text-sky-300">Foundation Phase 1D.3A • Runtime Assembly Builder</div></div>
       <span id="ui-mode" class="chip text-amber-300">BUILD</span>
     </div>
     <p class="text-xs text-gray-400 mb-3">
@@ -411,6 +411,7 @@
         'src/foundation/craft_model.js',
         'src/foundation/craft_history.js',
         'src/foundation/control_frame.js',
+        'src/foundation/mass_properties.js',
         'src/foundation/craft_compiler.js',
         'src/foundation/runtime_assembly.js',
         'src/foundation/input_profile.js',
@@ -421,6 +422,8 @@
         'src/foundation/state.js',
         'src/runtime/physics_port.js',
         'src/runtime/cannon_physics_backend.js',
+        'src/runtime/headless_physics_backend.js',
+        'src/runtime/assembly_builder.js',
         'src/foundation/bootstrap.js',
         'src/game.js'
       ];

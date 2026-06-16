@@ -9,8 +9,8 @@
       return Object.freeze(value);
     }
 
-    const APP_VERSION = '0.5.8-foundation.1d2f';
-    const RELEASE_ID = 'foundation-1d2f-runtime-assembly-foundation';
+    const APP_VERSION = '0.5.9-foundation.1d3a';
+    const RELEASE_ID = 'foundation-1d3a-runtime-assembly-builder';
     const GRID = { halfExtent: 18, minY: 0, maxY: 20, maxBlocks: 2500 };
     const SAVE_VERSION = 10;
     const SAVE_KEY = 'voxel-aeronautics-blueprint-v10';

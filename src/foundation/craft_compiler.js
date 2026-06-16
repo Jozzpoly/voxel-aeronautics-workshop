@@ -3,8 +3,8 @@
 
   window.VAW.define(
     'foundation.craft-compiler',
-    ['foundation.config', 'foundation.catalog', 'foundation.orientation', 'foundation.blueprint', 'foundation.control-frame'],
-    (config, catalog, orientation, blueprint, ControlFrame) => {
+    ['foundation.config', 'foundation.catalog', 'foundation.orientation', 'foundation.blueprint', 'foundation.control-frame', 'foundation.mass-properties'],
+    (config, catalog, orientation, blueprint, ControlFrame, MassProperties) => {
       const { GRID, NEIGHBOR_DIRECTIONS } = config;
       const { BLOCKS } = catalog;
       const cache = new WeakMap();
@@ -17,7 +17,6 @@
       }
 
       function vec(x = 0, y = 0, z = 0) { return [x, y, z]; }
-      function add(a, b) { return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]; }
       function sub(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; }
       function scale(a, scalar) { return [a[0] * scalar, a[1] * scalar, a[2] * scalar]; }
       function cross(a, b) {
@@ -143,21 +142,25 @@
         }
 
         const counts = Object.fromEntries(Object.keys(BLOCKS).map(type => [type, 0]));
-        let mass = 0;
         let fuelCapacity = 0;
         let dragArea = 0;
-        let weightedPosition = vec();
+        const massElements = [];
         for (const block of normalized) {
           const def = BLOCKS[block.type];
-          const partMass = Number(def.mass) || 0;
-          mass += partMass;
-          weightedPosition = add(weightedPosition, scale([block.x, block.y, block.z], partMass));
+          massElements.push({
+            id: block.blockId,
+            mass: Number(def.mass) || 0,
+            center: [block.x, block.y, block.z],
+            halfExtents: [0.5, 0.5, 0.5]
+          });
           fuelCapacity += Number(def.fuelCapacity) || 0;
           dragArea += Number(def.dragArea) || 0;
           counts[block.type] += 1;
         }
-        const com = mass > 0 ? scale(weightedPosition, 1 / mass) : vec();
-        const inertia = vec();
+        const massProperties = MassProperties.compute(massElements);
+        const mass = massProperties.mass;
+        const com = [...massProperties.centerOfMass];
+        const inertia = [...massProperties.inertiaDiagonal];
         const parts = [];
         const functionalByType = Object.fromEntries(Object.keys(BLOCKS).map(type => [type, []]));
         const colliderPlan = [];
@@ -174,10 +177,6 @@
             ? scale(basis.forward, Number(def.force) || 0)
             : vec();
           const localTorque = cross(offset, fullForce);
-          const cubeInertia = partMass / 6;
-          inertia[0] += partMass * (offset[1] ** 2 + offset[2] ** 2) + cubeInertia;
-          inertia[1] += partMass * (offset[0] ** 2 + offset[2] ** 2) + cubeInertia;
-          inertia[2] += partMass * (offset[0] ** 2 + offset[1] ** 2) + cubeInertia;
           if (block.type === 'Core') coreIndex = index;
 
           const part = {

@@ -23,6 +23,7 @@
             bodies: [],
             bodyById: new Map(),
             assemblyPlan: null,
+            assemblyRuntime: null,
             group: null,
             functionalBlocks: [],
             fuel: 0,

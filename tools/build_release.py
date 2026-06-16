@@ -8,12 +8,12 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE_ID = 'foundation-1d2f-runtime-assembly-foundation'
-APP_VERSION = '0.5.8-foundation.1d2f'
-SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D2F_Runtime_Assembly_Foundation.html'
-ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D2F_Runtime_Assembly_Foundation.zip'
+RELEASE_ID = 'foundation-1d3a-runtime-assembly-builder'
+APP_VERSION = '0.5.9-foundation.1d3a'
+SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3A_Runtime_Assembly_Builder.html'
+ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3A_Runtime_Assembly_Builder.zip'
 MANIFEST_NAME = 'SOURCE_MANIFEST.json'
-ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_Phase_1D2F_RUNTIME_ASSEMBLY_READY_TO_PUSH'
+ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_Phase_1D3A_RUNTIME_ASSEMBLY_BUILDER_READY_TO_PUSH'
 APP_SOURCES = (
     Path('src/foundation/kernel.js'),
     Path('src/foundation/config.js'),
@@ -23,6 +23,7 @@ APP_SOURCES = (
     Path('src/foundation/craft_model.js'),
     Path('src/foundation/craft_history.js'),
     Path('src/foundation/control_frame.js'),
+    Path('src/foundation/mass_properties.js'),
     Path('src/foundation/craft_compiler.js'),
     Path('src/foundation/runtime_assembly.js'),
     Path('src/foundation/input_profile.js'),
@@ -33,6 +34,8 @@ APP_SOURCES = (
     Path('src/foundation/state.js'),
     Path('src/runtime/physics_port.js'),
     Path('src/runtime/cannon_physics_backend.js'),
+    Path('src/runtime/headless_physics_backend.js'),
+    Path('src/runtime/assembly_builder.js'),
     Path('src/foundation/bootstrap.js'),
     Path('src/game.js'),
 )

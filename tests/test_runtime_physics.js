@@ -20,6 +20,7 @@ const BackendFactory = global.VAW.require('runtime.cannon-physics-backend');
 const Physics = BackendFactory.create(global.CANNON);
 
 assert.strictEqual(Physics.id, 'cannon');
+assert.strictEqual(typeof Physics.getPointVelocity, 'function');
 assert(Object.isFrozen(Physics));
 assert.throws(() => Port.normalizeBoxDescriptor({ halfExtents: { x: 0, y: 1, z: 1 } }), /greater than zero/);
 assert.throws(() => Port.assertBackend({ id: 'broken' }), /missing methods/);

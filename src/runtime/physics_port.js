@@ -11,7 +11,7 @@
       'vec3', 'setBodyTransform', 'setBodyVelocity', 'setBodyMass', 'setBodyMassProperties',
       'markBodyDirty', 'addCollisionListener',
       'applyForce', 'addTorque',
-      'vectorToWorldFrame', 'vectorToLocalFrame', 'pointToWorldFrame'
+      'vectorToWorldFrame', 'vectorToLocalFrame', 'pointToWorldFrame', 'getPointVelocity'
     ]);
 
     function finiteNumber(value, fallback = 0) {

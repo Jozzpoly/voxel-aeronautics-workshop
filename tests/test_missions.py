@@ -171,10 +171,11 @@ assert 'STATE.flight.pendingImpacts.push({' in GAME
 assert 'function processPendingImpacts()' in GAME
 step_sequence = re.search(r"Physics\.step\(world, PHYSICS\.fixedDt\);\s*processPendingImpacts\(\);\s*updateMission", GAME)
 assert step_sequence, 'impact processing must happen after world.step and before mission evaluation'
-callback_start = GAME.index('Physics.addCollisionListener(body, event =>')
-callback_end = GAME.index('Physics.addBody(world, body);', callback_start)
+callback_start = GAME.index('collisionListener: ({ body: collidedBody, event }) => {')
+callback_end = GAME.index('body = assemblyRuntime.rootBody;', callback_start)
 callback_source = GAME[callback_start:callback_end]
 assert 'applyImpactDamage(' not in callback_source, 'collision callback must not mutate body shapes directly'
+assert 'AssemblyBuilder.build({' in GAME, 'flight runtime must be constructed through the assembly builder boundary'
 
 # Workshop prediction must use the same neutral control-surface lift scale as runtime.
 assert "const isControlSurface = part.type === 'ControlSurface';" in GAME

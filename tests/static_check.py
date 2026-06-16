@@ -3,8 +3,8 @@ import re, collections, subprocess, sys
 ROOT=Path(__file__).resolve().parents[1]
 source_files=[
  ROOT/'src/foundation/kernel.js', ROOT/'src/foundation/config.js', ROOT/'src/foundation/catalog.js',
- ROOT/'src/foundation/orientation.js', ROOT/'src/foundation/blueprint.js', ROOT/'src/foundation/craft_model.js', ROOT/'src/foundation/craft_history.js', ROOT/'src/foundation/control_frame.js', ROOT/'src/foundation/craft_compiler.js', ROOT/'src/foundation/runtime_assembly.js', ROOT/'src/foundation/input_profile.js', ROOT/'src/foundation/ui_workspace.js', ROOT/'src/foundation/mission_evaluator.js', ROOT/'src/foundation/aerostatics.js', ROOT/'src/foundation/flight_control.js', ROOT/'src/foundation/state.js',
- ROOT/'src/runtime/physics_port.js', ROOT/'src/runtime/cannon_physics_backend.js',
+ ROOT/'src/foundation/orientation.js', ROOT/'src/foundation/blueprint.js', ROOT/'src/foundation/craft_model.js', ROOT/'src/foundation/craft_history.js', ROOT/'src/foundation/control_frame.js', ROOT/'src/foundation/mass_properties.js', ROOT/'src/foundation/craft_compiler.js', ROOT/'src/foundation/runtime_assembly.js', ROOT/'src/foundation/input_profile.js', ROOT/'src/foundation/ui_workspace.js', ROOT/'src/foundation/mission_evaluator.js', ROOT/'src/foundation/aerostatics.js', ROOT/'src/foundation/flight_control.js', ROOT/'src/foundation/state.js',
+ ROOT/'src/runtime/physics_port.js', ROOT/'src/runtime/cannon_physics_backend.js', ROOT/'src/runtime/headless_physics_backend.js', ROOT/'src/runtime/assembly_builder.js',
  ROOT/'src/foundation/bootstrap.js', ROOT/'src/game.js'
 ]
 sources={path:path.read_text(encoding='utf-8') for path in source_files}
@@ -46,7 +46,7 @@ if 'STATE.voxels' in game: errors.append('Legacy STATE.voxels coupling still exi
 if 'meshesByKey' not in game: errors.append('Workshop view map is missing')
 for expected in [
  'foundation.config', 'foundation.catalog', 'foundation.orientation',
- 'foundation.blueprint', 'foundation.craft-model', 'foundation.craft-history', 'foundation.control-frame', 'foundation.craft-compiler', 'foundation.runtime-assembly', 'foundation.input-profile', 'foundation.ui-workspace', 'foundation.mission-evaluator', 'foundation.aerostatics', 'foundation.flight-control', 'foundation.state', 'runtime.physics-port', 'runtime.cannon-physics-backend'
+ 'foundation.blueprint', 'foundation.craft-model', 'foundation.craft-history', 'foundation.control-frame', 'foundation.mass-properties', 'foundation.craft-compiler', 'foundation.runtime-assembly', 'foundation.input-profile', 'foundation.ui-workspace', 'foundation.mission-evaluator', 'foundation.aerostatics', 'foundation.flight-control', 'foundation.state', 'runtime.physics-port', 'runtime.cannon-physics-backend', 'runtime.headless-physics-backend', 'runtime.assembly-builder'
 ]:
  if not re.search(r"window\.VAW\.define\(\s*['\"]" + re.escape(expected) + r"['\"]", js): errors.append(f'Missing module definition: {expected}')
 

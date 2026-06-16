@@ -29,6 +29,7 @@
   const CraftModel = window.VAW.require('foundation.craft-model');
   const CraftHistory = window.VAW.require('foundation.craft-history');
   const ControlFrame = window.VAW.require('foundation.control-frame');
+  const MassProperties = window.VAW.require('foundation.mass-properties');
   const CraftCompiler = window.VAW.require('foundation.craft-compiler');
   const RuntimeAssembly = window.VAW.require('foundation.runtime-assembly');
   const InputProfile = window.VAW.require('foundation.input-profile');
@@ -39,6 +40,8 @@
   const State = window.VAW.require('foundation.state');
   const PhysicsPort = window.VAW.require('runtime.physics-port');
   const CannonPhysicsBackend = window.VAW.require('runtime.cannon-physics-backend');
+  const HeadlessPhysicsBackend = window.VAW.require('runtime.headless-physics-backend');
+  const AssemblyBuilder = window.VAW.require('runtime.assembly-builder');
   const Physics = CannonPhysicsBackend.create(window.CANNON);
 
   const Capabilities = Object.freeze({
@@ -46,14 +49,15 @@
     cannonVersion: Physics.version,
     webglRenderer: true,
     physicsBackend: Physics.id,
-    physicsBoundary: 'phase-1d2f-mass-properties',
-    runtimeAssembly: 'single-body-plan-v1',
+    physicsBoundary: 'phase-1d3-assembly-builder',
+    runtimeAssembly: 'runtime-builder-v1',
+    headlessHarness: 'deterministic-free-flight-v1',
     missionEvaluation: 'phase-1d2b-multi-pad-ground-state',
     aerostatics: 'altitude-lift-damped-settling-v2',
     platform: 'desktop-keyboard-mouse-v1',
     workspaceState: 'version-3-z-order'
   });
-  const runtime = Object.freeze({ Config, Catalog, Orientation, Blueprint, CraftModel, CraftHistory, ControlFrame, CraftCompiler, RuntimeAssembly, InputProfile, UIWorkspace, MissionEvaluator, Aerostatics, FlightControl, State, PhysicsPort, Physics, Capabilities });
+  const runtime = Object.freeze({ Config, Catalog, Orientation, Blueprint, CraftModel, CraftHistory, ControlFrame, MassProperties, CraftCompiler, RuntimeAssembly, AssemblyBuilder, HeadlessPhysicsBackend, InputProfile, UIWorkspace, MissionEvaluator, Aerostatics, FlightControl, State, PhysicsPort, Physics, Capabilities });
   Object.defineProperty(window, 'VAW_RUNTIME', {
     configurable: false,
     enumerable: true,

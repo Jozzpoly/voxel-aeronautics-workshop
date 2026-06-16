@@ -1,58 +1,70 @@
-# Voxel Aeronautics Workshop — Foundation Phase 1D.2F
+# Voxel Aeronautics Workshop — Foundation Phase 1D.3A
 
-**Runtime Assembly Foundation**
+**Runtime Assembly Builder & Deterministic Headless Harness Core**
 
-Voxel Aeronautics Workshop to desktopowy voxelowy sandbox inżynieryjny. Główna fantazja projektu brzmi:
+Voxel Aeronautics Workshop to desktopowy voxelowy sandbox inżynieryjny. Główna fantazja projektu:
 
 > **buduję, programuję, testuję i latam własną fizyczną maszyną.**
 
-Kontrakty i progresja są dodatkiem. Pełnoprawnym trybem jest także czysty sandbox: budowa, ręczne sterowanie, eksperymenty, awarie i kolejne przebudowy.
+Sandbox i ręczne latanie są pełnoprawnym rdzeniem. Kontrakty pomagają testować projekty, ale nie definiują całej gry.
 
-## Co wnosi Phase 1D.2F
+## Co wnosi Phase 1D.3A
 
-### Trwała tożsamość każdego bloku
+### Produkcyjny Runtime Assembly Builder
 
-Blueprint v10 zapisuje `blockId` niezależne od `gridKey`.
+`game.js` nie składa już sam fizycznej konstrukcji blok po bloku. Nowy `runtime.assembly-builder` przejmuje:
 
-- `blockId` identyfikuje urządzenie przez cały cykl życia projektu;
-- `gridKey` opisuje wyłącznie aktualną pozycję w lokalnej siatce;
-- przeniesienie bloku przez `CraftModel.move()` zachowuje jego tożsamość;
-- kompilator publikuje `blockIdToIndex`;
-- runtime publikuje `runtimePartById`.
+- tworzenie wszystkich body z `RuntimeAssemblyPlan`;
+- tworzenie colliderów;
+- atomowe stosowanie mass properties;
+- stabilne mapy `bodyId`, `colliderId` i `blockId`;
+- rejestrację backend-neutralnych callbacków kolizji;
+- transakcyjny rollback po błędzie;
+- lifecycle i bezpieczne `dispose()`;
+- usuwanie colliderów po utracie bloku;
+- recenter body z zachowaniem prędkości nowego środka masy;
+- rozszerzalny punkt tworzenia przyszłych constraintów.
 
-To jest fundament pod indywidualne sterowanie thrusterami, grupy urządzeń, przewody sygnałowe, sensory i jointy.
+Obecna gra nadal uruchamia jeden rigid body, ale sam builder i jego testy obsługują wiele body. Założenie „statek = jedno body” nie jest już zakodowane w tej warstwie.
 
-### Runtime Assembly Plan
+### Jedno źródło prawdy dla masy, COM i bezwładności
 
-Nowy czysty moduł `foundation.runtime-assembly` zamienia skompilowany lub załadowany snapshot w neutralny plan:
+`foundation.mass-properties` liczy właściwości masowe dla kompilatora, payloadu i uszkodzonego runtime. Dzięki temu:
 
-```text
-RuntimeAssemblyPlan
-  rigidBodies[]
-  constraints[]
-  signalLinks[]
-  parts[]
-  blockIdToBodyId
-  blockIdToPartIndex
-```
+- analiza i solver używają tej samej diagonalnej bezwładności;
+- payload zmienia masę, COM i inertia tym samym algorytmem;
+- detach przelicza właściwości pozostałej konstrukcji;
+- recenter przesuwa collidery i lokalną ramę bez sztucznego skoku prędkości.
 
-Obecnie plan zawiera jeden `body:root`, lecz API nie zakłada, że tak pozostanie. Następne etapy mogą podzielić konstrukcję na sztywne podzespoły połączone łożyskami, silnikami obrotowymi i serwami.
+### Deterministyczny backend headless
 
-### Zgodność bezwładności analizy i solvera
+`runtime.headless-physics-backend` działa bez DOM, Three.js i WebGL. Nie zastępuje docelowego solvera kolizji. Służy do szybkiego testowania kontraktów dynamiki:
 
-Physics Port otrzymał atomową operację `setBodyMassProperties()`.
+- free fall;
+- jawna inertia parity;
+- równowaga siły i ciężaru;
+- odpowiedź na moment;
+- offset thrust;
+- zachowanie przy długim soak;
+- multi-body lifecycle buildera.
 
-- masa i diagonalna bezwładność z kompilatora trafiają do Cannon.js;
-- payload korzysta z bezwładności załadowanego snapshotu;
-- po odpadnięciu części COM i bezwładność są liczone ponownie;
-- panel inżynieryjny i solver nie bazują już świadomie na dwóch różnych modelach bezwładności.
+### Twarde zabezpieczenia architektury
 
-### Korekty spójności
+Automaty sprawdzają między innymi, że:
 
-- `CompiledCraft.weight` używa skonfigurowanej grawitacji;
-- limit wysokości znajduje się w `TEST_RANGE.maxAltitude`;
-- Balloon guidance mówi wprost, że próg dotyczy wysokości startowej;
-- Telemetry pokazuje łączny stosunek aktualnego wsparcia pionowego do ciężaru.
+- `buildFlightBody()` korzysta z `AssemblyBuilder.build()`;
+- `game.js` nie tworzy ponownie body i colliderów głównej konstrukcji;
+- recenter i prędkość punktu przechodzą przez Physics Port;
+- błędna budowa assembly usuwa częściowo utworzone body;
+- 12 000 kroków soak nie produkuje NaN ani rozjechanego kwaternionu.
+
+## Czego ten etap jeszcze nie kończy
+
+- Nie ma jeszcze graczowych jointów ani podziału blueprintu na rigid islands.
+- Headless backend nie rozwiązuje kontaktów i nie służy do wyboru backendu produkcyjnego.
+- Prawdziwy benchmark Cannon wymaga uruchomienia w środowisku z dostępnymi bibliotekami przeglądarkowymi.
+- `game.js` nadal zarządza wizualizacją, uszkodzeniami i gameplayowymi rekordami części.
+- Payload nadal korzysta z tymczasowego mocowania misyjnego, nie bloku `PayloadMount`.
 
 ## Obecne sterowanie
 
@@ -67,7 +79,7 @@ Physics Port otrzymał atomową operację `setBodyMassProperties()`.
 - `G` — stabilizacja;
 - `F` — powrót do warsztatu.
 
-Obecny mikser pozostanie domyślnym, łatwym sposobem sterowania. Docelowo każdy aktywny blok będzie mógł przejść w tryb bezpośredniego sygnału lub przypisanej grupy.
+Obecny mikser pozostanie domyślnym sposobem sterowania. Docelowy Per-Block Control Bus pozwoli przejąć kontrolę nad konkretnym urządzeniem bez odbierania początkującemu natychmiast grywalnego statku.
 
 ## Uruchomienie
 
@@ -83,13 +95,13 @@ Linux/macOS:
 ./run_game.sh
 ```
 
-albo:
+lub:
 
 ```bash
 python tools/serve.py
 ```
 
-Po podmianie wersji użyj `Ctrl+Shift+R`.
+Po podmianie wydania użyj `Ctrl+Shift+R`.
 
 ## Testy i build
 
@@ -99,14 +111,14 @@ python tools/build_release.py
 python tools/verify_release.py
 ```
 
-Bateria obejmuje blueprint v10, migracje, trwałe identyfikatory bloków, assembly plan, jawne mass properties, CraftModel, CraftCompiler, misje, aerostatykę, input, physics boundary, startup smoke, deterministyczny build oraz source parity.
+Manualny harness prawdziwego adaptera Cannon znajduje się w `tests/browser_runtime_harness.html`. Uruchamiaj go przez lokalny serwer, nie przez `file://`.
 
 ## Następny zdecydowany kierunek
 
-1. dokończyć `Runtime Assembly Builder` i headless harness;
-2. wykonać capability spike dwóch body połączonych free hinge i rotary motor;
-3. zbudować `Per-Block Control Bus`;
-4. dodać sensory, podstawowe węzły logiki, scope i PID;
-5. wystawić pierwsze jointy jako pełnoprawne bloki gracza.
+1. Phase 1D.3B: real-Cannon scenarios i pomiary kroku solvera;
+2. Phase 1D.3C: joint capability spike — dwa body, free hinge i powered hinge;
+3. Phase 1E: pierwszy grywalny Per-Block Control Bus;
+4. sensory, podstawowa logika, live scope i PID;
+5. pełnoprawne bloki Free Bearing, Rotary Motor i Servo Bearing.
 
-Szczegóły znajdują się w `ROADMAP_NEXT.md` i `ARCHITECTURE.md`.
+Szczegóły znajdują się w `ROADMAP_NEXT.md`, `ARCHITECTURE.md` i `PHASE_1D3A_REPORT.md`.

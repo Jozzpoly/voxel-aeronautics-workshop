@@ -17,6 +17,7 @@ const sourceFiles = [
   'src/foundation/craft_model.js',
   'src/foundation/craft_history.js',
   'src/foundation/control_frame.js',
+  'src/foundation/mass_properties.js',
   'src/foundation/craft_compiler.js',
   'src/foundation/runtime_assembly.js',
   'src/foundation/input_profile.js',
@@ -27,13 +28,15 @@ const sourceFiles = [
   'src/foundation/state.js',
   'src/runtime/physics_port.js',
   'src/runtime/cannon_physics_backend.js',
+  'src/runtime/headless_physics_backend.js',
+  'src/runtime/assembly_builder.js',
   'src/foundation/bootstrap.js'
 ];
 for (const relative of sourceFiles) {
   vm.runInThisContext(fs.readFileSync(path.join(ROOT, relative), 'utf8'), { filename: relative });
 }
 
-const { Config, Catalog, Orientation, Blueprint, CraftModel, CraftHistory, ControlFrame, CraftCompiler, RuntimeAssembly, InputProfile, UIWorkspace, MissionEvaluator, Aerostatics, FlightControl, State, PhysicsPort, Physics, Capabilities } = global.VAW_RUNTIME;
+const { Config, Catalog, Orientation, Blueprint, CraftModel, CraftHistory, ControlFrame, MassProperties, CraftCompiler, RuntimeAssembly, AssemblyBuilder, HeadlessPhysicsBackend, InputProfile, UIWorkspace, MissionEvaluator, Aerostatics, FlightControl, State, PhysicsPort, Physics, Capabilities } = global.VAW_RUNTIME;
 assert(Object.isFrozen(Config));
 assert(Object.isFrozen(Config.GRID));
 assert.strictEqual(Config.SAVE_VERSION, 10);
@@ -45,8 +48,9 @@ assert.strictEqual(Catalog.getContractById('courier').payloadMass, 10);
 assert.strictEqual(Catalog.getContractById('missing'), null);
 assert(Catalog.knownContractIds().has('heavy_lift'));
 assert.strictEqual(Capabilities.physicsBackend, 'cannon');
-assert.strictEqual(Capabilities.physicsBoundary, 'phase-1d2f-mass-properties');
-assert.strictEqual(Capabilities.runtimeAssembly, 'single-body-plan-v1');
+assert.strictEqual(Capabilities.physicsBoundary, 'phase-1d3-assembly-builder');
+assert.strictEqual(Capabilities.runtimeAssembly, 'runtime-builder-v1');
+assert.strictEqual(Capabilities.headlessHarness, 'deterministic-free-flight-v1');
 assert.strictEqual(Capabilities.missionEvaluation, 'phase-1d2b-multi-pad-ground-state');
 assert.strictEqual(Capabilities.aerostatics, 'altitude-lift-damped-settling-v2');
 assert.strictEqual(Capabilities.platform, 'desktop-keyboard-mouse-v1');
@@ -69,7 +73,10 @@ assert.strictEqual(secondState.input.controlActions.size, 0, 'State factory must
 assert.notStrictEqual(firstState.flight.com, secondState.flight.com, 'State factory must not share vectors.');
 assert.strictEqual(typeof CraftModel.create, 'function');
 assert.strictEqual(typeof CraftHistory.create, 'function');
+assert.strictEqual(typeof MassProperties.compute, 'function');
 assert.strictEqual(typeof CraftCompiler.compile, 'function');
+assert.strictEqual(typeof AssemblyBuilder.build, 'function');
+assert.strictEqual(typeof HeadlessPhysicsBackend.create, 'function');
 assert.strictEqual(typeof FlightControl.actionForInput, 'function');
 assert.notStrictEqual(firstState.history, secondState.history, 'State factory must not share history instances.');
 assert.notStrictEqual(firstState.input.profile, secondState.input.profile, 'State factory must not share input profiles.');
