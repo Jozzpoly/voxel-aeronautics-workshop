@@ -1,6 +1,9 @@
 name: Recovery Validation
 
 on:
+  push:
+    branches:
+      - recovery/2026-06-16-regression-repair
   pull_request:
     branches:
       - main
