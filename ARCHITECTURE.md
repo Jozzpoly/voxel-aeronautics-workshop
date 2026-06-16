@@ -45,7 +45,13 @@ Block and link IDs are persistent authoring identities. Body IDs are anchor-base
 
 ## Runtime ownership
 
-Plan/runtime indexes provide block->body/part/collider, body->parts/constraints and endpoint->constraints. Collision routing preserves body ID. Damage and support use rigid neighbors, not raw grid adjacency. Camera, mission and default pilot mixer intentionally follow the Core/root body; passive sub-bodies still receive their own aero/forces where defined.
+Plan/runtime indexes provide block->body/part/collider, body->parts/constraints and endpoint->constraints. Collision routing preserves body ID. Damage and support use rigid neighbors, not raw grid adjacency. Camera and mission sampling intentionally follow the Core/root body.
+
+Manual pilot intent is expressed in the primary control frame, then `FlightThrusterRouter` converts that intent primary-local -> world -> owning-body-local before the existing mixer evaluates each functional part. Force direction and application point are converted through the owning body's current transform and applied only to that body. Missing ownership is a controlled failure/skip, never an implicit root fallback. Passive vertical thrust remains a base command composed with manual input rather than a cap on the player command.
+
+## Runtime presentation
+
+Workshop mechanical-link authoring remains BUILD state. FLIGHT presentation is owned separately by `FlightMechanicalVisuals`. It creates one visual per live runtime constraint, computes pivot A and pivot B from their respective current body transforms on every synchronization, and registers disposal through `FlightSession.registerTransient`. Constraint removal deactivates its visual; stop, failed start and start-after-stop are idempotent and cannot retain or duplicate link objects.
 
 ## Rebase limitation
 

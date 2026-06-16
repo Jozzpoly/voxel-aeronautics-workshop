@@ -26,6 +26,14 @@ The sandbox comes before checklist pressure. Any module may be the first block, 
 - `bodyId` is not future `assemblySpaceId`.
 - Coordinates are explicit: `assemblyPosition`, `bodyLocalPosition`, `assemblyPose`, world transform.
 
+## Recovery baseline — 2026-06-16
+
+The verified recovery branch is `recovery/2026-06-16-regression-repair`, based on remote `main` at `f6082e84d3a352cea47a8e43d2260ae4d4226715`. The unpushed local commit prefix `1b42ef6` was not present on GitHub and could not be recovered without the former local object database.
+
+Input focus is governed by one editable-interaction policy based on the event target and `document.activeElement`; key release and window blur always clear active flight actions. Manual flight intent remains root-frame-relative for the pilot, but `FlightThrusterRouter` remaps it through world space to each functional part's owning body and never falls back silently to the root body. `FlightMechanicalVisuals` owns FLIGHT-only hinge/link presentation, derives both endpoints from current body transforms, and is registered in the `FlightSession` transient lifecycle for idempotent cleanup.
+
+Dedicated regression coverage exists in `tests/test_input_focus_policy.js`, `tests/test_flight_thruster_routing.js`, `tests/test_flight_mechanical_visuals.js`, and `tests/run_browser_recovery.mjs`. Read `RECOVERY_AUDIT_2026-06-16.md`, `RECOVERY_BASELINE_TESTS.md`, `BROWSER_RECOVERY_SCENARIO_2026-06-16.md`, and `RECOVERY_VALIDATION_REPORT_2026-06-16.md` before changing these seams.
+
 ## Safety constraint
 
 Connected-body recenter is blocked until an atomic constraint-pivot rebase/rebuild with rollback is proven. Endpoint failure first breaks the constraint backend-first. Dynamic rigid-body split is not implemented.
