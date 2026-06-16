@@ -370,3 +370,7 @@
 
 - Build jednoplikowy osadza wszystkie moduły w kontrolowanej kolejności.
 - Dodano centralny runner testów, lokalny serwer, polecenia npm, `jsconfig.json` i `.gitignore`.
+
+
+## Phase 1D.3D — Assembly-Centric Flight Lifecycle
+Runtime flight state now treats RuntimeAssembly as the authoritative launched vehicle. `primaryBody` is explicit; `STATE.flight.body` remains only a compatibility alias for the current single-rigid-island craft. New `game.flight-session` and `game.flight-integrity` seams document and test the lifecycle/integrity boundary for the future Rigid Island Compiler.

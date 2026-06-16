@@ -12,6 +12,8 @@
     const EngineeringAnalysis = window.VAW.require('game.engineering-analysis');
     const BlueprintController = window.VAW.require('game.blueprint-controller');
     const MissionController = window.VAW.require('game.mission-controller');
+    const FlightSession = window.VAW.require('game.flight-session');
+    const FlightIntegrity = window.VAW.require('game.flight-integrity');
 
     const { Config, Catalog, Orientation, Blueprint, ControlFrame, MassProperties, CraftCompiler, RuntimeAssembly, AssemblyBuilder, InputProfile, UIWorkspace, MissionEvaluator, Aerostatics, FlightControl, State, Physics } = FOUNDATION;
     const {
@@ -119,13 +121,24 @@
       return lift;
     }
 
+    function primaryFlightBody() {
+      return STATE.flight.primaryBody || STATE.flight.assemblyRuntime?.rootBody || STATE.flight.body || null;
+    }
+
+    function runtimeBodyForPart(part) {
+      if (!part) return primaryFlightBody();
+      if (part.bodyId && STATE.flight.bodyById?.has(part.bodyId)) return STATE.flight.bodyById.get(part.bodyId);
+      const runtimePart = part.blockId ? STATE.flight.assemblyRuntime?.partByBlockId?.get(part.blockId) : null;
+      return runtimePart?.body || primaryFlightBody();
+    }
+
     function currentAerostaticAltitude() {
-      const body = STATE.flight.body;
+      const body = primaryFlightBody();
       return body ? Math.max(0, body.position.y - TEST_RANGE.groundY) : 0;
     }
 
     function verticalSupportSample() {
-      const flight = STATE.mode === 'FLIGHT' && STATE.flight.body;
+      const flight = STATE.mode === 'FLIGHT' && primaryFlightBody();
       const altitude = flight ? currentAerostaticAltitude() : 0;
       let weight = 0;
       let maxSeaLevelLift = 0;
@@ -271,7 +284,7 @@
 
     function updateFlightFeedback() {
       syncPowerControlReadouts();
-      const body = STATE.flight.body;
+      const body = primaryFlightBody();
       const speed = body ? Math.sqrt(body.velocity.x ** 2 + body.velocity.y ** 2 + body.velocity.z ** 2) : 0;
       const pitch = STATE.controlIntent.pitch || 0;
       const yaw = STATE.controlIntent.yaw || 0;
@@ -699,14 +712,17 @@
       if (STATE.flight.assemblyRuntime) STATE.flight.assemblyRuntime.dispose();
       else {
         const craftBodies = new Set(STATE.flight.bodies || []);
-        if (STATE.flight.body) craftBodies.add(STATE.flight.body);
+        for (const body of STATE.flight.bodyById?.values?.() || []) craftBodies.add(body);
         for (const body of craftBodies) Physics.removeBody(world, body);
       }
       STATE.flight.body = null;
+      STATE.flight.primaryBody = null;
+      STATE.flight.assembly = null;
       STATE.flight.bodies = [];
       STATE.flight.bodyById = new Map();
       STATE.flight.assemblyPlan = null;
       STATE.flight.assemblyRuntime = null;
+      STATE.flight.assembly = null;
       if (STATE.flight.group) {
         scene.remove(STATE.flight.group);
         disposeObjectTree(STATE.flight.group);
@@ -984,7 +1000,7 @@
     }
 
     function createDebrisFromVisual(visual, mass, localPos) {
-      const craftBody = STATE.flight.body;
+      const craftBody = primaryFlightBody();
       const group = STATE.flight.group;
       if (!craftBody || !group || !visual) return;
       const worldPosition = Physics.pointToWorldFrame(craftBody, localPos);
@@ -1059,7 +1075,7 @@
     }
 
     function recenterCraftBody() {
-      const body = STATE.flight.body;
+      const body = primaryFlightBody();
       const group = STATE.flight.group;
       if (!body || !group) return;
       const attached = STATE.flight.runtimeParts.filter(part => part.attached);
@@ -1145,7 +1161,7 @@
         }
         part.attached = false;
         part.health = 0;
-        if (!STATE.flight.assemblyRuntime?.removeColliderByBlockId(part.blockId)) removeShapeFromBody(STATE.flight.body, part.shape);
+        if (!STATE.flight.assemblyRuntime?.removeColliderByBlockId(part.blockId)) removeShapeFromBody(runtimeBodyForPart(part), part.shape);
         createDetachedDebris(part);
         detachedCount += 1;
         STATE.flight.lostParts += 1;
@@ -1207,7 +1223,7 @@
       if (!payload?.attached) return false;
       payload.attached = false;
       payload.health = 0;
-      if (!STATE.flight.assemblyRuntime?.removeCollider(payload.colliderId)) removeShapeFromBody(STATE.flight.body, payload.shape);
+      if (!STATE.flight.assemblyRuntime?.removeCollider(payload.colliderId)) removeShapeFromBody(runtimeBodyForPart(payload), payload.shape);
       if (payload.coupler) {
         STATE.flight.group?.remove(payload.coupler);
         disposeObjectTree(payload.coupler);
@@ -1287,7 +1303,7 @@
     }
 
     function applyStructuralLoadDamage(dt, totalThrust, totalLift, totalDrag) {
-      const body = STATE.flight.body;
+      const body = primaryFlightBody();
       if (!body || body.mass <= 0) return;
       const loadAcceleration = (Math.abs(totalThrust) + Math.abs(totalLift) + Math.abs(totalDrag)) / Math.max(1, body.mass);
       const spin = body.angularVelocity.length();
@@ -1308,10 +1324,10 @@
     }
 
     function processPendingImpacts() {
-      if (!STATE.flight.body || !STATE.flight.pendingImpacts.length) return;
+      if (!primaryFlightBody() || !STATE.flight.pendingImpacts.length) return;
       const impacts = STATE.flight.pendingImpacts.splice(0);
       for (const entry of impacts) {
-        if (!STATE.flight.body) break;
+        if (!primaryFlightBody()) break;
         applyImpactDamage(entry.localImpact, entry.impact, entry.collisionKind);
         if (entry.impact >= PHYSICS.severeImpactSpeed && !STATE.flight.severeImpact) {
           STATE.flight.severeImpact = true;
@@ -1379,7 +1395,7 @@
             : { x: TEST_RANGE.spawn.x, y: TEST_RANGE.spawn.y, z: TEST_RANGE.spawn.z }
         }),
         collisionListener: ({ body: collidedBody, event }) => {
-          if (!STATE.flight.body || STATE.flight.body !== collidedBody) return;
+          if (!STATE.flight.bodyById || ![...STATE.flight.bodyById.values()].includes(collidedBody)) return;
           const impact = event.impactSpeed > 0 ? event.impactSpeed : Math.abs(collidedBody.velocity.y);
           STATE.flight.lastLoads.impact = Math.max(STATE.flight.lastLoads.impact || 0, impact);
           STATE.flight.maxImpact = Math.max(STATE.flight.maxImpact, impact);
@@ -1486,7 +1502,9 @@
       }
 
 
-      STATE.flight.body = body;
+      STATE.flight.body = assemblyRuntime.rootBody;
+      STATE.flight.primaryBody = assemblyRuntime.rootBody;
+      STATE.flight.assembly = assemblyRuntime;
       STATE.flight.bodies = [...assemblyRuntime.bodyById.values()].map(entry => entry.body);
       STATE.flight.bodyById = new Map([...assemblyRuntime.bodyById].map(([bodyId, entry]) => [bodyId, entry.body]));
       STATE.flight.assemblyPlan = assemblyPlan;
@@ -1603,9 +1621,10 @@
 
 
     function syncFlightVisuals() {
-      if (!STATE.flight.body || !STATE.flight.group) return;
-      STATE.flight.group.position.copy(STATE.flight.body.position);
-      STATE.flight.group.quaternion.copy(STATE.flight.body.quaternion);
+      const body = primaryFlightBody();
+      if (!body || !STATE.flight.group) return;
+      STATE.flight.group.position.copy(body.position);
+      STATE.flight.group.quaternion.copy(body.quaternion);
     }
 
 
@@ -1636,8 +1655,8 @@
       STATE.camera.yaw = STATE.camera.defaultYaw;
       STATE.camera.pitch = STATE.camera.defaultPitch;
       STATE.camera.distance = STATE.camera.defaultDistance;
-      if (STATE.mode === 'FLIGHT' && STATE.flight.body) {
-        STATE.camera.target.copy(STATE.flight.body.position);
+      if (STATE.mode === 'FLIGHT' && primaryFlightBody()) {
+        STATE.camera.target.copy(primaryFlightBody().position);
       }
       applyCameraOrbit();
     }
@@ -2172,7 +2191,7 @@
     }
 
     function stepFlightPhysics(dt) {
-      const body = STATE.flight.body;
+      const body = primaryFlightBody();
       if (!body) return;
 
       const speed = body.velocity.length();
@@ -2278,8 +2297,8 @@
 
 
     function fitCameraToFlightTarget() {
-      if (STATE.mode === 'FLIGHT' && STATE.flight.body) {
-        STATE.camera.target.lerp(STATE.flight.body.position, 0.08);
+      if (STATE.mode === 'FLIGHT' && primaryFlightBody()) {
+        STATE.camera.target.lerp(primaryFlightBody().position, 0.08);
       } else {
         STATE.camera.target.lerp(STATE.camera.defaultTarget, 0.04);
       }
@@ -2291,7 +2310,7 @@
       requestAnimationFrame(animate);
       const delta = Math.min(clock.getDelta(), 0.08);
 
-      if (STATE.mode === 'FLIGHT' && STATE.flight.body) {
+      if (STATE.mode === 'FLIGHT' && primaryFlightBody()) {
         if (!STATE.mission.paused) {
           physicsAccumulator = Math.min(physicsAccumulator + delta, PHYSICS.fixedDt * PHYSICS.maxSubSteps);
           let subSteps = 0;

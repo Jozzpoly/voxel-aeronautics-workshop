@@ -201,3 +201,7 @@ Następnie sensory, podstawowa logika, live scope i PID.
 - `FOUNDATION_READINESS_REVIEW.md` — stan całego fundamentu, ryzyka P1–P3 i bramki przed sublevelami/control bus.
 - `PROGRAMMABLE_MACHINE_RESEARCH.md` — wnioski z Sable/Create Aeronautics, VS2/Clockwork, Factorio, Stormworks i Space Engineers.
 - `PHASE_1D3C_REPORT.md` — dokładny kontrakt i wyniki joint spike.
+
+
+## Phase 1D.3D — Assembly-Centric Flight Lifecycle
+Runtime flight state now treats RuntimeAssembly as the authoritative launched vehicle. `primaryBody` is explicit; `STATE.flight.body` remains only a compatibility alias for the current single-rigid-island craft. New `game.flight-session` and `game.flight-integrity` seams document and test the lifecycle/integrity boundary for the future Rigid Island Compiler.

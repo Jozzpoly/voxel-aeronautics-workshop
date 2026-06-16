@@ -17,6 +17,8 @@ EXPECTED_MODULES = {
     'engineering_analysis.js': 'game.engineering-analysis',
     'blueprint_controller.js': 'game.blueprint-controller',
     'mission_controller.js': 'game.mission-controller',
+    'flight_session.js': 'game.flight-session',
+    'flight_integrity.js': 'game.flight-integrity',
 }
 
 paths = {path.name: path for path in GAME_PATHS if path.parent == GAME_MODULE_DIR}

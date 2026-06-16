@@ -70,3 +70,7 @@ Nie znaleziono nierozwiązanego release blockera. Projekt może kontynuować bez
 - brak browser/WebGL CI;
 - one-collider-per-voxel i limit 480;
 - produkcyjne biblioteki z CDN.
+
+
+## Phase 1D.3D — Assembly-Centric Flight Lifecycle
+Runtime flight state now treats RuntimeAssembly as the authoritative launched vehicle. `primaryBody` is explicit; `STATE.flight.body` remains only a compatibility alias for the current single-rigid-island craft. New `game.flight-session` and `game.flight-integrity` seams document and test the lifecycle/integrity boundary for the future Rigid Island Compiler.

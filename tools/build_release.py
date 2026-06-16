@@ -8,12 +8,12 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE_ID = 'foundation-1d3c-joint-capability'
-APP_VERSION = '0.6.2-foundation.1d3c'
-SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3C_Joint_Capability.html'
-ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3C_Joint_Capability.zip'
+RELEASE_ID = 'foundation-1d3d-assembly-flight-lifecycle'
+APP_VERSION = '0.6.3-foundation.1d3d'
+SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3D_Assembly_Lifecycle.html'
+ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3D_Assembly_Lifecycle.zip'
 MANIFEST_NAME = 'SOURCE_MANIFEST.json'
-ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_Phase_1D3C_JOINT_CAPABILITY_READY_TO_PUSH'
+ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_Phase_1D3D_ASSEMBLY_LIFECYCLE_READY_TO_PUSH'
 APP_SOURCES = (
     Path('src/foundation/kernel.js'),
     Path('src/foundation/config.js'),
@@ -45,6 +45,8 @@ APP_SOURCES = (
     Path('src/game/engineering_analysis.js'),
     Path('src/game/blueprint_controller.js'),
     Path('src/game/mission_controller.js'),
+    Path('src/game/flight_session.js'),
+    Path('src/game/flight_integrity.js'),
     Path('src/foundation/bootstrap.js'),
     Path('src/game.js'),
 )

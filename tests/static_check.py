@@ -50,7 +50,8 @@ for expected in [
  'foundation.blueprint', 'foundation.craft-model', 'foundation.craft-history', 'foundation.control-frame', 'foundation.mass-properties', 'foundation.craft-compiler', 'foundation.runtime-assembly', 'foundation.input-profile', 'foundation.ui-workspace', 'foundation.mission-evaluator', 'foundation.aerostatics', 'foundation.flight-control', 'foundation.state', 'runtime.physics-port', 'runtime.cannon-physics-backend', 'runtime.headless-physics-backend', 'runtime.assembly-builder',
  'game.scene-environment', 'game.career-service', 'game.workspace-controller',
  'game.input-settings-controller', 'game.orientation-service', 'game.module-visual-factory',
- 'game.engineering-analysis', 'game.blueprint-controller', 'game.mission-controller'
+ 'game.engineering-analysis', 'game.blueprint-controller', 'game.mission-controller',
+ 'game.flight-session', 'game.flight-integrity'
 ]:
  if not re.search(r"window\.VAW\.define\(\s*['\"]" + re.escape(expected) + r"['\"]", js): errors.append(f'Missing module definition: {expected}')
 

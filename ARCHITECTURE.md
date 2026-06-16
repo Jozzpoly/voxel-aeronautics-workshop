@@ -710,3 +710,7 @@ Szczegółowe bramki opisują `FOUNDATION_READINESS_REVIEW.md` i `PROGRAMMABLE_M
 - usunięcie publicznych założeń jednego `STATE.flight.body`;
 - powtarzany multi-body launch/cleanup bez wycieków;
 - następnie rigid-island/mechanical compiler.
+
+
+## Phase 1D.3D — Assembly-Centric Flight Lifecycle
+Runtime flight state now treats RuntimeAssembly as the authoritative launched vehicle. `primaryBody` is explicit; `STATE.flight.body` remains only a compatibility alias for the current single-rigid-island craft. New `game.flight-session` and `game.flight-integrity` seams document and test the lifecycle/integrity boundary for the future Rigid Island Compiler.

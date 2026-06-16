@@ -97,3 +97,7 @@ oraz analogicznej zgodności `RELEASE_ID`. Test wykrył i zamknął niespójnoś
 - performance values zależą od hosta i nie są twardym CI threshold;
 - soft limits nie są natywnymi hard stops;
 - gameplay planner nadal nie generuje jointów z blueprintu.
+
+
+## Phase 1D.3D — Assembly-Centric Flight Lifecycle
+Runtime flight state now treats RuntimeAssembly as the authoritative launched vehicle. `primaryBody` is explicit; `STATE.flight.body` remains only a compatibility alias for the current single-rigid-island craft. New `game.flight-session` and `game.flight-integrity` seams document and test the lifecycle/integrity boundary for the future Rigid Island Compiler.

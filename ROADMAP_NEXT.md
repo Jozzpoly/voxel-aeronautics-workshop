@@ -108,3 +108,7 @@ Limit lotu 480 części pozostaje. Benchmark 2500 colliderów i joint soak nie o
 - skrypty użytkownika;
 - multiplayer i authority model;
 - duża kampania.
+
+
+## Phase 1D.3D — Assembly-Centric Flight Lifecycle
+Runtime flight state now treats RuntimeAssembly as the authoritative launched vehicle. `primaryBody` is explicit; `STATE.flight.body` remains only a compatibility alias for the current single-rigid-island craft. New `game.flight-session` and `game.flight-integrity` seams document and test the lifecycle/integrity boundary for the future Rigid Island Compiler.
