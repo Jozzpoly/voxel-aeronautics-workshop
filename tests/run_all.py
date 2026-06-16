@@ -38,6 +38,7 @@ def main() -> None:
     run('node', 'tests/test_gate_b_compilers.js')
     run('node', 'tests/test_gate_b_gameplay.js')
     run('node', 'tests/test_flight_control.js')
+    run('node', 'tests/test_flight_thruster_routing.js')
     run('node', 'tests/test_craft_history.js')
     run('node', 'tests/test_game_services.js')
     run('node', 'tests/test_input_focus_policy.js')

@@ -12,6 +12,7 @@
     const BlueprintController = window.VAW.require('game.blueprint-controller');
     const MissionController = window.VAW.require('game.mission-controller');
     const FlightSession = window.VAW.require('game.flight-session');
+    const FlightThrusterRouter = window.VAW.require('game.flight-thruster-router');
     const FlightIntegrity = window.VAW.require('game.flight-integrity');
     const DebrisRuntime = window.VAW.require('game.debris-runtime');
 
@@ -803,6 +804,8 @@
       }
     });
 
+    const flightThrusterRouter = FlightThrusterRouter.create({ flightSession });
+
     const debrisRuntime = DebrisRuntime.create({
       Physics, world, scene, disposeObjectTree,
       maxLifetime: PHYSICS.debrisLifetime,
@@ -1422,7 +1425,8 @@
           localTorque, force: part.def.force || 0, wingArea: part.def.wingArea || 0, fuelRate: part.def.fuelRate || 0,
           controlAxis: normalizeControlAxis(part.controlAxis), controlSign: normalizeControlSign(part.controlSign),
           mass: part.def.mass || 0, maxHealth: part.def.durability || 60, health: part.def.durability || 60,
-          rigidNeighborBlockIds: [...part.rigidNeighborBlockIds], pilotControlled: bodyId === started.primaryBodyId,
+          rigidNeighborBlockIds: [...part.rigidNeighborBlockIds],
+          pilotControlled: bodyId === started.primaryBodyId || part.type === 'Thruster' || part.type === 'VectorThruster',
           attached: true, lastCommand: 0, gimbalA: 0, gimbalB: 0, controlDeflection: 0
         };
         runtimeParts.push(runtimePart);
@@ -2292,14 +2296,19 @@
       let requestedFuel = 0;
 
       for (const mod of STATE.flight.functionalBlocks) {
-        if (!mod.attached || !flightSession.hasBody(mod.bodyId)) continue;
-        if ((mod.type === 'Thruster' || mod.type === 'VectorThruster' || mod.type === 'Balloon' || mod.type === 'ControlSurface' || mod.type === 'Gyro') && !mod.pilotControlled) continue;
+        if (!mod.attached) { if (flightThrusterRouter.isThruster(mod)) mod.lastCommand = 0; continue; }
+        if (mod.bodyId == null) throw new Error(`Functional module ${mod.blockId || '<unknown>'} has no body ownership.`);
+        if (!flightSession.hasBody(mod.bodyId)) { if (flightThrusterRouter.isThruster(mod)) mod.lastCommand = 0; continue; }
+        const rootOnlyControl = mod.type === 'Balloon' || mod.type === 'ControlSurface' || mod.type === 'Gyro';
+        if (rootOnlyControl && !mod.pilotControlled) continue;
         if (mod.type === 'Thruster' || mod.type === 'VectorThruster') {
-          const command = computeThrusterCommand(mod, pilot);
+          const bodyPilot = flightThrusterRouter.pilotForBody(primaryBodyId, mod.bodyId, pilot);
+          if (!bodyPilot) { mod.lastCommand = 0; continue; }
+          const command = computeThrusterCommand(mod, bodyPilot);
           mod.lastCommand = command;
           const fuelNeed = mod.fuelRate * command * dt;
           requestedFuel += fuelNeed;
-          thrusterJobs.push({ mod, command, fuelNeed });
+          thrusterJobs.push({ mod, bodyPilot, command, fuelNeed });
         } else if (mod.type === 'Balloon') {
           const command = clamp01(STATE.balloonPower);
           mod.lastCommand = command;
@@ -2323,15 +2332,14 @@
         if (!job.mod.attached) continue;
         const health = runtimePartHealthFraction(job.mod);
         const effectiveCommand = job.command * fuelScale;
-        job.mod.lastCommand = effectiveCommand * health;
+        flightThrusterRouter.recordCommand(job.mod, job.command, fuelScale, health);
         const localForce = job.mod.type === 'VectorThruster'
-          ? computeVectorThrusterForceCannon(job.mod, pilot, effectiveCommand)
+          ? computeVectorThrusterForceCannon(job.mod, job.bodyPilot, effectiveCommand)
           : job.mod.localAxis.scale(job.mod.force * effectiveCommand * health);
         const forceMagnitude = localForce.length();
         if (forceMagnitude <= 0) continue;
-        const worldForce = flightSession.vectorToWorldFrame(job.mod.bodyId, localForce);
-        const worldPoint = flightSession.pointToWorldFrame(job.mod.bodyId, job.mod.bodyLocalPosition);
-        flightSession.applyBodyForce(job.mod.bodyId, worldForce, worldPoint);
+        const routed = flightThrusterRouter.routeLocalForce(job.mod, localForce);
+        if (!routed.applied) { job.mod.lastCommand = 0; continue; }
         totalThrust += forceMagnitude;
         loadsByBodyId.get(job.mod.bodyId).thrust += forceMagnitude;
       }

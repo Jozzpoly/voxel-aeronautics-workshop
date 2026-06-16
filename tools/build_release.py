@@ -52,6 +52,7 @@ APP_SOURCES = (
     Path('src/game/blueprint_controller.js'),
     Path('src/game/mission_controller.js'),
     Path('src/game/flight_session.js'),
+    Path('src/game/flight_thruster_router.js'),
     Path('src/game/flight_integrity.js'),
     Path('src/game/debris_runtime.js'),
     Path('src/foundation/bootstrap.js'),
