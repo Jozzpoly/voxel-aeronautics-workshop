@@ -1,5 +1,23 @@
 # Changelog
 
+## Foundation Phase 1D.3B — Real-Cannon Parity & Runtime Contract Hardening
+
+- Added automated real-Cannon 0.6.2 parity tests without network dependency.
+- Added free-fall, torque, rotated-inertia, offset-thrust, payload/recenter, real-contact, soak, performance and lifecycle scenarios.
+- Fixed Cannon point-velocity return semantics hidden by the browser stub.
+- Added full pre-allocation RuntimeAssemblyPlan validation.
+- Made collider removal backend-first and retry-safe.
+- Preserved original build failures when rollback cleanup also fails.
+- Protected reserved assembly metadata from descriptor overrides.
+- Hardened runtime snapshot and mass-property numeric contracts.
+- Fixed headless rotated-body inertia and static force/torque accumulation.
+- Synchronized STATIC/DYNAMIC body type after mass changes in both backends.
+- Capped CraftCompiler work exactly at `GRID.maxBlocks`.
+- Added test-only Cannon MIT notices and local browser harness loading.
+- Kept `game.js` unchanged and preserved the planner/builder/Physics Port boundary.
+- Version `0.6.0-foundation.1d3b`.
+- Release id `foundation-1d3b-real-cannon-parity`.
+
 ## Foundation Phase 1D.3A — Runtime Assembly Builder & Deterministic Headless Harness Core
 
 - Added production `runtime.assembly-builder` and integrated it into flight body creation.

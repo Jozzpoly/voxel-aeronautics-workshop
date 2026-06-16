@@ -1,4 +1,4 @@
-# Architektura — Foundation Phase 1D.3A
+# Architektura — Foundation Phase 1D.3B
 
 ## Cel etapu
 
@@ -22,11 +22,20 @@ CraftModel
 CraftCompiler
     │ immutable CompiledCraft
     ▼
-Runtime adapter w game.js
-    ├─ Three.js visuals
+foundation.runtime-assembly
+    │ immutable RuntimeAssemblyPlan
+    ▼
+runtime.assembly-builder
     ├─ runtime.physics-port
-    │      └─ runtime.cannon-physics-backend
-    ├─ damage runtime
+    │      ├─ runtime.cannon-physics-backend
+    │      └─ runtime.headless-physics-backend (test harness)
+    ├─ stable body/collider/part maps
+    └─ transactional lifecycle
+
+game.js
+    ├─ delegates physical assembly to the builder
+    ├─ Three.js visuals
+    ├─ damage/gameplay runtime
     └─ flight telemetry
 ```
 
@@ -49,8 +58,15 @@ foundation.kernel
    ├─ foundation.flight-control
    └─ foundation.state
 
-runtime.physics-port
-   └─ runtime.cannon-physics-backend
+foundation.runtime-assembly
+            │
+            ▼
+runtime.assembly-builder
+            │
+            ▼
+   runtime.physics-port
+      ├─ runtime.cannon-physics-backend
+      └─ runtime.headless-physics-backend
             │
             ▼
    foundation.bootstrap
@@ -304,8 +320,9 @@ Mechanizm działa best-effort: wymaga wsparcia, bezpiecznego kontekstu, zgody u�
 - runtime lotu nadal tworzy collider na każdy voxel.
 - `CompiledCraft.colliderPlan` jest na razie referencyjny, nie zoptymalizowany.
 - aerodynamika kadłuba nadal sumuje uproszczone `dragArea`.
-- Three.js, Cannon.js i Tailwind pochodzą z CDN.
-- brak prawdziwego automatycznego testu WebGL w obecnym środowisku.
+- produkcyjne Three.js, Cannon.js i Tailwind pochodzą z CDN; testowy Cannon 0.6.2 jest vendored wyłącznie pod harness;
+- brak prawdziwego automatycznego testu WebGL/GPU w obecnym środowisku;
+- benchmark real Cannon nie obejmuje jeszcze masowych aktywnych kontaktów ani constraints.
 
 ## Historyczna granica zaplanowana po 1D.2F — wykonana w 1D.3A
 
@@ -313,7 +330,7 @@ Mechanizm działa best-effort: wymaga wsparcia, bezpiecznego kontekstu, zgody u�
 - stabilne mapowanie collider → part używa `blockId`;
 - dodano headless scenariusze dynamiki i soak;
 - zapisano benchmark kosztu budowy na backendzie testowym;
-- benchmark prawdziwego solvera i constraint spike pozostają zakresem 1D.3B/1D.3C.
+- automatyczny benchmark prawdziwego solvera wykonano w 1D.3B; constraint spike pozostaje zakresem 1D.3C.
 
 
 ## Phase 1D.2F — trwała tożsamość bloków
@@ -493,7 +510,7 @@ Backend testowy implementuje pełny wymagany kontrakt Physics Portu dla swobodne
 
 Nie implementuje broadphase, narrowphase, kontaktów ani constraints. Jest deterministycznym harness-em kontraktu, nie konkurencyjnym silnikiem gry.
 
-## Zaktualizowane inwarianty 1D.3A
+## Zaktualizowane inwarianty 1D.3A–1D.3B
 
 26. Fizyczne body i collidery głównego assembly tworzy wyłącznie `runtime.assembly-builder`.
 27. Nieudana budowa assembly musi być transakcyjnie wycofana.
@@ -503,12 +520,44 @@ Nie implementuje broadphase, narrowphase, kontaktów ani constraints. Jest deter
 31. Wyniki backendu headless nie są wynikiem benchmarku Cannon i nie pozwalają podnosić limitu części.
 32. Finalne API constraintów nie powstaje przed joint capability spike.
 
-## Następna granica — Phase 1D.3B/1D.3C
+## Phase 1D.3B — real-Cannon parity i strict contracts
 
-1. wykonać tę samą baterię na real Cannon;
-2. zmierzyć krok solvera, pamięć i lifecycle;
-3. zweryfikować payload/detach/recenter podczas rotacji;
-4. zbudować dwa body połączone free hinge;
-5. dodać powered hinge i servo tylko jako capability spike;
-6. na podstawie wyników zaprojektować neutralny Physics Port constraints;
-7. następnie przejść do Per-Block Control Bus.
+Prawdziwy Cannon.js 0.6.2 jest vendored w `tests/vendor/` wyłącznie jako zależność walidacyjna. Produkcyjny loader nie został przełączony na tę kopię. Główna bateria uruchamia real backend w Node i sprawdza free dynamics, rotated inertia, payload/recenter, kontakty, soak, benchmark i lifecycle.
+
+Builder stosuje kolejność:
+
+```text
+validate whole plan
+    -> allocate bodies/colliders
+    -> apply mass properties
+    -> register listeners
+    -> add bodies to world
+    -> build constraints
+    -> publish frozen runtime
+```
+
+Mutacje runtime stosują zasadę **backend-first, state-second**. Nieudane usunięcie collidera nie zmienia map. Rollback zachowuje pierwotny wyjątek, a awarie cleanup umieszcza w `cleanupErrors`.
+
+Dane na granicach `MassProperties.compute()` i `RuntimeAssembly.createPlan()` są rygorystyczne: NaN, Infinity, brak trwałego `blockId`, ujemna masa i wadliwe half-extents są błędami, nie wartościami do cichego naprawienia.
+
+Diagonalna bezwładność jest wyrażona w lokalnej ramie body. Headless transformuje torque world -> local, stosuje `I^-1`, a następnie transformuje angular acceleration local -> world. To jest pokryte wspólnym scenariuszem z real Cannon.
+
+## Dodatkowe inwarianty 1D.3B
+
+33. Cały plan assembly musi przejść walidację przed pierwszą alokacją backendu.
+34. Backend mutation musi zakończyć się sukcesem przed zmianą map i flag runtime.
+35. Rollback nie może zastąpić pierwotnej przyczyny błędem cleanup.
+36. Reserved assembly metadata wygrywa z `bodyDescriptor.userData`.
+37. Zmiana masy synchronizuje typ STATIC/DYNAMIC w każdym backendzie.
+38. Diagonalna inertia zawsze należy do lokalnej ramy body.
+39. Test stubowy nie wystarcza do potwierdzenia semantyki adaptera; kluczowe scenariusze muszą przechodzić na real Cannon.
+40. Vendored Cannon pozostaje zależnością testową z zachowaną licencją i nie może niejawnie wejść do produkcyjnego buildu.
+
+## Następna granica — Phase 1D.3C
+
+1. zbudować dwa body połączone realnym free hinge;
+2. zmierzyć limit, tarcie, drift i zachowanie kolizji;
+3. dodać powered hinge i servo tylko jako capability spike;
+4. sprawdzić remove constraint/body i rollback;
+5. na podstawie wyników zaprojektować minimalne neutralne Physics Port constraints;
+6. następnie przejść do Per-Block Control Bus.

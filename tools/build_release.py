@@ -8,12 +8,12 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE_ID = 'foundation-1d3a-runtime-assembly-builder'
-APP_VERSION = '0.5.9-foundation.1d3a'
-SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3A_Runtime_Assembly_Builder.html'
-ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3A_Runtime_Assembly_Builder.zip'
+RELEASE_ID = 'foundation-1d3b-real-cannon-parity'
+APP_VERSION = '0.6.0-foundation.1d3b'
+SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3B_Real_Cannon_Parity.html'
+ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3B_Real_Cannon_Parity.zip'
 MANIFEST_NAME = 'SOURCE_MANIFEST.json'
-ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_Phase_1D3A_RUNTIME_ASSEMBLY_BUILDER_READY_TO_PUSH'
+ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_Phase_1D3B_REAL_CANNON_PARITY_READY_TO_PUSH'
 APP_SOURCES = (
     Path('src/foundation/kernel.js'),
     Path('src/foundation/config.js'),

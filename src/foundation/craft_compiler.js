@@ -72,7 +72,7 @@
         let coreCount = 0;
 
         if (input.blocks.length > GRID.maxBlocks) errors.push('block-limit');
-        for (const raw of input.blocks.slice(0, GRID.maxBlocks + 1)) {
+        for (const raw of input.blocks.slice(0, GRID.maxBlocks)) {
           const x = Number(raw?.x);
           const y = Number(raw?.y);
           const z = Number(raw?.z);

@@ -52,11 +52,16 @@ assert.deepStrictEqual([body.position.x, body.position.y, body.position.z], [1, 
 assert.strictEqual(body.collisionFilterGroup, 4);
 assert.strictEqual(body.collisionFilterMask, 3);
 assert.strictEqual(body.userData.test, true);
+assert.strictEqual(body.type, global.CANNON.Body.DYNAMIC);
 const massProperties = Physics.setBodyMassProperties(body, { mass: 12, inertiaDiagonal: { x: 2, y: 3, z: 4 } });
 assert.strictEqual(massProperties.mass, 12);
 assert.deepStrictEqual([body.inertia.x, body.inertia.y, body.inertia.z], [2, 3, 4]);
 assert.deepStrictEqual([body.invInertia.x, body.invInertia.y, body.invInertia.z], [0.5, 1 / 3, 0.25]);
 assert.throws(() => Physics.setBodyMassProperties(body, { mass: 12, centerOfMass: { x: 1, y: 0, z: 0 }, inertiaDiagonal: { x: 2, y: 3, z: 4 } }), /centered around local COM/);
+Physics.setBodyMassProperties(body, { mass: 0, inertiaDiagonal: { x: 0, y: 0, z: 0 } });
+assert.strictEqual(body.type, global.CANNON.Body.STATIC);
+Physics.setBodyMassProperties(body, { mass: 12, inertiaDiagonal: { x: 2, y: 3, z: 4 } });
+assert.strictEqual(body.type, global.CANNON.Body.DYNAMIC);
 
 const shape = Physics.addBoxCollider(body, {
   halfExtents: { x: 2, y: 1, z: 0.5 },
@@ -109,5 +114,6 @@ console.log(JSON.stringify({
   forceTorqueBridge: 'ok',
   colliderMutation: 'ok',
   normalizedCollisionEvents: 'ok',
-  explicitMassProperties: 'ok'
+  explicitMassProperties: 'ok',
+  bodyTypeTransitions: 'ok'
 }, null, 2));

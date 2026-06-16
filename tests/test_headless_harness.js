@@ -67,6 +67,30 @@ assert(offsetAssembly.rootBody.angularVelocity.z > 0, 'Offset thrust must create
 assert(offsetAssembly.rootBody.velocity.y > 0, 'Offset thrust must still create translation.');
 offsetAssembly.dispose();
 
+
+const rotatedWorld = Physics.createWorld({ gravity: { x: 0, y: 0, z: 0 } });
+const halfSqrt = Math.sqrt(0.5);
+const rotatedAssembly = AssemblyBuilder.build({
+  plan: makePlan(2, [2, 4, 8]),
+  physics: Physics,
+  world: rotatedWorld,
+  bodyDescriptor: { quaternion: { x: 0, y: 0, z: halfSqrt, w: halfSqrt } }
+});
+Physics.addTorque(rotatedAssembly.rootBody, { x: 1, y: 0, z: 0 });
+Physics.step(rotatedWorld, DT);
+near(rotatedAssembly.rootBody.angularVelocity.x, DT / 4, 1e-9, 'rotated inertia response');
+rotatedAssembly.dispose();
+
+const staticWorld = Physics.createWorld({ gravity: { x: 0, y: 0, z: 0 } });
+const staticBody = Physics.createBody({ mass: 0 });
+Physics.addBody(staticWorld, staticBody);
+Physics.applyForce(staticBody, { x: 10, y: 0, z: 0 }, staticBody.position);
+Physics.step(staticWorld, DT);
+assert.strictEqual(staticBody.force.x, 0, 'Static body forces must not survive a step.');
+Physics.setBodyMassProperties(staticBody, { mass: 2, inertiaDiagonal: { x: 1, y: 1, z: 1 } });
+assert.strictEqual(staticBody.type, 'dynamic');
+Physics.removeBody(staticWorld, staticBody);
+
 const soakWorld = Physics.createWorld({ gravity: { x: 0, y: 0, z: 0 } });
 const soak = AssemblyBuilder.build({
   plan: makePlan(3, [2, 4, 6]), physics: Physics, world: soakWorld,
@@ -92,6 +116,9 @@ console.log(JSON.stringify({
   exactHover: 'ok',
   torqueResponse: 'ok',
   offsetThrust: 'ok',
+  rotatedInertia: 'ok',
+  staticAccumulatorReset: 'ok',
+  dynamicTypeTransition: 'ok',
   longSoakSteps: 12000,
   finiteState: 'ok'
 }, null, 2));

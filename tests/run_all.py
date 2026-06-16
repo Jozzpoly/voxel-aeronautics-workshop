@@ -27,6 +27,7 @@ def main() -> None:
     run('node', 'tests/test_runtime_assembly.js')
     run('node', 'tests/test_assembly_builder.js')
     run('node', 'tests/test_headless_harness.js')
+    run('node', '--expose-gc', 'tests/test_real_cannon_harness.js')
     run('node', 'tests/test_runtime_assembly_benchmark.js')
     run('node', 'tests/test_craft_model.js')
     run('node', 'tests/test_craft_compiler.js')

@@ -1,6 +1,6 @@
 # AI PROJECT MEMORY — Voxel Aeronautics Workshop
 
-> Obowiązkowy punkt wejścia. Najpierw przeczytaj ten plik, następnie `ARCHITECTURE.md`, `ROADMAP_NEXT.md`, `VALIDATION_REPORT.md`, `DELIVERY_WORKFLOW.md` i testy.
+> Obowiązkowy punkt wejścia. Najpierw przeczytaj ten plik, następnie `ARCHITECTURE.md`, `ROADMAP_NEXT.md`, najnowszy raport fazy, `VALIDATION_REPORT.md`, `TEST_REPORT.md`, `DELIVERY_WORKFLOW.md` i odpowiadające testy.
 
 ## 1. Wizja
 
@@ -20,22 +20,21 @@ Docelowo gracz może:
 
 ## 2. Aktualny milestone
 
-**Foundation Phase 1D.3A — Runtime Assembly Builder & Deterministic Headless Harness Core**
+**Foundation Phase 1D.3B — Real-Cannon Parity & Runtime Contract Hardening**
 
 Ukończone fundamenty:
 
 - blueprint v10 z trwałym `blockId` niezależnym od `gridKey`;
 - `CompiledCraft` i `RuntimeAssemblyPlan` jako neutralne kontrakty;
-- `RuntimeAssemblyPlan.rigidBodies[]`, `constraints[]`, `signalLinks[]`;
 - produkcyjny `runtime.assembly-builder` używany przez lot;
-- builder obsługujący wiele body, stabilne mapy i transakcyjny rollback;
-- wspólne `foundation.mass-properties`;
-- jawne mass properties przekazywane do backendu;
+- wielobody builder ze stabilnymi mapami, preflight validation, rollbackiem i kontrolowanym dispose;
+- wspólne, rygorystyczne `foundation.mass-properties`;
+- jawne mass properties i dynamic/static type sync w obu backendach;
 - recenter i prędkość punktu za Physics Portem;
-- deterministyczny backend headless;
-- free fall, hover, torque, offset thrust, inertia parity i soak;
-- architektoniczny benchmark tworzenia do 2500 colliderów;
-- manualny browser harness prawdziwego adaptera Cannon;
+- poprawna odpowiedź diagonalnej bezwładności dla obróconej bryły w headless;
+- automatyczny test prawdziwego Cannon.js 0.6.2 bez CDN;
+- real-Cannon free fall, torque, rotated inertia, offset thrust, kontakt, payload/recenter podczas obrotu, soak, lifecycle i benchmark do 2500 colliderów;
+- deterministyczny backend headless jako osobny architecture baseline;
 - sześć semantycznych osi, rebindable input i guided vertical controls;
 - deterministyczny ZIP + single HTML z source parity.
 
@@ -58,13 +57,17 @@ Ukończone fundamenty:
 15. PID jest zwykłym węzłem logiki, nie wyjątkiem zaszytym w fizyce.
 16. `game.js` nie może omijać Physics Portu.
 17. Główne body i collidery konstrukcji tworzy `runtime.assembly-builder`, nie `game.js`.
-18. Panel analizy i solver muszą korzystać ze zgodnych właściwości masowych.
-19. Recenter musi zachować prędkość nowego COM i przechodzić przez Physics Port.
-20. Headless deterministic backend jest harness-em architektury, nie substytutem solvera kontaktów ani podstawą decyzji backendowej.
-21. Nie podnosić limitu części bez realnego benchmarku produkcyjnego solvera i świadomej decyzji o colliderach.
-22. Każda dostawa zawiera pełne źródła, single HTML, raport, walidację, sumy i instrukcję aktualizacji.
-23. Nigdy nie zalecać zwykłego `git push --force`.
-24. Domyślna dostawa to pełny ZIP projektu; użytkownik wykonuje lokalny commit i push. Nie publikować projektu na GitHub w kawałkach.
+18. Plan assembly musi zostać w pełni zweryfikowany przed pierwszą alokacją backendu.
+19. Nieudana mutacja backendu nie może wcześniej uszkodzić map runtime.
+20. Rollback musi zachować pierwotny błąd; błędy cleanup są informacją dodatkową.
+21. Panel analizy i solver muszą korzystać ze zgodnych właściwości masowych.
+22. Recenter musi zachować prędkość nowego COM i przechodzić przez Physics Port.
+23. Headless deterministic backend jest harness-em architektury, nie substytutem solvera kontaktów ani podstawą decyzji backendowej.
+24. Wyniki real Cannon i headless muszą być raportowane osobno.
+25. Nie podnosić limitu części wyłącznie na podstawie czasu budowy pustego świata; decyzja wymaga scenariuszy kontaktowych i świadomej strategii colliderów.
+26. Każda dostawa zawiera pełne źródła, single HTML, raport, walidację, sumy i instrukcję aktualizacji.
+27. Nigdy nie zalecać zwykłego `git push --force`.
+28. Domyślna dostawa to pełny ZIP projektu; użytkownik wykonuje lokalny commit i push. Nie publikować projektu na GitHub w kawałkach.
 
 ## 4. Trzy grafy przyszłej maszyny
 
@@ -76,13 +79,16 @@ Tych grafów nie wolno scalać w jeden model.
 
 ## 5. Najbliższy etap
 
-**Phase 1D.3B — Real-Cannon Harness & Runtime Parity**
+**Phase 1D.3C — Joint Capability Spike**
 
-1. uruchomić tę samą baterię na prawdziwym Cannon.js;
-2. zweryfikować payload, detach i recenter podczas obrotu;
-3. zmierzyć build, `world.step`, pamięć i lifecycle;
-4. nie mieszać wyników headless architecture benchmark z wynikami solvera;
-5. następnie wykonać 1D.3C joint capability spike.
+1. dwa body na prawdziwym backendzie;
+2. free hinge;
+3. limit kąta i tarcie;
+4. powered hinge: target speed + max torque;
+5. servo: target angle;
+6. kontrolowane kolizje połączonych body;
+7. długi soak, usuwanie constraintu/body i jawny lifecycle;
+8. dopiero na podstawie spike zaprojektować neutralne Physics Port API constraintów.
 
 ## 6. Następny gameplay
 
@@ -101,10 +107,11 @@ Następnie sensory, podstawowa logika, live scope i PID.
 
 - `game.js` nadal zarządza wizualizacją, uszkodzeniami i gameplayowymi rekordami części;
 - planner projektu emituje obecnie jedno body i zero constraintów;
-- real-Cannon harness nie jest jeszcze częścią automatycznej baterii w środowisku bez CDN;
-- backend headless nie rozwiązuje kolizji;
+- `constraintBuilder` jest seam-em testowym, nie finalnym Physics Port API;
+- backend headless nie rozwiązuje kolizji ani constraintów;
 - jeden collider na voxel i limit 480 części w locie;
+- benchmark 2500 colliderów mierzy pusty świat bez kosztu kontaktów;
 - payload nie ma jeszcze graczowego `PayloadMount`;
-- nie ma jeszcze Physics Port API dla constraintów;
-- biblioteki runtime pochodzą z CDN;
-- brak pełnego automatycznego testu WebGL/GPU.
+- biblioteki produkcyjnego runtime pochodzą z CDN;
+- brak pełnego automatycznego testu WebGL/GPU;
+- brak CI uruchamiającego manualny harness w prawdziwej przeglądarce.

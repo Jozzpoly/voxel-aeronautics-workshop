@@ -1,74 +1,59 @@
-# Critical Review — Foundation Phase 1D.3A
+# Critical Review — Foundation Phase 1D.3B
 
 ## Pytanie kontrolne
 
-Czy projekt rzeczywiście przesunął odpowiedzialność za fizyczne assembly poza `game.js`, czy tylko dodał nowy plan i kolejną warstwę nazw?
+Czy granica assembly działa poprawnie wyłącznie ze stubem i headless, czy jej kontrakty są zgodne z rzeczywistą semantyką Cannon.js oraz odporne na błędy backendu?
 
-Po tej iteracji odpowiedź brzmi: **builder jest realnie używany przez produkcyjny lot**, ale separacja nie jest jeszcze kompletna.
+Po tej iteracji odpowiedź brzmi: **główne scenariusze parity są automatycznie sprawdzone na real Cannon, a lifecycle buildera jest znacznie bardziej transakcyjny.** Nie oznacza to jeszcze gotowych articulated assemblies.
 
 ## Co zostało poprawione właściwie
 
-### Builder jest granicą wykonawczą
+### Real backend jest częścią głównej baterii
 
-`buildFlightBody()` nie tworzy już compound body konstrukcji ręcznie. Przekazuje `RuntimeAssemblyPlan` do `runtime.assembly-builder`, a następnie buduje wyłącznie warstwę wizualną i gameplayowe rekordy części.
+Test nie zależy od sieci i nie używa uproszczonego stuba. To właśnie realny harness wykrył różnicę semantyki `Vec3.vadd`, która psuła zwrot prędkości punktu.
 
-To jest istotna różnica. W 1D.2F plan opisywał przyszłość, ale główny runtime nadal powielał budowę fizyki. W 1D.3A jedna warstwa naprawdę odpowiada za body, collidery, mapy, rollback i dispose.
+### Plan jest odrzucany przed alokacją
 
-### Mass properties mają wspólne źródło
+Builder nie próbuje już „sprawdzać w locie”, czy part wskazuje istniejące body albo czy collider ma poprawny blok. Cały graph contract jest weryfikowany przed utworzeniem zasobów.
 
-Kompilator, payload i runtime po detach korzystają z `foundation.mass-properties`. Usunięto ryzyko trzech podobnych, lecz rozchodzących się implementacji COM i bezwładności.
+### Mutacje są backend-first, state-second
 
-### Recenter zachowuje kinematykę
+Collider nie znika z map, dopóki backend nie potwierdzi usunięcia. Mass properties runtime aktualizują się po sukcesie backendu. Rollback nie maskuje pierwotnego wyjątku.
 
-Zmiana lokalnego środka masy podczas obrotu nie może zachować starej prędkości liniowej body. Nowy COM musi otrzymać prędkość punktu `v + omega × r`. Ta operacja została przeniesiona do Physics Port/Assembly Buildera i ma test regresyjny.
+### Headless mierzy tę samą fizykę swobodną w poprawnej ramie
 
-### Headless harness jest użyteczny, ale nazwany uczciwie
-
-Backend deterministyczny pozwala testować free flight i lifecycle bez przeglądarki. Nie udaje solvera kontaktów. Benchmark jego buildera jest jawnie oddzielony od benchmarku Cannon.
+Diagonalna inertia jest lokalna dla body. Obrócona bryła wymaga transformacji torque do tej ramy. Headless i Cannon mają teraz wspólny test tego przypadku.
 
 ## Najważniejsze ryzyka nadal otwarte
 
-### 1. Produkcyjna gra nadal zakłada jeden aktywny root body
+### 1. Joint API nadal nie istnieje
 
-Builder obsługuje wiele body, lecz `game.js` nadal steruje `STATE.flight.body` jako główną bryłą, a damage/connectivity używa jednej voxelowej mapy. To świadome ograniczenie do czasu rigid-island compiler i joint spike.
+`constraintBuilder` sprawdza lifecycle i mapowanie, ale nie określa semantyki hinge, motoru, limitu, tarcia ani servo. To właściwe ograniczenie: publiczny kontrakt musi powstać po realnym spike, nie przed nim.
 
-Nie wolno teraz udawać, że articulated assemblies są prawie gotowe. Gotowa jest granica, nie feature.
+### 2. Produkcyjna gra nadal ma jeden root body
 
-### 2. Brak neutralnego Physics Port dla constraintów
+Builder potrafi wiele body, ale sterowanie, damage i wizualny runtime nadal są zorientowane na główną konstrukcję. Granica jest gotowa na eksperyment, feature jeszcze nie.
 
-`constraintBuilder` pozwala testować lifecycle wielu body, ale nie definiuje jeszcze semantyki hinge, motoru, limitów, tarcia i servo. Wprowadzenie zbyt ogólnego API przed spike grozi zaprojektowaniem niewłaściwego kontraktu.
+### 3. Benchmark nie mierzy najgorszego przypadku kontaktów
 
-Właściwy następny krok to mały capability spike na prawdziwym backendzie.
+2500 colliderów w pustym świecie ma tani step, ale budowa trwa około pół sekundy. Podłoże, przeszkody, debris i joints mogą radykalnie zmienić koszt. Limit 480 pozostaje.
 
-### 3. Headless backend nie wykryje problemów kontaktowych
+### 4. Jeden collider na voxel pozostaje skalującym długiem
 
-Nie sprawdzi:
+Realne pomiary wzmacniają argument za Collider Compilerem, lecz greedy merge musi respektować rigid islands, identity mapping, detach i damage. Nie może być tylko optymalizacją renderera.
 
-- stabilności na ziemi;
-- constraint drift;
-- kolizji między podzespołami;
-- broadphase kosztu tysięcy colliderów;
-- kontaktów po recenter;
-- damage eventów prawdziwego solvera.
+### 5. WebGL i produkcyjne dependency loading nie są hermetyczne
 
-Dlatego limit 480 części pozostaje bez zmian.
-
-### 4. Runtime gameplay records nadal powstają w `game.js`
-
-To nie jest natychmiastowy błąd. Próba wydzielenia visuals, damage, fuel i aerodynamics w jednym etapie zwiększyłaby ryzyko regresji. Jednak przed pełnymi articulated assemblies potrzebny będzie model runtime part state niezależny od pojedynczej grupy Three.js.
-
-### 5. Zależność od CDN blokuje hermetyczne testy przeglądarkowe
-
-Manualny harness real Cannon istnieje, ale środowisko bez sieci nie uruchomi go. Docelowo trzeba rozważyć kontrolowany vendoring wersji bibliotek lub osobny workflow CI z cache, bez przypadkowego kopiowania zależności o niejasnej licencji.
+Cannon testowy jest vendored legalnie i lokalnie. Aplikacja produkcyjna nadal używa zależności określonych w `index.html`, a pełny test GPU/browser nie jest automatyczny.
 
 ## Decyzje odrzucone
 
-- Nie dodano od razu jointów do UI.
-- Nie podniesiono limitu części na podstawie szybkiego headless benchmarku.
-- Nie rozpoczęto Collider Compilera przed pomiarem prawdziwego solvera.
-- Nie dodano kolejnej rundy aerodynamiki.
-- Nie potraktowano PID jako specjalnego systemu poza przyszłym control busem.
+- Nie ruszono `game.js` tylko po to, by zmniejszyć liczbę linii.
+- Nie dodano prowizorycznego API jointów.
+- Nie podniesiono limitu części.
+- Nie pomylono benchmarku pustego świata z kosztami kontaktów.
+- Nie przeniesiono testowej kopii Cannon do produkcyjnego loadera.
 
 ## Wniosek
 
-Phase 1D.3A jest solidnym krokiem, ponieważ usuwa fałszywą granicę i daje testowalny lifecycle assembly. Nie kończy 1D.3. Kolejny etap musi skonfrontować te kontrakty z real Cannon, a następnie sprawdzić najmniejszy prawdziwy mechanizm dwóch brył. Dopiero po tym można bezpiecznie rozpocząć Per-Block Control Bus i graczowe jointy.
+Phase 1D.3B zamyka właściwy zestaw długów po 1D.3A: real parity, strict contracts, failure atomicity i wiarygodniejsze headless dynamics. Następny etap powinien być małym joint capability spike. Dopiero jego wynik uzasadni nowe API i dalszy podział runtime.

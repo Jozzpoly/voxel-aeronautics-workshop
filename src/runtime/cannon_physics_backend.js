@@ -64,6 +64,7 @@
         const descriptor = PhysicsPort.normalizeBodyDescriptor(value);
         const body = new CANNON.Body({
           mass: descriptor.mass,
+          type: descriptor.mass > 0 ? CANNON.Body.DYNAMIC : CANNON.Body.STATIC,
           linearDamping: descriptor.linearDamping,
           angularDamping: descriptor.angularDamping,
           allowSleep: descriptor.allowSleep
@@ -152,6 +153,11 @@
       }
 
 
+      function syncBodyType(body, mass) {
+        body.type = mass > 0 ? CANNON.Body.DYNAMIC : CANNON.Body.STATIC;
+        if (mass > 0 && typeof body.wakeUp === 'function') body.wakeUp();
+      }
+
       function setBodyMassProperties(body, value = {}) {
         if (!body) throw new TypeError('Body is required.');
         const descriptor = PhysicsPort.normalizeMassProperties(value);
@@ -161,10 +167,12 @@
         }
         body.mass = descriptor.mass;
         body.invMass = descriptor.mass > 0 ? 1 / descriptor.mass : 0;
+        syncBodyType(body, descriptor.mass);
         const inertia = descriptor.inertiaDiagonal;
         const hasExplicitInertia = inertia.x > 0 || inertia.y > 0 || inertia.z > 0;
         if (!hasExplicitInertia) {
           if (typeof body.updateMassProperties === 'function') body.updateMassProperties();
+          if (typeof body.updateSolveMassProperties === 'function') body.updateSolveMassProperties();
         } else {
           if (!body.inertia || !body.invInertia) throw new Error('Cannon body does not expose diagonal inertia fields.');
           body.inertia.set(inertia.x, inertia.y, inertia.z);
@@ -186,7 +194,9 @@
       function setBodyMass(body, mass) {
         if (!body) throw new TypeError('Body is required.');
         body.mass = Math.max(0, Number(mass) || 0);
+        syncBodyType(body, body.mass);
         if (typeof body.updateMassProperties === 'function') body.updateMassProperties();
+        if (typeof body.updateSolveMassProperties === 'function') body.updateSolveMassProperties();
         markBodyDirty(body);
         return body.mass;
       }
@@ -251,7 +261,8 @@
         const rotational = vec3();
         const result = vec3();
         body.angularVelocity.cross(worldOffset, rotational);
-        return body.velocity.vadd(rotational, result);
+        body.velocity.vadd(rotational, result);
+        return result;
       }
 
       const backend = {

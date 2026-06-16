@@ -57,7 +57,10 @@ const runtime = AssemblyBuilder.build({
   plan,
   physics: Physics,
   world,
-  bodyDescriptor: bodyPlan => ({ position: { x: bodyPlan.bodyId === 'body:root' ? 10 : 12, y: 4, z: 0 } }),
+  bodyDescriptor: bodyPlan => ({
+    position: { x: bodyPlan.bodyId === 'body:root' ? 10 : 12, y: 4, z: 0 },
+    userData: { custom: true, assemblyBodyId: 'spoofed' }
+  }),
   constraintBuilder: ({ constraintPlan, bodyA, bodyB }) => ({
     constraintId: constraintPlan.constraintId,
     bodyA,
@@ -74,6 +77,8 @@ assert.strictEqual(runtime.colliderByBlockId.size, 2);
 assert.strictEqual(runtime.constraintById.size, 1);
 assert.strictEqual(runtime.rootBody.position.x, 10);
 assert.strictEqual(runtime.bodyById.get('body:rotor').body.position.x, 12);
+assert.strictEqual(runtime.rootBody.userData.custom, true);
+assert.strictEqual(runtime.rootBody.userData.assemblyBodyId, 'body:root', 'Reserved assembly metadata cannot be overwritten.');
 
 const rotorBody = runtime.bodyById.get('body:rotor').body;
 Physics.setBodyVelocity(rotorBody, { linear: { x: 0, y: 0, z: 0 }, angular: { x: 0, y: 0, z: 2 } });
@@ -100,6 +105,52 @@ assert.strictEqual(constraintDisposed, true);
 assert.strictEqual(runtime.disposed, true);
 assert.strictEqual(PhysicsPort.assertBackend(Physics), Physics);
 
+const noConstraintPlan = { ...plan, constraints: [] };
+const validationWorld = Physics.createWorld({ gravity: { x: 0, y: 0, z: 0 } });
+assert.throws(() => AssemblyBuilder.build({
+  plan: { ...noConstraintPlan, parts: [noConstraintPlan.parts[0]] },
+  physics: Physics,
+  world: validationWorld
+}), /has no runtime part/);
+assert.strictEqual(validationWorld.bodies.length, 0, 'Invalid plans must fail before backend allocation.');
+
+let rejectRemoval = true;
+const removalPhysics = {
+  ...Physics,
+  id: 'headless-removal-failure-test',
+  removeCollider(bodyValue, shapeValue) {
+    if (rejectRemoval) { rejectRemoval = false; return false; }
+    return Physics.removeCollider(bodyValue, shapeValue);
+  }
+};
+const removalWorld = removalPhysics.createWorld({ gravity: { x: 0, y: 0, z: 0 } });
+const removalRuntime = AssemblyBuilder.build({ plan: noConstraintPlan, physics: removalPhysics, world: removalWorld });
+assert.strictEqual(removalRuntime.removeColliderByBlockId('rotor'), false);
+assert.strictEqual(removalRuntime.colliderByBlockId.has('rotor'), true, 'Failed backend removal must not corrupt runtime maps.');
+assert.strictEqual(removalRuntime.removeColliderByBlockId('rotor'), true);
+removalRuntime.dispose();
+
+const cleanupPhysics = {
+  ...Physics,
+  id: 'headless-cleanup-failure-test',
+  removeBody(worldValue, bodyValue) {
+    Physics.removeBody(worldValue, bodyValue);
+    throw new Error('synthetic cleanup failure');
+  }
+};
+const cleanupWorld = cleanupPhysics.createWorld({ gravity: { x: 0, y: 0, z: 0 } });
+let originalBuildError = null;
+try {
+  AssemblyBuilder.build({ plan, physics: cleanupPhysics, world: cleanupWorld });
+} catch (error) {
+  originalBuildError = error;
+}
+assert(originalBuildError);
+assert.match(originalBuildError.message, /constraintBuilder/, 'Rollback must preserve the original construction failure.');
+assert(Array.isArray(originalBuildError.cleanupErrors));
+assert(originalBuildError.cleanupErrors.length >= 1);
+assert.strictEqual(cleanupWorld.bodies.length, 0);
+
 console.log(JSON.stringify({
   multiBodyConstruction: 'ok',
   transactionalRollback: 'ok',
@@ -107,5 +158,9 @@ console.log(JSON.stringify({
   constraintExtensionPoint: 'ok',
   colliderRemoval: 'ok',
   recenterKinematics: 'ok',
-  lifecycleDisposal: 'ok'
+  lifecycleDisposal: 'ok',
+  preallocationValidation: 'ok',
+  reservedMetadata: 'ok',
+  atomicColliderRemoval: 'ok',
+  rollbackErrorPreservation: 'ok'
 }, null, 2));

@@ -44,10 +44,15 @@ const empty = MassProperties.compute([]);
 assert.deepStrictEqual(empty.centerOfMass, [0, 0, 0]);
 assert.deepStrictEqual(empty.inertiaDiagonal, [0, 0, 0]);
 
+assert.throws(() => MassProperties.compute([{ mass: -1, center: [0, 0, 0], halfExtents: [0.5, 0.5, 0.5] }]), /cannot be negative/);
+assert.throws(() => MassProperties.compute([{ mass: 1, center: [NaN, 0, 0], halfExtents: [0.5, 0.5, 0.5] }]), /finite number/);
+assert.throws(() => MassProperties.compute([{ mass: 1, center: [0, 0, 0], halfExtents: [0, 0.5, 0.5] }]), /greater than zero/);
+
 console.log(JSON.stringify({
   cuboidInertia: 'ok',
   parallelAxis: 'ok',
   translationInvariant: 'ok',
   payloadMassProperties: 'ok',
-  emptyAssembly: 'ok'
+  emptyAssembly: 'ok',
+  invalidElementRejection: 'ok'
 }, null, 2));

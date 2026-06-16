@@ -1,4 +1,4 @@
-# Roadmap po Foundation Phase 1D.3A
+# Roadmap po Foundation Phase 1D.3B
 
 ## Kierunek produktu
 
@@ -10,64 +10,58 @@ buduj -> steruj ręcznie lub programuj -> obserwuj fizykę -> przebuduj
 
 Kontrakty uczą i inspirują. Nie mogą zastąpić swobodnego budowania, sterowania każdym urządzeniem i tworzenia mechanizmów wielobryłowych.
 
-## Ukończone — Phase 1D.3A
+## Ukończone — Phase 1D.3B
 
-- produkcyjny `runtime.assembly-builder` zintegrowany z lotem;
-- wielobody API buildera bez zakodowanego założenia pojedynczej bryły;
-- transakcyjna budowa i rollback;
-- stabilne mapy `bodyId`, `colliderId`, `blockId -> part/body/collider`;
-- usuwanie colliderów przez trwałe `blockId`;
-- wspólny `foundation.mass-properties` dla kompilatora, payloadu i detach;
-- jawne mass properties stosowane przez Physics Port;
-- recenter zachowujący światową pozycję i prędkość nowego COM;
-- `getPointVelocity()` za granicą Physics Port;
-- deterministyczny backend headless bez DOM/WebGL;
-- headless free fall, hover, torque, offset thrust, inertia parity i 12 000 kroków soak;
-- test multi-body buildera oraz seam `constraintBuilder`;
-- benchmark budowy 100/500/1000/2500 colliderów na backendzie headless;
-- manualny browser harness dla prawdziwego adaptera Cannon;
-- test regresyjny zabraniający ponownego składania głównego body w `game.js`.
-
-## Phase 1D.3B — Real-Cannon Harness & Runtime Parity
-
-Cel: sprawdzić produkcyjny adapter na tej samej baterii, bez mieszania wyników z uproszczonym backendem headless.
-
-Scenariusze:
-
-- free fall i inertia parity na rzeczywistym Cannon.js;
-- moment 1 N·m i oczekiwana prędkość kątowa;
-- offset thrust;
-- payload, zmiana COM i recenter podczas obrotu;
-- detach podczas translacji i rotacji;
-- długi soak;
-- stabilność po wielokrotnym remove/recenter;
-- lifecycle bez pozostawionych body i listenerów.
-
-Pomiary:
-
-- build time dla 100/500/1000/2500 colliderów;
-- średni, medianowy i 99. percentyl `world.step`;
-- koszt detach/recenter;
-- wzrost pamięci podczas powtarzanego start/return;
-- wyniki osobno dla headless architecture baseline i real Cannon.
-
-Kryterium: żadnej decyzji o collider compilerze ani zmianie backendu bez wyników tej samej baterii.
+- prawdziwy Cannon.js 0.6.2 jest vendored wyłącznie do testów i uruchamiany automatycznie z Node;
+- browser runtime harness nie wymaga już CDN dla Cannon;
+- real-Cannon free fall, inertia parity, rotated inertia i torque response;
+- offset thrust tworzący translację i obrót;
+- payload removal oraz recenter podczas translacji i rotacji;
+- prawdziwe zdarzenia kontaktowe normalizowane przez Physics Port;
+- 12 000 kroków real-Cannon soak;
+- pomiary build i `world.step` dla 100/500/1000/2500 colliderów;
+- 50 cykli build/dispose z kontrolą pozostawionych body i pamięci;
+- synchronizacja typu STATIC/DYNAMIC po zmianie masy w obu backendach;
+- poprawiona bezwładność obróconej bryły w headless;
+- pełna walidacja planu przed alokacją body/colliderów;
+- atomowe usuwanie colliderów i rollback zachowujący pierwotny błąd;
+- rygorystyczne wejście mass properties i RuntimeAssemblyPlan;
+- twardy limit pracy CraftCompiler do `GRID.maxBlocks`;
+- zachowana granica: `game.js` nie składa fizycznego assembly.
 
 ## Phase 1D.3C — Joint Capability Spike
 
-Twardy eksperyment techniczny, jeszcze bez finalnego UI:
+Cel: sprawdzić najmniejszy prawdziwy mechanizm dwóch brył przed zaprojektowaniem publicznego API jointów i UI gracza.
 
-- dwa niezależne rigid body;
+Scenariusze:
+
+- dwa niezależne rigid body z osobnymi mass properties;
 - free hinge;
-- limit kąta i tarcie;
-- powered hinge: target speed + max torque;
-- tryb servo: target angle;
-- stabilność długiego soak;
-- wyłączone lub kontrolowane kolizje połączonych podzespołów;
-- bezpieczne usunięcie constraintu i jednego body;
+- limit kąta;
+- pasywne tarcie / damping;
+- powered hinge z `targetSpeed` i `maxTorque`;
+- servo z `targetAngle`, limitem prędkości i momentu;
+- włączanie/wyłączanie kolizji między połączonymi podzespołami;
+- długi soak bez driftu prowadzącego do eksplozji solvera;
+- bezpieczne usunięcie constraintu;
+- bezpieczne usunięcie jednego body;
+- rollback, gdy konstrukcja constraintu nie powiedzie się;
 - sygnał sterujący odseparowany od mechanical graph.
 
-Spike ma odpowiedzieć, czy obecny backend i Physics Port wystarczą dla Free Bearing, Rotary Motor i Servo Bearing. Nie może rozrosnąć się w pełny system mechaniczny przed wynikiem testów.
+Wynik spike ma określić minimalny neutralny kontrakt Physics Port dla hinge/motor/servo. Nie wolno przed wynikiem tworzyć ogólnego „API do wszystkich jointów”.
+
+## Decyzja o Collider Compilerze
+
+Real-Cannon benchmark pustego świata pokazał, że koszt samej budowy compound body rośnie mocno:
+
+| Collidery | Mediana build | Mediana step | P99 step |
+|---:|---:|---:|---:|
+| 100 | 3.101 ms | 0.0131 ms | 0.0217 ms |
+| 500 | 26.888 ms | 0.0622 ms | 0.0791 ms |
+| 1000 | 85.201 ms | 0.1260 ms | 0.1524 ms |
+| 2500 | 482.791 ms | 0.3292 ms | 0.3744 ms |
+
+To uzasadnia dalszy pomiar i prototyp greedy merge, ale **nie** uzasadnia jeszcze podniesienia limitu 480 części. `world.step` był mierzony bez aktywnych kontaktów między tysiącami shape’ów. Przed zmianą limitu potrzebne są scenariusze z podłożem, przeszkodami, uszkodzeniami i jointami.
 
 ## Phase 1E — Per-Block Control Bus
 
@@ -127,10 +121,6 @@ Kompilator:
 
 Następnie: wały, przekładnie, pistony, wirniki, obrotowe gondole, składane skrzydła i docking.
 
-## Collider Compiler
-
-Greedy merge pozostaje ważny, ale działa osobno dla każdej rigid island. Termin zależy od real-Cannon benchmarku. Nie podnosimy limitu lotu na podstawie benchmarku samego buildera headless.
-
 ## Rzeczy świadomie odłożone
 
 - pełny tensor 3×3 przy obecnym Cannon;
@@ -140,4 +130,4 @@ Greedy merge pozostaje ważny, ale działa osobno dla każdej rigid island. Term
 - duży system kampanii;
 - multiplayer.
 
-Żadna z tych rzeczy nie wyprzedza Per-Block Control Bus bez konkretnego problemu blokującego.
+Żadna z tych rzeczy nie wyprzedza joint spike i Per-Block Control Bus bez konkretnego problemu blokującego.

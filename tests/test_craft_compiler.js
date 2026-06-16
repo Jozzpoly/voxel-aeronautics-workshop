@@ -127,6 +127,12 @@ assert(maximumCompiled.ready);
 assert.strictEqual(maximumCompiled.parts.length, Config.GRID.maxBlocks);
 assert(compileMs < 5000, `Maximum compile took ${compileMs.toFixed(1)} ms.`);
 
+const overLimitCompiled = CraftCompiler.compile([...maximumBlocks, block(999, 999, 999, 'Hull')]);
+assert.strictEqual(overLimitCompiled.ready, false);
+assert(overLimitCompiled.errors.includes('block-limit'));
+assert.strictEqual(overLimitCompiled.parts.length, Config.GRID.maxBlocks, 'Compiler work must remain capped at the configured block limit.');
+assert(!overLimitCompiled.errors.includes('invalid-block'), 'Blocks beyond the hard limit must not leak into compilation.');
+
 console.log(JSON.stringify({
   emptyReadiness: 'ok',
   movableCore: 'ok',
@@ -135,6 +141,7 @@ console.log(JSON.stringify({
   disconnectedDiagnostics: 'ok',
   maximumCompileMs: Number(compileMs.toFixed(2)),
   maximumParts: maximumCompiled.parts.length,
+  overLimitWorkCap: 'ok',
   persistentBlockMapping: 'ok',
   configuredGravity: 'ok'
 }, null, 2));

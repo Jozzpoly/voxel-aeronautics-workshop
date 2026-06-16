@@ -194,6 +194,7 @@
       }
       body.mass = descriptor.mass;
       body.invMass = descriptor.mass > 0 ? 1 / descriptor.mass : 0;
+      body.type = descriptor.mass > 0 ? PhysicsPort.BODY_TYPES.DYNAMIC : PhysicsPort.BODY_TYPES.STATIC;
       body.inertia.copy(descriptor.inertiaDiagonal);
       body.invInertia.set(
         descriptor.inertiaDiagonal.x > 0 ? 1 / descriptor.inertiaDiagonal.x : 0,
@@ -273,7 +274,11 @@
       const dt = Number(dtValue);
       if (!(dt > 0)) throw new RangeError('Physics step must be greater than zero.');
       for (const body of world.bodies) {
-        if (!(body.mass > 0)) continue;
+        if (!(body.mass > 0)) {
+          body.force.set(0, 0, 0);
+          body.torque.set(0, 0, 0);
+          continue;
+        }
         body.velocity.x += (world.gravity.x + body.force.x * body.invMass) * dt;
         body.velocity.y += (world.gravity.y + body.force.y * body.invMass) * dt;
         body.velocity.z += (world.gravity.z + body.force.z * body.invMass) * dt;
@@ -283,9 +288,16 @@
         body.position.y += body.velocity.y * dt;
         body.position.z += body.velocity.z * dt;
 
-        body.angularVelocity.x += body.torque.x * body.invInertia.x * dt;
-        body.angularVelocity.y += body.torque.y * body.invInertia.y * dt;
-        body.angularVelocity.z += body.torque.z * body.invInertia.z * dt;
+        const localTorque = inverseRotateVector(body.quaternion, body.torque);
+        const localAngularAcceleration = new Vec3(
+          localTorque.x * body.invInertia.x,
+          localTorque.y * body.invInertia.y,
+          localTorque.z * body.invInertia.z
+        );
+        const worldAngularAcceleration = rotateVector(body.quaternion, localAngularAcceleration);
+        body.angularVelocity.x += worldAngularAcceleration.x * dt;
+        body.angularVelocity.y += worldAngularAcceleration.y * dt;
+        body.angularVelocity.z += worldAngularAcceleration.z * dt;
         const angularFactor = Math.exp(-body.angularDamping * dt);
         body.angularVelocity.scale(angularFactor);
         integrateQuaternion(body, dt);
