@@ -19,6 +19,7 @@ EXPECTED_MODULES = {
     'mission_controller.js': 'game.mission-controller',
     'flight_session.js': 'game.flight-session',
     'flight_thruster_router.js': 'game.flight-thruster-router',
+    'flight_mechanical_visuals.js': 'game.flight-mechanical-visuals',
     'flight_integrity.js': 'game.flight-integrity',
     'debris_runtime.js': 'game.debris-runtime',
 }

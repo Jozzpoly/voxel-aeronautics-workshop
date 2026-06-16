@@ -13,6 +13,7 @@
     const MissionController = window.VAW.require('game.mission-controller');
     const FlightSession = window.VAW.require('game.flight-session');
     const FlightThrusterRouter = window.VAW.require('game.flight-thruster-router');
+    const FlightMechanicalVisuals = window.VAW.require('game.flight-mechanical-visuals');
     const FlightIntegrity = window.VAW.require('game.flight-integrity');
     const DebrisRuntime = window.VAW.require('game.debris-runtime');
 
@@ -805,6 +806,27 @@
     });
 
     const flightThrusterRouter = FlightThrusterRouter.create({ flightSession });
+    const flightMechanicalVisuals = FlightMechanicalVisuals.create({
+      flightSession,
+      createVisual(constraint) {
+        const group = new THREE.Group();
+        group.userData.runtimeMechanicalLinkId = constraint.mechanicalLinkId;
+        const line = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x22d3ee }));
+        const pivotA = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), new THREE.MeshBasicMaterial({ color: 0xf59e0b }));
+        const pivotB = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+        group.userData.line = line; group.userData.pivotA = pivotA; group.userData.pivotB = pivotB;
+        group.add(line, pivotA, pivotB); scene.add(group);
+        return group;
+      },
+      updateVisual(group, { endpointA, endpointB }) {
+        const a = new THREE.Vector3(endpointA.x, endpointA.y, endpointA.z), b = new THREE.Vector3(endpointB.x, endpointB.y, endpointB.z);
+        group.userData.line.geometry.setFromPoints([a, b]);
+        group.userData.pivotA.position.copy(a); group.userData.pivotB.position.copy(b);
+        group.userData.endpointA = { x: a.x, y: a.y, z: a.z }; group.userData.endpointB = { x: b.x, y: b.y, z: b.z };
+      },
+      disposeVisual(group) { scene.remove(group); disposeObjectTree(group); },
+      onDiagnostic(diagnostic) { if (diagnostic?.error) console.warn(diagnostic.code, diagnostic.error); }
+    });
 
     const debrisRuntime = DebrisRuntime.create({
       Physics, world, scene, disposeObjectTree,
@@ -1384,6 +1406,7 @@
         scene.add(root);
         visualRootByBodyId.set(bodyPlan.bodyId, root);
       }
+      flightMechanicalVisuals.start();
 
       const functionalBlocks = [];
       const runtimeParts = [];
@@ -1605,6 +1628,7 @@
     function syncFlightVisuals() {
       if (!flightSession.isActive()) return;
       flightSession.syncVisuals();
+      flightMechanicalVisuals.sync();
     }
 
 
