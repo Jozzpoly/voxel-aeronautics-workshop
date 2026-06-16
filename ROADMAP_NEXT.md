@@ -1,114 +1,148 @@
-# Roadmap po Foundation Phase 1D.3C
+# Roadmap po Foundation Phase 1D.3E
 
-## Kierunek produktu
+Roadmap jest sekwencją bramek zależności. Nie jest listą równoległych feature’ów.
+
+## Ukończone — Gate A / Phase 1D.3E
+
+### Single-body flight ownership / assembly-centric lifecycle
+
+Warunki wyjścia spełnione:
+
+- `FlightSession` posiada build, lifecycle i cleanup;
+- `RuntimeAssembly` jest jedynym źródłem prawdy lotu;
+- primary body jest deterministyczną polityką;
+- integrity ma exact ownership;
+- visuals są per body;
+- mission/HUD/camera korzystają z neutralnych próbek;
+- constraints/listeners/colliders/bodies/visuals mają jawny porządek cleanupu;
+- cleanup jest idempotentny i retry-safe;
+- repeated lifecycle oraz aktywny `pagehide` są testowane;
+- game shell nie buduje assembly i debris bezpośrednio.
+
+Świadome ograniczenie `primary-rigid-island-only` nie blokuje Gate A, ponieważ normalny compiler emituje dziś jedną wyspę, a błędne użycie dla innego body jest jawnie odrzucane.
+
+---
+
+## Gate B — Phase 1D.4A: Rigid Islands & Mechanical Graph Compiler
+
+**Status: następna bramka; nie rozpoczęta w 1D.3E.**
+
+### B0. ADR i schema review
+
+Przed kodem produkcyjnym ustalić:
+
+- authoring mechanical links;
+- structural edge cut semantics;
+- endpoint identity;
+- stabilne `bodyId` i `constraintId`;
+- rigid bypass;
+- move/copy/delete;
+- blueprint v11 i migrację albo uzasadnienie pozostania przy v10;
+- diagnostyki invalid topology.
+
+### B1. Pure compilers
 
 ```text
-buduj -> steruj ręcznie lub programuj -> obserwuj fizykę -> przebuduj
+CraftCompiler
+  -> StructuralGraphCompiler
+  -> RigidIslandCompiler
+  -> MechanicalGraphCompiler
+  -> CompiledCraft / RuntimeAssemblyPlan
 ```
 
-VAW jest sandboxem konstrukcyjno-programistycznym. Kontrakty uczą i inspirują, lecz ręczne latanie i swobodne eksperymenty pozostają pełnoprawnym rdzeniem.
+Wymagania:
 
-## Ukończone — Phase 1D.3C
+- deterministyczne wyspy niezależne od kolejności wejścia;
+- joint przecina rigid connectivity;
+- per-island mass properties/COM;
+- stabilne IDs;
+- walidacja axes/pivots przed allocation;
+- missing/duplicate endpoints i rigid bypass diagnostics;
+- mechanical cycles oceniane według kontraktu, nie automatycznie odrzucane.
 
-- minimalny hinge-only kontrakt Physics Portu;
-- prawdziwe dwa body z osobnymi mass properties;
-- capability negotiation backendu;
-- free hinge, motor, servo, pasywne tarcie i miękkie limity;
-- jawne `collideConnected`;
-- stabilne `constraintById` i oddzielny mutable control command;
-- preflight osi, pivotów i world membership;
-- constraint-before-body lifecycle;
-- retry-safe `removeConstraint()` i pełne `RuntimeAssembly.dispose()`;
-- 12 000 kroków joint soak;
-- automatyczna zgodność wersji package/build/manifest/runtime;
-- pełny foundation readiness review i research kierunku programowalnych maszyn.
+### B2. Najwęższy gameplay vertical slice
 
-## Phase 1D.3D — Assembly-Centric Flight Lifecycle
+Normalny blueprint przechodzi:
 
-Cel: usunąć ostatnie istotne założenie `craft = STATE.flight.body`.
+```text
+CraftModel -> CraftCompiler -> RuntimeAssemblyPlan -> AssemblyBuilder
+```
 
-1. `game.flight-session` przejmuje launch/stop, `RuntimeAssembly`, rejestrację w świecie, listenery i cleanup.
-2. Root body jest zapytaniem do assembly, nie równoległym źródłem prawdy.
-3. `game.flight-integrity` przejmuje damage, detach, payload, recenter i debris z jawnym body ownership.
-4. Testy obejmują powtarzane workshop -> multi-body flight -> workshop oraz transient cleanup failure.
-5. Composition root pozostaje routingiem i kompozycją.
+i tworzy co najmniej dwa body oraz hinge bez specjalnego kodu w `game.js`.
 
-## Phase 1D.4A — Rigid Islands & Mechanical Graph Compiler
+### B3. Exit criteria
 
-1. Joint przecina rigid connectivity.
-2. Każda wyspa dostaje deterministyczne `bodyId`.
-3. Mechanical links dostają stabilne `constraintId`.
-4. Kompilator wykrywa rigid bypass, brakujące endpointy, niewłaściwe osie/pivoty i niedozwolone połączenia.
-5. Normalny gameplay path uruchamia pierwszy dwubryłowy craft.
+- gameplay compilation generuje multi-body plan;
+- real Cannon hinge działa;
+- visual roots i mission sample pozostają poprawne;
+- rollback i cleanup są atomowe;
+- brak ręcznej rekonstrukcji assembly w game shellu.
 
-## Phase 1D.4B — Assembly Space / Sublevel Foundation
+---
 
-1. Jawna przestrzeń lokalna assembly i transform world/local.
-2. Stabilne mapowanie block/device -> rigid island/body.
-3. Reguły split, detach, dock i ownership.
-4. Interakcja i sygnały zachowują tożsamość niezależnie od world pose.
-5. Blueprint pozostaje jedynym źródłem prawdy; sublevel nie jest drugim dokumentem konstrukcji.
+## Gate C — Phase 1D.4B: Assembly Space / Sublevel Foundation
 
-## Phase 1D.4C — Device Catalog & Typed Ports
+**Status: zablokowany przez Gate B.**
 
-- endpoint `{ blockId, portId }`;
-- pure-data deklaracje input/output;
-- początkowo scalar oraz boolean/event;
-- jawne jednostki, zakresy i wartości domyślne;
-- diagnostyka missing/damaged/detached endpoint;
-- przetestowane move/copy/delete/migration.
+Zakres:
 
-## Phase 1D.4D — Deterministic Control Runtime
+- stabilny `assemblySpaceId`;
+- local-to-world/world-to-local;
+- block/device → rigid island/body mapping;
+- ownership przy split/detach i przyszłym dock;
+- visual roots związane z body/space;
+- blueprint pozostaje jedynym source of truth;
+- sublevel jest compiled/runtime view.
+
+Bez chodzenia po statku i bez pełnego dockingu.
+
+---
+
+## Gate D — Phase 1D.4C: Device Catalog & Typed Ports
+
+**Status: zablokowany przez Gate C.**
+
+Zakres minimalny:
+
+- endpoint `{blockId, portId}`;
+- scalar oraz boolean/event;
+- direction, units, range, default, update semantics;
+- Core/default mixer, thruster, telemetry i potrzebny actuator;
+- missing/damaged/detached endpoint behavior;
+- migracje/copy/move/delete;
+- `InputProfile` oddzielony od craft `controlBindings`.
+
+Bez cables/bus/wireless.
+
+---
+
+## Gate E — Phase 1D.4D: Deterministic Control Runtime
+
+**Status: zablokowany przez Gate D.**
+
+Zakres:
 
 - fixed control tick niezależny od FPS;
-- bounded graph budget;
-- deterministyczna kolejność;
-- jawne Delay/Memory dla feedbacku;
-- headless evaluation;
-- actuator commands przez publiczne RuntimeAssembly API;
-- brak arbitralnego JavaScriptu w zapisach.
+- stabilna kolejność;
+- nodes/links/work budgets;
+- scalar i boolean/event;
+- Delay/Memory dla feedbacku;
+- algebraic cycle rejection;
+- evaluate, potem apply command batch;
+- actuator command przez RuntimeAssembly;
+- headless-first diagnostics i snapshots;
+- brak DOM/renderera/arbitralnego JS.
 
-## Phase 1E — Per-Block Control Bus
+---
 
-Pierwszy gameplayowy UX:
+## Opcjonalny Phase 1E vertical slice
 
-- wybór konkretnego urządzenia i jego portów;
-- `Default mixer`, `Direct signal`, `Control group`, `Disabled`;
-- gain, invert, trim, min, max;
-- named craft actions oddzielone od fizycznych klawiszy użytkownika;
-- zapis i migracja konfiguracji;
-- live values, diagnostyka i scope;
-- najpierw direct/internal links, później fizyczne kable, bus i wireless jako transport tej samej semantyki.
+Dopiero po pełnym A–E:
 
-## Phase 1E.1 — Sensors, Logic & Scope
+- wybór urządzenia;
+- Default mixer / Direct signal / Disabled;
+- gain/invert/trim/min/max;
+- named craft action oddzielona od klawisza;
+- live value i podstawowa diagnostyka.
 
-Sensory: altitude, vertical speed, orientation, angular velocity, fuel, health, joint state i actuator output.
-
-Węzły: Constant, Add/Subtract, Multiply, Clamp, Compare/Switch, Delay/Memory, Integrator i PID.
-
-## Phase 1F — Player-Facing Articulated Machines
-
-- Free Bearing;
-- Rotary Motor;
-- Servo Bearing;
-- joint pass-through dla sygnałów;
-- damage/detach mechanizmów;
-- mechaniczne limity i tuning pod realne konstrukcje.
-
-## Collider Compiler
-
-Limit lotu 480 części pozostaje. Benchmark 2500 colliderów i joint soak nie obejmują ciężkich scen wielokontaktowych. Przed podniesieniem limitu potrzebny jest greedy merge prototype oraz articulated/contact benchmark.
-
-## Świadomie później
-
-- kolejne joint types;
-- natywne hard stops lub zmiana backendu;
-- pełny tensor 3x3;
-- zaawansowana aerodynamika;
-- skrypty użytkownika;
-- multiplayer i authority model;
-- duża kampania.
-
-
-## Phase 1D.3D — Assembly-Centric Flight Lifecycle
-Runtime flight state now treats RuntimeAssembly as the authoritative launched vehicle. `primaryBody` is explicit; `STATE.flight.body` remains only a compatibility alias for the current single-rigid-island craft. New `game.flight-session` and `game.flight-integrity` seams document and test the lifecycle/integrity boundary for the future Rigid Island Compiler.
+Nie implementować jeszcze finalnego node editora, kabli, wireless, PID UX, skryptowania ani multiplayera.

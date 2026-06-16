@@ -1,76 +1,133 @@
-# Validation Report — Foundation Phase 1D.3C
+# Validation Report — Foundation Phase 1D.3E
 
-## Źródło prawdy
+## Źródło prawdy i baseline
 
-Praca została wykonana na pełnym ZIP-ie Phase 1D.3B.1, zgodnym z najnowszym commitem `main` tej fazy. Repozytorium GitHub nie zostało zmodyfikowane przez agenta.
+- Dostarczony ZIP został rozpakowany do nowego katalogu roboczego.
+- Zweryfikowana wersja baseline: `0.6.3-foundation.1d3d`.
+- Zweryfikowany release ID: `foundation-1d3d-assembly-flight-lifecycle`.
+- Repozytorium `Jozzpoly/voxel-aeronautics-workshop`, branch `main`: commit `5cf38926623a17290ff2c6caad24d1c36fe77ad3` — `Phase 1D.3D assembly-centric flight lifecycle`.
+- ZIP pozostał źródłem prawdy; pliki repozytorium nie zastąpiły jego zawartości.
+- Agent nie wykonał commita ani pushu do repozytorium użytkownika.
 
-## Bazowa walidacja
+## Baseline validation
 
-Przed zmianami:
+Przed zmianami wykonano:
 
 ```text
-python tests/run_all.py
-All core tests passed.
+python -u tests/run_all.py
+python tools/build_release.py
+python tools/verify_release.py
 ```
 
-## Walidacja po zmianach
+Wynik:
 
-- pełne `python tests/run_all.py`: PASS;
-- syntax check wszystkich źródeł: PASS;
-- static architecture checks: PASS;
-- real Cannon parity: PASS;
-- joint capability spike: PASS;
-- 12 000 joint soak steps: PASS;
-- retry-safe assembly disposal: PASS;
-- release identity parity: PASS;
-- documentation contract i obecność direction docs w ZIP-ie: PASS;
+- wszystkie kroki runnera: PASS, 19,83 s;
+- baseline build: PASS;
+- baseline verify/source parity: PASS;
+- baseline release identity: `0.6.3-foundation.1d3d` / `foundation-1d3d-assembly-flight-lifecycle`.
+
+## Walidacja zmienionego drzewa roboczego
+
+```text
+python -u tests/run_all.py
+python tools/build_release.py
+python tools/verify_release.py
+git diff --check
+```
+
+Wynik:
+
+- pełny runner: PASS, 19,72 s;
+- build: PASS;
+- verify: PASS;
+- manifest: 40 wejść;
+- embedded sources: 35;
+- single-file source parity: PASS;
 - deterministic release build: PASS;
-- embedded/ZIP source parity: PASS;
-- pełna bateria po ponownym rozpakowaniu finalnego ZIP-a: PASS;
-- patch zastosowany do czystego baseline 1D.3B.1 i pełna bateria: PASS;
-- `git diff --check`: PASS;
-- startup smoke: PASS.
+- `git diff --check`: PASS.
 
-## Manualny code review
+## Walidacja rozpakowanego ZIP-a
 
-Sprawdzono:
+Pełny ZIP źródeł został rozpakowany do nowego katalogu. Na rozpakowanej zawartości wykonano ponownie:
 
-- granicę planner/builder/Physics Port/backend;
-- brak natywnych jointów w game shell;
-- oddzielenie mechanical plan od runtime command;
-- walidację axes/pivots/world membership;
-- rollback po create/add/remove failures;
-- constraint-before-body cleanup;
-- zachowanie map po transient failure;
-- ograniczenia soft limits i angle unwrapping;
-- pozostałe założenia single-body w `STATE.flight`;
-- manifest źródeł, wersje, dokumentację i roadmapę;
-- cały kierunek sublevel/device/signal/control przed Phase 1E;
-- kanoniczną wizję produktu, anti-goals i zgodność pamięci z roadmapą.
+```text
+python -u tests/run_all.py
+python tools/build_release.py
+python tools/verify_release.py
+```
 
-## Znalezisko wydaniowe
+Wynik:
 
-Review wykrył, że package, build i manifest miały wersję 1D.3C, podczas gdy runtime config oraz HTML nadal identyfikowały 1D.3B.1. Wersje zostały ujednolicone, a regresję blokuje `tests/test_release_identity.py`.
+- pełny runner: PASS, 20,52 s;
+- build: PASS;
+- verify/source parity: PASS;
+- startup smoke: PASS;
+- deterministic build i manifest hashes: PASS.
 
-## Foundation readiness
+## Walidacja patcha względem dokładnego baseline'u
 
-Nie znaleziono nierozwiązanego release blockera. Projekt może kontynuować bez restartu. Przed finalnym systemem kabli/programowania wymagane są jednak bramki opisane w `FOUNDATION_READINESS_REVIEW.md`:
+1. Czysty Phase 1D.3D zapisano jako lokalny commit walidacyjny.
+2. Wygenerowano binary-capable patch bez generated `dist/` i `release/`.
+3. Patch sprawdzono przez `git apply --check`.
+4. Patch zastosowano do świeżej kopii baseline'u.
+5. Wygenerowane katalogi usunięto i odbudowano ze źródeł.
+6. Uruchomiono pełny runner, build i verify.
+7. Porównano source tree z projektem roboczym, wyłączając generated/cache/git.
 
-1. assembly-centric flight lifecycle;
-2. rigid-island/mechanical compiler;
-3. assembly-space/sublevel identity;
-4. typed device ports;
-5. deterministic control runtime.
+Wynik:
 
-## Świadome ograniczenia
+- `git apply --check`: PASS;
+- pełny runner po patchu: PASS, 20,24 s;
+- build po patchu: PASS;
+- verify/source parity po patchu: PASS;
+- source-tree parity: PASS;
+- patch diff: 46 plików, 3017 insertions, 1896 deletions przed finalnym dokumentacyjnym zapisem tego raportu.
 
-- graczowy planner nadal jedno-body;
-- brak player-facing joint blocks;
-- limity hinge są miękkie;
-- brak browser/WebGL CI;
-- one-collider-per-voxel i limit 480;
-- produkcyjne biblioteki z CDN.
+## Krytyczne scenariusze potwierdzone
 
+- single-body sterowanie i misje bez regresji;
+- 0/1/2/wiele body na poziomie lifecycle plan/builder/session;
+- deterministyczny primary body;
+- visual root per body;
+- exact collider/part/body ownership;
+- brak wrong-body damage fallback;
+- backend-first collider mutation;
+- per-body recenter i mass properties;
+- constraint → listener/collider → body → visual cleanup;
+- wielokrotny dispose;
+- częściowa awaria cleanupu i skuteczny retry;
+- atomic multi-body build rollback;
+- start → stop → start;
+- active `fullscreenchange` i `pagehide`;
+- real Cannon free flight, contacts, point velocity i payload podczas obrotu;
+- hinge free, motor, servo, friction, soft limits i `collideConnected`;
+- 12 000-step headless soak i 12 000-step real-Cannon/joint soak;
+- 50 lifecycle cycles;
+- startup smoke;
+- source inventory, release identity, deterministic build i source parity.
 
-## Phase 1D.3D — Assembly-Centric Flight Lifecycle
-Runtime flight state now treats RuntimeAssembly as the authoritative launched vehicle. `primaryBody` is explicit; `STATE.flight.body` remains only a compatibility alias for the current single-rigid-island craft. New `game.flight-session` and `game.flight-integrity` seams document and test the lifecycle/integrity boundary for the future Rigid Island Compiler.
+## Drugi review
+
+Po pierwszej implementacji cały diff został przejrzany ponownie. Wykryto i naprawiono między innymi:
+
+- integrity denominator obejmujący niewłaściwą wyspę;
+- niedokładną kolejność cleanupu;
+- native body reads w debris sync;
+- zbyt duży debris adapter w composition root;
+- presentation hook mogący przerwać zatwierdzoną mutację;
+- nieatomową rejestrację visual roots;
+- brak aktywnego-flight pagehide smoke;
+- kruche markery tekstowe testów;
+- historyczne dokumenty udające stan bieżący.
+
+Szczegóły: `CODE_REVIEW_REPORT.md` i `FOUNDATION_CONVERGENCE_REVIEW.md`.
+
+## Release verdict
+
+- Gate A: **CLOSED**.
+- Najdalsza w pełni ukończona bramka: **Phase 1D.3E / Gate A**.
+- Gate B–E: **nie rozpoczęte**.
+- Nie ma nieuruchomionych testów z `tests/run_all.py`.
+- Nie znaleziono release blockera dla dostawy Gate A.
+
+Po zapisaniu tego raportu finalne artefakty są ponownie budowane z kanonicznego drzewa, a dostawa zawiera zewnętrzny plik checksum i końcowy wynik walidacji artefaktów.

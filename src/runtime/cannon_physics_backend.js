@@ -67,6 +67,24 @@
         return body;
       }
 
+      function getBodyTransform(body) {
+        if (!body) throw new TypeError('Body is required.');
+        return Object.freeze({
+          position: PhysicsPort.normalizeVec3(body.position),
+          quaternion: PhysicsPort.normalizeQuaternion(body.quaternion)
+        });
+      }
+
+      function getBodyLinearVelocity(body) {
+        if (!body) throw new TypeError('Body is required.');
+        return PhysicsPort.normalizeVec3(body.velocity);
+      }
+
+      function getBodyAngularVelocity(body) {
+        if (!body) throw new TypeError('Body is required.');
+        return PhysicsPort.normalizeVec3(body.angularVelocity);
+      }
+
       function createBody(value = {}) {
         const descriptor = PhysicsPort.normalizeBodyDescriptor(value);
         const body = new CANNON.Body({
@@ -508,6 +526,13 @@
         return body.pointToWorldFrame(vec3(point));
       }
 
+      function pointToLocalFrame(body, point) {
+        if (!body) throw new TypeError('Body is required.');
+        const relative = vec3(point);
+        relative.vsub(body.position, relative);
+        return body.vectorToLocalFrame(relative);
+      }
+
       function getPointVelocity(body, localPoint) {
         if (!body) throw new TypeError('Body is required.');
         const worldOffset = vectorToWorldFrame(body, localPoint);
@@ -532,6 +557,9 @@
         removeCollider,
         shiftColliderOffsets,
         vec3,
+        getBodyTransform,
+        getBodyLinearVelocity,
+        getBodyAngularVelocity,
         setBodyTransform,
         setBodyVelocity,
         setBodyMass,
@@ -543,6 +571,7 @@
         vectorToWorldFrame,
         vectorToLocalFrame,
         pointToWorldFrame,
+        pointToLocalFrame,
         getPointVelocity,
         createConstraint,
         addConstraint,

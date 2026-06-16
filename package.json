@@ -1,8 +1,8 @@
 {
   "name": "voxel-aeronautics-workshop",
-  "version": "0.6.3-foundation.1d3d",
+  "version": "0.6.4-foundation.1d3e",
   "private": true,
-  "description": "Desktop voxel airship engineering sandbox — rebindable input, persistent block identities, production assembly building, automated real-Cannon parity, deterministic headless physics, strict runtime contracts, an explicitly composed modular game shell, a minimal hinge-only Physics Port constraint contract, real-Cannon motor/servo validation, guided controls, and multi-pad missions.",
+  "description": "Desktop voxel engineering sandbox with RuntimeAssembly-owned flight lifecycle, exact per-body integrity ownership, per-body visuals, retry-safe cleanup, real-Cannon hinge validation, deterministic headless physics, and a modular desktop game shell.",
   "scripts": {
     "test": "python tests/run_all.py",
     "build": "python tools/build_release.py",

@@ -19,6 +19,7 @@ EXPECTED_MODULES = {
     'mission_controller.js': 'game.mission-controller',
     'flight_session.js': 'game.flight-session',
     'flight_integrity.js': 'game.flight-integrity',
+    'debris_runtime.js': 'game.debris-runtime',
 }
 
 paths = {path.name: path for path in GAME_PATHS if path.parent == GAME_MODULE_DIR}
@@ -64,15 +65,30 @@ for leaked_private in ('autosaveTimer', 'workspaceSaveTimer', 'keyboardLockActiv
 assert "document.addEventListener('fullscreenchange', handleFullscreenChange)" in main
 assert 'flushPendingAutosave();' in main and 'flushPendingSave();' in main
 
-assert 'AssemblyBuilder.build({' in main
+assert 'AssemblyBuilder.build({' not in main, 'composition root must not construct RuntimeAssembly directly'
 build_flight_body = function_source('buildFlightBody')
-assert 'AssemblyBuilder.build({' in build_flight_body
+assert 'flightSession.start({' in build_flight_body
+assert 'AssemblyBuilder.build({' not in build_flight_body
 assert 'Physics.createBody({' not in build_flight_body
 assert 'Physics.addBoxCollider(' not in build_flight_body
+assert 'Physics.createBody({' not in main, 'composition root must delegate debris allocation to DebrisRuntime'
+assert 'Physics.removeBody(' not in main, 'composition root must delegate debris cleanup to DebrisRuntime'
+flight_session_source = paths['flight_session.js'].read_text(encoding='utf-8')
+assert flight_session_source.count('AssemblyBuilder.build({') == 1
+assert 'state.flight.assembly = nextRuntime' in flight_session_source
+assert 'cleanupPending' in flight_session_source and 'retry stop()' in flight_session_source
+flight_integrity_source = paths['flight_integrity.js'].read_text(encoding='utf-8')
+assert 'primary-rigid-island-only' in flight_integrity_source
+assert 'Backend rejected collider removal' in flight_integrity_source
+assert 'state.flight.primaryBody || state.flight.body' not in flight_integrity_source
+assert 'STATE.flight.body' not in main, 'game.js must use FlightSession rather than the deprecated native-body alias'
+assert 'STATE.flight.body' not in paths['mission_controller.js'].read_text(encoding='utf-8')
+assert 'STATE.flight.bodyById' not in main and 'STATE.flight.bodies' not in main
 for path in GAME_MODULE_DIR.glob('*.js'):
-    if path.name == 'scene_environment.js':
+    if path.name in {'scene_environment.js', 'flight_session.js', 'debris_runtime.js'}:
         continue
     source = path.read_text(encoding='utf-8')
+    assert 'AssemblyBuilder.build({' not in source, f'{path.name} bypasses FlightSession lifecycle ownership'
     assert 'Physics.createBody({' not in source, f'{path.name} allocates physics bodies outside permitted runtime ownership'
     assert 'Physics.addBoxCollider(' not in source, f'{path.name} allocates colliders outside permitted runtime ownership'
 

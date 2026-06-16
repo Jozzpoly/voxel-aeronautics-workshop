@@ -10,10 +10,11 @@
     const REQUIRED_BACKEND_METHODS = Object.freeze([
       'createWorld', 'createBody', 'addBody', 'removeBody', 'step',
       'addBoxCollider', 'addPlaneCollider', 'removeCollider', 'shiftColliderOffsets',
-      'vec3', 'setBodyTransform', 'setBodyVelocity', 'setBodyMass', 'setBodyMassProperties',
+      'vec3', 'getBodyTransform', 'getBodyLinearVelocity', 'getBodyAngularVelocity',
+      'setBodyTransform', 'setBodyVelocity', 'setBodyMass', 'setBodyMassProperties',
       'markBodyDirty', 'addCollisionListener',
       'applyForce', 'addTorque',
-      'vectorToWorldFrame', 'vectorToLocalFrame', 'pointToWorldFrame', 'getPointVelocity',
+      'vectorToWorldFrame', 'vectorToLocalFrame', 'pointToWorldFrame', 'pointToLocalFrame', 'getPointVelocity',
       'createConstraint', 'addConstraint', 'removeConstraint',
       'setConstraintControl', 'getConstraintState'
     ]);

@@ -1,103 +1,109 @@
-# Test Report — Foundation Phase 1D.3C
+# Test Report — Foundation Phase 1D.3E
 
-## Komenda
+## Baseline
+
+Na czystym Phase 1D.3D uruchomiono:
 
 ```text
-python tests/run_all.py
+python -u tests/run_all.py
 ```
 
-## Wynik końcowy
+Wynik: `All core tests passed.` — 19,83 s. Baseline build i verify również zakończyły się kodem 0.
+
+## Końcowa bateria źródeł roboczych
+
+```text
+python -u tests/run_all.py
+```
+
+Wynik:
 
 ```text
 All core tests passed.
+ELAPSED=19.72 EXIT=0
 ```
 
-## Nowe pokrycie 1D.3C
+Runner wykonał każdy krok sekwencyjnie w jednej sesji; nie było timeoutu ani pominiętych poleceń.
 
-### Hinge capability na prawdziwym Cannon.js 0.6.2
+## Nowe pokrycie Gate A
 
-- dwa body z oddzielnymi mass properties;
-- free hinge i pivot drift;
-- motor target `1.5 rad/s`, measured `1.5 rad/s`;
-- servo target `-0.5 rad`, measured `-0.5 rad`;
-- passive friction;
+### FlightSession
+
+- odrzucenie sesji 0-body;
+- 1, 2 i wiele body przez neutralny plan/runtime;
+- deterministyczna primary-body policy niezależna od input order;
+- osobny visual root i transform każdego body;
+- exact part/collider ownership;
+- constraint-before-listener/collider-before-body-before-visual cleanup;
+- wielokrotny `dispose()`;
+- awaria cleanupu i skuteczny retry bez utraty handles;
+- start → stop → start bez starego assembly.
+
+### FlightIntegrity
+
+- exact part/body ownership i brak destructive fallbacku;
+- wrong-body damage rejection;
+- backend-first collider removal;
+- zachowanie gameplay maps po odrzuconej mutacji backendu;
+- per-body mass properties i recenter;
+- primary-body integrity denominator;
+- payload ownership/damage/detach;
+- debris lifecycle;
+- isolation presentation-hook failure.
+
+### DebrisRuntime
+
+- neutralna synchronizacja transformu;
+- jawna collision policy;
+- staged retry-safe body/visual cleanup;
+- allocation rollback po błędzie scene registration.
+
+### Runtime/Physics Port
+
+- neutral body transform;
+- linear/angular velocity;
+- local/world point round-trip;
+- deterministic body iteration;
+- exact ownership wrappers.
+
+### Game shell i lifecycle
+
+- brak produkcyjnego `AssemblyBuilder.build` poza FlightSession;
+- brak aktywnego `STATE.flight.body` consumer w `game.js` i mission controllerze;
+- per-body visual composition;
+- active-flight `fullscreenchange` pozostawia lot;
+- active-flight `pagehide` wykonuje cleanup i wraca do BUILD;
+- startup smoke: 160 ID, 544 elementy, 32 moduły, 35 źródeł.
+
+## Zachowane real-Cannon i foundation coverage
+
+- Cannon.js 0.6.2 free fall, torque, rotated inertia, contacts;
+- payload detach/recenter podczas obrotu;
+- 12 000 kroków headless soak i 12 000 kroków real-Cannon soak;
+- hinge free/motor/servo/passive friction;
+- motor target/measured `1.5 rad/s`;
+- servo target/measured `-0.5 rad`;
 - soft limits `[-0.3, 0.3]`, observed `[-0.317613, 0.316210]`;
-- `collideConnected=false`: 0 kontaktów;
-- `collideConnected=true`: kontakty potwierdzone;
-- 12 000 kroków soak;
-- max free pivot drift `0.004689`;
-- max soak pivot drift `0.076684`;
-- finite body state.
-
-### Lifecycle i kontrakty
-
-- backend capability refusal przed alokacją body;
-- invalid pivot/axis preflight i rollback;
-- world membership preflight;
-- synthetic joint construction failure bez wycieku;
-- constraint removal backend-first/state-second;
-- retry po `false`;
-- body removal blocked przez aktywny constraint;
-- retry-safe full assembly disposal z `cleanupPending`;
-- mechanical plan i signal links nie są mutowane przez runtime control;
-- natywny `CANNON.HingeConstraint` pozostaje wyłącznie w backendzie.
-
-### Dokumentacja jako testowany kontrakt
-
-`tests/test_documentation_contract.py` wymaga obecności i wzajemnej zgodności:
-
-- `PROJECT_VISION.md`;
-- foundation readiness review i research systemu programowania;
-- aktualnej fazy 1D.3C i następnej bramki 1D.3D;
-- ADR 0027/0028;
-- release/delivery workflow.
-
-Test release ZIP wymaga także spakowania nowych dokumentów i testów, więc nie mogą zniknąć z dostawy mimo zielonego runtime.
-
-### Release identity
-
-Nowy test wymaga zgodności:
-
-```text
-package.json version
-= tools/build_release.py APP_VERSION
-= SOURCE_MANIFEST.json appVersion
-= foundation.config APP_VERSION
-```
-
-oraz analogicznej zgodności `RELEASE_ID`. Test wykrył i zamknął niespójność znalezioną podczas końcowego review.
-
-## Zachowane pokrycie
-
-- blueprint v3-v10 migration i future-version rejection;
-- CraftModel atomicity/history/stress;
-- compiler readiness/cache/work cap;
-- mass properties i rotated inertia;
-- deterministic headless free flight;
-- real Cannon free fall, torque, contacts, payload/detach/recenter;
-- 100/500/1000/2500 collider benchmark;
+- `collideConnected=false`: 0 kontaktów; `true`: 4 kontakty;
+- maximum free pivot drift `0.004689`;
+- maximum soak pivot drift `0.076684`;
 - 50 lifecycle cycles;
-- six-axis/rebindable input i Flight Focus;
-- mission, landing, damage, debris i structural regressions;
-- game shell module ownership i lifecycle;
-- deterministic ZIP/single HTML/source parity;
-- startup smoke z `fullscreenchange` i `pagehide`.
+- CraftModel/CraftCompiler/history/input/missions/aerostatics regressions;
+- source parity, manifest hashes, release identity i deterministic build.
 
-## Niezależna walidacja dostawy
+## Benchmark informacyjny z bieżącego hosta
 
-- finalny ZIP rozpakowano do czystego katalogu i uruchomiono z niego pełne `tests/run_all.py`;
-- finalny patch zastosowano do czystego baseline 1D.3B.1 i ponownie uruchomiono pełną baterię;
-- oba scenariusze zakończyły się `All core tests passed.`;
-- patch przechodzi `git diff --check`.
+Real Cannon median step:
 
-## Ograniczenia testów
+| Collidery | Median build | Median step | p99 step |
+|---:|---:|---:|---:|
+| 100 | 3,019 ms | 0,0159 ms | 0,0298 ms |
+| 500 | 23,129 ms | 0,0525 ms | 0,0797 ms |
+| 1000 | 69,529 ms | 0,1037 ms | 0,1332 ms |
+| 2500 | 409,482 ms | 0,2600 ms | 0,4137 ms |
 
-- headless backend nie rozwiązuje kontaktów ani constraints;
-- brak automatycznego WebGL/GPU flight testu w prawdziwej przeglądarce;
-- performance values zależą od hosta i nie są twardym CI threshold;
-- soft limits nie są natywnymi hard stops;
-- gameplay planner nadal nie generuje jointów z blueprintu.
+Wartości zależą od hosta i nie są twardym progiem CI. Flight cap pozostaje 480.
 
+## Nieuruchomione testy
 
-## Phase 1D.3D — Assembly-Centric Flight Lifecycle
-Runtime flight state now treats RuntimeAssembly as the authoritative launched vehicle. `primaryBody` is explicit; `STATE.flight.body` remains only a compatibility alias for the current single-rigid-island craft. New `game.flight-session` and `game.flight-integrity` seams document and test the lifecycle/integrity boundary for the future Rigid Island Compiler.
+Brak. Wszystkie polecenia z `tests/run_all.py` zostały rzeczywiście uruchomione i zakończyły się kodem 0. Końcowa walidacja rozpakowanego ZIP-a i wersji odtworzonej z patcha jest opisana w `VALIDATION_REPORT.md`.

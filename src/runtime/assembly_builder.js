@@ -194,6 +194,121 @@
         if (cleanupPending) throw new Error('Runtime assembly cleanup is incomplete; retry dispose() before further use.');
       }
 
+      function runtimeBodyFor(bodyId) {
+        assertActive();
+        const runtimeBody = bodyById.get(String(bodyId));
+        if (!runtimeBody) throw new Error(`Unknown assembly body: ${String(bodyId)}`);
+        return runtimeBody;
+      }
+
+      function getBodyIds() {
+        assertActive();
+        return Object.freeze([...bodyById.keys()].sort());
+      }
+
+      function getBodyPlan(bodyId) {
+        return runtimeBodyFor(bodyId).plan;
+      }
+
+      function getBodyTransform(bodyId) {
+        return physics.getBodyTransform(runtimeBodyFor(bodyId).body);
+      }
+
+      function getBodyLinearVelocity(bodyId) {
+        return physics.getBodyLinearVelocity(runtimeBodyFor(bodyId).body);
+      }
+
+      function getBodyAngularVelocity(bodyId) {
+        return physics.getBodyAngularVelocity(runtimeBodyFor(bodyId).body);
+      }
+
+      function setBodyTransform(bodyId, transform) {
+        physics.setBodyTransform(runtimeBodyFor(bodyId).body, transform);
+        return getBodyTransform(bodyId);
+      }
+
+      function setBodyVelocity(bodyId, velocity) {
+        physics.setBodyVelocity(runtimeBodyFor(bodyId).body, velocity);
+        return Object.freeze({
+          linear: getBodyLinearVelocity(bodyId),
+          angular: getBodyAngularVelocity(bodyId)
+        });
+      }
+
+      function clearBodyMotion(bodyId) {
+        return setBodyVelocity(bodyId, {
+          linear: { x: 0, y: 0, z: 0 },
+          angular: { x: 0, y: 0, z: 0 }
+        });
+      }
+
+      function vectorToWorldFrame(bodyId, vector) {
+        return PhysicsPort.normalizeVec3(physics.vectorToWorldFrame(runtimeBodyFor(bodyId).body, vector));
+      }
+
+      function vectorToLocalFrame(bodyId, vector) {
+        return PhysicsPort.normalizeVec3(physics.vectorToLocalFrame(runtimeBodyFor(bodyId).body, vector));
+      }
+
+      function pointToWorldFrame(bodyId, point) {
+        return PhysicsPort.normalizeVec3(physics.pointToWorldFrame(runtimeBodyFor(bodyId).body, point));
+      }
+
+      function pointToLocalFrame(bodyId, point) {
+        return PhysicsPort.normalizeVec3(physics.pointToLocalFrame(runtimeBodyFor(bodyId).body, point));
+      }
+
+      function getBodyPointVelocity(bodyId, localPoint) {
+        return PhysicsPort.normalizeVec3(physics.getPointVelocity(runtimeBodyFor(bodyId).body, localPoint));
+      }
+
+      function applyBodyForce(bodyId, force, worldPoint) {
+        const body = runtimeBodyFor(bodyId).body;
+        physics.applyForce(body, force, worldPoint);
+      }
+
+      function addBodyTorque(bodyId, torque) {
+        physics.addTorque(runtimeBodyFor(bodyId).body, torque);
+      }
+
+      function ownsBody(body) {
+        if (!body || disposed) return false;
+        for (const entry of bodyById.values()) if (entry.body === body) return true;
+        return false;
+      }
+
+      function getBodyIdForBlock(blockId) {
+        assertActive();
+        return partByBlockId.get(String(blockId))?.plan?.bodyId || null;
+      }
+
+      function getPartDescriptor(blockId) {
+        assertActive();
+        return partByBlockId.get(String(blockId))?.plan || null;
+      }
+
+      function getColliderOwnershipByBlockId(blockId) {
+        assertActive();
+        const runtimeCollider = colliderByBlockId.get(String(blockId));
+        if (!runtimeCollider) return null;
+        return Object.freeze({
+          colliderId: runtimeCollider.plan.colliderId,
+          blockId: runtimeCollider.plan.blockId,
+          bodyId: runtimeCollider.bodyPlan.bodyId
+        });
+      }
+
+      function getColliderOwnership(colliderId) {
+        assertActive();
+        const runtimeCollider = colliderById.get(String(colliderId));
+        if (!runtimeCollider) return null;
+        return Object.freeze({
+          colliderId: runtimeCollider.plan.colliderId,
+          blockId: runtimeCollider.plan.blockId || null,
+          bodyId: runtimeCollider.bodyPlan.bodyId
+        });
+      }
+
       function removeCollider(colliderId) {
         assertActive();
         const runtimeCollider = colliderById.get(colliderId);
@@ -214,8 +329,7 @@
 
       function setBodyMassProperties(bodyId, massProperties) {
         assertActive();
-        const runtimeBody = bodyById.get(bodyId);
-        if (!runtimeBody) throw new Error(`Unknown assembly body: ${bodyId}`);
+        const runtimeBody = runtimeBodyFor(bodyId);
         const normalized = PhysicsPort.normalizeMassProperties(massProperties);
         if (normalized.mass > 0 && [normalized.inertiaDiagonal.x, normalized.inertiaDiagonal.y, normalized.inertiaDiagonal.z].some(value => value <= 0)) {
           throw new RangeError(`Dynamic body ${bodyId} requires positive inertia on every axis.`);
@@ -227,8 +341,7 @@
 
       function recenterBody(bodyId, shiftValue) {
         assertActive();
-        const runtimeBody = bodyById.get(bodyId);
-        if (!runtimeBody) throw new Error(`Unknown assembly body: ${bodyId}`);
+        const runtimeBody = runtimeBodyFor(bodyId);
         const shift = PhysicsPort.normalizeVec3(shiftValue);
         const body = runtimeBody.body;
         const worldPosition = physics.pointToWorldFrame(body, shift);
@@ -284,12 +397,8 @@
         cleanupPending = true;
         const errors = [];
 
-        const failedStops = [];
-        for (const stop of unsubscribe.splice(0).reverse()) {
-          try { stop(); } catch (error) { errors.push(error); failedStops.unshift(stop); }
-        }
-        unsubscribe.push(...failedStops);
-
+        // Mechanical ownership is released first. No body or collider may disappear while a
+        // constraint still references it.
         for (const [constraintId, runtimeConstraint] of [...constraintById.entries()].reverse()) {
           try {
             if (!disposeRuntimeConstraint(runtimeConstraint)) {
@@ -301,6 +410,30 @@
         }
 
         if (constraintById.size === 0) {
+          const failedStops = [];
+          for (const stop of unsubscribe.splice(0).reverse()) {
+            try {
+              const stopped = stop();
+              if (stopped === false) throw new Error('Collision listener cleanup was rejected.');
+            } catch (error) { errors.push(error); failedStops.unshift(stop); }
+          }
+          unsubscribe.push(...failedStops);
+
+          for (const [colliderId, runtimeCollider] of [...colliderById.entries()].reverse()) {
+            try {
+              const removed = physics.removeCollider(runtimeCollider.body, runtimeCollider.shape);
+              if (removed === false) {
+                errors.push(new Error(`Collider cleanup failed: ${colliderId}`));
+                continue;
+              }
+              runtimeCollider.removed = true;
+              colliderById.delete(colliderId);
+              if (runtimeCollider.plan.blockId) colliderByBlockId.delete(runtimeCollider.plan.blockId);
+            } catch (error) { errors.push(error); }
+          }
+        }
+
+        if (constraintById.size === 0 && unsubscribe.length === 0 && colliderById.size === 0) {
           if (world) {
             for (let index = addedBodies.length - 1; index >= 0; index -= 1) {
               const runtimeBody = addedBodies[index];
@@ -318,7 +451,8 @@
           }
         }
 
-        const complete = unsubscribe.length === 0 && constraintById.size === 0 && addedBodies.length === 0;
+        const complete = unsubscribe.length === 0 && constraintById.size === 0
+          && colliderById.size === 0 && addedBodies.length === 0;
         if (complete) {
           bodyById.clear();
           colliderById.clear();
@@ -353,6 +487,26 @@
         partByBlockId,
         constraintById,
         rootBody: null,
+        getBodyIds,
+        getBodyPlan,
+        getBodyTransform,
+        getBodyLinearVelocity,
+        getBodyAngularVelocity,
+        setBodyTransform,
+        setBodyVelocity,
+        clearBodyMotion,
+        vectorToWorldFrame,
+        vectorToLocalFrame,
+        pointToWorldFrame,
+        pointToLocalFrame,
+        getBodyPointVelocity,
+        applyBodyForce,
+        addBodyTorque,
+        ownsBody,
+        getBodyIdForBlock,
+        getPartDescriptor,
+        getColliderOwnership,
+        getColliderOwnershipByBlockId,
         removeCollider,
         removeColliderByBlockId,
         setBodyMassProperties,

@@ -48,7 +48,7 @@ assert.strictEqual(Catalog.getContractById('courier').payloadMass, 10);
 assert.strictEqual(Catalog.getContractById('missing'), null);
 assert(Catalog.knownContractIds().has('heavy_lift'));
 assert.strictEqual(Capabilities.physicsBackend, 'cannon');
-assert.strictEqual(Capabilities.physicsBoundary, 'phase-1d3-assembly-builder');
+assert.strictEqual(Capabilities.physicsBoundary, 'phase-1d3e-neutral-assembly-api');
 assert.strictEqual(Capabilities.runtimeAssembly, 'runtime-builder-v1');
 assert.strictEqual(Capabilities.headlessHarness, 'deterministic-free-flight-v1');
 assert.strictEqual(Capabilities.missionEvaluation, 'phase-1d2b-multi-pad-ground-state');

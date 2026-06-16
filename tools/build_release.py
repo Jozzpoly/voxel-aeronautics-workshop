@@ -8,12 +8,12 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE_ID = 'foundation-1d3d-assembly-flight-lifecycle'
-APP_VERSION = '0.6.3-foundation.1d3d'
-SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3D_Assembly_Lifecycle.html'
-ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3D_Assembly_Lifecycle.zip'
+RELEASE_ID = 'foundation-1d3e-gate-a-convergence'
+APP_VERSION = '0.6.4-foundation.1d3e'
+SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3E_Gate_A_Convergence.html'
+ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3E_Gate_A_Convergence.zip'
 MANIFEST_NAME = 'SOURCE_MANIFEST.json'
-ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_Phase_1D3D_ASSEMBLY_LIFECYCLE_READY_TO_PUSH'
+ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_Phase_1D3E_GATE_A_CONVERGENCE_READY_TO_PUSH'
 APP_SOURCES = (
     Path('src/foundation/kernel.js'),
     Path('src/foundation/config.js'),
@@ -47,6 +47,7 @@ APP_SOURCES = (
     Path('src/game/mission_controller.js'),
     Path('src/game/flight_session.js'),
     Path('src/game/flight_integrity.js'),
+    Path('src/game/debris_runtime.js'),
     Path('src/foundation/bootstrap.js'),
     Path('src/game.js'),
 )

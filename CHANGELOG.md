@@ -1,5 +1,32 @@
 # Changelog
 
+## Foundation Phase 1D.3E — Gate A Foundation Convergence
+
+- Made `game.flight-session` the sole production owner of launch, RuntimeAssembly publication, primary-body selection, transient resources and retry-safe stop/restart.
+- Made RuntimeAssembly the authoritative flight source of truth; legacy `STATE.flight.body`, `primaryBody`, `assemblyRuntime` and `group` remain deprecated same-source aliases only.
+- Added neutral body transform, velocity, frame-conversion, point-velocity, force and torque access through RuntimeAssembly/Physics Port instead of native Cannon reads in game modules.
+- Added deterministic body iteration and exact part/collider/body ownership lookups.
+- Replaced the global craft visual root with `visualRootByBodyId` and independent per-body synchronization.
+- Moved health, collision damage, detach, payload, recenter, per-body mass properties and debris lifecycle into `game.flight-integrity`.
+- Added `game.debris-runtime` as the isolated physical/visual debris adapter with allocation rollback and retry-safe disposal.
+- Removed destructive fallback to primary body; gameplay detach is explicitly restricted to `primary-rigid-island-only` until Gate B/C provide split ownership.
+- Enforced cleanup order constraint → listener/collider → body → visual → published-state clear, preserving retry handles after partial failure.
+- Routed HUD, camera and mission samples through deterministic primary-body policy and neutral data.
+- Added direct tests for 0/1/2/many-body lifecycle, per-body visuals, exact damage ownership, repeated dispose, partial cleanup retry, start → stop → start, active `pagehide`, debris rollback and neutral API parity.
+- Rewrote canonical architecture, roadmap, readiness, memory and review documents to distinguish completed Gate A from unimplemented Gate B–E.
+- Added ADR 0029–0032 for session truth/primary policy, cleanup ownership, per-body visuals and integrity ownership.
+- Version `0.6.4-foundation.1d3e`.
+- Release id `foundation-1d3e-gate-a-convergence`.
+
+## Foundation Phase 1D.3D — Assembly-Centric Flight Lifecycle Seams
+
+- Added initial `game.flight-session` and `game.flight-integrity` seams.
+- Published RuntimeAssembly and explicit primary body alongside compatibility state.
+- Began replacing direct single-body reads.
+- This phase did **not** close Gate A; lifecycle, integrity and global visual ownership still remained in `game.js` until Phase 1D.3E.
+- Version `0.6.3-foundation.1d3d`.
+- Release id `foundation-1d3d-assembly-flight-lifecycle`.
+
 ## Foundation Phase 1D.3C — Joint Capability & Foundation Readiness
 
 - Added a hinge-only Physics Port constraint contract and backend capability negotiation.

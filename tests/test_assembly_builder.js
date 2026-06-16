@@ -79,6 +79,26 @@ assert.strictEqual(runtime.rootBody.position.x, 10);
 assert.strictEqual(runtime.bodyById.get('body:rotor').body.position.x, 12);
 assert.strictEqual(runtime.rootBody.userData.custom, true);
 assert.strictEqual(runtime.rootBody.userData.assemblyBodyId, 'body:root', 'Reserved assembly metadata cannot be overwritten.');
+assert.deepStrictEqual(runtime.getBodyIds(), ['body:root', 'body:rotor']);
+assert(Object.isFrozen(runtime.getBodyIds()));
+assert.strictEqual(runtime.getBodyPlan('body:rotor').bodyId, 'body:rotor');
+assert.strictEqual(runtime.getBodyIdForBlock('rotor'), 'body:rotor');
+assert.strictEqual(runtime.getPartDescriptor('rotor').bodyId, 'body:rotor');
+assert.deepStrictEqual(runtime.getColliderOwnershipByBlockId('rotor'), {
+  colliderId: 'collider:rotor', blockId: 'rotor', bodyId: 'body:rotor'
+});
+assert.deepStrictEqual(runtime.getColliderOwnership('collider:rotor'), {
+  colliderId: 'collider:rotor', blockId: 'rotor', bodyId: 'body:rotor'
+});
+assert.deepStrictEqual(runtime.getBodyTransform('body:root').position, { x: 10, y: 4, z: 0 });
+runtime.setBodyVelocity('body:root', { linear: { x: 2, y: 3, z: 4 }, angular: { x: 0.1, y: 0.2, z: 0.3 } });
+assert.deepStrictEqual(runtime.getBodyLinearVelocity('body:root'), { x: 2, y: 3, z: 4 });
+assert.deepStrictEqual(runtime.getBodyAngularVelocity('body:root'), { x: 0.1, y: 0.2, z: 0.3 });
+const transformedPoint = runtime.pointToWorldFrame('body:root', { x: 1, y: 2, z: 3 });
+assert.deepStrictEqual(runtime.pointToLocalFrame('body:root', transformedPoint), { x: 1, y: 2, z: 3 });
+runtime.clearBodyMotion('body:root');
+assert.deepStrictEqual(runtime.getBodyLinearVelocity('body:root'), { x: 0, y: 0, z: 0 });
+assert.deepStrictEqual(runtime.getBodyAngularVelocity('body:root'), { x: 0, y: 0, z: 0 });
 
 const rotorBody = runtime.bodyById.get('body:rotor').body;
 Physics.setBodyVelocity(rotorBody, { linear: { x: 0, y: 0, z: 0 }, angular: { x: 0, y: 0, z: 2 } });
@@ -167,5 +187,7 @@ console.log(JSON.stringify({
   preallocationValidation: 'ok',
   reservedMetadata: 'ok',
   atomicColliderRemoval: 'ok',
-  rollbackErrorPreservation: 'ok'
+  rollbackErrorPreservation: 'ok',
+  neutralAssemblyQueries: 'ok',
+  deterministicBodyIteration: 'ok'
 }, null, 2));

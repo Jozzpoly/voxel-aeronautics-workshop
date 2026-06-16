@@ -63,6 +63,21 @@ assert.strictEqual(body.type, global.CANNON.Body.STATIC);
 Physics.setBodyMassProperties(body, { mass: 12, inertiaDiagonal: { x: 2, y: 3, z: 4 } });
 assert.strictEqual(body.type, global.CANNON.Body.DYNAMIC);
 
+const initialTransform = Physics.getBodyTransform(body);
+assert(Object.isFrozen(initialTransform));
+assert(Object.isFrozen(initialTransform.position));
+assert(Object.isFrozen(initialTransform.quaternion));
+assert.deepStrictEqual(initialTransform.position, { x: 1, y: 2, z: 3 });
+assert.deepStrictEqual(initialTransform.quaternion, { x: 0, y: 0, z: 0, w: 1 });
+Physics.setBodyVelocity(body, { linear: { x: 4, y: -2, z: 1 }, angular: { x: 0.25, y: 0.5, z: -0.75 } });
+assert.deepStrictEqual(Physics.getBodyLinearVelocity(body), { x: 4, y: -2, z: 1 });
+assert.deepStrictEqual(Physics.getBodyAngularVelocity(body), { x: 0.25, y: 0.5, z: -0.75 });
+const worldPoint = Physics.pointToWorldFrame(body, { x: 2, y: -1, z: 0.5 });
+const localPoint = Physics.pointToLocalFrame(body, worldPoint);
+assert(Math.abs(localPoint.x - 2) < 1e-9);
+assert(Math.abs(localPoint.y + 1) < 1e-9);
+assert(Math.abs(localPoint.z - 0.5) < 1e-9);
+
 const shape = Physics.addBoxCollider(body, {
   halfExtents: { x: 2, y: 1, z: 0.5 },
   offset: { x: 3, y: 0, z: -1 }
@@ -115,5 +130,7 @@ console.log(JSON.stringify({
   colliderMutation: 'ok',
   normalizedCollisionEvents: 'ok',
   explicitMassProperties: 'ok',
-  bodyTypeTransitions: 'ok'
+  bodyTypeTransitions: 'ok',
+  neutralBodySampling: 'ok',
+  localWorldRoundTrip: 'ok'
 }, null, 2));

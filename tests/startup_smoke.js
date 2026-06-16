@@ -100,10 +100,12 @@ try{
  dispatchWindowEvent('keydown',{key:',',code:'Comma',ctrlKey:true});
  assert(elements.get('ui-balloon-power').textContent==='70%','Ctrl + Comma must adjust Balloon power while descending.');
  dispatchWindowEvent('keyup',{key:'Control',code:'ControlLeft'});
+ document.dispatchEvent({type:'fullscreenchange'});
+ assert(elements.get('ui-mode').textContent==='FLIGHT','Fullscreen transitions must not replace or lose the active flight session.');
+ dispatchWindowEvent('pagehide');
+ assert(elements.get('ui-mode').textContent==='BUILD','Pagehide must close the active flight session without leaving a stale flight mode.');
  elements.get('btn-build').click();
  elements.get('btn-clear').click();
  assert(elements.get('ui-blocks').textContent==='0','New blueprint must return to a truly empty workspace.');
- document.dispatchEvent({type:'fullscreenchange'});
- dispatchWindowEvent('pagehide');
  console.log('STARTUP_OK', {ids:ids.length,elements:all.length,modules:global.VAW.inspect().initialized.length,sources:sourceFiles.length,interaction:'ok',lifecycle:'ok'});
 }catch(e){console.error(e.stack||e);process.exit(1)}

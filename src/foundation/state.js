@@ -19,11 +19,15 @@
             rootMeshes: []
           },
           flight: {
-            body: null,
-            bodies: [],
-            bodyById: new Map(),
+            assembly: null,
             assemblyPlan: null,
+            primaryBodyId: null,
+            visualRootByBodyId: new Map(),
+            cleanupPending: false,
+            // Deprecated compatibility aliases. RuntimeAssembly is the only source of truth.
             assemblyRuntime: null,
+            primaryBody: null,
+            body: null,
             group: null,
             functionalBlocks: [],
             fuel: 0,

@@ -14,6 +14,7 @@
     const MissionController = window.VAW.require('game.mission-controller');
     const FlightSession = window.VAW.require('game.flight-session');
     const FlightIntegrity = window.VAW.require('game.flight-integrity');
+    const DebrisRuntime = window.VAW.require('game.debris-runtime');
 
     const { Config, Catalog, Orientation, Blueprint, ControlFrame, MassProperties, CraftCompiler, RuntimeAssembly, AssemblyBuilder, InputProfile, UIWorkspace, MissionEvaluator, Aerostatics, FlightControl, State, Physics } = FOUNDATION;
     const {
@@ -121,24 +122,28 @@
       return lift;
     }
 
-    function primaryFlightBody() {
-      return STATE.flight.primaryBody || STATE.flight.assemblyRuntime?.rootBody || STATE.flight.body || null;
+    function primaryFlightBodyId() {
+      return flightSession.isActive() ? flightSession.primaryBodyId() : null;
     }
 
-    function runtimeBodyForPart(part) {
-      if (!part) return primaryFlightBody();
-      if (part.bodyId && STATE.flight.bodyById?.has(part.bodyId)) return STATE.flight.bodyById.get(part.bodyId);
-      const runtimePart = part.blockId ? STATE.flight.assemblyRuntime?.partByBlockId?.get(part.blockId) : null;
-      return runtimePart?.body || primaryFlightBody();
+    function primaryFlightTransform() {
+      const bodyId = primaryFlightBodyId();
+      return bodyId ? flightSession.getBodyTransform(bodyId) : null;
+    }
+
+    function primaryFlightVelocity() {
+      const bodyId = primaryFlightBodyId();
+      return bodyId ? flightSession.getBodyLinearVelocity(bodyId) : null;
     }
 
     function currentAerostaticAltitude() {
-      const body = primaryFlightBody();
-      return body ? Math.max(0, body.position.y - TEST_RANGE.groundY) : 0;
+      const transform = primaryFlightTransform();
+      return transform ? Math.max(0, transform.position.y - TEST_RANGE.groundY) : 0;
     }
 
+
     function verticalSupportSample() {
-      const flight = STATE.mode === 'FLIGHT' && primaryFlightBody();
+      const flight = STATE.mode === 'FLIGHT' && primaryFlightBodyId();
       const altitude = flight ? currentAerostaticAltitude() : 0;
       let weight = 0;
       let maxSeaLevelLift = 0;
@@ -284,8 +289,10 @@
 
     function updateFlightFeedback() {
       syncPowerControlReadouts();
-      const body = primaryFlightBody();
-      const speed = body ? Math.sqrt(body.velocity.x ** 2 + body.velocity.y ** 2 + body.velocity.z ** 2) : 0;
+      const bodyId = primaryFlightBodyId();
+      const velocity = bodyId ? flightSession.getBodyLinearVelocity(bodyId) : null;
+      const transform = bodyId ? flightSession.getBodyTransform(bodyId) : null;
+      const speed = velocity ? Math.hypot(velocity.x, velocity.y, velocity.z) : 0;
       const pitch = STATE.controlIntent.pitch || 0;
       const yaw = STATE.controlIntent.yaw || 0;
       const roll = STATE.controlIntent.roll || 0;
@@ -294,8 +301,8 @@
       const liftCommand = STATE.controlIntent.lift || 0;
 
       let tiltDegrees = 0;
-      if (body) {
-        const attitude = new THREE.Quaternion(body.quaternion.x, body.quaternion.y, body.quaternion.z, body.quaternion.w);
+      if (transform) {
+        const attitude = new THREE.Quaternion(transform.quaternion.x, transform.quaternion.y, transform.quaternion.z, transform.quaternion.w);
         const worldUp = new THREE.Vector3(0, 1, 0);
         const craftUp = worldUp.clone().applyQuaternion(attitude).normalize();
         tiltDegrees = THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(craftUp.dot(worldUp), -1, 1)));
@@ -317,13 +324,13 @@
       };
 
       setText('ui-speed', `${speed.toFixed(1)} m/s`);
-      setText('ui-altitude', body ? `${currentCraftAltitude().toFixed(1)} m` : '0.0 m');
-      setText('ui-vertical-speed', body ? `${body.velocity.y >= 0 ? '+' : ''}${body.velocity.y.toFixed(1)} m/s` : '0.0 m/s');
+      setText('ui-altitude', bodyId ? `${currentCraftAltitude().toFixed(1)} m` : '0.0 m');
+      setText('ui-vertical-speed', velocity ? `${velocity.y >= 0 ? '+' : ''}${velocity.y.toFixed(1)} m/s` : '0.0 m/s');
       const loads = STATE.flight.lastLoads || { lift: 0, drag: 0, thrust: 0, impact: 0 };
       setText('ui-loads', `${Math.round(loads.thrust)} / ${Math.round(loads.lift)} / ${Math.round(loads.drag)} N`);
       const payloadText = STATE.flight.payload?.attached ? ` • cargo ${Math.round(payloadHealthFraction() * 100)}%` : (STATE.flight.payload ? ' • cargo lost' : '');
       setText('ui-damage-status', STATE.mode === 'FLIGHT' ? `${STATE.flight.lostParts} lost • ${STATE.flight.leakingFuelRate.toFixed(2)}/s leak${payloadText}` : 'No active damage');
-      if (body && STATE.mode === 'FLIGHT') {
+      if (bodyId && STATE.mode === 'FLIGHT') {
         setText('ui-fuel', `${Math.max(0, Math.round(STATE.flight.fuel))} / ${Math.max(0, Math.round(STATE.flight.fuelMax))}`);
       }
       setText('ui-pitch-value', `${Math.round(pitch * 100)}%`);
@@ -708,26 +715,66 @@
       });
     }
 
+    const flightSession = FlightSession.create({
+      state: STATE,
+      RuntimeAssembly,
+      AssemblyBuilder,
+      Physics,
+      world,
+      removeVisualRoot(root) {
+        scene.remove(root);
+        disposeObjectTree(root);
+        return true;
+      }
+    });
+
+    const debrisRuntime = DebrisRuntime.create({
+      Physics, world, scene, disposeObjectTree,
+      maxLifetime: PHYSICS.debrisLifetime,
+      collisionGroup: COLLISION_GROUP.debris,
+      collisionMask: COLLISION_GROUP.world | COLLISION_GROUP.craft
+    });
+
+    const flightIntegrity = FlightIntegrity.create({
+      state: STATE,
+      flightSession,
+      MassProperties,
+      makeKey,
+      neighborDirections: NEIGHBOR_DIRECTIONS,
+      clamp: THREE.MathUtils.clamp,
+      hooks: {
+        onDiagnostic({ hook, error }) { console.error(`FlightIntegrity hook failed: ${hook}`, error); },
+        onPartDamaged(part) { updateRuntimePartVisual(part); },
+        onPartDetached(part) { createDetachedDebris(part); },
+        onRecenter() { recomputeThrusterTorqueEnvelope(); },
+        onDetachBatch(count) {
+          if (count > 0) showStatus(count === 1 ? 'MODULE LOST' : `${count} MODULES LOST`, 1100);
+        },
+        onPayloadDamaged() { updatePayloadVisual(); },
+        onPayloadDetached(payload) {
+          const root = flightSession.getVisualRoot(payload.bodyId);
+          if (payload.coupler) {
+            root?.remove(payload.coupler);
+            disposeObjectTree(payload.coupler);
+            payload.coupler = null;
+          }
+          if (payload.visual) {
+            createDebrisFromVisual(payload.visual, payload.mass, payload.localPos, payload.bodyId);
+            payload.visual = null;
+          }
+          showStatus('PAYLOAD LOST', 1500);
+        },
+        createDebris(descriptor) { return debrisRuntime.spawn(descriptor); },
+        updateDebris(entry, dt) { return debrisRuntime.update(entry, dt); },
+        disposeDebris(entry) { return debrisRuntime.dispose(entry); }
+      }
+    });
+
     function cleanupFlightState() {
-      if (STATE.flight.assemblyRuntime) STATE.flight.assemblyRuntime.dispose();
-      else {
-        const craftBodies = new Set(STATE.flight.bodies || []);
-        for (const body of STATE.flight.bodyById?.values?.() || []) craftBodies.add(body);
-        for (const body of craftBodies) Physics.removeBody(world, body);
-      }
-      STATE.flight.body = null;
-      STATE.flight.primaryBody = null;
-      STATE.flight.assembly = null;
-      STATE.flight.bodies = [];
-      STATE.flight.bodyById = new Map();
-      STATE.flight.assemblyPlan = null;
-      STATE.flight.assemblyRuntime = null;
-      STATE.flight.assembly = null;
-      if (STATE.flight.group) {
-        scene.remove(STATE.flight.group);
-        disposeObjectTree(STATE.flight.group);
-        STATE.flight.group = null;
-      }
+      // Independent debris is cleaned first; an error leaves the assembly and retry handles intact.
+      flightIntegrity.disposeAllDebris();
+      flightSession.stop();
+      STATE.flight.group = null; // Deprecated single-root alias.
       STATE.flight.functionalBlocks = [];
       STATE.flight.fuel = 0;
       STATE.flight.fuelMax = 0;
@@ -745,14 +792,9 @@
       STATE.flight.runtimeMass = 0;
       STATE.flight.payloadMass = 0;
       STATE.flight.lastImpactAt = -Infinity;
-      for (const debris of STATE.flight.debris) {
-        if (debris.body) Physics.removeBody(world, debris.body);
-        if (debris.visual) { scene.remove(debris.visual); disposeObjectTree(debris.visual); }
-      }
       STATE.flight.runtimeParts = [];
       STATE.flight.runtimePartById = new Map();
       STATE.flight.currentInertia.set(0, 0, 0);
-      STATE.flight.debris = [];
       STATE.flight.lostParts = 0;
       STATE.flight.leakingFuelRate = 0;
       STATE.flight.firstFailure = '';
@@ -772,7 +814,9 @@
       for (const mesh of WORKSHOP.meshesByKey.values()) mesh.visible = true;
       clearPilotAxes();
       setStabilize(false);
+      return true;
     }
+
 
 
     function resetToEmptyCraft(persist = true) {
@@ -952,7 +996,7 @@
     }
 
     function runtimePartHealthFraction(part) {
-      return part && part.maxHealth > 0 ? THREE.MathUtils.clamp(part.health / part.maxHealth, 0, 1) : 0;
+      return flightIntegrity.healthFraction(part);
     }
 
     function updateRuntimePartVisual(part) {
@@ -972,72 +1016,56 @@
     }
 
     function getRuntimeCore() {
-      return STATE.flight.runtimeParts.find(part => part.type === 'Core') || null;
+      return flightIntegrity.getRuntimeCore();
     }
 
     function recomputeFlightIntegrity(force = false) {
-      if (!force && !STATE.flight.metricsDirty) return;
-      const attached = STATE.flight.runtimeParts.filter(part => part.attached);
-      const health = attached.reduce((sum, part) => sum + Math.max(0, part.health), 0);
-      const core = getRuntimeCore();
-      const coreOperational = Boolean(core?.attached && core.health > 0);
-      STATE.flight.integrity = coreOperational && STATE.flight.initialHealth > 0
-        ? THREE.MathUtils.clamp(health / STATE.flight.initialHealth * 100, 0, 100)
-        : 0;
-      STATE.flight.dragArea = attached.reduce((sum, part) => sum + (part.def.dragArea || 0) * Math.max(0.15, runtimePartHealthFraction(part)), 0)
-        + (STATE.flight.payload?.attached ? 0.2 : 0);
-      STATE.flight.gyroAuthority = attached.filter(part => part.type === 'Gyro').reduce((sum, part) => sum + runtimePartHealthFraction(part), 0);
-      STATE.flight.gyroCount = STATE.flight.gyroAuthority;
-      STATE.flight.leakingFuelRate = attached.filter(part => part.type === 'Fuel').reduce((sum, part) => {
-        const health = runtimePartHealthFraction(part);
-        return sum + (part.def.leakRate || 0) * Math.max(0, (0.82 - health) / 0.82);
-      }, 0);
-      STATE.flight.metricsDirty = false;
+      return flightIntegrity.recompute(force);
     }
 
-    function removeShapeFromBody(body, shape) {
-      Physics.removeCollider(body, shape);
-    }
-
-    function createDebrisFromVisual(visual, mass, localPos) {
-      const craftBody = primaryFlightBody();
-      const group = STATE.flight.group;
-      if (!craftBody || !group || !visual) return;
-      const worldPosition = Physics.pointToWorldFrame(craftBody, localPos);
-      const worldVelocity = pointVelocityWorld(craftBody, localPos);
-      const craftQuaternion = new THREE.Quaternion(craftBody.quaternion.x, craftBody.quaternion.y, craftBody.quaternion.z, craftBody.quaternion.w);
-      const worldQuaternion = craftQuaternion.multiply(visual.quaternion.clone());
+    function createDebrisFromVisual(visual, mass, localPos, bodyId = flightSession.primaryBodyId()) {
+      const group = flightSession.getVisualRoot(bodyId);
+      if (!flightSession.hasBody(bodyId) || !group || !visual) return;
+      const worldPosition = flightSession.pointToWorldFrame(bodyId, localPos);
+      const worldVelocity = flightSession.getBodyPointVelocity(bodyId, localPos);
+      const angularVelocity = flightSession.getBodyAngularVelocity(bodyId);
+      const transform = flightSession.getBodyTransform(bodyId);
+      const craftQuaternion = new THREE.Quaternion(
+        transform.quaternion.x, transform.quaternion.y, transform.quaternion.z, transform.quaternion.w
+      );
+      const localPosition = visual.position.clone();
+      const localQuaternion = visual.quaternion.clone();
+      const worldQuaternion = craftQuaternion.multiply(localQuaternion.clone());
       group.remove(visual);
       if (STATE.flight.debris.length >= PHYSICS.maxPhysicalDebris) {
         disposeObjectTree(visual);
         return;
       }
-      scene.add(visual);
-      visual.position.set(worldPosition.x, worldPosition.y, worldPosition.z);
-      visual.quaternion.copy(worldQuaternion);
-      const debrisBody = Physics.createBody({
-        mass: Math.max(0.15, mass),
-        linearDamping: 0.025,
-        angularDamping: 0.04,
-        allowSleep: true,
-        collisionGroup: COLLISION_GROUP.debris,
-        collisionMask: COLLISION_GROUP.world | COLLISION_GROUP.craft,
-        position: worldPosition,
-        quaternion: worldQuaternion,
-        userData: { debris: true }
-      });
-      Physics.addBoxCollider(debrisBody, { halfExtents: { x: 0.47, y: 0.47, z: 0.47 } });
-      Physics.setBodyVelocity(debrisBody, { linear: worldVelocity, angular: craftBody.angularVelocity });
-      debrisBody.angularVelocity.x += (Math.random() - 0.5) * 2.5;
-      debrisBody.angularVelocity.y += (Math.random() - 0.5) * 2.5;
-      debrisBody.angularVelocity.z += (Math.random() - 0.5) * 2.5;
-      Physics.addBody(world, debrisBody);
-      STATE.flight.debris.push({ body: debrisBody, visual, age: 0 });
+      try {
+        flightIntegrity.createDebris({
+          visual,
+          mass,
+          worldPosition,
+          worldVelocity,
+          angularVelocity: {
+            x: angularVelocity.x + (Math.random() - 0.5) * 2.5,
+            y: angularVelocity.y + (Math.random() - 0.5) * 2.5,
+            z: angularVelocity.z + (Math.random() - 0.5) * 2.5
+          },
+          worldQuaternion,
+          sourceBodyId: bodyId
+        });
+      } catch (error) {
+        group.add(visual);
+        visual.position.copy(localPosition);
+        visual.quaternion.copy(localQuaternion);
+        throw error;
+      }
     }
 
     function createDetachedDebris(part) {
       if (!part?.visual) return;
-      createDebrisFromVisual(part.visual, part.mass, part.localPos);
+      createDebrisFromVisual(part.visual, part.mass, part.localPos, flightIntegrity.requireOwnedPart(part));
       part.visual = null;
     }
 
@@ -1075,140 +1103,33 @@
     }
 
     function recenterCraftBody() {
-      const body = primaryFlightBody();
-      const group = STATE.flight.group;
-      if (!body || !group) return;
-      const attached = STATE.flight.runtimeParts.filter(part => part.attached);
-      const payload = STATE.flight.payload?.attached ? STATE.flight.payload : null;
-      const massProperties = computeRuntimeMassProperties(attached, payload);
-      const totalMass = massProperties.mass;
-      if (totalMass <= 0) return;
-      const shift = Physics.vec3(...massProperties.centerOfMass);
-      if (shift.lengthSquared() >= 1e-8) {
-        const assemblyRuntime = STATE.flight.assemblyRuntime;
-        let recentered = null;
-        if (assemblyRuntime) recentered = assemblyRuntime.recenterBody(STATE.flight.assemblyPlan.rootBodyId, shift);
-        else {
-          const newWorldPosition = Physics.pointToWorldFrame(body, shift);
-          const newVelocity = pointVelocityWorld(body, shift);
-          Physics.shiftColliderOffsets(body, shift);
-          Physics.setBodyTransform(body, { position: newWorldPosition });
-          Physics.setBodyVelocity(body, { linear: newVelocity });
-          recentered = { worldPosition: newWorldPosition, linearVelocity: newVelocity };
-        }
-        for (const part of attached) {
-          part.localPos.x -= shift.x; part.localPos.y -= shift.y; part.localPos.z -= shift.z;
-        }
-        if (payload) {
-          payload.localPos.x -= shift.x; payload.localPos.y -= shift.y; payload.localPos.z -= shift.z;
-          STATE.flight.payloadLocalPos = payload.localPos;
-        }
-        for (const child of group.children) {
-          child.position.x -= shift.x; child.position.y -= shift.y; child.position.z -= shift.z;
-        }
-      }
-      const inertia = Physics.vec3(...massProperties.inertiaDiagonal);
-      const assemblyRuntime = STATE.flight.assemblyRuntime;
-      if (assemblyRuntime) assemblyRuntime.setBodyMassProperties(STATE.flight.assemblyPlan.rootBodyId, { mass: totalMass, inertiaDiagonal: inertia });
-      else Physics.setBodyMassProperties(body, { mass: totalMass, inertiaDiagonal: inertia });
-      STATE.flight.runtimeMass = totalMass;
-      STATE.flight.currentInertia.copy(inertia);
-      STATE.flight.payloadMass = payload ? payload.mass : 0;
-      STATE.flight.lowestLocalY = Math.min(
-        ...attached.map(part => part.localPos.y - 0.5),
-        payload ? payload.localPos.y - 0.42 : Infinity
-      );
-      recomputeThrusterTorqueEnvelope();
-      markFlightMetricsDirty();
+      return flightIntegrity.recenterBody(flightSession.primaryBodyId());
     }
 
     function collectDisconnectedRuntimeParts() {
-      const byKey = STATE.flight.runtimePartByKey;
-      const core = getRuntimeCore();
-      if (!core?.attached) return STATE.flight.runtimeParts.filter(part => part.attached && part.type !== 'Core');
-      const visited = new Set([core.key]);
-      const queue = [core.key];
-      for (let cursor = 0; cursor < queue.length; cursor++) {
-        const [x,y,z] = queue[cursor].split(',').map(Number);
-        for (const [dx,dy,dz] of NEIGHBOR_DIRECTIONS) {
-          const key = makeKey(x+dx,y+dy,z+dz);
-          const neighbor = byKey.get(key);
-          if (neighbor?.attached && !visited.has(key)) { visited.add(key); queue.push(key); }
-        }
-      }
-      return STATE.flight.runtimeParts.filter(part => part.attached && part.type !== 'Core' && !visited.has(part.key));
+      return flightIntegrity.collectDisconnected(flightSession.primaryBodyId());
     }
 
 
     function detachRuntimeParts(entries, cascade = true) {
-      const pending = new Map();
-      for (const entry of entries || []) {
-        const part = entry?.part || entry;
-        if (part?.attached) pending.set(part, entry?.reason || 'structural failure');
-      }
-      if (!pending.size) return 0;
-      let detachedCount = 0;
-      let fuelCapacityLost = 0;
-      let coreFailed = false;
-      const detachOne = (part, reason) => {
-        if (!part?.attached) return;
-        if (part.type === 'Core') {
-          part.health = 0;
-          coreFailed = true;
-          STATE.flight.integrity = 0;
-          STATE.flight.firstFailure = `Command core failed: ${reason}`;
-          return;
-        }
-        part.attached = false;
-        part.health = 0;
-        if (!STATE.flight.assemblyRuntime?.removeColliderByBlockId(part.blockId)) removeShapeFromBody(runtimeBodyForPart(part), part.shape);
-        createDetachedDebris(part);
-        detachedCount += 1;
-        STATE.flight.lostParts += 1;
-        STATE.flight.structuralFailures += 1;
-        if (!STATE.flight.firstFailure) STATE.flight.firstFailure = `${part.type} detached: ${reason}`;
-        if (part.type === 'Fuel') fuelCapacityLost += part.def.fuelCapacity || 0;
-      };
-      for (const [part, reason] of pending) detachOne(part, reason);
-      if (cascade && !coreFailed) {
-        for (const part of collectDisconnectedRuntimeParts()) detachOne(part, 'connection to core was severed');
-      }
-      if (fuelCapacityLost > 0) {
-        STATE.flight.fuelMax = Math.max(0, STATE.flight.fuelMax - fuelCapacityLost);
-        STATE.flight.fuel = Math.min(STATE.flight.fuel, STATE.flight.fuelMax);
-      }
-      if (detachedCount > 0) {
-        STATE.flight.blockCount = Math.max(1, STATE.flight.blockCount - detachedCount);
-        recenterCraftBody();
-      }
-      markFlightMetricsDirty();
-      recomputeFlightIntegrity(true);
-      if (detachedCount > 0) showStatus(detachedCount === 1 ? 'MODULE LOST' : `${detachedCount} MODULES LOST`, 1100);
-      return detachedCount;
+      return flightIntegrity.detachParts(entries, cascade);
     }
 
     function detachRuntimePart(part, reason = 'structural failure', cascade = true) {
-      return detachRuntimeParts([{ part, reason }], cascade) > 0;
+      return flightIntegrity.detachParts([{ part, reason }], cascade) > 0;
     }
 
     function detachDisconnectedRuntimeParts() {
-      const disconnected = collectDisconnectedRuntimeParts();
-      return detachRuntimeParts(disconnected.map(part => ({ part, reason: 'connection to core was severed' })), false);
+      const disconnected = flightIntegrity.collectDisconnected(flightSession.primaryBodyId());
+      return flightIntegrity.detachParts(disconnected.map(part => ({ part, reason: 'connection to core was severed' })), false);
     }
 
     function applyDamageOnly(part, amount, reason = 'impact') {
-      if (!part?.attached || amount <= 0) return false;
-      const absorbed = Math.max(0.25, part.def.structural || 1);
-      part.health = Math.max(0, part.health - amount / absorbed);
-      if (!STATE.flight.firstFailure && runtimePartHealthFraction(part) < 0.55) STATE.flight.firstFailure = `${part.type} critically damaged by ${reason}`;
-      updateRuntimePartVisual(part);
-      markFlightMetricsDirty();
-      return part.health <= 0;
+      return flightIntegrity.applyDamageOnly(part, amount, reason);
     }
 
     function damageRuntimePart(part, amount, reason = 'impact') {
-      if (applyDamageOnly(part, amount, reason)) detachRuntimeParts([{ part, reason }], true);
-      else recomputeFlightIntegrity();
+      return flightIntegrity.damagePart(part, amount, reason);
     }
 
     function updatePayloadVisual() {
@@ -1219,36 +1140,11 @@
     }
 
     function detachPayload(reason = 'payload mount failure') {
-      const payload = STATE.flight.payload;
-      if (!payload?.attached) return false;
-      payload.attached = false;
-      payload.health = 0;
-      if (!STATE.flight.assemblyRuntime?.removeCollider(payload.colliderId)) removeShapeFromBody(runtimeBodyForPart(payload), payload.shape);
-      if (payload.coupler) {
-        STATE.flight.group?.remove(payload.coupler);
-        disposeObjectTree(payload.coupler);
-        payload.coupler = null;
-      }
-      if (payload.visual) {
-        createDebrisFromVisual(payload.visual, payload.mass, payload.localPos);
-        payload.visual = null;
-      }
-      STATE.flight.payloadMass = 0;
-      STATE.flight.payloadLocalPos = null;
-      if (!STATE.flight.firstFailure) STATE.flight.firstFailure = `Payload lost: ${reason}`;
-      recenterCraftBody();
-      recomputeFlightIntegrity(true);
-      showStatus('PAYLOAD LOST', 1500);
-      return true;
+      return flightIntegrity.detachPayload(reason);
     }
 
     function damagePayload(amount, reason = 'impact') {
-      const payload = STATE.flight.payload;
-      if (!payload?.attached || amount <= 0) return false;
-      payload.health = Math.max(0, payload.health - amount);
-      updatePayloadVisual();
-      if (payload.health <= 0) return detachPayload(reason);
-      return false;
+      return flightIntegrity.damagePayload(amount, reason);
     }
 
     function applyImpactDamage(localImpact, impact, collisionKind = 'ground') {
@@ -1303,10 +1199,11 @@
     }
 
     function applyStructuralLoadDamage(dt, totalThrust, totalLift, totalDrag) {
-      const body = primaryFlightBody();
-      if (!body || body.mass <= 0) return;
-      const loadAcceleration = (Math.abs(totalThrust) + Math.abs(totalLift) + Math.abs(totalDrag)) / Math.max(1, body.mass);
-      const spin = body.angularVelocity.length();
+      const bodyId = primaryFlightBodyId();
+      if (!bodyId || STATE.flight.runtimeMass <= 0) return;
+      const loadAcceleration = (Math.abs(totalThrust) + Math.abs(totalLift) + Math.abs(totalDrag)) / Math.max(1, STATE.flight.runtimeMass);
+      const angularVelocity = flightSession.getBodyAngularVelocity(bodyId);
+      const spin = Math.hypot(angularVelocity.x, angularVelocity.y, angularVelocity.z);
       const failures = [];
       const candidates = STATE.flight.runtimeParts.filter(part => part.attached && part.type !== 'Core');
       for (const part of candidates) {
@@ -1324,10 +1221,10 @@
     }
 
     function processPendingImpacts() {
-      if (!primaryFlightBody() || !STATE.flight.pendingImpacts.length) return;
+      if (!primaryFlightBodyId() || !STATE.flight.pendingImpacts.length) return;
       const impacts = STATE.flight.pendingImpacts.splice(0);
       for (const entry of impacts) {
-        if (!primaryFlightBody()) break;
+        if (!primaryFlightBodyId()) break;
         applyImpactDamage(entry.localImpact, entry.impact, entry.collisionKind);
         if (entry.impact >= PHYSICS.severeImpactSpeed && !STATE.flight.severeImpact) {
           STATE.flight.severeImpact = true;
@@ -1339,18 +1236,7 @@
     }
 
     function syncDebris(dt) {
-      for (let index = STATE.flight.debris.length - 1; index >= 0; index--) {
-        const debris = STATE.flight.debris[index];
-        debris.age += dt;
-        debris.visual.position.copy(debris.body.position);
-        debris.visual.quaternion.copy(debris.body.quaternion);
-        if (debris.age > PHYSICS.debrisLifetime || debris.body.position.y < -20) {
-          Physics.removeBody(world, debris.body);
-          scene.remove(debris.visual);
-          disposeObjectTree(debris.visual);
-          STATE.flight.debris.splice(index, 1);
-        }
-      }
+      return flightIntegrity.updateDebris(dt);
     }
 
     function buildFlightBody() {
@@ -1370,20 +1256,22 @@
       const rootBodyPlan = RuntimeAssembly.rootBody(assemblyPlan);
       if (!rootBodyPlan) throw new Error('Runtime assembly plan has no root body.');
       const runtimeMass = rootBodyPlan.massProperties.mass;
-      const colliderPlanByBlockId = new Map(
-        rootBodyPlan.colliders.filter(collider => collider.blockId).map(collider => [collider.blockId, collider])
-      );
-      const payloadColliderPlan = rootBodyPlan.colliders.find(collider => collider.payload) || null;
+      const colliderPlanByBlockId = new Map();
+      let payloadColliderPlan = null;
+      for (const bodyPlan of assemblyPlan.rigidBodies) {
+        for (const collider of bodyPlan.colliders) {
+          if (collider.blockId) colliderPlanByBlockId.set(collider.blockId, collider);
+          if (collider.payload) payloadColliderPlan = collider;
+        }
+      }
       const runtimeCom = snapshot.com;
       STATE.flight.com.copy(runtimeCom);
       let lowestLocalY = Math.min(...rootBodyPlan.colliders.map(collider => collider.center[1] - collider.halfExtents[1]));
       if (!Number.isFinite(lowestLocalY)) lowestLocalY = -0.5;
 
-      let body = null;
-      const assemblyRuntime = AssemblyBuilder.build({
-        plan: assemblyPlan,
-        physics: Physics,
-        world,
+      try {
+        const started = flightSession.start({
+        assemblyPlan,
         bodyDescriptor: bodyPlan => ({
           linearDamping: 0.005,
           angularDamping: 0.012,
@@ -1394,31 +1282,44 @@
             ? { x: TEST_RANGE.spawn.x + runtimeCom.x, y: -0.45 - lowestLocalY, z: TEST_RANGE.spawn.z + runtimeCom.z }
             : { x: TEST_RANGE.spawn.x, y: TEST_RANGE.spawn.y, z: TEST_RANGE.spawn.z }
         }),
-        collisionListener: ({ body: collidedBody, event }) => {
-          if (!STATE.flight.bodyById || ![...STATE.flight.bodyById.values()].includes(collidedBody)) return;
-          const impact = event.impactSpeed > 0 ? event.impactSpeed : Math.abs(collidedBody.velocity.y);
+        classifyCollision(otherBody) {
+          if (otherBody === groundBody) return 'ground';
+          if (otherBody?.userData?.rangeObstacle) return 'obstacle';
+          if (otherBody?.userData?.debris) return 'debris';
+          return 'other';
+        },
+        collisionListener: ({ bodyId, collision }) => {
+          if (!flightSession.hasBody(bodyId)) return;
+          const velocity = flightSession.getBodyLinearVelocity(bodyId);
+          const impact = collision.impactSpeed > 0 ? collision.impactSpeed : Math.abs(velocity.y);
           STATE.flight.lastLoads.impact = Math.max(STATE.flight.lastLoads.impact || 0, impact);
           STATE.flight.maxImpact = Math.max(STATE.flight.maxImpact, impact);
-          const otherBody = event.otherBody;
-          if (otherBody === groundBody) STATE.mission.lastGroundContact = STATE.mission.elapsed;
+          if (collision.kind === 'ground') STATE.mission.lastGroundContact = STATE.mission.elapsed;
           const damageNow = STATE.mission.elapsed;
-          const collisionKind = otherBody?.userData?.rangeObstacle ? 'obstacle' : (otherBody?.userData?.debris ? 'debris' : 'ground');
           if (impact > 3.5 && damageNow - STATE.flight.lastImpactAt > 0.25) {
             let localImpact = { x: 0, y: STATE.flight.lowestLocalY, z: 0 };
-            if (event.relativePoint) localImpact = Physics.vectorToLocalFrame(collidedBody, event.relativePoint);
+            if (collision.relativePoint) localImpact = flightSession.vectorToLocalFrame(bodyId, collision.relativePoint);
             STATE.flight.pendingImpacts.push({
+              bodyId,
               localImpact: { x: localImpact.x, y: localImpact.y, z: localImpact.z },
               impact,
-              collisionKind,
+              collisionKind: collision.kind,
               timestamp: damageNow
             });
             STATE.flight.lastImpactAt = damageNow;
           }
         }
       });
-      body = assemblyRuntime.rootBody;
-      const group = new THREE.Group();
-      scene.add(group);
+      const visualRootByBodyId = new Map();
+      for (const bodyPlan of assemblyPlan.rigidBodies) {
+        const root = new THREE.Group();
+        root.userData.assemblyBodyId = bodyPlan.bodyId;
+        flightSession.registerVisualRoot(bodyPlan.bodyId, root);
+        scene.add(root);
+        visualRootByBodyId.set(bodyPlan.bodyId, root);
+      }
+      const group = visualRootByBodyId.get(started.primaryBodyId);
+      STATE.flight.group = group; // Deprecated compatibility alias for the primary visual root.
 
       const functionalBlocks = [];
       const runtimeParts = [];
@@ -1430,27 +1331,30 @@
       for (const part of snapshot.parts) {
         const colliderPlan = colliderPlanByBlockId.get(part.blockId);
         if (!colliderPlan) throw new Error(`Runtime assembly is missing collider for ${part.blockId}.`);
-        const offsetThree = part.offset;
         const localOffset = Physics.vec3(...colliderPlan.center);
-        const runtimeCollider = assemblyRuntime.colliderByBlockId.get(part.blockId);
-        if (!runtimeCollider) throw new Error(`Runtime assembly builder is missing collider for ${part.blockId}.`);
-        const shape = runtimeCollider.shape;
+        const bodyId = flightSession.getBodyIdForBlock(part.blockId);
+        const ownership = flightSession.getColliderOwnershipByBlockId(part.blockId);
+        if (!bodyId || !ownership || ownership.bodyId !== bodyId) {
+          throw new Error(`Runtime assembly ownership is missing for ${part.blockId}.`);
+        }
+        const partRoot = visualRootByBodyId.get(bodyId);
+        if (!partRoot) throw new Error(`Visual root is missing for body ${bodyId}.`);
 
         const visual = createModuleVisual(part.type, part.orientation, false);
         visual.position.set(localOffset.x, localOffset.y, localOffset.z);
-        group.add(visual);
+        partRoot.add(visual);
         const key = part.key;
         const sourceMesh = WORKSHOP.meshesByKey.get(key);
         if (sourceMesh) sourceMesh.visible = false;
 
         const fullForce = (part.type === 'Thruster' || part.type === 'VectorThruster') ? part.basis.chord.clone().multiplyScalar(part.def.force || 0) : new THREE.Vector3();
-        const torqueThree = offsetThree.clone().cross(fullForce);
+        const torqueThree = new THREE.Vector3(localOffset.x, localOffset.y, localOffset.z).cross(fullForce);
         const localTorque = Physics.vec3(torqueThree.x, torqueThree.y, torqueThree.z);
         const runtimePart = {
           blockId: part.blockId,
-          bodyId: rootBodyPlan.bodyId,
+          bodyId,
           key, grid: { x: part.position.x, y: part.position.y, z: part.position.z }, type: part.type, def: part.def,
-          visual, shape, localPos: localOffset.clone(), orientation: part.orientation,
+          visual, localPos: localOffset.clone(), orientation: part.orientation,
           localAxis: Physics.vec3(part.basis.chord.x, part.basis.chord.y, part.basis.chord.z),
           localNormal: Physics.vec3(part.basis.normal.x, part.basis.normal.y, part.basis.normal.z),
           localSpan: Physics.vec3(part.basis.span.x, part.basis.span.y, part.basis.span.z),
@@ -1473,9 +1377,13 @@
         if (!payloadColliderPlan) throw new Error('Runtime assembly is missing the mission payload collider.');
         const payloadOffsetThree = snapshot.payloadOffset || payloadPosition.clone().sub(runtimeCom);
         const payloadOffset = Physics.vec3(...payloadColliderPlan.center);
-        const payloadRuntimeCollider = assemblyRuntime.colliderById.get(payloadColliderPlan.colliderId);
-        if (!payloadRuntimeCollider) throw new Error('Runtime assembly builder is missing the mission payload collider.');
-        const payloadShape = payloadRuntimeCollider.shape;
+        const payloadBodyId = payloadColliderPlan.bodyId;
+        const payloadOwnership = flightSession.getColliderOwnership(payloadColliderPlan.colliderId);
+        if (!payloadOwnership || payloadOwnership.bodyId !== payloadBodyId) {
+          throw new Error('Runtime assembly builder is missing the mission payload ownership.');
+        }
+        const payloadRoot = visualRootByBodyId.get(payloadBodyId);
+        if (!payloadRoot) throw new Error(`Visual root is missing for payload body ${payloadBodyId}.`);
         STATE.flight.payloadLocalPos = payloadOffset.clone();
         const crate = new THREE.Mesh(
           new THREE.BoxGeometry(0.84, 0.84, 0.84),
@@ -1485,7 +1393,7 @@
         crate.castShadow = true;
         crate.receiveShadow = true;
         crate.userData.isMissionPayload = true;
-        group.add(crate);
+        payloadRoot.add(crate);
         let coupler = null;
         const corePart = snapshot.parts.find(part => part.type === 'Core');
         if (corePart) {
@@ -1495,21 +1403,13 @@
           );
           coupler.position.copy(payloadOffsetThree.clone().add(corePart.offset).multiplyScalar(0.5));
           coupler.castShadow = true;
-          group.add(coupler);
+          payloadRoot.add(coupler);
         }
         const payloadMaxHealth = 80 + payloadMass * 2.5;
-        STATE.flight.payload = { mass: payloadMass, localPos: payloadOffset, shape: payloadShape, colliderId: payloadColliderPlan.colliderId, visual: crate, coupler, health: payloadMaxHealth, maxHealth: payloadMaxHealth, attached: true };
+        STATE.flight.payload = { bodyId: payloadBodyId, mass: payloadMass, localPos: payloadOffset, colliderId: payloadColliderPlan.colliderId, visual: crate, coupler, health: payloadMaxHealth, maxHealth: payloadMaxHealth, attached: true };
       }
 
 
-      STATE.flight.body = assemblyRuntime.rootBody;
-      STATE.flight.primaryBody = assemblyRuntime.rootBody;
-      STATE.flight.assembly = assemblyRuntime;
-      STATE.flight.bodies = [...assemblyRuntime.bodyById.values()].map(entry => entry.body);
-      STATE.flight.bodyById = new Map([...assemblyRuntime.bodyById].map(([bodyId, entry]) => [bodyId, entry.body]));
-      STATE.flight.assemblyPlan = assemblyPlan;
-      STATE.flight.assemblyRuntime = assemblyRuntime;
-      STATE.flight.group = group;
       STATE.flight.functionalBlocks = functionalBlocks;
       STATE.flight.runtimeParts = runtimeParts;
       STATE.flight.runtimePartById = new Map(runtimeParts.map(part => [part.blockId, part]));
@@ -1536,15 +1436,31 @@
       STATE.flight.leakingFuelRate = 0;
       STATE.flight.firstFailure = '';
       STATE.flight.structuralFailures = 0;
-      STATE.flight.initialHealth = runtimeParts.reduce((sum, part) => sum + part.maxHealth, 0);
+      STATE.flight.initialHealth = runtimeParts
+        .filter(part => part.bodyId === started.primaryBodyId)
+        .reduce((sum, part) => sum + part.maxHealth, 0);
       STATE.flight.gyroAuthority = gyroCount;
       STATE.flight.pendingImpacts = [];
       STATE.flight.metricsDirty = true;
       recomputeFlightIntegrity(true);
 
-      STATE.camera.target.copy(body.position);
-      camera.position.set(body.position.x + 13, body.position.y + 7, body.position.z + 13);
-      return true;
+        const primaryTransform = flightSession.getBodyTransform(started.primaryBodyId);
+        STATE.camera.target.set(primaryTransform.position.x, primaryTransform.position.y, primaryTransform.position.z);
+        camera.position.set(primaryTransform.position.x + 13, primaryTransform.position.y + 7, primaryTransform.position.z + 13);
+        return true;
+      } catch (error) {
+        const cleanupErrors = [];
+        try {
+          if (STATE.flight.assembly || STATE.flight.cleanupPending || flightSession.isActive()) cleanupFlightState();
+        } catch (cleanupError) {
+          cleanupErrors.push(cleanupError);
+        }
+        for (const mesh of WORKSHOP.meshesByKey.values()) mesh.visible = true;
+        if (cleanupErrors.length) {
+          Object.defineProperty(error, 'cleanupErrors', { value: cleanupErrors, enumerable: true, configurable: true });
+        }
+        throw error;
+      }
     }
 
     function setMode(mode) {
@@ -1621,10 +1537,8 @@
 
 
     function syncFlightVisuals() {
-      const body = primaryFlightBody();
-      if (!body || !STATE.flight.group) return;
-      STATE.flight.group.position.copy(body.position);
-      STATE.flight.group.quaternion.copy(body.quaternion);
+      if (!flightSession.isActive()) return;
+      flightSession.syncVisuals();
     }
 
 
@@ -1655,8 +1569,9 @@
       STATE.camera.yaw = STATE.camera.defaultYaw;
       STATE.camera.pitch = STATE.camera.defaultPitch;
       STATE.camera.distance = STATE.camera.defaultDistance;
-      if (STATE.mode === 'FLIGHT' && primaryFlightBody()) {
-        STATE.camera.target.copy(primaryFlightBody().position);
+      if (STATE.mode === 'FLIGHT' && primaryFlightBodyId()) {
+        const transform = primaryFlightTransform();
+        STATE.camera.target.set(transform.position.x, transform.position.y, transform.position.z);
       }
       applyCameraOrbit();
     }
@@ -1692,7 +1607,7 @@
       missionMarkerGroup,
       services: {
         getContractById, isContractUnlocked, getSelectedContract, careerRank,
-        recalculateCareerStars, saveCareer
+        recalculateCareerStars, saveCareer, flightSession
       },
       callbacks: {
         computeCraftAnalysis, buildLoadedSnapshot, computeControlMetrics,
@@ -2012,6 +1927,10 @@
       flushPendingAutosave();
       saveCareer();
       flushPendingSave();
+      if (STATE.mode === 'FLIGHT') {
+        try { setMode('BUILD'); }
+        catch (error) { console.error('Flight cleanup during pagehide failed; retry handles were retained.', error); }
+      }
     });
 
     function clamp01(value) {
@@ -2022,8 +1941,8 @@
       return a.x * b.x + a.y * b.y + a.z * b.z;
     }
 
-    function pointVelocityWorld(body, localPoint) {
-      return Physics.getPointVelocity(body, localPoint);
+    function pointVelocityWorld(bodyId, localPoint) {
+      return Physics.vec3(flightSession.getBodyPointVelocity(bodyId, localPoint));
     }
 
     function updateFlameVisibility() {
@@ -2063,14 +1982,14 @@
       );
     }
 
-    function applyWingAerodynamics(body, mod) {
-      const pointVelocity = pointVelocityWorld(body, mod.localPos);
+    function applyWingAerodynamics(bodyId, mod) {
+      const pointVelocity = pointVelocityWorld(bodyId, mod.localPos);
       const speed = pointVelocity.length();
       if (speed < 0.25) return { lift: 0, drag: 0 };
 
-      const chordWorld = Physics.vectorToWorldFrame(body, mod.localAxis).unit();
-      const normalWorld = Physics.vectorToWorldFrame(body, mod.localNormal).unit();
-      const spanWorld = Physics.vectorToWorldFrame(body, mod.localSpan).unit();
+      const chordWorld = Physics.vec3(flightSession.vectorToWorldFrame(bodyId, mod.localAxis)).unit();
+      const normalWorld = Physics.vec3(flightSession.vectorToWorldFrame(bodyId, mod.localNormal)).unit();
+      const spanWorld = Physics.vec3(flightSession.vectorToWorldFrame(bodyId, mod.localSpan)).unit();
       const velocityDirection = pointVelocity.scale(1 / speed);
       const chordSpeed = cannonDot(pointVelocity, chordWorld);
       const normalSpeed = cannonDot(pointVelocity, normalWorld);
@@ -2088,15 +2007,15 @@
       const liftDirection = normalWorld.vsub(velocityDirection.scale(cannonDot(normalWorld, velocityDirection)));
       if (liftDirection.lengthSquared() < 0.0001) return { lift: 0, drag: Math.abs(dragMagnitude) };
       liftDirection.normalize();
-      const worldPoint = Physics.pointToWorldFrame(body, mod.localPos);
-      Physics.applyForce(body, liftDirection.scale(liftMagnitude), worldPoint);
-      Physics.applyForce(body, velocityDirection.scale(-dragMagnitude), worldPoint);
+      const worldPoint = flightSession.pointToWorldFrame(bodyId, mod.localPos);
+      flightSession.applyBodyForce(bodyId, liftDirection.scale(liftMagnitude), worldPoint);
+      flightSession.applyBodyForce(bodyId, velocityDirection.scale(-dragMagnitude), worldPoint);
       return { lift: Math.abs(liftMagnitude), drag: Math.abs(dragMagnitude) };
     }
 
-    function applyControlSurfaceAerodynamics(body, mod) {
+    function applyControlSurfaceAerodynamics(bodyId, mod) {
       if (!mod.attached) return { lift: 0, drag: 0 };
-      const pointVelocity = pointVelocityWorld(body, mod.localPos);
+      const pointVelocity = pointVelocityWorld(bodyId, mod.localPos);
       const speed = pointVelocity.length();
       const commandRaw = Number(STATE.pilot[mod.controlAxis]) || 0;
       if (speed < 0.35) {
@@ -2105,9 +2024,9 @@
         if (flap) flap.rotation.z = -mod.controlDeflection * PHYSICS.controlSurfaceMaxDeflection;
         return { lift: 0, drag: 0 };
       }
-      const chordWorld = Physics.vectorToWorldFrame(body, mod.localAxis).unit();
-      const normalWorld = Physics.vectorToWorldFrame(body, mod.localNormal).unit();
-      const spanWorld = Physics.vectorToWorldFrame(body, mod.localSpan).unit();
+      const chordWorld = Physics.vec3(flightSession.vectorToWorldFrame(bodyId, mod.localAxis)).unit();
+      const normalWorld = Physics.vec3(flightSession.vectorToWorldFrame(bodyId, mod.localNormal)).unit();
+      const spanWorld = Physics.vec3(flightSession.vectorToWorldFrame(bodyId, mod.localSpan)).unit();
       const velocityDirection = pointVelocity.scale(1 / speed);
       const chordSpeed = cannonDot(pointVelocity, chordWorld);
       const normalSpeed = cannonDot(pointVelocity, normalWorld);
@@ -2128,9 +2047,9 @@
       const liftDirection = normalWorld.vsub(velocityDirection.scale(cannonDot(normalWorld, velocityDirection)));
       if (liftDirection.lengthSquared() < 0.0001) return { lift: 0, drag: Math.abs(dragMagnitude) };
       liftDirection.normalize();
-      const worldPoint = Physics.pointToWorldFrame(body, mod.localPos);
-      Physics.applyForce(body, liftDirection.scale(liftMagnitude), worldPoint);
-      Physics.applyForce(body, velocityDirection.scale(-dragMagnitude), worldPoint);
+      const worldPoint = flightSession.pointToWorldFrame(bodyId, mod.localPos);
+      flightSession.applyBodyForce(bodyId, liftDirection.scale(liftMagnitude), worldPoint);
+      flightSession.applyBodyForce(bodyId, velocityDirection.scale(-dragMagnitude), worldPoint);
       const flap = mod.visual?.getObjectByName('controlFlapPivot');
       if (flap) flap.rotation.z = -command * PHYSICS.controlSurfaceMaxDeflection;
       return { lift: Math.abs(liftMagnitude), drag: Math.abs(dragMagnitude) };
@@ -2157,13 +2076,16 @@
       return forward.scale(baseForce * forwardScale).vadd(mod.localNormal.scale(lateral*a)).vadd(mod.localSpan.scale(lateral*b));
     }
 
-    function applyGyroControl(body) {
-      const gyroCount = STATE.flight.gyroAuthority;
+    function applyGyroControl(bodyId) {
+      const gyroCount = STATE.flight.runtimeParts
+        .filter(part => part.attached && part.type === 'Gyro' && part.bodyId === bodyId)
+        .reduce((sum, part) => sum + runtimePartHealthFraction(part), 0);
       if (gyroCount <= 0) return;
 
       const pilot = STATE.pilot;
       const manualTorque = gyroCount * PHYSICS.gyroManualTorque;
-      const localAngularVelocity = Physics.vectorToLocalFrame(body, body.angularVelocity);
+      const angularVelocity = Physics.vec3(flightSession.getBodyAngularVelocity(bodyId));
+      const localAngularVelocity = Physics.vec3(flightSession.vectorToLocalFrame(bodyId, angularVelocity));
       const dampingStrength = gyroCount * (0.7 + STATE.stabilityAssist * 5.5 + (pilot.stabilize ? 6 : 0));
       const localTorque = Physics.vec3(
         pilot.roll * manualTorque - localAngularVelocity.x * dampingStrength,
@@ -2172,11 +2094,11 @@
       );
 
       if (STATE.stabilityAssist > 0.001 || pilot.stabilize) {
-        const craftUp = Physics.vectorToWorldFrame(body, Physics.vec3(0, 1, 0)).unit();
+        const craftUp = Physics.vec3(flightSession.vectorToWorldFrame(bodyId, { x: 0, y: 1, z: 0 })).unit();
         const worldUp = Physics.vec3(0, 1, 0);
         const levelErrorWorld = Physics.vec3();
         craftUp.cross(worldUp, levelErrorWorld);
-        const levelErrorLocal = Physics.vectorToLocalFrame(body, levelErrorWorld);
+        const levelErrorLocal = Physics.vec3(flightSession.vectorToLocalFrame(bodyId, levelErrorWorld));
         const levelStrength = gyroCount * (STATE.stabilityAssist * 10 + (pilot.stabilize ? 18 : 0));
         localTorque.x += levelErrorLocal.x * levelStrength;
         localTorque.y += levelErrorLocal.y * levelStrength * 0.35;
@@ -2186,20 +2108,28 @@
       const maxTorque = gyroCount * PHYSICS.gyroManualTorque * 3.2;
       const torqueLength = localTorque.length();
       if (torqueLength > maxTorque) localTorque.scale(maxTorque / torqueLength, localTorque);
-      const worldTorque = Physics.vectorToWorldFrame(body, localTorque);
-      Physics.addTorque(body, worldTorque);
+      const worldTorque = flightSession.vectorToWorldFrame(bodyId, localTorque);
+      flightSession.addBodyTorque(bodyId, worldTorque);
     }
 
     function stepFlightPhysics(dt) {
-      const body = primaryFlightBody();
-      if (!body) return;
+      const primaryBodyId = primaryFlightBodyId();
+      if (!primaryBodyId) return;
 
-      const speed = body.velocity.length();
       let totalDrag = 0;
-      if (speed > 0.001) {
-        const dragMagnitude = 0.5 * PHYSICS.airDensity * PHYSICS.bodyDragCoefficient * STATE.flight.dragArea * speed * speed;
-        const drag = body.velocity.scale(-dragMagnitude / speed);
-        Physics.applyForce(body, drag, body.position);
+      for (const bodyId of flightSession.bodyIds()) {
+        const velocity = Physics.vec3(flightSession.getBodyLinearVelocity(bodyId));
+        const speed = velocity.length();
+        if (speed <= 0.001) continue;
+        const bodyDragArea = STATE.flight.runtimeParts
+          .filter(part => part.attached && part.bodyId === bodyId)
+          .reduce((sum, part) => sum + (part.def.dragArea || 0) * Math.max(0.15, runtimePartHealthFraction(part)), 0)
+          + (STATE.flight.payload?.attached && STATE.flight.payload.bodyId === bodyId ? 0.2 : 0);
+        if (bodyDragArea <= 0) continue;
+        const dragMagnitude = 0.5 * PHYSICS.airDensity * PHYSICS.bodyDragCoefficient * bodyDragArea * speed * speed;
+        const drag = velocity.scale(-dragMagnitude / speed);
+        const transform = flightSession.getBodyTransform(bodyId);
+        flightSession.applyBodyForce(bodyId, drag, transform.position);
         totalDrag += dragMagnitude;
       }
 
@@ -2216,7 +2146,7 @@
       let requestedFuel = 0;
 
       for (const mod of STATE.flight.functionalBlocks) {
-        if (!mod.attached) continue;
+        if (!mod.attached || !flightSession.hasBody(mod.bodyId)) continue;
         if (mod.type === 'Thruster' || mod.type === 'VectorThruster') {
           const command = computeThrusterCommand(mod, pilot);
           mod.lastCommand = command;
@@ -2252,9 +2182,9 @@
           : job.mod.localAxis.scale(job.mod.force * effectiveCommand * health);
         const forceMagnitude = localForce.length();
         if (forceMagnitude <= 0) continue;
-        const worldForce = Physics.vectorToWorldFrame(body, localForce);
-        const worldPoint = Physics.pointToWorldFrame(body, job.mod.localPos);
-        Physics.applyForce(body, worldForce, worldPoint);
+        const worldForce = flightSession.vectorToWorldFrame(job.mod.bodyId, localForce);
+        const worldPoint = flightSession.pointToWorldFrame(job.mod.bodyId, job.mod.localPos);
+        flightSession.applyBodyForce(job.mod.bodyId, worldForce, worldPoint);
         totalThrust += forceMagnitude;
       }
 
@@ -2263,29 +2193,38 @@
         const liftMagnitude = job.mod.force * job.command * fuelScale * runtimePartHealthFraction(job.mod) * balloonEfficiency;
         job.mod.lastCommand = job.command * fuelScale;
         if (liftMagnitude <= 0) continue;
-        const worldPoint = Physics.pointToWorldFrame(body, job.mod.localPos);
-        Physics.applyForce(body, Physics.vec3(0, liftMagnitude, 0), worldPoint);
+        const worldPoint = flightSession.pointToWorldFrame(job.mod.bodyId, job.mod.localPos);
+        flightSession.applyBodyForce(job.mod.bodyId, { x: 0, y: liftMagnitude, z: 0 }, worldPoint);
         totalLift += liftMagnitude;
       }
 
+      // Mission tuning intentionally evaluates vertical damping on the explicitly selected primary body.
+      const primaryVelocity = flightSession.getBodyLinearVelocity(primaryBodyId);
+      const primaryTransform = flightSession.getBodyTransform(primaryBodyId);
       const aerostaticDamping = Aerostatics.verticalDampingForce({
         mass: STATE.flight.runtimeMass,
-        verticalSpeed: body.velocity.y,
+        verticalSpeed: primaryVelocity.y,
         commandedLift: totalLift,
         weight: STATE.flight.runtimeMass * AEROSTATIC_POLICY.gravity
       }, AEROSTATIC_POLICY);
       if (Math.abs(aerostaticDamping) > 1e-6) {
-        Physics.applyForce(body, Physics.vec3(0, aerostaticDamping, 0), body.position);
+        flightSession.applyBodyForce(primaryBodyId, { x: 0, y: aerostaticDamping, z: 0 }, primaryTransform.position);
       }
 
       for (const mod of STATE.flight.functionalBlocks) {
         if (!mod.attached || (mod.type !== 'Wing' && mod.type !== 'ControlSurface')) continue;
-        const loads = mod.type === 'ControlSurface' ? applyControlSurfaceAerodynamics(body, mod) : applyWingAerodynamics(body, mod);
+        const loads = mod.type === 'ControlSurface'
+          ? applyControlSurfaceAerodynamics(mod.bodyId, mod)
+          : applyWingAerodynamics(mod.bodyId, mod);
         totalLift += loads.lift;
         totalDrag += loads.drag;
       }
 
-      applyGyroControl(body);
+      const gyroBodies = new Set(
+        STATE.flight.runtimeParts.filter(part => part.attached && part.type === 'Gyro').map(part => part.bodyId)
+      );
+      for (const bodyId of gyroBodies) applyGyroControl(bodyId);
+
       STATE.flight.structuralAccumulator += dt;
       if (STATE.flight.structuralAccumulator >= PHYSICS.structuralCheckInterval) {
         applyStructuralLoadDamage(STATE.flight.structuralAccumulator, totalThrust, totalLift, totalDrag);
@@ -2295,10 +2234,10 @@
       STATE.flight.lastLoads = { lift: totalLift, drag: totalDrag, thrust: totalThrust, impact };
     }
 
-
     function fitCameraToFlightTarget() {
-      if (STATE.mode === 'FLIGHT' && primaryFlightBody()) {
-        STATE.camera.target.lerp(primaryFlightBody().position, 0.08);
+      if (STATE.mode === 'FLIGHT' && primaryFlightBodyId()) {
+        const transform = primaryFlightTransform();
+        STATE.camera.target.lerp(new THREE.Vector3(transform.position.x, transform.position.y, transform.position.z), 0.08);
       } else {
         STATE.camera.target.lerp(STATE.camera.defaultTarget, 0.04);
       }
@@ -2310,7 +2249,7 @@
       requestAnimationFrame(animate);
       const delta = Math.min(clock.getDelta(), 0.08);
 
-      if (STATE.mode === 'FLIGHT' && primaryFlightBody()) {
+      if (STATE.mode === 'FLIGHT' && primaryFlightBodyId()) {
         if (!STATE.mission.paused) {
           physicsAccumulator = Math.min(physicsAccumulator + delta, PHYSICS.fixedDt * PHYSICS.maxSubSteps);
           let subSteps = 0;

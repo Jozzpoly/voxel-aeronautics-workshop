@@ -11,13 +11,19 @@ required = {
     'ROADMAP_NEXT.md',
     'FOUNDATION_READINESS_REVIEW.md',
     'PROGRAMMABLE_MACHINE_RESEARCH.md',
-    'PHASE_1D3C_REPORT.md',
+    'PHASE_1D3D_REPORT.md',
+    'PHASE_1D3E_REPORT.md',
+    'FOUNDATION_CONVERGENCE_REVIEW.md',
     'TEST_REPORT.md',
     'VALIDATION_REPORT.md',
     'DELIVERY_WORKFLOW.md',
     'PUSH_INSTRUCTIONS.md',
     'docs/adr/0027-hinge-only-constraint-contract.md',
     'docs/adr/0028-programmable-machine-layers.md',
+    'docs/adr/0029-flight-session-source-of-truth-and-primary-policy.md',
+    'docs/adr/0030-retry-safe-flight-cleanup-ownership.md',
+    'docs/adr/0031-per-body-visual-ownership.md',
+    'docs/adr/0032-exact-integrity-ownership-and-primary-island-limit.md',
 }
 missing = sorted(path for path in required if not (ROOT / path).is_file())
 assert not missing, f'Missing current foundation documents: {missing}'
@@ -32,6 +38,10 @@ research = (ROOT / 'PROGRAMMABLE_MACHINE_RESEARCH.md').read_text(encoding='utf-8
 delivery = (ROOT / 'DELIVERY_WORKFLOW.md').read_text(encoding='utf-8')
 adr_hinge = (ROOT / 'docs/adr/0027-hinge-only-constraint-contract.md').read_text(encoding='utf-8')
 adr_control = (ROOT / 'docs/adr/0028-programmable-machine-layers.md').read_text(encoding='utf-8')
+adr_session = (ROOT / 'docs/adr/0029-flight-session-source-of-truth-and-primary-policy.md').read_text(encoding='utf-8')
+adr_cleanup = (ROOT / 'docs/adr/0030-retry-safe-flight-cleanup-ownership.md').read_text(encoding='utf-8')
+adr_visuals = (ROOT / 'docs/adr/0031-per-body-visual-ownership.md').read_text(encoding='utf-8')
+adr_integrity = (ROOT / 'docs/adr/0032-exact-integrity-ownership-and-primary-island-limit.md').read_text(encoding='utf-8')
 
 for name, text in {
     'memory': memory,
@@ -39,7 +49,7 @@ for name, text in {
     'roadmap': roadmap,
     'readme': readme,
 }.items():
-    assert 'Phase 1D.3C' in text, f'{name} does not identify the current phase.'
+    assert 'Phase 1D.3E' in text, f'{name} does not identify the current phase.'
 
 for name, text in {
     'memory': memory,
@@ -47,7 +57,7 @@ for name, text in {
     'roadmap': roadmap,
     'review': review,
 }.items():
-    assert 'Phase 1D.3D' in text or '1D.3D' in text, f'{name} does not identify the next gate.'
+    assert 'Phase 1D.4A' in text or '1D.4A' in text, f'{name} does not identify the next gate.'
 
 for document in ('PROJECT_VISION.md', 'FOUNDATION_READINESS_REVIEW.md', 'PROGRAMMABLE_MACHINE_RESEARCH.md'):
     assert document in readme, f'README does not point to {document}.'
@@ -79,14 +89,16 @@ for phrase in (
 
 assert 'Status: Accepted in Foundation Phase 1D.3C.' in adr_hinge
 assert 'Status: Proposed after the Foundation 1D.3C whole-project review.' in adr_control
+for text in (adr_session, adr_cleanup, adr_visuals, adr_integrity):
+    assert 'Status: Accepted in Foundation Phase 1D.3E.' in text
 assert 'tests/test_release_identity.py' in delivery
 assert 'python tests/run_all.py' in delivery
 assert 'git push --force' in delivery
 
 print({
     'requiredDocuments': len(required),
-    'currentPhase': '1D.3C',
-    'nextGate': '1D.3D',
+    'currentPhase': '1D.3E',
+    'nextGate': '1D.4A',
     'projectVision': 'ok',
     'foundationReview': 'ok',
     'programmingResearch': 'ok',

@@ -1,6 +1,10 @@
 # Research kierunku — sublevele, mechanizmy i programowalne maszyny
 
-Stan researchu: 16 czerwca 2026. Dokument opisuje decyzje kierunkowe, nie zaakceptowane publiczne API.
+**Stan kanoniczny po Foundation Phase 1D.3E, 16 czerwca 2026.**
+
+Gate A jest zamknięty: flight lifecycle, exact integrity ownership i per-body visuals są assembly-centric. Ten dokument nadal opisuje decyzje kierunkowe dla Gate B–E; nie jest deklaracją istniejącego API. Następna bramka to **Phase 1D.4A — Rigid Islands & Mechanical Graph Compiler**. Assembly spaces, typed device ports i `ControlRuntime` pozostają niezaimplementowane.
+
+Dokument nie autoryzuje rozpoczęcia kabli, busu, wireless ani finalnego node editora przed zamknięciem wcześniejszych bramek.
 
 ## Cel
 

@@ -9,8 +9,8 @@
       return Object.freeze(value);
     }
 
-    const APP_VERSION = '0.6.3-foundation.1d3d';
-    const RELEASE_ID = 'foundation-1d3d-assembly-flight-lifecycle';
+    const APP_VERSION = '0.6.4-foundation.1d3e';
+    const RELEASE_ID = 'foundation-1d3e-gate-a-convergence';
     const GRID = { halfExtent: 18, minY: 0, maxY: 20, maxBlocks: 2500 };
     const SAVE_VERSION = 10;
     const SAVE_KEY = 'voxel-aeronautics-blueprint-v10';

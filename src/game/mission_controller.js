@@ -17,9 +17,10 @@
         throw new TypeError('Mission controller requires renderer/physics services, state, CraftModel, landing policy, and marker group.');
       }
       const document = documentRef;
+      if (!services.flightSession) throw new TypeError('Mission controller requires FlightSession.');
       const {
         getContractById, isContractUnlocked, getSelectedContract, careerRank,
-        recalculateCareerStars, saveCareer
+        recalculateCareerStars, saveCareer, flightSession
       } = services;
       const {
         computeCraftAnalysis, buildLoadedSnapshot, computeControlMetrics,
@@ -27,6 +28,24 @@
         updateTelemetry, autoSave, showStatus, updateHUD, disposeObjectTree,
         clearControlActions, setStabilize, setMode
       } = callbacks;
+
+      function primaryBodyId() {
+        return flightSession.isActive() ? flightSession.primaryBodyId() : null;
+      }
+
+      function primaryBodySample() {
+        const bodyId = primaryBodyId();
+        if (!bodyId) return null;
+        return {
+          bodyId,
+          transform: flightSession.getBodyTransform(bodyId),
+          velocity: flightSession.getBodyLinearVelocity(bodyId)
+        };
+      }
+
+      function vector3(value) {
+        return new THREE.Vector3(value.x, value.y, value.z);
+      }
 
       function formatMissionTime(seconds) {
         const safe = Math.max(0, Math.floor(Number(seconds) || 0));
@@ -283,15 +302,15 @@
       }
 
       function isStableHover(contract) {
-        const body = STATE.flight.body;
-        if (!body) return false;
+        const sample = primaryBodySample();
+        if (!sample) return false;
         const altitude = currentCraftAltitude();
         const target = Number(contract.targetAltitude) || 0;
-        const horizontalSpeed = Math.hypot(body.velocity.x, body.velocity.z);
+        const horizontalSpeed = Math.hypot(sample.velocity.x, sample.velocity.z);
         return altitude >= target && altitude <= target + 6
-          && Math.abs(body.velocity.y) <= 2.4
+          && Math.abs(sample.velocity.y) <= 2.4
           && horizontalSpeed <= 5.5
-          && craftTiltDegrees(body) <= 42;
+          && craftTiltDegrees(sample.bodyId) <= 42;
       }
 
       function payloadHealthFraction() {
@@ -317,7 +336,7 @@
       }
 
       function missionObjectiveText(contract) {
-        const body = STATE.flight.body;
+        const sample = primaryBodySample();
         if (contract.id === 'sandbox') return 'Free flight • F returns to workshop';
         if (contract.kind === 'hover-return') {
           if (STATE.mission.phase === 0) {
@@ -332,7 +351,8 @@
         }
         if (contract.gates && STATE.mission.gateIndex < contract.gates.length) {
           const gate = contract.gates[STATE.mission.gateIndex];
-          const distance = body ? Math.hypot(body.position.x - gate.x, body.position.y - gate.y, body.position.z - gate.z) : 0;
+          const position = sample?.transform.position;
+          const distance = position ? Math.hypot(position.x - gate.x, position.y - gate.y, position.z - gate.z) : 0;
           return `Pass gate ${STATE.mission.gateIndex + 1} of ${contract.gates.length} • ${distance.toFixed(0)} m`;
         }
         const landingText = landingObjectiveText(landingZonesForContract(contract).map(entry => entry.zone), 'Land on the highlighted remote pad');
@@ -361,7 +381,7 @@
         const hud = document.getElementById('mission-hud');
         if (!hud) return;
         const contract = getContractById(STATE.mission.contractId || STATE.career.selectedContractId);
-        const visible = STATE.mode === 'FLIGHT' && Boolean(STATE.flight.body);
+        const visible = STATE.mode === 'FLIGHT' && flightSession.isActive();
         hud.hidden = !visible;
         if (!visible) return;
         refreshMissionMarkerStates();
@@ -389,30 +409,31 @@
         document.getElementById('mission-progress-fill').style.width = `${Math.round(missionProgress(contract) * 100)}%`;
       }
 
-      function craftTiltDegrees(body) {
-        const up = Physics.vectorToWorldFrame(body, Physics.vec3(0, 1, 0));
-        return THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(up.y / Math.max(0.0001, up.length()), -1, 1)));
+      function craftTiltDegrees(bodyId = primaryBodyId()) {
+        if (!bodyId) return 0;
+        const up = flightSession.vectorToWorldFrame(bodyId, { x: 0, y: 1, z: 0 });
+        const length = Math.hypot(up.x, up.y, up.z);
+        return THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(up.y / Math.max(0.0001, length), -1, 1)));
       }
 
       function estimateCraftGroundClearance() {
-        const body = STATE.flight.body;
-        if (!body) return Number.POSITIVE_INFINITY;
-        const voxelExtent = MissionEvaluator.boxVerticalHalfExtent(body.quaternion, { x: 0.5, y: 0.5, z: 0.5 });
+        const sample = primaryBodySample();
+        if (!sample) return Number.POSITIVE_INFINITY;
+        const { bodyId, transform } = sample;
+        const voxelExtent = MissionEvaluator.boxVerticalHalfExtent(transform.quaternion, { x: 0.5, y: 0.5, z: 0.5 });
         let lowestWorldY = Number.POSITIVE_INFINITY;
         for (const part of STATE.flight.runtimeParts) {
-          if (!part.attached || !part.localPos) continue;
-          const centerY = MissionEvaluator.projectLocalPointY(body.position, body.quaternion, part.localPos);
+          if (!part.attached || !part.localPos || part.bodyId !== bodyId) continue;
+          const centerY = MissionEvaluator.projectLocalPointY(transform.position, transform.quaternion, part.localPos);
           lowestWorldY = Math.min(lowestWorldY, centerY - voxelExtent);
         }
         const payload = STATE.flight.payload;
-        if (payload?.attached && payload.localPos) {
-          const payloadCenterY = MissionEvaluator.projectLocalPointY(body.position, body.quaternion, payload.localPos);
-          const payloadExtent = MissionEvaluator.boxVerticalHalfExtent(body.quaternion, { x: 0.42, y: 0.42, z: 0.42 });
+        if (payload?.attached && payload.localPos && payload.bodyId === bodyId) {
+          const payloadCenterY = MissionEvaluator.projectLocalPointY(transform.position, transform.quaternion, payload.localPos);
+          const payloadExtent = MissionEvaluator.boxVerticalHalfExtent(transform.quaternion, { x: 0.42, y: 0.42, z: 0.42 });
           lowestWorldY = Math.min(lowestWorldY, payloadCenterY - payloadExtent);
         }
-        if (!Number.isFinite(lowestWorldY)) {
-          lowestWorldY = body.position.y + STATE.flight.lowestLocalY;
-        }
+        if (!Number.isFinite(lowestWorldY)) lowestWorldY = transform.position.y + STATE.flight.lowestLocalY;
         return lowestWorldY - TEST_RANGE.groundY;
       }
 
@@ -422,12 +443,12 @@
       }
 
       function landingSample() {
-        const body = STATE.flight.body;
-        if (!body) return null;
+        const sample = primaryBodySample();
+        if (!sample) return null;
         return {
-          position: body.position,
-          velocity: body.velocity,
-          tiltDegrees: craftTiltDegrees(body),
+          position: sample.transform.position,
+          velocity: sample.velocity,
+          tiltDegrees: craftTiltDegrees(sample.bodyId),
           groundClearance: estimateCraftGroundClearance(),
           contactAge: STATE.mission.elapsed - STATE.mission.lastGroundContact
         };
@@ -467,7 +488,8 @@
         STATE.mission.maxImpact = 0;
         STATE.mission.startFuel = STATE.flight.fuel;
         STATE.mission.result = null;
-        STATE.mission.previousPosition = STATE.flight.body ? STATE.flight.body.position.clone() : null;
+        const sample = primaryBodySample();
+        STATE.mission.previousPosition = sample ? vector3(sample.transform.position) : null;
         STATE.mission.helpPaused = false;
         prepareMissionMarkers(contract);
         document.getElementById('debrief-modal').hidden = true;
@@ -541,10 +563,8 @@
         STATE.mission.helpPaused = false;
         clearControlActions();
         setStabilize(false);
-        if (STATE.flight.body) {
-          STATE.flight.body.velocity.set(0, 0, 0);
-          STATE.flight.body.angularVelocity.set(0, 0, 0);
-        }
+        const bodyId = primaryBodyId();
+        if (bodyId) flightSession.clearBodyMotion(bodyId);
         const result = {
           success, contractId: contract.id, stars, reward,
           elapsed: STATE.mission.elapsed,
@@ -570,20 +590,22 @@
       }
 
       function updateMission(dt) {
-        if (STATE.mission.status !== 'ACTIVE' || STATE.mission.paused || !STATE.flight.body) return;
+        if (STATE.mission.status !== 'ACTIVE' || STATE.mission.paused || !flightSession.isActive()) return;
         const contract = getContractById(STATE.mission.contractId);
-        const body = STATE.flight.body;
-        const currentPosition = body.position.clone();
+        const sample = primaryBodySample();
+        if (!sample) return;
+        const currentPosition = vector3(sample.transform.position);
         const previousPosition = STATE.mission.previousPosition || currentPosition.clone();
         STATE.mission.elapsed += dt;
         const altitude = currentCraftAltitude();
-        const speed = body.velocity.length();
+        const speed = Math.hypot(sample.velocity.x, sample.velocity.y, sample.velocity.z);
         STATE.mission.maxAltitude = Math.max(STATE.mission.maxAltitude, altitude);
         STATE.mission.maxSpeed = Math.max(STATE.mission.maxSpeed, speed);
         STATE.mission.maxImpact = Math.max(STATE.mission.maxImpact, STATE.flight.maxImpact || 0);
 
         const finishFrame = () => { STATE.mission.previousPosition = currentPosition; };
-        if (Math.abs(body.position.x) > TEST_RANGE.bounds || Math.abs(body.position.z) > TEST_RANGE.bounds || body.position.y > TEST_RANGE.maxAltitude) {
+        const position = sample.transform.position;
+        if (Math.abs(position.x) > TEST_RANGE.bounds || Math.abs(position.z) > TEST_RANGE.bounds || position.y > TEST_RANGE.maxAltitude) {
           finishFrame(); finishMission(false, 'The craft left the authorized test range.'); return;
         }
         if (STATE.flight.integrity <= 0) {

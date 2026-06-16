@@ -9,6 +9,9 @@ ROOT = Path(__file__).resolve().parents[1]
 from source_inventory import ALL_JS, FOUNDATION, GAME, RUNTIME, function_source
 HTML = (ROOT / 'index.html').read_text(encoding='utf-8')
 CSS = (ROOT / 'styles.css').read_text(encoding='utf-8').rstrip()
+INTEGRITY = (ROOT / 'src/game/flight_integrity.js').read_text(encoding='utf-8')
+SESSION = (ROOT / 'src/game/flight_session.js').read_text(encoding='utf-8')
+ENTRY = (ROOT / 'src/game.js').read_text(encoding='utf-8')
 
 
 
@@ -30,11 +33,13 @@ for relative in module.APP_SOURCES:
 for element_id in ('ui-structural-reserve', 'ui-weak-links', 'mission-hud-payload', 'debrief-payload'):
     assert f'id="{element_id}"' in HTML
 
-# Branch failure is a transaction: one body recenter and one aggregate block-count change.
-detach = function_source('detachRuntimeParts')
-assert detach.count('recenterCraftBody()') == 1
-assert 'STATE.flight.blockCount = Math.max(1, STATE.flight.blockCount - detachedCount);' in detach
-assert 'collectDisconnectedRuntimeParts()' in detach
+# Branch failure is a backend-first transaction owned by FlightIntegrity.
+assert 'function detachParts(entries, cascade = true)' in INTEGRITY
+assert 'Backend rejected collider removal' in INTEGRITY
+assert 'finalizeDetachedPart(part, reason);' in INTEGRITY
+assert 'state.flight.runtimePartById?.delete(part.blockId);' in INTEGRITY
+assert 'if (detached > 0) recenterBody(primaryBodyId);' in INTEGRITY
+assert 'primary-rigid-island-only' in INTEGRITY
 
 # Neighbor lookup must remain O(1) per direction instead of scanning all runtime parts.
 neighbors = function_source('runtimeNeighborCount')
@@ -49,8 +54,8 @@ assert re.search(r'structuralCheckInterval:\s*1\s*/\s*30', ALL_JS)
 
 # Collider mutation happens only after world.step.
 assert re.search(r'Physics\.step\(world, PHYSICS\.fixedDt\);\s*processPendingImpacts\(\);\s*updateMission', GAME)
-callback_start = GAME.index('collisionListener: ({ body: collidedBody, event }) => {')
-callback = GAME[callback_start:GAME.index('body = assemblyRuntime.rootBody;', callback_start)]
+callback_start = GAME.index('collisionListener: ({ bodyId, collision }) => {')
+callback = GAME[callback_start:GAME.index('const visualRootByBodyId = new Map();', callback_start)]
 assert 'applyImpactDamage(' not in callback
 
 # Debris must be bounded and isolated from debris-debris collision storms.
@@ -81,7 +86,7 @@ assert 'segmentCrossesGate(previousPosition, currentPosition, gate)' in GAME
 
 # Hover certification must be a stable hold, not merely reaching altitude.
 stable_hover = function_source('isStableHover')
-for token in ('Math.abs(body.velocity.y) <= 2.4', 'horizontalSpeed <= 5.5', 'craftTiltDegrees(body) <= 42'):
+for token in ('Math.abs(sample.velocity.y) <= 2.4', 'horizontalSpeed <= 5.5', 'craftTiltDegrees(sample.bodyId) <= 42'):
     assert token in stable_hover
 
 # Cargo damage has gameplay consequences and is visible in the debrief.
@@ -106,9 +111,8 @@ assert 'STATE.history.rollbackUndo(current, target)' in GAME
 assert 'storedParts > maxStoredParts' in ALL_JS
 
 # A destroyed command core is always a terminal craft failure, regardless of remaining wing health.
-integrity = function_source('recomputeFlightIntegrity')
-assert 'getRuntimeCore()' in integrity
-assert 'coreOperational && STATE.flight.initialHealth > 0' in integrity
+assert 'const core = getRuntimeCore(primaryBodyId);' in INTEGRITY
+assert 'core?.health > 0 && state.flight.initialHealth > 0' in INTEGRITY
 
 
 # Editing readiness is separated from flight readiness: empty/disconnected work-in-progress is saveable,
@@ -182,7 +186,7 @@ for element_id in ('workspace-toolbar', 'contract-panel'):
 for removed_id in ('btn-ui-contracts', 'mobile-topbar', 'mobile-controls', 'btn-touch-place'):
     assert f'id="{removed_id}"' not in HTML
 assert 'id="desktop-required"' in HTML
-assert 'Foundation Phase 1D.3C' in HTML
+assert 'Foundation Phase 1D.3E' in HTML
 assert 'Foundation Phase 1D.2B • Mission + Balloon Control Fix' not in HTML
 assert re.search(r'id="contract-panel"[^>]*\shidden', HTML)
 assert 'btn-contract-panel-open' not in HTML and 'btn-contract-panel-close' not in HTML
@@ -233,27 +237,27 @@ print({'state_based_landing': 'ok', 'collision_event_not_required_for_dwell': 'o
 # Runtime assembly construction is a real boundary: game.js consumes AssemblyBuilder instead of
 # rebuilding craft bodies and colliders through the physics backend.
 build_flight = function_source('buildFlightBody')
-assert 'AssemblyBuilder.build({' in build_flight
-assert 'assemblyRuntime.colliderByBlockId.get' in build_flight
+assert 'flightSession.start({' in build_flight
+assert 'AssemblyBuilder.build({' not in build_flight
+assert 'flightSession.getColliderOwnershipByBlockId' in build_flight
 assert 'Physics.createBody({' not in build_flight
 assert 'Physics.addBoxCollider(' not in build_flight
-recenter = function_source('recenterCraftBody')
-assert 'assemblyRuntime.recenterBody' in recenter
-assert 'assemblyRuntime.setBodyMassProperties' in recenter
+assert 'flightSession.recenterBody(bodyId, shift);' in INTEGRITY
+assert 'flightSession.setBodyMassProperties(bodyId' in INTEGRITY
 assert 'body.angularVelocity.cross' not in function_source('pointVelocityWorld')
-assert 'Physics.getPointVelocity(body, localPoint)' in function_source('pointVelocityWorld')
+assert 'flightSession.getBodyPointVelocity(bodyId, localPoint)' in function_source('pointVelocityWorld')
 assert 'runtime.headless-physics-backend' in ALL_JS
 assert 'runtime.assembly-builder' in ALL_JS
 print({'assembly_builder_boundary': 'ok', 'recenter_physics_boundary': 'ok', 'headless_backend_registered': 'ok'})
 
 # Runtime collision callbacks expose a backend-neutral event instead of Cannon contact internals.
-collision_callback_start = GAME.index('collisionListener: ({ body: collidedBody, event }) => {')
-collision_callback = GAME[collision_callback_start:GAME.index('body = assemblyRuntime.rootBody;', collision_callback_start)]
+collision_callback_start = GAME.index('collisionListener: ({ bodyId, collision }) => {')
+collision_callback = GAME[collision_callback_start:GAME.index('const visualRootByBodyId = new Map();', collision_callback_start)]
 assert 'event.contact' not in collision_callback
 assert 'event.body' not in collision_callback
-assert 'event.impactSpeed' in collision_callback
-assert 'event.otherBody' in collision_callback
-assert 'event.relativePoint' in collision_callback
+assert 'collision.impactSpeed' in collision_callback
+assert 'collision.kind' in collision_callback
+assert 'collision.relativePoint' in collision_callback
 assert 'normalizeCollisionEvent' in ALL_JS
 print({'physics_collision_event_boundary': 'ok'})
 
@@ -263,7 +267,8 @@ CANNON_BACKEND = (ROOT / 'src/runtime/cannon_physics_backend.js').read_text(enco
 GAME_SOURCES = '\n'.join(path.read_text(encoding='utf-8') for path in [ROOT / 'src/game.js', *(ROOT / 'src/game').glob('*.js')])
 assert 'new CANNON.HingeConstraint' in CANNON_BACKEND
 assert 'new CANNON.HingeConstraint' not in GAME_SOURCES
-assert 'constraintBuilder' not in GAME_SOURCES
+assert 'constraintBuilder' not in ENTRY, 'composition root must not inject custom solver handles'
+assert 'constraintBuilder' in SESSION, 'FlightSession may expose the neutral AssemblyBuilder test seam'
 assert 'Physics.createConstraint(' not in GAME_SOURCES
 assert 'Physics.addConstraint(' not in GAME_SOURCES
 assert 'Physics.removeConstraint(' not in GAME_SOURCES

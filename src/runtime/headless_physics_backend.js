@@ -185,6 +185,24 @@
       return body;
     }
 
+    function getBodyTransform(body) {
+      if (!body) throw new TypeError('Body is required.');
+      return Object.freeze({
+        position: PhysicsPort.normalizeVec3(body.position),
+        quaternion: PhysicsPort.normalizeQuaternion(body.quaternion)
+      });
+    }
+
+    function getBodyLinearVelocity(body) {
+      if (!body) throw new TypeError('Body is required.');
+      return PhysicsPort.normalizeVec3(body.velocity);
+    }
+
+    function getBodyAngularVelocity(body) {
+      if (!body) throw new TypeError('Body is required.');
+      return PhysicsPort.normalizeVec3(body.angularVelocity);
+    }
+
     function setBodyMassProperties(body, value = {}) {
       if (!body) throw new TypeError('Body is required.');
       const descriptor = PhysicsPort.normalizeMassProperties(value);
@@ -245,6 +263,11 @@
 
     function pointToWorldFrame(body, pointValue) {
       return rotateVector(body.quaternion, vec3(pointValue)).add(body.position);
+    }
+
+    function pointToLocalFrame(body, pointValue) {
+      if (!body) throw new TypeError('Body is required.');
+      return inverseRotateVector(body.quaternion, vec3(pointValue).sub(body.position));
     }
 
     function getPointVelocity(body, localPointValue) {
@@ -345,6 +368,9 @@
         removeCollider,
         shiftColliderOffsets,
         vec3,
+        getBodyTransform,
+        getBodyLinearVelocity,
+        getBodyAngularVelocity,
         setBodyTransform,
         setBodyVelocity,
         setBodyMass,
@@ -356,6 +382,7 @@
         vectorToWorldFrame,
         vectorToLocalFrame,
         pointToWorldFrame,
+        pointToLocalFrame,
         getPointVelocity,
         createConstraint,
         addConstraint,

@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 from source_inventory import ALL_JS as GAME
 HTML = (ROOT / 'index.html').read_text(encoding='utf-8')
+ENTRY = (ROOT / 'src/game.js').read_text(encoding='utf-8')
 
 EXPECTED_CONTRACTS = [
     ('sandbox', None),
@@ -115,7 +116,7 @@ assert 'const loadedControls = computeControlMetrics(loadedSnapshot);' in GAME
 assert 'const rangeStaticBodies = [];' in GAME
 assert 'userData: { rangeObstacle: true }' in GAME
 assert GAME.count('0x000000, true') >= 4, 'expected collidable range structures'
-assert 'if (otherBody === groundBody) STATE.mission.lastGroundContact = STATE.mission.elapsed;' in GAME
+assert "if (collision.kind === 'ground') STATE.mission.lastGroundContact = STATE.mission.elapsed;" in GAME
 
 # Mission DOM should update on the render path, not on every 120 Hz physics substep.
 update_start = GAME.index('function updateMission(dt)')
@@ -160,11 +161,12 @@ assert 'STATE.flight.pendingImpacts.push({' in GAME
 assert 'function processPendingImpacts()' in GAME
 step_sequence = re.search(r"Physics\.step\(world, PHYSICS\.fixedDt\);\s*processPendingImpacts\(\);\s*updateMission", GAME)
 assert step_sequence, 'impact processing must happen after world.step and before mission evaluation'
-callback_start = GAME.index('collisionListener: ({ body: collidedBody, event }) => {')
-callback_end = GAME.index('body = assemblyRuntime.rootBody;', callback_start)
+callback_start = GAME.index('collisionListener: ({ bodyId, collision }) => {')
+callback_end = GAME.index('const visualRootByBodyId = new Map();', callback_start)
 callback_source = GAME[callback_start:callback_end]
 assert 'applyImpactDamage(' not in callback_source, 'collision callback must not mutate body shapes directly'
-assert 'AssemblyBuilder.build({' in GAME, 'flight runtime must be constructed through the assembly builder boundary'
+assert 'flightSession.start({' in ENTRY, 'flight runtime must be constructed through FlightSession'
+assert 'AssemblyBuilder.build({' not in ENTRY, 'composition root must not duplicate assembly construction'
 
 # Workshop prediction must use the same neutral control-surface lift scale as runtime.
 assert "const isControlSurface = part.type === 'ControlSurface';" in GAME

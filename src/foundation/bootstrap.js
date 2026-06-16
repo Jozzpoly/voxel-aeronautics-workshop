@@ -49,14 +49,14 @@
     cannonVersion: Physics.version,
     webglRenderer: true,
     physicsBackend: Physics.id,
-    physicsBoundary: 'phase-1d3-assembly-builder',
+    physicsBoundary: 'phase-1d3e-neutral-assembly-api',
     runtimeAssembly: 'runtime-builder-v1',
     headlessHarness: 'deterministic-free-flight-v1',
     missionEvaluation: 'phase-1d2b-multi-pad-ground-state',
     aerostatics: 'altitude-lift-damped-settling-v2',
     platform: 'desktop-keyboard-mouse-v1',
     workspaceState: 'version-3-z-order',
-    gameShell: 'explicit-composition-v1'
+    gameShell: 'assembly-centric-lifecycle-v2'
   });
   const runtime = Object.freeze({ Config, Catalog, Orientation, Blueprint, CraftModel, CraftHistory, ControlFrame, MassProperties, CraftCompiler, RuntimeAssembly, AssemblyBuilder, HeadlessPhysicsBackend, InputProfile, UIWorkspace, MissionEvaluator, Aerostatics, FlightControl, State, PhysicsPort, Physics, Capabilities });
   Object.defineProperty(window, 'VAW_RUNTIME', {

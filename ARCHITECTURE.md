@@ -1,716 +1,260 @@
-# Architektura — Foundation Phase 1D.3C
+# Architektura — Foundation Phase 1D.3E
 
-## Cel etapu
+## 1. Status
 
-Phase 1D.3C zachowuje modularny game shell i rozszerza runtime assembly o pierwszy zweryfikowany mechanical constraint. `src/game.js` pozostaje composition rootem, natomiast tworzenie body, colliderów i constraints należy do `runtime.assembly-builder` oraz Physics Portu.
+Phase 1D.3E zamyka **Gate A — Single-body flight ownership / assembly-centric lifecycle**. Runtime może już poprawnie posiadać 0, 1, 2 lub wiele body na poziomie planu/buildera/lifecycle, choć produkcyjny `CraftCompiler` nadal emituje jedną rigid island. Następną bramką jest **Phase 1D.4A — Rigid Islands & Mechanical Graph Compiler**.
 
-Nadal obowiązują trzy główne stany:
+Historyczne raporty 1D.3A–1D.3D pozostają historią. Nie są kanonicznym opisem bieżącego ownership.
 
-1. **Blueprint / CraftModel** — edytowalny i zapisywalny projekt;
-2. **CompiledCraft** — zweryfikowany, deterministyczny opis maszyny;
-3. **Flight Runtime** — obiekty renderingu i fizyki używane podczas lotu.
-
-Poprawność stanu roboczego nie jest tym samym co gotowość do lotu.
-
-## Przepływ danych domenowych i fizycznych
+## 2. Warstwy i kierunek zależności
 
 ```text
-Blueprint JSON
-    │ normalize / migrate
-    ▼
-CraftModel
-    │ snapshot + revision
-    ▼
-CraftCompiler
-    │ immutable CompiledCraft
-    ▼
-foundation.runtime-assembly
-    │ immutable RuntimeAssemblyPlan
-    ▼
-runtime.assembly-builder
-    ├─ runtime.physics-port
-    │      ├─ runtime.cannon-physics-backend
-    │      └─ runtime.headless-physics-backend
-    ├─ stable body/collider/part/constraint maps
-    ├─ hinge runtime commands through Physics Port
-    └─ transactional, retry-safe lifecycle
+foundation domain
+  CraftModel
+  Blueprint / migration
+  Catalog / Orientation / ControlFrame
+  MassProperties
+
+compilation
+  CraftCompiler
+  CompiledCraft
+  RuntimeAssembly.createPlan
+
+runtime construction
+  AssemblyBuilder
+  RuntimeAssembly instance
+  Physics Port
+  Cannon or headless backend
+
+game application
+  game.js (composition only)
+  FlightSession
+  FlightIntegrity
+  DebrisRuntime
+  MissionController
+  presentation/services
 ```
 
-Renderer i fizyka nigdy nie są źródłem prawdy blueprintu.
+Zależności płyną w dół. Foundation nie zna DOM, Three ani Cannon. Game modules nie czytają `window.VAW_RUNTIME`; zależności dostają jawnie z composition rootu albo przez modułowy registry.
 
-## Game shell i kompozycja
+## 3. Workshop source of truth
+
+`CraftModel` posiada:
+
+- części;
+- trwałe `blockId`;
+- pozycję, typ, orientację i ustawienia części;
+- atomic transactions;
+- readiness diagnostics;
+- dokument blueprintu.
+
+`gridKey` jest indeksem przestrzennym, nie tożsamością. Move zachowuje `blockId`; copy tworzy nowy. Renderer workshopu jest projection modelu.
+
+## 4. Compilation boundary
+
+`CraftCompiler.compile(CraftModel)` jest jedyną drogą do `CompiledCraft`.
+
+Bieżący compiler:
+
+- waliduje craft;
+- daje deterministyczne parts i signature;
+- oblicza control frame oraz analizy potrzebne single-body gameplay;
+- nadal nie dzieli konstrukcji na rigid islands.
+
+`RuntimeAssembly.createPlan(snapshot)` tworzy neutralny plan V1. Obecnie plan produkcyjny ma jedną rigid body, ale kontrakt buildera i test fixtures obsługują wiele body, constraints i signal-links slot.
+
+## 5. RuntimeAssembly jako źródło prawdy lotu
+
+Aktywna sesja ma dokładnie jedno `RuntimeAssembly`.
 
 ```text
-foundation.bootstrap
-    │ publishes immutable VAW_RUNTIME
-    ▼
-src/game.js — final composition root
-    ├─ game.scene-environment
-    ├─ game.career-service
-    ├─ game.workspace-controller
-    ├─ game.input-settings-controller
-    ├─ game.orientation-service
-    ├─ game.module-visual-factory
-    ├─ game.engineering-analysis
-    ├─ game.blueprint-controller
-    └─ game.mission-controller
+FlightSession.start
+  -> RuntimeAssemblyPlan
+  -> AssemblyBuilder.build
+  -> RuntimeAssembly
+  -> publish state.flight.assembly
 ```
 
-Composition root:
+Nie istnieje drugi niezależny `bodyById` w game shellu. `primaryBodyId` jest polityką/query, nie drugim pojazdem.
 
-- pobiera stabilne moduły z kernela;
-- tworzy jeden wspólny stan aplikacji;
-- przekazuje modułom tylko wymagane zależności i callbacki;
-- spina event routing, workshop glue, flight/integrity i główną pętlę;
-- pozostaje ostatnim plikiem w `APP_SOURCES`.
+Deprecated aliases `STATE.flight.body`, `primaryBody`, `assemblyRuntime` i `group` mogą wskazywać ten sam runtime/primary root dla kompatybilności, lecz nie są czytane przez nowe moduły i nie mogą być źródłem prawdy.
 
-Moduł `game.*`:
+## 6. Primary body policy
 
-- nie importuje `src/game.js`;
-- nie czyta `window.VAW_RUNTIME`;
-- deklaruje zależności przez `window.VAW.define(...)` lub argumenty `create(...)`;
-- nie sięga z zewnątrz do prywatnych timerów ani mutable state innego modułu;
-- wystawia jawny handler lifecycle, `flush` albo `dispose`, gdy posiada zasób wymagający domknięcia.
+Kolejność wyboru:
 
-## Kierunek zależności
+1. jawnie requested `primaryBodyId`;
+2. `plan.rootBodyId`;
+3. najmniejszy stabilnie sortowany body z `role === "root"`;
+4. najmniejszy stabilnie sortowany `bodyId`.
 
-```text
-foundation.* ──────────────┐
-                           ├─> foundation.bootstrap ─> src/game.js
-runtime.physics-port ──────┤                           │
-runtime.*-backend ─────────┤                           ├─> game.* services/controllers
-runtime.assembly-builder ──┘                           └─> render/input/event composition
+Polityka nie zależy od indeksu tablicy. Mission, HUD i camera pobierają próbkę wyłącznie przez `FlightSession`.
 
-game.*  ─X─> src/game.js
-game.*  ─X─> window.VAW_RUNTIME
-foundation.* ─X─> game.*
-```
+## 7. Physics Port
 
-Fundament nie może zależeć od sceny ani warstwy aplikacyjnej.
+Physics Port jest neutralną granicą backendu. Publiczny game/control layer nie otrzymuje solver handles.
 
-## `foundation.blueprint`
+Podstawowy kontrakt obejmuje:
 
-Blueprint v10 jest czystym dokumentem i może reprezentować:
-
-- pusty warsztat;
-- konstrukcję bez Core;
-- Core w dowolnej poprawnej pozycji;
-- chwilowo rozłączone wyspy konstrukcji;
-- maksymalnie jeden Core.
-
-Takie dokumenty są poprawnymi **stanami edytora**, lecz nie muszą być gotowe do lotu.
-
-Dla v3–v7 zachowane są historyczne reguły pozycji i spójności. Dla v3–v8 zachowana jest historyczna orientacja Core:
-
-- Core w `0,0,0` dla v3–v7;
-- automatyczne dodanie Core, gdy stary zapis go nie zawierał;
-- wymagana spójność konstrukcji dla v3–v7;
-- Core `forward +X / up +Y` dla v3–v8.
-
-Normalizacja zawsze zwraca dokument v10 i przydziela trwałe `blockId` dokumentom v3–v9.
-
-## `foundation.craft-model`
-
-`CraftModel` jest jedynym właścicielem aktualnej konstrukcji warsztatowej. Przechowuje wyłącznie zamrożone rekordy domenowe:
-
-```text
-{
-  blockId,
-  key,
-  x, y, z,
-  type,
-  orientation,
-  controlAxis,
-  controlSign
-}
-```
-
-Model:
-
-- pozwala zacząć od dowolnego bloku;
-- pozwala na zero lub jeden Core;
-- pozwala przesuwać Core przez usunięcie i ponowne ustawienie;
-- pozwala zachować rozłączony stan roboczy;
-- pilnuje granic, typów, duplikatów i limitu bloków;
-- wykonuje operacje wieloblokowe atomowo;
-- emituje jedno zdarzenie na przyjętą transakcję;
-- posiada rewizję rosnącą wyłącznie po realnej zmianie.
-
-Spójność pozostaje dostępna jako diagnostyka `isContiguous()`, ale jej wymaganie należy do kompilacji lotnej.
-
-## `foundation.craft-history`
-
-Historia przechowuje izolowane snapshoty dokumentów i odpowiada za:
-
-- undo / redo;
-- deduplikację;
-- limit liczby wpisów;
-- limit sumy części;
-- rollback, gdy odtworzenie nie powiedzie się.
-
-Runtime nie utrzymuje równoległych, luźnych stosów historii.
-
-## `foundation.craft-compiler`
-
-### Kontrakt wejścia
-
-Kompilator przyjmuje:
-
-- `CraftModel`;
-- snapshot `{ revision, blocks }`;
-- dokument lub listę bloków.
-
-Dla modelu cache jest kluczowany obiektem i rewizją.
-
-### Walidacja gotowości do lotu
-
-`CompiledCraft.ready` jest prawdziwe wyłącznie, gdy:
-
-- istnieje co najmniej jeden blok;
-- istnieje dokładnie jeden Core;
-- wszystkie części są poprawne i unikalne;
-- wszystkie części należą do jednej połączonej wyspy;
-- limit siatki i bloków nie jest przekroczony.
-
-Edytor nie musi spełniać tych reguł w każdej klatce. Start musi.
-
-### Zawartość artefaktu
-
-`CompiledCraft` zawiera:
-
-- `format`, `sourceRevision`, `signature`;
-- `ready`, `errors`, `warnings`;
-- `blockCount`, `connectedCount`;
-- `coreIndex`, `coreKey`, `corePosition`;
-- `controlFrame` z forward/up/right i źródłem orientacji;
-- masę, ciężar, paliwo, opór, COM i bezwładność;
-- `keyToIndex`, `blockIdToIndex`, `adjacency`;
-- kanoniczne części z liczbowymi bazami orientacji;
-- lokalne offsety, pełne siły i momenty;
-- `functionalByType`;
-- referencyjny `colliderPlan`.
-
-Cały wynik jest głęboko zamrożony. Kompilator nie tworzy wektorów Three.js, body Cannon.js ani elementów DOM.
-
-### Determinizm
-
-Kolejność części jest kanoniczna. Ta sama konstrukcja niezależnie od kolejności wejściowej produkuje tę samą sygnaturę i układ indeksów.
-
-## Adapter `CompiledCraft -> Flight Runtime`
-
-`buildCraftSnapshot()` jest obecnie przejściowym adapterem:
-
-- bierze wyłącznie wynik `CraftCompiler`;
-- konwertuje neutralne tablice liczbowe na `THREE.Vector3`;
-- nie odczytuje meshów jako danych konstrukcji;
-- przekazuje rzeczywistą pozycję Core do mocowania payloadu;
-- buduje istniejący runtime bez zmiany modelu lotu.
-
-Tworzenie świata i backendowych zasobów przechodzi przez `runtime.physics-port`. Od Phase 1D.3A `runtime.assembly-builder` wykonuje plan głównego craft assembly i jest jedynym właścicielem jego body/collider lifecycle. Game shell przechowuje gameplayowe runtime parts oraz może tworzyć krótkotrwałe debris przez Physics Port.
-
-
-## `runtime.physics-port` i `runtime.cannon-physics-backend`
-
-Port definiuje neutralne deskryptory świata, body, boxa, plane, wektora i kwaternionu oraz sprawdza wymagany zestaw operacji backendu. Nie zależy od DOM, Three.js ani Cannon.js.
-
-Adapter Cannon jest jedynym miejscem, w którym wolno tworzyć `CANNON.World`, `CANNON.Body`, `CANNON.Box`, `CANNON.Plane` i wykonywać `world.step`. Odpowiada także za:
-
-- dodawanie i usuwanie body;
-- tworzenie i usuwanie colliderów;
-- przesuwanie offsetów colliderów po zmianie COM;
-- aktualizację masy i flag broadphase/AABB;
-- siły, momenty i transformacje local/world;
-- rejestrację zdarzeń kolizji.
-
-Phase 1D.2B zachowuje natywne obiekty body i wektorów Cannon jako warstwę kompatybilności, ale kontakt jest już mapowany do neutralnego `{ otherBody, impactSpeed, relativePoint }`. `game.js` nie odczytuje pól `contact/bi/ri/rj` ani metod Cannon. Zmiana backendu nadal nie jest operacją podmiany jednego importu, ponieważ aerodynamika korzysta z natywnych metod wektorów.
-
-## `foundation.control-frame`, `foundation.input-profile` i `foundation.flight-control`
-
-Command Core przechowuje jedną z 24 baz orientacji. Kompilator wyprowadza z niej `forward`, `up` i `right`. Intencja gracza jest najpierw przetwarzana przez profil wejścia, a następnie transformowana z układu Core do lokalnych osi bryły.
-
-Warstwa wejścia operuje na semantycznych akcjach:
-
-```text
-pitch+ / pitch-
-yaw+ / yaw-
-roll+ / roll-
-surge+ / surge-
-sway+ / sway-
-lift+ / lift-
-```
-
-Mapowanie klawiszy jest oddzielone od stanu pilota. Profil wejścia v3 przechowuje do dwóch fizycznych `KeyboardEvent.code` na akcję, migruje profile v1–v2 i gwarantuje jednoznaczność kodu. Obejmuje sześć osi oraz pomocnicze akcje `thrusterPower-/+` i `balloonPower-/+`. Dzięki temu klawiatura, przyszły gamepad i mikrokontroler mogą zasilać te same semantyczne komendy bez zmian w mikserze.
-
-`applyTranslationMix()` miesza lokalny kierunek thrustera z żądaniem:
-
-- `surge` — lokalne przód / tył;
-- `sway` — lokalne lewo / prawo;
-- `lift` — lokalne góra / dół.
-
-Suwak mocy ustala wyłącznie pasywny ciąg silników skierowanych ku lokalnemu +Y. Nie jest limitem mocy dostępnej dla wejść pilota. Poziome i skierowane w dół thrustry są neutralnie wyłączone, natomiast zgodna komenda translacji lub obrotu może zwiększyć dowolny thruster aż do 100%. Komenda przeciwna redukuje istniejący pasywny ciąg do zera. Domyślny `Left Ctrl` publikuje semantyczne `lift-`, aktywuje thrustry skierowane w dół i wygasza pasywny ciąg skierowany w górę. Sam mikser nie zna fizycznego klawisza.
-
-
-## `foundation.ui-workspace`
-
-Build, Contracts, Telemetry i Controls są projekcjami jednego wersjonowanego stanu okien. Ramka panelu zarządza pozycją i resize, natomiast `.workspace-panel-scroll` jest jedynym przewijanym korpusem. `fitPanelRect()` ogranicza całą ramkę do viewportu podczas odtwarzania i przeciągania. Workspace v3 zachowuje z-order i wersjonowany stan, resetuje wadliwą geometrię starszych zapisów oraz zachowuje preferencje otwarcia. Workspace ma jeden desktopowy model okien. Telefon i touch-only są poza zakresem runtime; nie istnieje alternatywna mobilna projekcja paneli. Profil wejścia i workspace są preferencjami użytkownika, nie częścią blueprintu.
-
-## `foundation.mission-evaluator` i jawne strefy lądowania
-
-Kontrakt nie może polegać na ukrytym założeniu „start pad albo finish pad”. `foundation.catalog` zapisuje `landingZones`, a runtime mapuje identyfikatory na strefy `TEST_RANGE`. `evaluateLandingZones()` ocenia jeden znormalizowany sample statku względem wszystkich dozwolonych stref. Jeżeli żadna nie jest zaliczona, zwraca najbliższą strefę dla komunikatu HUD; jeżeli dowolna spełnia warunki, zwraca ją jako zaliczoną.
-
-Sample lądowania zawiera pozycję body, prędkość, przechył, prześwit najniższej geometrii i wiek ostatniego kontaktu. Prześwit jest sygnałem podstawowym. Event kontaktu jest tylko ograniczonym czasowo potwierdzeniem i nie może samodzielnie zaliczyć statku wysoko nad ziemią. Dwell jest aktualizowany przez czystą funkcję z kontrolowanym decay.
-
-## `foundation.aerostatics`
-
-Aerostatyka jest czystym modułem bez DOM, Three.js i Cannon.js. Definiuje:
-
-```text
-efficiency(h) = max(minimumEfficiency, exp(-h / scaleHeight))
-availableLift = maxSeaLevelLift × power × efficiency(h)
-```
-
-`requiredPowerForHover()` oblicza neutralną moc po odjęciu pasywnej siły pionowych thrusterów, a `equilibriumAltitude()` szacuje pułap równowagi wybranej komendy. Pętla fizyki oraz marker UI korzystają z tej samej polityki `AEROSTATICS`. Marker jest analizą statyczną: nie obejmuje dynamicznej siły skrzydeł ani chwilowych wejść pilota.
-
-`verticalSupportSample()` tworzy wspólny snapshot ciężaru, wysokości, maksymalnego liftu balonów i maksymalnego pasywnego liftu thrusterów. `requiredSupplementalPowerForHover()` oblicza wymagany udział źródła dodatkowego po uwzględnieniu źródła bazowego. Dla Passive vertical thrust bazą jest aktualny lift balonów; dla Balloon power źródłem pomocniczym jest aktualny pasywny ciąg.
-
-Stan Balloon power jest zmieniany tylko przez `setBalloonPower()`, a stan pasywnego ciągu tylko przez `setThrusterPower()`. Settery synchronizują model, tekst, suwaki, guidance i zapis. `Comma/Period` oraz `Minus/Equal` są rebindable akcjami profilu i wywołują te same ścieżki co suwaki. `verticalDampingForce()` dodaje ograniczony opór przeciwny do prędkości pionowej, zależny od aktywnego lift, ale nie od błędu wysokości.
-
-## Granica platformy desktopowej i Flight Focus
-
-Runtime zakłada klawiaturę i mysz. Pointer events obsługują mysz i pen, ale dotykowy canvas nie emuluje budowania ani pilotażu. Wąski viewport może wyświetlić komunikat o wymaganym desktopie. Touchpad laptopa pozostaje zwykłym pointerem i źródłem wheel/scroll.
-
-Bindingi są preferencją użytkownika i mogą używać modifierów. `foundation.flight-control` rozwiązuje fizyczny kod przez profil i publikuje wyłącznie semantyczne akcje lub pomocnicze adjustmenty. `game.js` nie posiada zapasowej hardkodowanej mapy.
-
-Zwykły `preventDefault()` nie jest kontraktem przejęcia wszystkich skrótów przeglądarki. Flight Focus jest opcjonalnym adapterem platformowym:
-
-```text
-user click
-  -> JavaScript Fullscreen
-  -> navigator.keyboard.lock(profile bound codes)
-  -> key events before supported browser shortcuts
-```
-
-Mechanizm działa best-effort: wymaga wsparcia, bezpiecznego kontekstu, zgody użytkownika i nie może przejąć kombinacji zastrzeżonych przez system operacyjny. Po wyjściu z fullscreen lock jest zwalniany, a aktywne akcje czyszczone. Rebinding pozostaje obowiązkowym fallbackiem.
-
-## Workflow wydania i aktualizacji repozytorium
-
-`DELIVERY_WORKFLOW.md` jest częścią architektury procesu, nie dodatkiem do wiadomości. ZIP źródeł jest źródłem prawdy dla repozytorium, single HTML jest artefaktem uruchomieniowym, a patch służy do audytu. Przed kopiowaniem wydania oraz bezpośrednio przed pushem wymagane są `fetch` i rebase z `origin/main`. Standardowy push używa `git push origin HEAD:main`; force-push nie jest normalnym sposobem rozwiązywania rozbieżności.
-
-## Ważne inwarianty
-
-1. `CraftModel` jest źródłem prawdy edytora.
-2. `CompiledCraft` jest źródłem prawdy dla uruchomienia lotu.
-3. Meshe i collidery nie trafiają do dokumentów domenowych.
-4. Core nie ma specjalnej pozycji; ma specjalną rolę.
-5. Edytor dopuszcza niegotowe stany robocze.
-6. Start wymaga dokładnie jednego Core i jednej wyspy.
-7. Każda zmiana formatu ma wersję i migrację.
-8. Sterowanie używa semantycznych osi, a fizyczne bindingi należą wyłącznie do wersjonowanego profilu wejścia.
-9. Dostarczone zdarzenia lotu mają pierwszeństwo nad skrótami edytora; przejęcie skrótów przeglądarki wymaga Flight Focus lub rebindingu.
-10. Nie podnosić limitu lotu przed benchmarkiem i collider compilerem.
-11. Pasywny ciąg i bezpośrednia autoryteta pilota są oddzielnymi pojęciami.
-12. Każdy artefakt wydania musi mieć weryfikowalną zgodność źródeł ZIP ↔ single HTML.
-13. Orientacja Core definiuje Control Frame, ale profil wejścia pozostaje preferencją użytkownika.
-14. Wszystkie główne okna używają wspólnego `UIWorkspace`.
-15. Game shell nie może bezpośrednio tworzyć świata ani głównego craft body/colliderów i nie może bezpośrednio wykonywać kroku solvera; gameplayowe debris nadal przechodzi przez Physics Port.
-16. `game.js` nie może interpretować natywnego kontaktu Cannon.
-17. Ramka panelu nie jest obszarem scrollowania; przewija się wyłącznie `.workspace-panel-scroll`.
-18. Dozwolone strefy lądowania należą do danych kontraktu.
-19. Fizyka i telemetria balonów korzystają z tej samej polityki aerostatycznej.
-20. Tłumienie balonów może zależeć od prędkości i aktywnego lift, ale nie od docelowej wysokości.
-21. Główny runtime jest desktop-only; nie dodawać prowizorycznej mobilnej projekcji sterowania.
-22. Kontrolki Balloon power i Passive vertical thrust synchronizują się przez osobne centralne settery i wspólny model guidance.
-23. Jeden fizyczny kod nie może być niejawnie przypisany do dwóch akcji.
-24. Flight Focus jest opcjonalnym adapterem platformowym, nie warunkiem działania gry.
-25. Każda dostawa artefaktów musi zawierać bezpieczną instrukcję aktualizacji repozytorium zgodną z `DELIVERY_WORKFLOW.md`.
-
-## Świadomy dług
-
-- composition root nadal zawiera workshop glue, camera/input routing oraz flight/damage/integrity.
-- `foundation.state` nadal posiada część obiektów Three.js dla kompatybilności.
-- runtime lotu nadal tworzy collider na każdy voxel.
-- `CompiledCraft.colliderPlan` jest na razie referencyjny, nie zoptymalizowany.
-- aerodynamika kadłuba nadal sumuje uproszczone `dragArea`.
-- produkcyjne Three.js, Cannon.js i Tailwind pochodzą z CDN; testowy Cannon 0.6.2 jest vendored wyłącznie pod harness;
-- brak prawdziwego automatycznego testu WebGL/GPU w obecnym środowisku;
-- benchmark real Cannon nie obejmuje jeszcze masowych aktywnych kontaktów w rozbudowanych articulated assemblies.
-- gameplay planner nadal emituje jedną rigid island i zero constraints.
-- soft hinge limits są controller-based, nie natywnym hard stopem.
-
-## Historyczna granica zaplanowana po 1D.2F — wykonana w 1D.3A
-
-- składanie body i colliderów zostało przeniesione do buildera runtime;
-- stabilne mapowanie collider → part używa `blockId`;
-- dodano headless scenariusze dynamiki i soak;
-- zapisano benchmark kosztu budowy na backendzie testowym;
-- automatyczny benchmark prawdziwego solvera wykonano w 1D.3B; real-Cannon hinge capability spike wykonano w 1D.3C.
-
-
-## Phase 1D.2F — trwała tożsamość bloków
-
-`blockId` i `gridKey` rozwiązują dwa różne problemy:
-
-- `blockId` jest trwałą tożsamością urządzenia;
-- `gridKey` (`x,y,z`) jest indeksem przestrzennym w lokalnej siatce bieżącej bryły.
-
-Przeniesienie bloku zachowuje `blockId`. Nowa kopia otrzymuje nowe `blockId`. Połączenia sygnałowe i konfiguracje przyszłego control busu mogą wskazywać wyłącznie `blockId`, nigdy samą pozycję.
-
-Blueprint v10 odrzuca brakujące, niepoprawne i zduplikowane identyfikatory. Migracje v3–v9 przydzielają deterministyczne identyfikatory pozycyjne, które po pierwszym zapisie stają się trwałe.
-
-## `foundation.runtime-assembly`
-
-Moduł jest neutralnym planistą pomiędzy domeną a backendem fizyki.
-
-```text
-Compiled/Loaded Snapshot
-        │
-        ▼
-RuntimeAssemblyPlan
-  ├─ rigidBodies[]
-  │    ├─ massProperties
-  │    ├─ blockIds[]
-  │    └─ colliders[]
-  ├─ constraints[]
-  ├─ signalLinks[]
-  ├─ parts[]
-  ├─ blockIdToBodyId
-  └─ blockIdToPartIndex
-```
-
-W 1D.2F planner emituje jedno `body:root`. Jest to kompatybilny przypadek bazowy, a nie nienaruszalny inwariant. `constraints[]` i `signalLinks[]` są puste, lecz jawnie rozdzielone.
-
-### Trzy niezależne grafy
-
-1. **Structural graph** — voxele scalone w jedną rigid island.
-2. **Mechanical graph** — constraints łączące rigid bodies.
-3. **Signal graph** — połączenia portów urządzeń.
-
-Połączenie sygnałowe może przechodzić przez joint. Joint nie oznacza automatycznie przewodu. Strukturalne obejście jointa zwykłymi blokami jest błędem kompilacji mechanizmu.
-
-## Mass properties boundary
-
-Physics Port publikuje `setBodyMassProperties(body, descriptor)`.
-
-Descriptor obejmuje:
-
-```text
-mass
-centerOfMass
-inertiaDiagonal
-```
-
-Obecny builder przesuwa collidery tak, aby lokalny COM body znajdował się w `(0,0,0)`, dlatego backend otrzymuje zerowy lokalny `centerOfMass`. Diagonalna bezwładność jest ustawiana jawnie po dodaniu colliderów. Backend Cannon aktualizuje `invMass`, `inertia`, `invInertia`, `invInertiaWorld` i właściwości solvera.
-
-Po detach runtime:
-
-1. znajduje przyłączone części;
-2. wyznacza nowy COM;
-3. przesuwa collider offsets, części i wizualizację;
-4. zachowuje światową pozycję oraz prędkość nowego COM;
-5. liczy diagonalną bezwładność od nowa;
-6. atomowo stosuje nowe mass properties.
-
-`setBodyMass()` pozostaje dla prostych body pomocniczych. Główna konstrukcja używa `setBodyMassProperties()`.
-
-## Granica przyszłego Per-Block Control Bus
-
-Obecny mikser publikuje semantyczne intencje pilota. Docelowo stanie się jednym z producentów sygnału.
-
-Aktywny blok będzie deklarował porty, np.:
-
-```text
-Thruster.input.throttle: 0..1
-Thruster.output.effectiveThrust
-RotaryMotor.input.targetSpeed
-RotaryMotor.input.maxTorque
-RotaryMotor.output.angle
-AltitudeSensor.output.altitude
-```
-
-Blueprint będzie przechowywał konfigurację i graf w odniesieniu do `blockId`. Runtime rozwiąże `blockId -> body/part/actuator` przez mapy assembly.
-
-## Phase 1D.3A — produkcyjny Runtime Assembly Builder
-
-`foundation.runtime-assembly` pozostaje czystym planistą. Nowy `runtime.assembly-builder` jest warstwą wykonawczą pomiędzy planem a Physics Portem:
-
-```text
-RuntimeAssemblyPlan
-        │
-        ▼
-runtime.assembly-builder
-  ├─ create body przez Physics Port
-  ├─ create colliders
-  ├─ apply mass properties
-  ├─ register collision listeners
-  ├─ bodyById / colliderById
-  ├─ colliderByBlockId / partByBlockId
-  ├─ optional constraintBuilder
-  └─ transactional dispose / rollback
-        │
-        ▼
-RuntimeAssembly
-```
-
-### Granica odpowiedzialności
-
-Game shell może:
-
-- wybrać contract i loaded snapshot;
-- zlecić budowę assembly;
-- delegować tworzenie Three.js visuals do modułów;
-- przechowywać gameplayowy stan zdrowia, paliwa i efektów;
-- aplikować siły przez Physics Port.
-
-Game shell nie może:
-
-- ponownie tworzyć body głównej konstrukcji;
-- ponownie dodawać voxelowych colliderów statku;
-- bezpośrednio zarządzać natywnym lifecycle Cannon body assembly;
-- obliczać prędkości punktu przez pola natywnego backendu.
-
-Ten inwariant jest pilnowany przez `tests/test_audit_regressions.py`.
-
-### Transactional build
-
-Budowa wielu body może nie udać się po utworzeniu części zasobów. Builder traktuje operację jako transakcję. Błąd collidera, brak body wskazanego przez part albo nieudany constraint powoduje:
-
-1. usunięcie listenerów;
-2. dispose zbudowanych constraintów;
-3. usunięcie body ze świata w odwrotnej kolejności;
-4. wyczyszczenie map runtime;
-5. ponowne wyrzucenie oryginalnego błędu.
-
-Nie wolno pozostawiać częściowo aktywnego assembly.
-
-### Recenter contract
-
-`recenterBody(bodyId, shift)` zakłada, że `shift` jest nowym COM wyrażonym w starej lokalnej ramie body.
-
-Builder:
-
-1. oblicza światową pozycję tego punktu;
-2. pobiera jego prędkość przez `Physics.getPointVelocity()`;
-3. przesuwa wszystkie collider offsets o `-shift`;
-4. ustawia body w pozycji nowego COM;
-5. ustawia liniową prędkość nowego COM.
-
-Warstwa gameplayu przesuwa następnie lokalne pozycje części i visuals o ten sam wektor oraz stosuje nowe mass properties.
-
-### Constraint seam
-
-`constraintBuilder` jest celowo minimalnym punktem rozszerzenia, a nie publicznym, finalnym API jointów. Pozwala sprawdzić:
-
-- referencje między body;
-- kolejność lifecycle;
-- rollback;
-- mapowanie `constraintId`.
-
-Phase 1D.3C definiuje minimalny neutralny `hinge` oraz oddzielne runtime commands `free`, `motor` i `servo`. Inne joint types pozostają poza publicznym kontraktem do osobnych spikeów.
-
-## `runtime.headless-physics-backend`
-
-Backend testowy implementuje pełny wymagany kontrakt Physics Portu dla swobodnej dynamiki:
-
-- body i collidery jako proste obiekty JS;
-- gravity;
-- force i torque accumulation;
-- semi-implicit integration;
-- liniowe i kątowe damping;
-- integrację i normalizację kwaternionu;
-- local/world transforms;
+- world/body/collider lifecycle;
+- neutralne transformy i velocities;
+- mass properties;
+- force/torque;
+- local/world vector i point conversion;
 - point velocity;
-- explicit mass properties.
+- collision events;
+- hinge lifecycle/control/state.
 
-Nie implementuje broadphase, narrowphase, kontaktów ani constraints. Jest deterministycznym harness-em kontraktu, nie konkurencyjnym silnikiem gry.
+Nowe metody 1D.3E zostały dodane dla konkretnych callsites: `getBodyTransform`, `getBodyLinearVelocity`, `getBodyAngularVelocity`, `pointToLocalFrame`.
 
-## Zaktualizowane inwarianty 1D.3A–1D.3B
+## 8. AssemblyBuilder i RuntimeAssembly
 
-26. Fizyczne body i collidery głównego assembly tworzy wyłącznie `runtime.assembly-builder`.
-27. Nieudana budowa assembly musi być transakcyjnie wycofana.
-28. Każdy collider assembly ma stabilne `colliderId`; collider bloku funkcjonalnego mapuje się przez `blockId`.
-29. Recenter nie może zachować starej prędkości liniowej body; musi zachować prędkość punktu nowego COM.
-30. `getPointVelocity` należy do Physics Portu.
-31. Wyniki backendu headless nie są wynikiem benchmarku Cannon i nie pozwalają podnosić limitu części.
-32. Finalne API constraintów nie powstaje przed joint capability spike.
+`AssemblyBuilder`:
 
-## Phase 1D.3B — real-Cannon parity i strict contracts
+- waliduje cały plan przed allocation;
+- tworzy body i collidery;
+- ustawia jawne mass properties;
+- rejestruje collision listeners;
+- tworzy constraints;
+- zwraca immutable publiczny runtime wrapper;
+- zachowuje pierwotny build error, a cleanup errors raportuje osobno.
 
-Prawdziwy Cannon.js 0.6.2 jest vendored w `tests/vendor/` wyłącznie jako zależność walidacyjna. Produkcyjny loader nie został przełączony na tę kopię. Główna bateria uruchamia real backend w Node i sprawdza free dynamics, rotated inertia, payload/recenter, kontakty, soak, benchmark i lifecycle.
+RuntimeAssembly udostępnia neutralne:
 
-Builder stosuje kolejność:
+- `getBodyIds()` w stabilnej kolejności;
+- body descriptor/transform/velocity;
+- frame conversion i point velocity;
+- apply force/torque;
+- ownership lookup part/collider;
+- collider removal;
+- per-body recenter/mass update;
+- constraint commands/state;
+- retry-safe dispose.
 
-```text
-validate whole plan
-    -> allocate bodies/colliders
-    -> apply mass properties
-    -> register listeners
-    -> add bodies to world
-    -> build constraints
-    -> publish frozen runtime
-```
-
-Mutacje runtime stosują zasadę **backend-first, state-second**. Nieudane usunięcie collidera nie zmienia map. Rollback zachowuje pierwotny wyjątek, a awarie cleanup umieszcza w `cleanupErrors`.
-
-Dane na granicach `MassProperties.compute()` i `RuntimeAssembly.createPlan()` są rygorystyczne: NaN, Infinity, brak trwałego `blockId`, ujemna masa i wadliwe half-extents są błędami, nie wartościami do cichego naprawienia.
-
-Diagonalna bezwładność jest wyrażona w lokalnej ramie body. Headless transformuje torque world -> local, stosuje `I^-1`, a następnie transformuje angular acceleration local -> world. To jest pokryte wspólnym scenariuszem z real Cannon.
-
-## Dodatkowe inwarianty 1D.3B
-
-33. Cały plan assembly musi przejść walidację przed pierwszą alokacją backendu.
-34. Backend mutation musi zakończyć się sukcesem przed zmianą map i flag runtime.
-35. Rollback nie może zastąpić pierwotnej przyczyny błędem cleanup.
-36. Reserved assembly metadata wygrywa z `bodyDescriptor.userData`.
-37. Zmiana masy synchronizuje typ STATIC/DYNAMIC w każdym backendzie.
-38. Diagonalna inertia zawsze należy do lokalnej ramy body.
-39. Test stubowy nie wystarcza do potwierdzenia semantyki adaptera; kluczowe scenariusze muszą przechodzić na real Cannon.
-40. Vendored Cannon pozostaje zależnością testową z zachowaną licencją i nie może niejawnie wejść do produkcyjnego buildu.
-
-## Historyczna granica — Phase 1D.3C
-
-1. zbudować dwa body połączone realnym free hinge;
-2. zmierzyć limit, tarcie, drift i zachowanie kolizji;
-3. dodać powered hinge i servo tylko jako capability spike;
-4. sprawdzić remove constraint/body i rollback;
-5. na podstawie wyników zaprojektować minimalne neutralne Physics Port constraints;
-6. następnie przejść do Per-Block Control Bus.
-
-
-## Phase 1D.3B.1 — Modular Game Shell
-
-### Zakres ekstrakcji
-
-Z monolitycznego pliku wydzielono odpowiedzialności, które posiadały stabilne granice przed joint spike:
-
-| Moduł | Odpowiedzialność |
-|---|---|
-| `game.scene-environment` | scena, renderer, statyczny świat, test range i współdzielone zasoby renderingu |
-| `game.career-service` | normalizacja, odblokowanie kontraktów i persistence kariery |
-| `game.workspace-controller` | layout, z-order, drag/resize i persistence paneli |
-| `game.input-settings-controller` | UI profilu sterowania, rebinding i Flight Focus |
-| `game.orientation-service` | game-facing helpery orientacji i mirror |
-| `game.module-visual-factory` | tworzenie wizualnych modeli bloków |
-| `game.engineering-analysis` | analiza konstrukcji, warnings i telemetry presentation |
-| `game.blueprint-controller` | save/load/import/export i integracja historii |
-| `game.mission-controller` | kontrakty, markery, HUD, ocena sesji i debrief |
-
-`src/game.js` zmniejszył się z 4697 do 2358 linii. Limit regresyjny wynosi obecnie 2500 linii i 120 kB.
-
-### Dlaczego flight i integrity nie zostały rozdzielone w 1D.3B.1
-
-W 1D.3B.1 runtime nadal opierał część integracji na pojedynczym `STATE.flight.body`. Wydzielenie publicznych modułów `flight-session` i `flight-integrity` przed joint spike utrwaliłoby założenie single-body w ich API, dlatego pozostawiono je w composition root jako jeden kontrolowany obszar. Phase 1D.3C potwierdziła już model wielu body i constraints. Następnym krokiem jest wydzielenie tych modułów wokół całego `RuntimeAssembly`, a nie wokół pojedynczego Cannon body.
-
-### Kanoniczny source inventory
-
-`tools/build_release.py::APP_SOURCES` jest jedyną kolejnością źródeł używaną przez:
-
-- loader w `index.html`;
-- single-file build;
-- source manifest;
-- ZIP;
-- static checks;
-- startup smoke i testy agregujące kod aplikacji.
-
-Testy nie mogą utrzymywać własnej ręcznej listy źródeł.
-
-### Lifecycle ownership
-
-Regresja wykryta podczas code review pokazała, że composition root odwoływał się do `autosaveTimer`, `workspaceSaveTimer` i `keyboardLockActive` po przeniesieniu ich do modułów. Naprawa ustanawia trwały wzorzec:
-
-- `blueprint-controller.flushPendingAutosave()`;
-- `workspace-controller.flushPendingSave()`;
-- `input-settings-controller.handleFullscreenChange()`.
-
-`pagehide` i `fullscreenchange` wywołują publiczne metody, nie mutują prywatnego stanu modułów.
-
-### Testowane inwarianty
-
-`tests/test_game_architecture.py` pilnuje:
-
-- pełnej listy modułów i ich nazw;
-- ładowania wszystkich modułów przed bootstrapem;
-- `game.js` jako ostatniego composition root;
-- pojedynczego właściciela kluczowych funkcji;
-- zakazu `window.VAW_RUNTIME` w modułach;
-- limitu rozmiaru composition root;
-- budowy głównego craft body wyłącznie przez `AssemblyBuilder`;
-- zakazu wycieku prywatnych nazw lifecycle do entrypointu.
-
-`tests/source_inventory.py` udostępnia spójny widok wszystkich źródeł, a startup smoke wykonuje również `fullscreenchange` i `pagehide`.
-
-
-## Phase 1D.3C — Minimalny mechanical constraint
-
-Physics Port deklaruje capability per typ:
+### Cleanup
 
 ```text
-capabilities.constraints.hinge = true | false
+constraints
+-> collision listeners
+-> colliders
+-> bodies
+-> FlightSession transients
+-> per-body visual roots
+-> published state
 ```
 
-`ConstraintPlan` pozostaje immutable i zawiera identyfikację body, lokalne pivoty/osie, collision policy, solver force, friction i opcjonalne soft limits. Mutable sterowanie jest oddzielne:
+Backend mutation następuje przed usunięciem mapy. `disposed=true` dopiero po pełnym cleanupie. Przy błędzie maps/handles pozostają dostępne do kolejnego `dispose()`.
+
+## 9. FlightSession
+
+`game.flight-session` posiada pełny lifecycle sesji:
+
+- plan/build;
+- primary selection;
+- collision normalization;
+- neutralne body access;
+- transient resources;
+- visual roots;
+- sync;
+- stop/cleanup/retry.
+
+`game.js` wywołuje `flightSession.start()` i tworzy prezentację. Nie wywołuje `AssemblyBuilder.build()`.
+
+## 10. Visual ownership per body
+
+`visualRootByBodyId: Map<bodyId, root>` jest kanonicznym ownershipem wizuali lotu.
+
+Każda runtime part ma `bodyId` i lokalną pozycję względem właściwego body. `FlightSession.syncVisuals()` ustawia transform każdego rootu oddzielnie. Obrót jednego body nie może poruszyć drugiego rootu.
+
+Visual root jest rejestrowany w sesji przed dodaniem do sceny, dzięki czemu wyjątek inicjalizacji ma atomowy rollback. Cleanup usuwa każdy root dokładnie raz.
+
+## 11. FlightIntegrity
+
+`game.flight-integrity` jest granicą integralności:
+
+- exact body ownership;
+- part health i damage;
+- backend-first collider removal;
+- primary-island detach i cascade;
+- payload lifecycle;
+- per-body mass properties/recenter;
+- debris lifecycle;
+- cleanup map.
+
+Nie ma fallbacku „brak body → primary body”. Ownership mismatch jest błędem.
+
+Bieżące ograniczenie:
 
 ```text
-setConstraintControl(constraintId, { mode: free | motor | servo, ... })
-getConstraintState(constraintId)
-removeConstraint(constraintId)
+bodyRestriction = primary-rigid-island-only
 ```
 
-Native `CANNON.HingeConstraint` nie opuszcza backendu. `AssemblyBuilder` wykonuje capability preflight przed alokacją body, weryfikuje plan, buduje constraints po body i usuwa constraints przed body. Cleanup, który częściowo zawiedzie, pozostawia `cleanupPending` oraz wszystkie retry handles; assembly nie może fałszywie zgłosić `disposed`.
+Dotyczy gameplayowego detach. Jest publiczne, testowane i ma zostać usunięte dopiero przy split assembly w późniejszej bramce.
 
-### Geometria
+Prezentacyjne hooki są best-effort i nie mogą przerwać już zatwierdzonej transakcji integrity. Ich błędy trafiają do diagnostyki.
 
-- `pivotA` i `pivotB` są lokalne dla swoich body;
-- ich world-space pozycje muszą się pokrywać przed dodaniem constraintu;
-- `axisA` i `axisB` muszą po transformacji wskazywać ten sam kierunek;
-- angle zero jest orientacją z chwili utworzenia;
-- angle unwrapping zakłada zmianę mniejszą niż π pomiędzy kolejnymi próbkami.
+## 12. DebrisRuntime
 
-### Ograniczenia Cannona
+`game.debris-runtime` jest adapterem fizyczno-wizualnym odłamków. `FlightIntegrity` decyduje o create/update/dispose i przechowuje ownership listy; adapter wykonuje neutralne Physics Port calls oraz scene sync.
 
-Cannon.js 0.6.2 nie udostępnia natywnego asymetrycznego hard stopu hinge. `limits` są kontrolerem silnikowym z testowanym overshootem. `collideConnected` jest ustawiane jawnie na obiekcie natywnym, ponieważ sama opcja konstruktora nie zapewnia wymaganego zachowania.
+Adapter zapewnia:
 
-## Foundation convergence przed sublevelami i control busem
+- rollback body, gdy późniejsza rejestracja sceny zawiedzie;
+- neutralny `getBodyTransform` przy synchronizacji;
+- staged retry-safe dispose body/visual;
+- brak natywnych body fields w composition root.
 
-Docelowy przepływ musi rozdzielić:
+## 13. Mission, HUD i camera
+
+Mission sample ma znaczenie **primary body sample**:
+
+- transform;
+- linear/angular velocity;
+- części i payload należące do primary body;
+- jawny landing clearance.
+
+HUD może pokazywać dane assembly oraz primary body, lecz nie może udawać, że jedna transformacja opisuje cały articulated craft. Kamera zawsze śledzi jawne primary body.
+
+## 14. Lifecycle aplikacji
+
+- `fullscreenchange` czyści input focus bez zastępowania aktywnej sesji.
+- `pagehide` zapisuje stan i, gdy trwa lot, przechodzi przez normalny `setMode('BUILD')` oraz cleanup.
+- `start → stop → start` nie dziedziczy listenerów, bodies, colliders, visuals, payloadu ani debris.
+- build wizuali po udanym runtime allocation jest objęty rollbackiem.
+
+## 15. Mechanical graph i przyszłe warstwy
+
+Planowana ścieżka:
 
 ```text
 Blueprint
-  -> structural graph
-  -> rigid islands / assembly spaces
-  -> mechanical graph
-  -> device endpoints
-  -> signal graph
-  -> deterministic ControlRuntime
-  -> actuator commands
-  -> RuntimeAssembly / Physics Port
+  -> StructuralGraphCompiler
+  -> RigidIslandCompiler
+  -> MechanicalGraphCompiler
+  -> RuntimeAssemblyPlan
+  -> AssemblyBuilder
 ```
 
-### Assembly space / sublevel
+Później:
 
-Sublevel w VAW jest stabilną lokalną przestrzenią assembly, a nie drugim blueprintem. Przechowuje jawny transform do świata i mapowanie urządzeń/bloków do rigid islands. Split, detach i dock zmieniają runtime ownership, lecz nie mogą losowo zmieniać `blockId` ani endpoint identity.
+```text
+assembly spaces
+-> device endpoints {blockId, portId}
+-> signal graph
+-> deterministic ControlRuntime
+-> actuator commands przez RuntimeAssembly
+```
 
-### Device ports
+Structural, mechanical i signal graph pozostają rozdzielone. Joint nie jest portem sygnałowym. Motor/servo command nie jest stałą geometrią mechanical graphu.
 
-Publiczny endpoint powinien być adresowany jako `{ blockId, portId }`. Catalog portów pozostaje pure data. Input profile użytkownika mapuje fizyczne klawisze na semantyczne akcje; craft control bindings mapują te akcje lub inne źródła na urządzenia i należą do blueprintu.
+## 16. Świadomie niezaimplementowane
 
-### Signal transport
-
-Direct link, cable, bus, wireless i joint pass-through są transportem/prezentacją jednej semantyki signal graphu. Mogą wnosić koszt, zasięg, latency lub failure, lecz nie zmieniają typów portów ani kolejności ewaluacji.
-
-### Deterministic control tick
-
-Control runtime działa w stałym ticku niezależnym od render FPS, ma ograniczony budżet i deterministyczną kolejność. Pierwsza wersja używa scalar oraz boolean/event. Feedback wymaga jawnego Delay/Memory; arbitralny JavaScript nie trafia do blueprintu.
-
-Szczegółowe bramki opisują `FOUNDATION_READINESS_REVIEW.md` i `PROGRAMMABLE_MACHINE_RESEARCH.md`.
-
-## Następna granica — Phase 1D.3D
-
-- assembly-centric `game.flight-session`;
-- assembly-aware `game.flight-integrity`;
-- usunięcie publicznych założeń jednego `STATE.flight.body`;
-- powtarzany multi-body launch/cleanup bez wycieków;
-- następnie rigid-island/mechanical compiler.
-
-
-## Phase 1D.3D — Assembly-Centric Flight Lifecycle
-Runtime flight state now treats RuntimeAssembly as the authoritative launched vehicle. `primaryBody` is explicit; `STATE.flight.body` remains only a compatibility alias for the current single-rigid-island craft. New `game.flight-session` and `game.flight-integrity` seams document and test the lifecycle/integrity boundary for the future Rigid Island Compiler.
+- mechanical authoring schema i blueprint v11;
+- RigidIslandCompiler/MechanicalGraphCompiler;
+- gameplayowy two-body craft z normalnego blueprintu;
+- split na subassemblies;
+- assembly spaces/sublevels;
+- typed ports;
+- fixed-tick ControlRuntime;
+- node editor, cables, bus, wireless;
+- multiplayer.
