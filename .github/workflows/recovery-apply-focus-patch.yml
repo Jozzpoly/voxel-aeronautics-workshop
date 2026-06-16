@@ -1,17 +1,17 @@
-name: Recovery Apply Focus Patch
+name: Recovery Apply Verified Stage
 
 on:
   push:
     branches:
       - recovery/2026-06-16-regression-repair
     paths:
-      - .recovery/focus-stage.patch.gz.b64
+      - .recovery/thruster-stage.patch.gz.b64
 
 permissions:
   contents: write
 
 concurrency:
-  group: vaw-recovery-focus-apply
+  group: vaw-recovery-stage-apply
   cancel-in-progress: false
 
 jobs:
@@ -38,24 +38,25 @@ jobs:
       - name: Decode and preflight patch
         run: |
           set -euo pipefail
-          base64 --decode .recovery/focus-stage.patch.gz.b64 | gzip --decompress > /tmp/focus-stage.patch
-          git apply --check /tmp/focus-stage.patch
+          base64 --decode .recovery/thruster-stage.patch.gz.b64 | gzip --decompress > /tmp/thruster-stage.patch
+          git apply --check /tmp/thruster-stage.patch
 
-      - name: Apply exact focus checkpoint
+      - name: Apply exact thruster checkpoint
         run: |
           set -euo pipefail
-          git apply --index /tmp/focus-stage.patch
-          git rm .recovery/focus-stage.patch.gz.b64
+          git apply --index /tmp/thruster-stage.patch
+          git rm .recovery/thruster-stage.patch.gz.b64
           git diff --cached --check
 
       - name: Run focused regression tests
         run: |
           set -euo pipefail
-          node --check src/game/input_settings_controller.js
+          node --check src/game/flight_thruster_router.js
           node --check src/game.js
-          node --check tests/startup_smoke.js
-          node tests/test_input_focus_policy.js
+          node tests/test_flight_thruster_routing.js
+          node tests/test_flight_control.js
           python tests/test_game_architecture.py
+          python tests/static_check.py
 
       - name: Run full suite
         run: python -u tests/run_all.py
@@ -67,7 +68,7 @@ jobs:
           python tools/verify_release.py
           git diff --check
 
-      - name: Discard generated worktree outputs only
+      - name: Restore staged checkpoint after generated outputs
         run: |
           set -euo pipefail
           git restore --worktree .
@@ -75,10 +76,10 @@ jobs:
           git diff --cached --check
           git status --short
 
-      - name: Commit verified focus repair
+      - name: Commit verified thruster repair
         run: |
           set -euo pipefail
           git config user.name "VAW Recovery Bot"
           git config user.email "actions@users.noreply.github.com"
-          git commit -m "Fix UI focus and hotkey routing regressions"
+          git commit -m "Fix thruster routing for articulated sub-bodies"
           git push origin HEAD:recovery/2026-06-16-regression-repair
