@@ -3,104 +3,55 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-
 required = {
-    'AI_PROJECT_MEMORY.md',
-    'PROJECT_VISION.md',
-    'ARCHITECTURE.md',
-    'ROADMAP_NEXT.md',
-    'FOUNDATION_READINESS_REVIEW.md',
-    'PROGRAMMABLE_MACHINE_RESEARCH.md',
-    'PHASE_1D3D_REPORT.md',
-    'PHASE_1D3E_REPORT.md',
-    'FOUNDATION_CONVERGENCE_REVIEW.md',
-    'TEST_REPORT.md',
-    'VALIDATION_REPORT.md',
-    'DELIVERY_WORKFLOW.md',
-    'PUSH_INSTRUCTIONS.md',
-    'docs/adr/0027-hinge-only-constraint-contract.md',
-    'docs/adr/0028-programmable-machine-layers.md',
-    'docs/adr/0029-flight-session-source-of-truth-and-primary-policy.md',
-    'docs/adr/0030-retry-safe-flight-cleanup-ownership.md',
-    'docs/adr/0031-per-body-visual-ownership.md',
-    'docs/adr/0032-exact-integrity-ownership-and-primary-island-limit.md',
+    'AI_PROJECT_MEMORY.md', 'PROJECT_VISION.md', 'ARCHITECTURE.md', 'ROADMAP_NEXT.md',
+    'FOUNDATION_READINESS_REVIEW.md', 'PROGRAMMABLE_MACHINE_RESEARCH.md', 'PHASE_1D4A_REPORT.md',
+    'CODE_REVIEW_REPORT.md', 'TEST_REPORT.md', 'VALIDATION_REPORT.md', 'DELIVERY_WORKFLOW.md',
+    'PUSH_INSTRUCTIONS.md', 'examples/articulated_hinge_v11.json',
+    *{f'docs/adr/{number:04d}-{name}.md' for number, name in [
+        (33, 'blueprint-v11-mechanical-link-schema'),
+        (34, 'persistent-mechanical-and-rigid-island-identities'),
+        (35, 'structural-cuts-rigid-bypass-and-assembly-connectivity'),
+        (36, 'coordinate-spaces-and-body-assembly-pose'),
+        (37, 'pure-topology-compilers-and-structured-diagnostics'),
+        (38, 'launch-loadout-payload-ownership-per-body'),
+        (39, 'body-frame-rebase-with-active-constraints'),
+        (40, 'minimal-workshop-hinge-authoring'),
+    ]},
 }
 missing = sorted(path for path in required if not (ROOT / path).is_file())
-assert not missing, f'Missing current foundation documents: {missing}'
+assert not missing, f'Missing Phase 1D.4A documents: {missing}'
 
-memory = (ROOT / 'AI_PROJECT_MEMORY.md').read_text(encoding='utf-8')
-architecture = (ROOT / 'ARCHITECTURE.md').read_text(encoding='utf-8')
-roadmap = (ROOT / 'ROADMAP_NEXT.md').read_text(encoding='utf-8')
-readme = (ROOT / 'README.md').read_text(encoding='utf-8')
-vision = (ROOT / 'PROJECT_VISION.md').read_text(encoding='utf-8')
-review = (ROOT / 'FOUNDATION_READINESS_REVIEW.md').read_text(encoding='utf-8')
-research = (ROOT / 'PROGRAMMABLE_MACHINE_RESEARCH.md').read_text(encoding='utf-8')
-delivery = (ROOT / 'DELIVERY_WORKFLOW.md').read_text(encoding='utf-8')
-adr_hinge = (ROOT / 'docs/adr/0027-hinge-only-constraint-contract.md').read_text(encoding='utf-8')
-adr_control = (ROOT / 'docs/adr/0028-programmable-machine-layers.md').read_text(encoding='utf-8')
-adr_session = (ROOT / 'docs/adr/0029-flight-session-source-of-truth-and-primary-policy.md').read_text(encoding='utf-8')
-adr_cleanup = (ROOT / 'docs/adr/0030-retry-safe-flight-cleanup-ownership.md').read_text(encoding='utf-8')
-adr_visuals = (ROOT / 'docs/adr/0031-per-body-visual-ownership.md').read_text(encoding='utf-8')
-adr_integrity = (ROOT / 'docs/adr/0032-exact-integrity-ownership-and-primary-island-limit.md').read_text(encoding='utf-8')
+texts = {path: (ROOT / path).read_text(encoding='utf-8') for path in required if path.endswith('.md')}
+for path in ('AI_PROJECT_MEMORY.md', 'ARCHITECTURE.md', 'ROADMAP_NEXT.md', 'README.md', 'PHASE_1D4A_REPORT.md'):
+    text = (ROOT / path).read_text(encoding='utf-8')
+    assert 'Phase 1D.4A' in text, f'{path} does not identify the current phase.'
 
-for name, text in {
-    'memory': memory,
-    'architecture': architecture,
-    'roadmap': roadmap,
-    'readme': readme,
-}.items():
-    assert 'Phase 1D.3E' in text, f'{name} does not identify the current phase.'
+memory = texts['AI_PROJECT_MEMORY.md']
+architecture = texts['ARCHITECTURE.md']
+roadmap = texts['ROADMAP_NEXT.md']
+review = texts['FOUNDATION_READINESS_REVIEW.md']
+research = texts['PROGRAMMABLE_MACHINE_RESEARCH.md']
+vision = texts['PROJECT_VISION.md']
+delivery = texts['DELIVERY_WORKFLOW.md']
+push = texts['PUSH_INSTRUCTIONS.md']
 
-for name, text in {
-    'memory': memory,
-    'architecture': architecture,
-    'roadmap': roadmap,
-    'review': review,
-}.items():
-    assert 'Phase 1D.4A' in text or '1D.4A' in text, f'{name} does not identify the next gate.'
-
-for document in ('PROJECT_VISION.md', 'FOUNDATION_READINESS_REVIEW.md', 'PROGRAMMABLE_MACHINE_RESEARCH.md'):
-    assert document in readme, f'README does not point to {document}.'
-    assert document in memory, f'AI_PROJECT_MEMORY does not point to {document}.'
-
-for phrase in (
-    'Sandbox przed checklistą',
-    'Dowolny pierwszy blok',
-    'Manualne sterowanie pozostaje pełnoprawne',
-    'Programowanie rośnie warstwami',
-):
+for phrase in ('Sandbox przed checklistą', 'Dowolny pierwszy blok', 'Manualne sterowanie pozostaje pełnoprawne', 'Programowanie rośnie warstwami'):
     assert phrase in vision, f'Project vision is missing pillar: {phrase}'
-
-for phrase in (
-    'Single-body flight ownership',
-    'Rigid Islands & Mechanical Compilation',
-    'Device & Port Schema',
-    'Deterministic Control Kernel',
-):
-    assert phrase in review, f'Foundation review is missing required gate/finding: {phrase}'
-
-for phrase in (
-    '{blockId, portId}',
-    'ControlRuntime',
-    'Kable, bus i wireless',
-    'sublevel',
-):
+for phrase in ('Rigid Islands & Mechanical Compilation', 'Assembly Spaces / Sublevels', 'Device & Port Schema', 'Deterministic Control Kernel'):
+    assert phrase in review, f'Foundation review is missing gate: {phrase}'
+for phrase in ('{blockId, portId}', 'ControlRuntime', 'Kable, bus i wireless', 'sublevel'):
     assert phrase in research, f'Programming research is missing concept: {phrase}'
-
-assert 'Status: Accepted in Foundation Phase 1D.3C.' in adr_hinge
-assert 'Status: Proposed after the Foundation 1D.3C whole-project review.' in adr_control
-for text in (adr_session, adr_cleanup, adr_visuals, adr_integrity):
-    assert 'Status: Accepted in Foundation Phase 1D.3E.' in text
-assert 'tests/test_release_identity.py' in delivery
+for phrase in ('assemblyPosition', 'bodyLocalPosition', 'assemblyPose', 'mechanical-rigid-bypass'):
+    assert phrase in architecture
+for phrase in ('Gate C', 'Gate D', 'Gate E', 'dynamic rigid-body split'):
+    assert phrase in roadmap or phrase in memory
+for number in range(33, 41):
+    path = next(path for path in required if path.startswith(f'docs/adr/{number:04d}-'))
+    assert 'Status: Accepted' in texts[path]
 assert 'python tests/run_all.py' in delivery
+assert 'tests/test_release_identity.py' in delivery
 assert 'git push --force' in delivery
+assert 'git push --force' in push
 
-print({
-    'requiredDocuments': len(required),
-    'currentPhase': '1D.3E',
-    'nextGate': '1D.4A',
-    'projectVision': 'ok',
-    'foundationReview': 'ok',
-    'programmingResearch': 'ok',
-    'deliveryContract': 'ok',
-})
+print({'requiredDocuments': len(required), 'currentPhase': '1D.4A', 'nextGate': 'Gate C', 'architectureContract': 'ok', 'deliveryContract': 'ok'})

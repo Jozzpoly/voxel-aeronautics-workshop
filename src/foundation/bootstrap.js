@@ -22,47 +22,25 @@
     throw new Error(`Physics/rendering libraries are incomplete: ${missingCapabilities.join(', ')}`);
   }
 
-  const Config = window.VAW.require('foundation.config');
-  const Catalog = window.VAW.require('foundation.catalog');
-  const Orientation = window.VAW.require('foundation.orientation');
-  const Blueprint = window.VAW.require('foundation.blueprint');
-  const CraftModel = window.VAW.require('foundation.craft-model');
-  const CraftHistory = window.VAW.require('foundation.craft-history');
-  const ControlFrame = window.VAW.require('foundation.control-frame');
-  const MassProperties = window.VAW.require('foundation.mass-properties');
-  const CraftCompiler = window.VAW.require('foundation.craft-compiler');
-  const RuntimeAssembly = window.VAW.require('foundation.runtime-assembly');
-  const InputProfile = window.VAW.require('foundation.input-profile');
-  const UIWorkspace = window.VAW.require('foundation.ui-workspace');
-  const MissionEvaluator = window.VAW.require('foundation.mission-evaluator');
-  const Aerostatics = window.VAW.require('foundation.aerostatics');
-  const FlightControl = window.VAW.require('foundation.flight-control');
-  const State = window.VAW.require('foundation.state');
-  const PhysicsPort = window.VAW.require('runtime.physics-port');
-  const CannonPhysicsBackend = window.VAW.require('runtime.cannon-physics-backend');
-  const HeadlessPhysicsBackend = window.VAW.require('runtime.headless-physics-backend');
-  const AssemblyBuilder = window.VAW.require('runtime.assembly-builder');
-  const Physics = CannonPhysicsBackend.create(window.CANNON);
+  window.VAW.define('runtime.active-context', ['runtime.cannon-physics-backend'], CannonPhysicsBackend => {
+    const Physics = CannonPhysicsBackend.create(window.CANNON);
+    const Capabilities = Object.freeze({
+      threeRevision: String(window.THREE.REVISION || 'unknown'),
+      cannonVersion: Physics.version,
+      webglRenderer: true,
+      physicsBackend: Physics.id,
+      physicsBoundary: 'phase-1d4a-neutral-mechanical-assembly-api',
+      runtimeAssembly: 'runtime-assembly-plan-v2',
+      headlessHarness: 'deterministic-free-flight-v1',
+      missionEvaluation: 'phase-1d2b-multi-pad-ground-state',
+      aerostatics: 'altitude-lift-damped-settling-v2',
+      platform: 'desktop-keyboard-mouse-v1',
+      workspaceState: 'version-3-z-order',
+      gameShell: 'mechanical-platform-convergence-v1'
+    });
+    return Object.freeze({ Physics, Capabilities });
+  });
 
-  const Capabilities = Object.freeze({
-    threeRevision: String(window.THREE.REVISION || 'unknown'),
-    cannonVersion: Physics.version,
-    webglRenderer: true,
-    physicsBackend: Physics.id,
-    physicsBoundary: 'phase-1d3e-neutral-assembly-api',
-    runtimeAssembly: 'runtime-builder-v1',
-    headlessHarness: 'deterministic-free-flight-v1',
-    missionEvaluation: 'phase-1d2b-multi-pad-ground-state',
-    aerostatics: 'altitude-lift-damped-settling-v2',
-    platform: 'desktop-keyboard-mouse-v1',
-    workspaceState: 'version-3-z-order',
-    gameShell: 'assembly-centric-lifecycle-v2'
-  });
-  const runtime = Object.freeze({ Config, Catalog, Orientation, Blueprint, CraftModel, CraftHistory, ControlFrame, MassProperties, CraftCompiler, RuntimeAssembly, AssemblyBuilder, HeadlessPhysicsBackend, InputProfile, UIWorkspace, MissionEvaluator, Aerostatics, FlightControl, State, PhysicsPort, Physics, Capabilities });
-  Object.defineProperty(window, 'VAW_RUNTIME', {
-    configurable: false,
-    enumerable: true,
-    writable: false,
-    value: runtime
-  });
+  // Eager resolution validates the selected browser backend before game composition.
+  window.VAW.require('runtime.active-context');
 })();

@@ -1,133 +1,101 @@
-# Validation Report — Foundation Phase 1D.3E
+# Validation Report — Foundation Phase 1D.4A
 
-## Źródło prawdy i baseline
-
-- Dostarczony ZIP został rozpakowany do nowego katalogu roboczego.
-- Zweryfikowana wersja baseline: `0.6.3-foundation.1d3d`.
-- Zweryfikowany release ID: `foundation-1d3d-assembly-flight-lifecycle`.
-- Repozytorium `Jozzpoly/voxel-aeronautics-workshop`, branch `main`: commit `5cf38926623a17290ff2c6caad24d1c36fe77ad3` — `Phase 1D.3D assembly-centric flight lifecycle`.
-- ZIP pozostał źródłem prawdy; pliki repozytorium nie zastąpiły jego zawartości.
-- Agent nie wykonał commita ani pushu do repozytorium użytkownika.
-
-## Baseline validation
-
-Przed zmianami wykonano:
+## Product path validated
 
 ```text
-python -u tests/run_all.py
-python tools/build_release.py
-python tools/verify_release.py
+Blueprint v11
+-> CraftModel
+-> CraftCompiler V4
+-> RuntimeAssemblyPlan V2
+-> FlightSession
+-> AssemblyBuilder
+-> Physics Port
+-> real Cannon hinge
 ```
 
-Wynik:
+The evidence does not manually construct topology. The startup harness imports `examples/articulated_hinge_v11.json` through the browser file-input path, verifies the workshop hinge projection and starts the craft with the normal Flight action.
 
-- wszystkie kroki runnera: PASS, 19,83 s;
-- baseline build: PASS;
-- baseline verify/source parity: PASS;
-- baseline release identity: `0.6.3-foundation.1d3d` / `foundation-1d3d-assembly-flight-lifecycle`.
+## Safety validation
 
-## Walidacja zmienionego drzewa roboczego
+- Backend allocation is preceded by structured topology and plan validation.
+- Endpoint failure removes the constraint before collider/body mutation.
+- Connected-body recenter is rejected before local/world frame mutation.
+- Collision queue preserves `bodyId`; nearest-part and payload checks are owner-filtered.
+- Damage propagation traverses `rigidNeighborBlockIds` only.
+- Root camera, mission and pilot-control policy is deterministic and not Map-order dependent.
+- Stop/retry removes constraints, listeners/colliders, bodies and visual roots in owned order.
+- Fifty articulated lifecycle cycles leave zero orphan bodies and zero orphan constraints.
 
-```text
+## Primary worktree validation
+
+Executed successfully:
+
+```bash
 python -u tests/run_all.py
 python tools/build_release.py
 python tools/verify_release.py
 git diff --check
 ```
 
-Wynik:
-
-- pełny runner: PASS, 19,72 s;
-- build: PASS;
-- verify: PASS;
-- manifest: 40 wejść;
-- embedded sources: 35;
-- single-file source parity: PASS;
+- full runner: PASS, `34.91 s`, maximum RSS `312520 KB`;
 - deterministic release build: PASS;
-- `git diff --check`: PASS.
+- release verification/source parity: PASS;
+- release identity/documentation contract: PASS;
+- startup single-body and articulated UI lifecycles: PASS.
 
-## Walidacja rozpakowanego ZIP-a
+An earlier full-run attempt reached `tests/test_release_build.py` but was terminated by the host's 180-second wrapper limit. It was not counted. The missing stage passed independently, then the complete worktree runner was repeated successfully from the beginning.
 
-Pełny ZIP źródeł został rozpakowany do nowego katalogu. Na rozpakowanej zawartości wykonano ponownie:
+## Extracted source-ZIP validation
 
-```text
+The generated source ZIP was unpacked into a new directory. A new Git worktree was initialized with intent-to-add entries so `git diff --check` inspected the extracted files rather than pretending Git metadata existed in the archive.
+
+Executed successfully:
+
+```bash
 python -u tests/run_all.py
 python tools/build_release.py
 python tools/verify_release.py
+git diff --check
 ```
 
-Wynik:
+- extracted full runner: PASS, `34.61 s`, maximum RSS `311328 KB`;
+- extracted deterministic rebuild: PASS;
+- extracted release verification/source parity: PASS;
+- articulated example import and normal Flight-button launch: PASS.
 
-- pełny runner: PASS, 20,52 s;
-- build: PASS;
-- verify/source parity: PASS;
-- startup smoke: PASS;
-- deterministic build i manifest hashes: PASS.
+## Patch validation
 
-## Walidacja patcha względem dokładnego baseline'u
+The patch was generated against exact clean local baseline commit:
 
-1. Czysty Phase 1D.3D zapisano jako lokalny commit walidacyjny.
-2. Wygenerowano binary-capable patch bez generated `dist/` i `release/`.
-3. Patch sprawdzono przez `git apply --check`.
-4. Patch zastosowano do świeżej kopii baseline'u.
-5. Wygenerowane katalogi usunięto i odbudowano ze źródeł.
-6. Uruchomiono pełny runner, build i verify.
-7. Porównano source tree z projektem roboczym, wyłączając generated/cache/git.
+```text
+9cca3be1b39d6276e2db8e99f847a19f10560dab
+```
 
-Wynik:
+A fresh clone of that commit accepted both `git apply --check` and `git apply`; `git diff --check` then passed. The patch-applied tree passed every runner stage through the documentation contract. The combined host wrapper again stopped while entering the deterministic release-build stage, so the remaining required stages were executed explicitly in the same order and all returned exit code 0:
 
-- `git apply --check`: PASS;
-- pełny runner po patchu: PASS, 20,24 s;
-- build po patchu: PASS;
-- verify/source parity po patchu: PASS;
-- source-tree parity: PASS;
-- patch diff: 46 plików, 3017 insertions, 1896 deletions przed finalnym dokumentacyjnym zapisem tego raportu.
+```text
+tests/test_release_build.py       PASS
+startup_smoke.js                  PASS
+build_release.py                  PASS
+verify_release.py                 PASS
+git diff --check                  PASS
+```
 
-## Krytyczne scenariusze potwierdzone
+No test is marked as passed merely because a wrapper started it.
 
-- single-body sterowanie i misje bez regresji;
-- 0/1/2/wiele body na poziomie lifecycle plan/builder/session;
-- deterministyczny primary body;
-- visual root per body;
-- exact collider/part/body ownership;
-- brak wrong-body damage fallback;
-- backend-first collider mutation;
-- per-body recenter i mass properties;
-- constraint → listener/collider → body → visual cleanup;
-- wielokrotny dispose;
-- częściowa awaria cleanupu i skuteczny retry;
-- atomic multi-body build rollback;
-- start → stop → start;
-- active `fullscreenchange` i `pagehide`;
-- real Cannon free flight, contacts, point velocity i payload podczas obrotu;
-- hinge free, motor, servo, friction, soft limits i `collideConnected`;
-- 12 000-step headless soak i 12 000-step real-Cannon/joint soak;
-- 50 lifecycle cycles;
-- startup smoke;
-- source inventory, release identity, deterministic build i source parity.
+## Source parity and deterministic rebuild
 
-## Drugi review
+Ignoring only generated/environment directories (`.git`, `dist`, `release`, caches and `node_modules`), the worktree, extracted ZIP tree and patch-applied tree contained the same 169 source/delivery files and produced the same deterministic tree hash during validation.
 
-Po pierwszej implementacji cały diff został przejrzany ponownie. Wykryto i naprawiono między innymi:
+The final build additionally verifies:
 
-- integrity denominator obejmujący niewłaściwą wyspę;
-- niedokładną kolejność cleanupu;
-- native body reads w debris sync;
-- zbyt duży debris adapter w composition root;
-- presentation hook mogący przerwać zatwierdzoną mutację;
-- nieatomową rejestrację visual roots;
-- brak aktywnego-flight pagehide smoke;
-- kruche markery tekstowe testów;
-- historyczne dokumenty udające stan bieżący.
+- manifest hashes;
+- 41 embedded application sources;
+- single-file source parity;
+- source-ZIP parity;
+- packaged single-file parity;
+- byte-identical deterministic rebuilds.
 
-Szczegóły: `CODE_REVIEW_REPORT.md` i `FOUNDATION_CONVERGENCE_REVIEW.md`.
+## Unrun tests and publication
 
-## Release verdict
-
-- Gate A: **CLOSED**.
-- Najdalsza w pełni ukończona bramka: **Phase 1D.3E / Gate A**.
-- Gate B–E: **nie rozpoczęte**.
-- Nie ma nieuruchomionych testów z `tests/run_all.py`.
-- Nie znaleziono release blockera dla dostawy Gate A.
-
-Po zapisaniu tego raportu finalne artefakty są ponownie budowane z kanonicznego drzewa, a dostawa zawiera zewnętrzny plik checksum i końcowy wynik walidacji artefaktów.
+No required test was left unexecuted. The only limitation was the host wrapper timeout described above; the interrupted stages were rerun explicitly and passed. No Git push, force-push or remote mutation was performed.

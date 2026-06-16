@@ -9,7 +9,7 @@
     format: 'BROWSER_CANNON_HARNESS',
     rootBodyId: 'body:root',
     rigidBodies: [{
-      bodyId: 'body:root', role: 'root', blockIds: ['core'], sourceCenterOfMass: [0, 0, 0],
+      bodyId: 'body:root', role: 'root', blockIds: ['core'], sourceAssemblyCenterOfMass: [0, 0, 0], assemblyPose: { position: [0, 0, 0], quaternion: [0, 0, 0, 1] },
       massProperties: { mass: 2, centerOfMass: [0, 0, 0], inertiaDiagonal: [2, 3, 4] },
       colliders: [{ colliderId: 'collider:core', blockId: 'core', bodyId: 'body:root', kind: 'box', center: [0, 0, 0], halfExtents: [0.5, 0.5, 0.5] }]
     }],

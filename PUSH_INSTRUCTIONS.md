@@ -1,43 +1,23 @@
-# Push Instructions — Foundation Phase 1D.3E
+# Safe local commit and push instructions
 
-## Źródło prawdy
+No push was performed by the delivery agent.
 
-Użyj pełnego ZIP-a źródeł:
+From the validated extracted project directory:
 
-`Voxel_Aeronautics_Workshop_Foundation_Phase_1D3E_Gate_A_Convergence.zip`
-
-Single HTML służy do szybkiego testu i prezentacji. Patch służy do audytu oraz odtworzenia zmian na dokładnym baseline Phase 1D.3D (`5cf38926623a17290ff2c6caad24d1c36fe77ad3`).
-
-## Bezpieczna aktualizacja lokalnego repo
-
-Najpierw upewnij się, że lokalne zmiany są zapisane albo odłożone. Agent nie wykonał pushu.
-
-```powershell
-git checkout main
-git status
-git fetch origin
-git pull --rebase origin main
-```
-
-Rozpakuj pełny ZIP poza repozytorium. Skopiuj zawartość katalogu projektu do repozytorium, zachowując `.git`, a potem uruchom:
-
-```powershell
-python tests/run_all.py
-python tools/build_release.py
-python tools/verify_release.py
+```bash
+git status --short
 git diff --check
-git status
-git diff --stat
-git add -A
-git commit -m "Foundation 1D.3E: close assembly-centric Gate A"
-git fetch origin
-git rebase origin/main
-python tests/run_all.py
+python -u tests/run_all.py
 python tools/build_release.py
 python tools/verify_release.py
-git push origin HEAD:main
+git add -A
+git commit -m "Phase 1D.4A rigid islands and mechanical graph"
+git push origin HEAD
 ```
 
-Po rebase pełna walidacja jest obowiązkowa, ponieważ zdalne zmiany mogły zmienić source inventory, loader lub kontrakty runtime.
+Review the remote and branch before the final command. Do not use `git push --force`. The supplied patch is relative to the exact clean Phase 1D.3E ZIP baseline and can be applied with:
 
-Nie używaj `git push --force`. W razie rzeczywistej potrzeby korekty własnej gałęzi dopuszczalne jest tylko świadome `git push --force-with-lease`, nigdy na `main` bez osobnej decyzji właściciela repozytorium.
+```bash
+git apply --check VAW_Phase_1D4A_from_1D3E.patch
+git apply VAW_Phase_1D4A_from_1D3E.patch
+```

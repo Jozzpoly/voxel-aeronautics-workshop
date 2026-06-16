@@ -62,7 +62,7 @@ function makePlan(count = 1, options = {}) {
       bodyId,
       role: 'root',
       blockIds,
-      sourceCenterOfMass: [0, 0, 0],
+      sourceAssemblyCenterOfMass: [0, 0, 0], assemblyPose: { position: [0, 0, 0], quaternion: [0, 0, 0, 1] },
       massProperties: {
         mass: options.mass || Math.max(1, count),
         centerOfMass: [0, 0, 0],
@@ -151,7 +151,7 @@ const report = { backend: `${Physics.id} ${Physics.version}` };
     format: 'REAL_CANNON_PAYLOAD_PLAN',
     rootBodyId: 'body:root',
     rigidBodies: [{
-      bodyId: 'body:root', role: 'root', blockIds: ['core'], sourceCenterOfMass: loaded.centerOfMass,
+      bodyId: 'body:root', role: 'root', blockIds: ['core'], sourceAssemblyCenterOfMass: loaded.centerOfMass, assemblyPose: { position: loaded.centerOfMass, quaternion: [0, 0, 0, 1] },
       massProperties: { mass: loaded.mass, centerOfMass: [0, 0, 0], inertiaDiagonal: loaded.inertiaDiagonal },
       colliders: [
         { colliderId: 'collider:core', blockId: 'core', bodyId: 'body:root', kind: 'box', center: coreOffset, halfExtents: [0.5, 0.5, 0.5] },

@@ -16,7 +16,9 @@
           craft: CraftModel.create(),
           workshop: {
             meshesByKey: new Map(),
-            rootMeshes: []
+            rootMeshes: [],
+            mechanicalLinkVisualsById: new Map(),
+            mechanicalAuthoring: { active: false, firstBlockId: null, axis: 'PY' }
           },
           flight: {
             assembly: null,
@@ -24,11 +26,6 @@
             primaryBodyId: null,
             visualRootByBodyId: new Map(),
             cleanupPending: false,
-            // Deprecated compatibility aliases. RuntimeAssembly is the only source of truth.
-            assemblyRuntime: null,
-            primaryBody: null,
-            body: null,
-            group: null,
             functionalBlocks: [],
             fuel: 0,
             fuelMax: 0,
@@ -58,7 +55,7 @@
             structuralFailures: 0,
             initialHealth: 0,
             gyroAuthority: 0,
-            payloadLocalPos: null,
+            payloadBodyLocalPosition: null,
             payload: null,
             pendingImpacts: [],
             runtimePartByKey: new Map(),

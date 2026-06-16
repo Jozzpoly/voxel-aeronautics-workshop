@@ -13,7 +13,6 @@
       flightSession,
       MassProperties,
       makeKey = (x, y, z) => `${x},${y},${z}`,
-      neighborDirections = [],
       clamp = (value, min, max) => Math.max(min, Math.min(max, value)),
       hooks = {}
     }) {
@@ -21,7 +20,7 @@
         throw new TypeError('FlightIntegrity requires flight state, FlightSession, and MassProperties.');
       }
 
-      const bodyRestriction = 'primary-rigid-island-only';
+      const bodyRestriction = 'per-rigid-island-static-frame-guard';
 
       function notify(hookName, ...args) {
         try { hooks[hookName]?.(...args); }
@@ -64,13 +63,9 @@
       }
 
       function requirePrimaryIsland(part) {
-        const bodyId = requireOwnedPart(part);
-        const primaryBodyId = flightSession.primaryBodyId();
-        if (bodyId !== primaryBodyId) {
-          throw new Error(`Gameplay detach is ${bodyRestriction}; refusing ${part.blockId} on ${bodyId}.`);
-        }
-        return bodyId;
+        return requireOwnedPart(part);
       }
+
 
       function removePartCollider(part) {
         const bodyId = requireOwnedPart(part);
@@ -113,8 +108,8 @@
         const parts = state.flight.runtimeParts.filter(part => part.attached && bodyIdForPart(part) === bodyId);
         const payload = state.flight.payload?.attached && state.flight.payload.bodyId === bodyId ? state.flight.payload : null;
         return MassProperties.compute([
-          ...parts.map(part => ({ id: part.blockId, mass: part.mass, center: part.localPos, halfExtents: [0.5, 0.5, 0.5] })),
-          ...(payload ? [{ id: 'mission-payload', mass: payload.mass, center: payload.localPos, halfExtents: [0.42, 0.42, 0.42] }] : [])
+          ...parts.map(part => ({ id: part.blockId, mass: part.mass, center: part.bodyLocalPosition, halfExtents: [0.5, 0.5, 0.5] })),
+          ...(payload ? [{ id: 'mission-payload', mass: payload.mass, center: payload.bodyLocalPosition, halfExtents: [0.42, 0.42, 0.42] }] : [])
         ]);
       }
 
@@ -129,53 +124,56 @@
         const massProperties = computeBodyMassProperties(bodyId);
         if (!(massProperties.mass > 0)) return null;
         const shift = { x: massProperties.centerOfMass[0], y: massProperties.centerOfMass[1], z: massProperties.centerOfMass[2] };
+        const activeConstraints = flightSession.constraintIdsForBody(bodyId);
+        if (activeConstraints.length && Math.hypot(shift.x, shift.y, shift.z) >= 1e-8) {
+          const result = Object.freeze({ bodyId, guarded: true, constraintIds: activeConstraints, shift: Object.freeze(shift), massProperties });
+          notify('onDiagnostic', { source: 'flight-integrity', code: 'connected-body-recenter-blocked', bodyId, constraintIds: activeConstraints });
+          return result;
+        }
         if (Math.hypot(shift.x, shift.y, shift.z) >= 1e-8) {
           flightSession.recenterBody(bodyId, shift);
-          for (const part of parts) subtractVector(part.localPos, shift);
+          for (const part of parts) subtractVector(part.bodyLocalPosition, shift);
           if (payload) {
-            subtractVector(payload.localPos, shift);
-            state.flight.payloadLocalPos = payload.localPos;
+            subtractVector(payload.bodyLocalPosition, shift);
+            state.flight.payloadBodyLocalPosition = payload.bodyLocalPosition;
           }
           const visualRoot = flightSession.getVisualRoot(bodyId);
           for (const child of visualRoot?.children || []) subtractVector(child.position, shift);
         }
-        const inertia = {
-          x: massProperties.inertiaDiagonal[0],
-          y: massProperties.inertiaDiagonal[1],
-          z: massProperties.inertiaDiagonal[2]
-        };
+        const inertia = { x: massProperties.inertiaDiagonal[0], y: massProperties.inertiaDiagonal[1], z: massProperties.inertiaDiagonal[2] };
         flightSession.setBodyMassProperties(bodyId, { mass: massProperties.mass, inertiaDiagonal: inertia });
         if (bodyId === flightSession.primaryBodyId()) {
           state.flight.runtimeMass = massProperties.mass;
           state.flight.payloadMass = payload ? payload.mass : 0;
           if (state.flight.currentInertia?.set) state.flight.currentInertia.set(inertia.x, inertia.y, inertia.z);
           else state.flight.currentInertia = inertia;
-          state.flight.lowestLocalY = Math.min(
-            ...parts.map(part => part.localPos.y - 0.5),
-            payload ? payload.localPos.y - 0.42 : Infinity
-          );
+          state.flight.lowestLocalY = Math.min(...parts.map(part => part.bodyLocalPosition.y - 0.5), payload ? payload.bodyLocalPosition.y - 0.42 : Infinity);
         }
         notify('onRecenter', { bodyId, shift, massProperties, parts, payload });
         markMetricsDirty();
-        return Object.freeze({ bodyId, shift: Object.freeze(shift), massProperties });
+        return Object.freeze({ bodyId, guarded: false, shift: Object.freeze(shift), massProperties });
       }
+
 
       function collectDisconnected(bodyId = flightSession.primaryBodyId()) {
         const parts = state.flight.runtimeParts.filter(part => part.attached && bodyIdForPart(part) === bodyId);
-        const core = parts.find(part => part.type === 'Core') || null;
-        if (!core) return parts;
-        const byKey = new Map(parts.map(part => [part.key, part]));
-        const visited = new Set([core.key]);
-        const queue = [core.key];
+        if (!parts.length) return [];
+        const bodyPlan = state.flight.assemblyPlan?.rigidBodies?.find(body => body.bodyId === bodyId);
+        const anchor = parts.find(part => part.type === 'Core')
+          || parts.find(part => part.blockId === bodyPlan?.anchorBlockId)
+          || [...parts].sort((a, b) => a.blockId.localeCompare(b.blockId))[0];
+        const byId = new Map(parts.map(part => [part.blockId, part]));
+        const visited = new Set([anchor.blockId]);
+        const queue = [anchor.blockId];
         for (let cursor = 0; cursor < queue.length; cursor += 1) {
-          const [x, y, z] = queue[cursor].split(',').map(Number);
-          for (const [dx, dy, dz] of neighborDirections) {
-            const key = makeKey(x + dx, y + dy, z + dz);
-            if (byKey.has(key) && !visited.has(key)) { visited.add(key); queue.push(key); }
+          const part = byId.get(queue[cursor]);
+          for (const neighborId of part?.rigidNeighborBlockIds || []) {
+            if (byId.has(neighborId) && !visited.has(neighborId)) { visited.add(neighborId); queue.push(neighborId); }
           }
         }
-        return parts.filter(part => part.type !== 'Core' && !visited.has(part.key));
+        return parts.filter(part => part.blockId !== anchor.blockId && !visited.has(part.blockId));
       }
+
 
       function finalizeDetachedPart(part, reason) {
         part.attached = false;
@@ -199,53 +197,70 @@
         let fuelCapacityLost = 0;
         let detached = 0;
         let coreFailed = false;
-        const primaryBodyId = flightSession.primaryBodyId();
+        const affectedBodies = new Set();
 
         const detachOne = (part, reason) => {
-          const bodyId = requirePrimaryIsland(part);
-          if (bodyId !== primaryBodyId || !part.attached) return;
+          const bodyId = requireOwnedPart(part);
+          if (!part.attached) return;
           if (part.type === 'Core') {
-            part.health = 0;
-            coreFailed = true;
-            state.flight.integrity = 0;
+            part.health = 0; coreFailed = true; state.flight.integrity = 0;
             state.flight.firstFailure = `Command core failed: ${reason}`;
-            notify('onCoreFailed', part, reason);
+            notify('onCoreFailed', part, reason); return;
+          }
+          const broken = flightSession.breakConstraintsForEndpointBlock(part.blockId, reason);
+          if (broken.length) notify('onDiagnostic', { source: 'flight-integrity', code: 'mechanical-endpoint-failure', blockId: part.blockId, constraintIds: broken });
+          const remaining = flightSession.constraintIdsForBody(bodyId);
+          if (remaining.length) {
+            part.health = Math.max(1, part.maxHealth * 0.01);
+            notify('onDiagnostic', { source: 'flight-integrity', code: 'connected-body-detach-blocked', blockId: part.blockId, bodyId, constraintIds: remaining });
             return;
           }
           const ownership = colliderForBlock(part.blockId);
-          if (ownership && !removePartCollider(part)) {
-            throw new Error(`Backend rejected collider removal for ${part.blockId}; part state was not mutated.`);
-          }
+          if (ownership && !removePartCollider(part)) throw new Error(`Backend rejected collider removal for ${part.blockId}; part state was not mutated.`);
           finalizeDetachedPart(part, reason);
+          affectedBodies.add(bodyId);
           if (part.type === 'Fuel') fuelCapacityLost += part.def.fuelCapacity || 0;
           detached += 1;
         };
 
         for (const [part, reason] of pending) detachOne(part, reason);
         if (cascade && !coreFailed) {
-          for (const part of collectDisconnected(primaryBodyId)) detachOne(part, 'connection to core was severed');
+          for (const bodyId of [...affectedBodies]) {
+            for (const part of collectDisconnected(bodyId)) detachOne(part, 'rigid connection to body anchor was severed');
+          }
         }
         if (fuelCapacityLost > 0) {
           state.flight.fuelMax = Math.max(0, state.flight.fuelMax - fuelCapacityLost);
           state.flight.fuel = Math.min(state.flight.fuel, state.flight.fuelMax);
         }
-        if (detached > 0) recenterBody(primaryBodyId);
-        markMetricsDirty();
-        recompute(true);
-        notify('onDetachBatch', detached);
+        for (const bodyId of affectedBodies) recenterBody(bodyId);
+        markMetricsDirty(); recompute(true); notify('onDetachBatch', detached);
         return detached;
       }
 
+
       function applyDamageOnly(part, amount, reason = 'impact') {
-        requireOwnedPart(part);
+        const bodyId = requireOwnedPart(part);
         if (!part.attached || !(amount > 0)) return false;
         const absorbed = Math.max(0.25, part.def.structural || 1);
-        part.health = Math.max(0, part.health - amount / absorbed);
+        const projected = Math.max(0, part.health - amount / absorbed);
+        if (projected <= 0) {
+          const bodyConstraints = flightSession.constraintIdsForBody(bodyId);
+          const endpointConstraints = new Set(flightSession.constraintIdsForEndpointBlock(part.blockId));
+          const unbrokenConstraints = bodyConstraints.filter(id => !endpointConstraints.has(id));
+          if (unbrokenConstraints.length) {
+            part.health = Math.max(1, part.maxHealth * 0.01);
+            notify('onDiagnostic', { source: 'flight-integrity', code: 'connected-body-damage-detach-guard', blockId: part.blockId, bodyId, constraintIds: unbrokenConstraints });
+            markMetricsDirty();
+            return false;
+          }
+        }
+        part.health = projected;
         if (!state.flight.firstFailure && healthFraction(part) < 0.55) state.flight.firstFailure = `${part.type} critically damaged by ${reason}`;
-        notify('onPartDamaged', part, reason);
-        markMetricsDirty();
+        notify('onPartDamaged', part, reason); markMetricsDirty();
         return part.health <= 0;
       }
+
 
       function damagePart(part, amount, reason = 'impact') {
         if (applyDamageOnly(part, amount, reason)) return detachParts([{ part, reason }], true) > 0;
@@ -266,13 +281,19 @@
         const owned = requireOwnedPayload();
         if (!owned) return false;
         const { payload, ownership } = owned;
+        const activeConstraints = flightSession.constraintIdsForBody(payload.bodyId);
+        if (activeConstraints.length) {
+          payload.health = Math.max(1, payload.maxHealth * 0.01);
+          notify('onDiagnostic', { source: 'flight-integrity', code: 'connected-body-payload-detach-blocked', bodyId: payload.bodyId, constraintIds: activeConstraints });
+          return false;
+        }
         if (ownership && !flightSession.removeCollider(payload.colliderId)) {
           throw new Error('Backend rejected payload collider removal; payload state was not mutated.');
         }
         payload.attached = false;
         payload.health = 0;
         state.flight.payloadMass = 0;
-        state.flight.payloadLocalPos = null;
+        state.flight.payloadBodyLocalPosition = null;
         if (!state.flight.firstFailure) state.flight.firstFailure = `Payload lost: ${reason}`;
         notify('onPayloadDetached', payload, reason);
         recenterBody(payload.bodyId);

@@ -1,33 +1,85 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
-const vm = require('vm');
-const ROOT = path.resolve(__dirname, '..');
-global.window = global;
-for (const relative of ['src/foundation/kernel.js','src/foundation/runtime_assembly.js']) {
-  vm.runInThisContext(fs.readFileSync(path.join(ROOT, relative), 'utf8'), { filename: relative });
-}
-const RuntimeAssembly = global.VAW.require('foundation.runtime-assembly');
-const snapshot = {
-  signature: 'sample', mass: 8, com: [0.25, 0, 0], inertia: [3, 4, 5],
-  parts: [
-    { blockId: 'engine-left', key: '0,0,0', type: 'Thruster', grid: [0,0,0], offset: [-0.25,0,0], orientation: 0, properties: { force: 42 } },
-    { blockId: 'core', key: '1,0,0', type: 'Core', grid: [1,0,0], offset: [0.75,0,0], orientation: 0, properties: {} }
-  ]
-};
-const plan = RuntimeAssembly.createPlan(snapshot);
+const { FOUNDATION_SOURCES, load } = require('./load_runtime');
+load(FOUNDATION_SOURCES, { stubs: true });
+
+const CraftModel = VAW.require('foundation.craft-model');
+const CraftCompiler = VAW.require('foundation.craft-compiler');
+const RuntimeAssembly = VAW.require('foundation.runtime-assembly');
+const TransformMath = VAW.require('foundation.transform-math');
+
+const blocks = [
+  { blockId: 'core', x: 0, y: 0, z: 0, type: 'Core' },
+  { blockId: 'root-hull', x: 1, y: 0, z: 0, type: 'Hull' },
+  { blockId: 'arm-hull', x: 2, y: 0, z: 0, type: 'Hull' },
+  { blockId: 'arm-tip', x: 3, y: 0, z: 0, type: 'Hull' }
+];
+const links = [{
+  mechanicalLinkId: 'mechanical:arm', kind: 'hinge',
+  endpointA: { blockId: 'root-hull', face: 'PX' },
+  endpointB: { blockId: 'arm-hull', face: 'NX' },
+  axis: 'PY', collideConnected: false, maxForce: 1000000, frictionTorque: 0, limits: null
+}];
+const model = CraftModel.create({ version: 11, blocks, mechanicalLinks: links });
+const compiled = CraftCompiler.compile(model);
+assert.strictEqual(compiled.format, 'VAW_COMPILED_CRAFT_V4');
+assert(compiled.ready, compiled.errors.join(', '));
+const plan = RuntimeAssembly.createPlan(compiled);
 assert(Object.isFrozen(plan));
-assert.strictEqual(plan.format, 'VAW_RUNTIME_ASSEMBLY_PLAN_V1');
-assert.strictEqual(plan.rigidBodies.length, 1);
-assert.strictEqual(plan.constraints.length, 0);
+assert.strictEqual(plan.format, 'VAW_RUNTIME_ASSEMBLY_PLAN_V2');
+assert.strictEqual(plan.rigidBodies.length, 2);
+assert.strictEqual(plan.constraints.length, 1);
 assert.strictEqual(plan.signalLinks.length, 0);
-assert.strictEqual(plan.parts.length, 2);
-assert.strictEqual(plan.blockIdToBodyId['engine-left'], 'body:root');
-assert.strictEqual(plan.rigidBodies[0].massProperties.mass, 8);
-assert.deepStrictEqual(plan.rigidBodies[0].massProperties.inertiaDiagonal, [3,4,5]);
-assert.strictEqual(plan.rigidBodies[0].colliders[0].blockId, 'engine-left');
-assert.throws(() => RuntimeAssembly.createPlan({ mass: 1, com: [0,0,0], inertia: [1,1,1], parts: [snapshot.parts[0], snapshot.parts[0]] }), /Duplicate runtime block id/);
-assert.throws(() => RuntimeAssembly.createPlan({ mass: 1, com: [0,0,0], inertia: [1,1,1], parts: [{ ...snapshot.parts[0], blockId: '' }] }), /blockId/);
-assert.throws(() => RuntimeAssembly.createPlan({ mass: 1, com: [0,0,0], inertia: [1,0,1], parts: [snapshot.parts[0]] }), /greater than zero/);
-assert.throws(() => RuntimeAssembly.createPlan({ mass: 1, com: [0,0,0], inertia: [1,1,1], payloadMass: 2, parts: [snapshot.parts[0]] }), /payload offset/);
-console.log(JSON.stringify({ singleBodyCompatibility: 'ok', persistentBlockMapping: 'ok', massPropertyPlan: 'ok', strictSnapshotBoundary: 'ok', futureConstraintSlot: 'ok', signalGraphSlot: 'ok' }, null, 2));
+assert.strictEqual(plan.parts.length, 4);
+assert.strictEqual(plan.rootBodyId, 'body:core');
+assert.strictEqual(plan.constraints[0].constraintId, 'mechanical:arm');
+assert.notStrictEqual(plan.blockIdToBodyId['root-hull'], plan.blockIdToBodyId['arm-hull']);
+for (const body of plan.rigidBodies) {
+  assert.deepStrictEqual(body.massProperties.centerOfMass, [0, 0, 0]);
+  const bodyParts = plan.parts.filter(part => part.bodyId === body.bodyId);
+  for (const part of bodyParts) {
+    assert.deepStrictEqual(
+      part.bodyLocalPosition.map((value, index) => value + body.assemblyPose.position[index]),
+      part.assemblyPosition
+    );
+  }
+}
+const hinge = plan.constraints[0];
+const bodyA = plan.rigidBodies.find(body => body.bodyId === hinge.bodyAId);
+const bodyB = plan.rigidBodies.find(body => body.bodyId === hinge.bodyBId);
+assert.deepStrictEqual(hinge.pivotA.map((v, i) => v + bodyA.assemblyPose.position[i]), hinge.assemblyPivotPosition);
+assert.deepStrictEqual(hinge.pivotB.map((v, i) => v + bodyB.assemblyPose.position[i]), hinge.assemblyPivotPosition);
+
+const loaded = RuntimeAssembly.createPlan(compiled, {
+  payloadMass: 10,
+  payloadAnchorBlockId: 'core',
+  payloadAssemblyPosition: [0, -1, 0]
+});
+const ownerBodyId = loaded.blockIdToBodyId.core;
+const otherBodyId = loaded.rigidBodies.find(body => body.bodyId !== ownerBodyId).bodyId;
+const baseOwner = plan.rigidBodies.find(body => body.bodyId === ownerBodyId);
+const loadedOwner = loaded.rigidBodies.find(body => body.bodyId === ownerBodyId);
+assert(loadedOwner.massProperties.mass > baseOwner.massProperties.mass);
+assert.notDeepStrictEqual(loadedOwner.assemblyPose.position, baseOwner.assemblyPose.position);
+assert.deepStrictEqual(
+  loaded.rigidBodies.find(body => body.bodyId === otherBodyId).assemblyPose,
+  plan.rigidBodies.find(body => body.bodyId === otherBodyId).assemblyPose
+);
+assert.strictEqual(loaded.launchLoadout.payload.ownerBodyId, ownerBodyId);
+const loadedHinge = loaded.constraints[0];
+assert.deepStrictEqual(loadedHinge.pivotA.map((v, i) => v + loaded.rigidBodies.find(b => b.bodyId === loadedHinge.bodyAId).assemblyPose.position[i]), loadedHinge.assemblyPivotPosition);
+assert.deepStrictEqual(loadedHinge.pivotB.map((v, i) => v + loaded.rigidBodies.find(b => b.bodyId === loadedHinge.bodyBId).assemblyPose.position[i]), loadedHinge.assemblyPivotPosition);
+
+const spawn = { position: [10, 4, -3], quaternion: [0, 0, Math.SQRT1_2, Math.SQRT1_2] };
+const poses = RuntimeAssembly.worldBodyPoses(plan, spawn);
+for (const body of plan.rigidBodies) {
+  assert.deepStrictEqual(poses[body.bodyId], RuntimeAssembly.worldBodyPose(spawn, body));
+  const assemblyPoint = body.assemblyPose.position;
+  assert.deepStrictEqual(poses[body.bodyId].position, TransformMath.transformPoint(spawn, assemblyPoint));
+}
+
+assert.throws(() => RuntimeAssembly.createPlan({ format: 'VAW_COMPILED_CRAFT_V3' }), /CompiledCraft V4/);
+assert.throws(() => RuntimeAssembly.createPlan({ ...compiled, ready: false, errors: ['synthetic'] }), /unready craft/);
+console.log(JSON.stringify({
+  planV2: 'ok', multiBodyCoordinates: 'ok', hingePivotRoundTrip: 'ok',
+  payloadOwnerIsolation: 'ok', bodyInAssemblySpawn: 'ok', strictCompiledBoundary: 'ok'
+}, null, 2));

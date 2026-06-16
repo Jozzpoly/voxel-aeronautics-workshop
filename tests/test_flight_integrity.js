@@ -16,20 +16,22 @@ function part(blockId, bodyId, x, type = 'Frame') {
   return {
     blockId, bodyId, key: `${x},0,0`, grid: { x, y: 0, z: 0 }, type,
     def: { structural: 1, dragArea: 0.2, durability: 10, fuelCapacity: type === 'Fuel' ? 5 : 0 },
-    mass: 1, localPos: { x, y: 0, z: 0 }, maxHealth: 10, health: 10, attached: true,
-    visual: { position: { x, y: 0, z: 0 } }
+    mass: 1, bodyLocalPosition: { x, y: 0, z: 0 }, maxHealth: 10, health: 10, attached: true,
+    rigidNeighborBlockIds: [], visual: { position: { x, y: 0, z: 0 } }
   };
 }
 function createFixture({ rejectRemovalOnce = false } = {}) {
   const parts = [part('core', 'body:root', 0, 'Core'), part('frame', 'body:root', 1), part('rotor', 'body:rotor', 0)];
+  parts[0].rigidNeighborBlockIds = ['frame'];
+  parts[1].rigidNeighborBlockIds = ['core'];
   const runtimePartById = new Map(parts.map(item => [item.blockId, item]));
   const runtimePartByKey = new Map(parts.map(item => [item.key, item]));
   const state = { flight: {
     runtimeParts: parts, runtimePartById, runtimePartByKey, metricsDirty: true,
-    payload: null, payloadLocalPos: null, payloadMass: 0, initialHealth: 20,
+    payload: null, payloadBodyLocalPosition: null, payloadMass: 0, initialHealth: 20,
     integrity: 100, dragArea: 0, gyroAuthority: 0, gyroCount: 0, leakingFuelRate: 0,
     fuelMax: 10, fuel: 10, lostParts: 0, structuralFailures: 0, blockCount: 3,
-    firstFailure: '', runtimeMass: 2, currentInertia: { x: 0, y: 0, z: 0, set(x,y,z){this.x=x;this.y=y;this.z=z;} },
+    firstFailure: '', assemblyPlan: { rigidBodies: [{ bodyId: 'body:root', anchorBlockId: 'core' }, { bodyId: 'body:rotor', anchorBlockId: 'rotor' }] }, runtimeMass: 2, currentInertia: { x: 0, y: 0, z: 0, set(x,y,z){this.x=x;this.y=y;this.z=z;} },
     lowestLocalY: -0.5, debris: []
   } };
   const blockBody = new Map(parts.map(item => [item.blockId, item.bodyId]));
@@ -40,6 +42,8 @@ function createFixture({ rejectRemovalOnce = false } = {}) {
   ]);
   let reject = rejectRemovalOnce;
   const calls = [];
+  const constraintsByBody = new Map([['body:root', new Set()], ['body:rotor', new Set()]]);
+  const constraintsByEndpoint = new Map();
   const session = {
     primaryBodyId: () => 'body:root',
     hasBody: bodyId => bodyId === 'body:root' || bodyId === 'body:rotor',
@@ -58,6 +62,13 @@ function createFixture({ rejectRemovalOnce = false } = {}) {
       calls.push(`remove:${colliderId}`);
       colliders.delete(found[0]); return true;
     },
+    constraintIdsForBody(bodyId) { return [...(constraintsByBody.get(bodyId) || [])].sort(); },
+    constraintIdsForEndpointBlock(blockId) { return [...(constraintsByEndpoint.get(blockId) || [])].sort(); },
+    breakConstraintsForEndpointBlock(blockId, reason) {
+      const ids = [...(constraintsByEndpoint.get(blockId) || [])];
+      for (const id of ids) { for (const set of constraintsByBody.values()) set.delete(id); for (const set of constraintsByEndpoint.values()) set.delete(id); calls.push(`break:${id}:${reason}`); }
+      return ids;
+    },
     recenterBody(bodyId, shift) { calls.push({ recenter: bodyId, shift: { ...shift } }); return true; },
     setBodyMassProperties(bodyId, value) { calls.push({ mass: bodyId, value }); return value; },
     getVisualRoot: bodyId => visualRoots.get(bodyId) || null
@@ -66,7 +77,6 @@ function createFixture({ rejectRemovalOnce = false } = {}) {
   const disposedDebris = [];
   const integrity = FlightIntegrity.create({
     state, flightSession: session, MassProperties,
-    neighborDirections: [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]],
     hooks: {
       onPartDetached(item) { detached.push(item.blockId); },
       createDebris(descriptor) { return { id: descriptor.id, age: 0 }; },
@@ -74,7 +84,7 @@ function createFixture({ rejectRemovalOnce = false } = {}) {
       disposeDebris(entry) { disposedDebris.push(entry.id); return true; }
     }
   });
-  return { state, parts, session, integrity, colliders, calls, detached, disposedDebris };
+  return { state, parts, session, integrity, colliders, calls, detached, disposedDebris, constraintsByBody, constraintsByEndpoint };
 }
 
 // Ownership is exact and never falls back to primary body.
@@ -87,7 +97,8 @@ function createFixture({ rejectRemovalOnce = false } = {}) {
   assert.strictEqual(fixture.state.flight.integrity, 100, 'Primary-island integrity must not include another body in its denominator.');
   assert.strictEqual(integrity.bodyIdForPart({ blockId: 'missing' }), null);
   assert.throws(() => integrity.applyDamageOnly({ blockId: 'missing', attached: true, def: {}, health: 1, maxHealth: 1 }, 1), /no runtime body ownership/);
-  assert.throws(() => integrity.detachParts([{ part: parts[2], reason: 'test' }]), /primary-rigid-island-only/);
+  assert.strictEqual(integrity.detachParts([{ part: parts[2], reason: 'test' }], false), 1, 'Sub-body integrity must be owned explicitly rather than rejected as primary-only.');
+  assert.strictEqual(parts[0].attached, true);
 }
 
 // Backend-first removal preserves gameplay maps after a failed collider mutation.
@@ -106,10 +117,10 @@ function createFixture({ rejectRemovalOnce = false } = {}) {
 // Per-body recenter only shifts the selected body's parts and visual children.
 {
   const { state, parts, integrity, calls } = createFixture();
-  const rotorBefore = { ...parts[2].localPos };
+  const rotorBefore = { ...parts[2].bodyLocalPosition };
   const result = integrity.recenterBody('body:root');
   assert(result && result.bodyId === 'body:root');
-  assert.deepStrictEqual(parts[2].localPos, rotorBefore, 'Another rigid island must not be recentered.');
+  assert.deepStrictEqual(parts[2].bodyLocalPosition, rotorBefore, 'Another rigid island must not be recentered.');
   assert(calls.some(call => call.recenter === 'body:root'));
   assert(calls.some(call => call.mass === 'body:root'));
   assert.strictEqual(state.flight.runtimeMass, 2);
@@ -133,7 +144,6 @@ function createFixture({ rejectRemovalOnce = false } = {}) {
     state: fixture.state,
     flightSession: fixture.session,
     MassProperties,
-    neighborDirections: [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]],
     hooks: {
       onPartDetached() { throw new Error('synthetic presentation failure'); },
       onDiagnostic(entry) { diagnostics.push(entry); }
@@ -149,7 +159,7 @@ function createFixture({ rejectRemovalOnce = false } = {}) {
 // Payload ownership and debris lifecycle are explicit.
 {
   const { state, integrity, colliders, disposedDebris } = createFixture();
-  state.flight.payload = { bodyId: 'body:root', colliderId: 'c:payload', attached: true, health: 5, maxHealth: 5, mass: 2, localPos: { x: 0, y: -1, z: 0 } };
+  state.flight.payload = { bodyId: 'body:root', colliderId: 'c:payload', attached: true, health: 5, maxHealth: 5, mass: 2, bodyLocalPosition: { x: 0, y: -1, z: 0 } };
   colliders.set('payload', { colliderId: 'c:payload', blockId: null, bodyId: 'body:root' });
   assert.strictEqual(integrity.damagePayload(10, 'payload test'), true);
   assert.strictEqual(state.flight.payload.attached, false);
@@ -163,7 +173,7 @@ function createFixture({ rejectRemovalOnce = false } = {}) {
 
 console.log(JSON.stringify({
   exactPartOwnership: 'ok',
-  destructiveFallbackRejected: 'ok',
+  subBodyIntegrityOwnership: 'ok',
   backendFirstMutation: 'ok',
   perBodyRecenter: 'ok',
   wrongBodyDamagePrevented: 'ok',

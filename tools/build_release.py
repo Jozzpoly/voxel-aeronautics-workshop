@@ -8,22 +8,28 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE_ID = 'foundation-1d3e-gate-a-convergence'
-APP_VERSION = '0.6.4-foundation.1d3e'
-SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3E_Gate_A_Convergence.html'
-ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D3E_Gate_A_Convergence.zip'
+RELEASE_ID = 'foundation-1d4a-rigid-islands-mechanical-graph'
+APP_VERSION = '0.7.0-foundation.1d4a'
+SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D4A_Mechanical_Platform_Convergence.html'
+ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D4A_Mechanical_Platform_Convergence.zip'
 MANIFEST_NAME = 'SOURCE_MANIFEST.json'
-ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_Phase_1D3E_GATE_A_CONVERGENCE_READY_TO_PUSH'
+ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_Phase_1D4A_MECHANICAL_PLATFORM_CONVERGENCE_READY_TO_PUSH'
 APP_SOURCES = (
     Path('src/foundation/kernel.js'),
     Path('src/foundation/config.js'),
     Path('src/foundation/catalog.js'),
     Path('src/foundation/orientation.js'),
     Path('src/foundation/blueprint.js'),
+    Path('src/foundation/diagnostics.js'),
+    Path('src/foundation/transform_math.js'),
     Path('src/foundation/craft_model.js'),
     Path('src/foundation/craft_history.js'),
     Path('src/foundation/control_frame.js'),
     Path('src/foundation/mass_properties.js'),
+    Path('src/foundation/structural_graph_compiler.js'),
+    Path('src/foundation/mechanical_authoring_resolver.js'),
+    Path('src/foundation/rigid_island_compiler.js'),
+    Path('src/foundation/mechanical_graph_compiler.js'),
     Path('src/foundation/craft_compiler.js'),
     Path('src/foundation/runtime_assembly.js'),
     Path('src/foundation/input_profile.js'),

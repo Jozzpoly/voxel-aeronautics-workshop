@@ -22,7 +22,7 @@
       return Object.freeze({
         source: corePart ? 'core' : 'default',
         sourcePartKey: corePart?.key || null,
-        origin: Object.freeze(vec(corePart?.grid || corePart?.position || [0, 0, 0])),
+        origin: Object.freeze(vec(corePart?.assemblyPosition || corePart?.gridPosition || corePart?.grid || corePart?.position || [0, 0, 0])),
         forward: basis.forward,
         up: basis.up,
         right: basis.right

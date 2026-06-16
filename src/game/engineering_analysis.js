@@ -3,8 +3,8 @@
 
   window.VAW.define('game.engineering-analysis', [
     'foundation.config', 'foundation.catalog', 'foundation.craft-compiler',
-    'foundation.mass-properties', 'foundation.flight-control'
-  ], (Config, Catalog, CraftCompiler, MassProperties, FlightControl) => {
+    'foundation.runtime-assembly', 'foundation.flight-control'
+  ], (Config, Catalog, CraftCompiler, RuntimeAssembly, FlightControl) => {
     const { GRID, PHYSICS, MISSION_PAYLOAD_POSITION } = Config;
     const { BLOCKS } = Catalog;
 
@@ -96,49 +96,54 @@
 
       function buildCraftSnapshot() {
         const compiled = CraftCompiler.compile(CRAFT);
-        const snapshot = {
+        const rootBody = compiled.rootBodyId ? compiled.bodyById[compiled.rootBodyId] : null;
+        return {
           compiled,
           ready: compiled.ready,
           errors: [...compiled.errors],
+          diagnostics: [...compiled.diagnostics],
           mass: compiled.mass,
           weight: compiled.weight,
           fuelCapacity: compiled.fuelCapacity,
           dragArea: compiled.dragArea,
-          com: new THREE.Vector3(...compiled.com),
-          inertia: new THREE.Vector3(...compiled.inertia),
+          assemblyCenterOfMass: new THREE.Vector3(...compiled.assemblyCenterOfMass),
+          aggregateInertia: new THREE.Vector3(...compiled.aggregateInertiaDiagonal),
+          rootBodyInertia: new THREE.Vector3(...(rootBody?.massProperties?.inertiaDiagonal || [1, 1, 1])),
           counts: { ...compiled.counts },
+          rootBodyId: compiled.rootBodyId,
           coreKey: compiled.coreKey,
-          corePosition: compiled.corePosition ? new THREE.Vector3(...compiled.corePosition) : null,
+          coreAssemblyPosition: compiled.coreAssemblyPosition ? new THREE.Vector3(...compiled.coreAssemblyPosition) : null,
           parts: compiled.parts.map(part => {
             const def = BLOCKS[part.type];
-            const position = new THREE.Vector3(...part.grid);
-            const offset = new THREE.Vector3(...part.offset);
+            const assemblyPosition = new THREE.Vector3(...part.assemblyPosition);
+            const bodyLocalPosition = new THREE.Vector3(...part.bodyLocalPosition);
             const basis = {
               chord: new THREE.Vector3(...part.basis.forward),
               normal: new THREE.Vector3(...part.basis.up),
               span: new THREE.Vector3(...part.basis.span)
             };
-            const fullForce = new THREE.Vector3(...part.fullForce);
-            const localTorque = new THREE.Vector3(...part.localTorque);
+            const fullForce = (part.type === 'Thruster' || part.type === 'VectorThruster')
+              ? basis.chord.clone().multiplyScalar(def.force || 0)
+              : new THREE.Vector3();
             return {
               index: part.index,
               blockId: part.blockId,
-              key: part.key,
+              bodyId: part.bodyId,
+              key: part.gridKey,
               type: part.type,
-              position,
-              offset,
+              assemblyPosition,
+              bodyLocalPosition,
               orientation: part.orientation,
               basis,
               def,
               controlAxis: part.controlAxis,
               controlSign: part.controlSign,
               fullForce,
-              localTorque,
-              neighbors: [...part.neighbors]
+              localTorque: bodyLocalPosition.clone().cross(fullForce),
+              rigidNeighborBlockIds: [...part.rigidNeighborBlockIds]
             };
           })
         };
-        return snapshot;
       }
 
 
@@ -166,7 +171,7 @@
 
       function controlSurfaceAutoSign(part) {
         const target = controlAxisVector(part.controlAxis);
-        const positiveTorque = part.offset.clone().cross(part.basis.normal);
+        const positiveTorque = part.bodyLocalPosition.clone().cross(part.basis.normal);
         const projection = positiveTorque.dot(target);
         return Math.abs(projection) < 0.0001 ? 1 : Math.sign(projection);
       }
@@ -191,7 +196,7 @@
         );
         if (forceDirection.lengthSq() < 0.0001) return new THREE.Vector3();
         forceDirection.normalize();
-        return part.offset.clone().cross(forceDirection.multiplyScalar(forceMagnitude));
+        return part.bodyLocalPosition.clone().cross(forceDirection.multiplyScalar(forceMagnitude));
       }
 
       function computeGimbalForceThree(part, pilot, command = 0) {
@@ -200,8 +205,8 @@
         const baseForce = (part.def.force || 0) * command;
         if (desired.lengthSq() < 0.0001 || baseForce <= 0) return part.basis.chord.clone().multiplyScalar(baseForce);
         const lateral = baseForce * Math.sin(PHYSICS.gimbalAngle);
-        const torqueNormal = part.offset.clone().cross(part.basis.normal.clone().multiplyScalar(lateral));
-        const torqueSpan = part.offset.clone().cross(part.basis.span.clone().multiplyScalar(lateral));
+        const torqueNormal = part.bodyLocalPosition.clone().cross(part.basis.normal.clone().multiplyScalar(lateral));
+        const torqueSpan = part.bodyLocalPosition.clone().cross(part.basis.span.clone().multiplyScalar(lateral));
         const desiredAmplitude = THREE.MathUtils.clamp(desired.length(), 0, 1);
         const normalization = Math.max(0.0001, desired.length());
         let a = torqueNormal.lengthSq() > 0.0001 ? desired.dot(torqueNormal) / (normalization * torqueNormal.length()) * desiredAmplitude : 0;
@@ -217,6 +222,7 @@
       function computeAuxiliaryControlTorque(snapshot, pilot, torqueMax = computeSnapshotTorqueMax(snapshot)) {
         const torque = new THREE.Vector3();
         for (const part of snapshot.parts) {
+          if (part.bodyId !== snapshot.rootBodyId) continue;
           if (part.type === 'ControlSurface') torque.add(computeControlSurfaceTorqueThree(part, pilot));
           if (part.type === 'VectorThruster') {
             const command = computeMixerCommandFromTorque(
@@ -226,7 +232,7 @@
             );
             const base = part.basis.chord.clone().multiplyScalar((part.def.force || 0) * command);
             const deflected = computeGimbalForceThree(part, pilot, command);
-            torque.add(part.offset.clone().cross(deflected.sub(base)));
+            torque.add(part.bodyLocalPosition.clone().cross(deflected.sub(base)));
           }
         }
         return torque;
@@ -235,6 +241,7 @@
       function computeSnapshotTorqueMax(snapshot) {
         const max = new THREE.Vector3();
         for (const part of snapshot.parts) {
+          if (part.bodyId !== snapshot.rootBodyId) continue;
           if (part.type !== 'Thruster' && part.type !== 'VectorThruster') continue;
           max.x = Math.max(max.x, Math.abs(part.localTorque.x));
           max.y = Math.max(max.y, Math.abs(part.localTorque.y));
@@ -246,6 +253,7 @@
       function computeThrusterTorqueForPilot(snapshot, pilot, torqueMax) {
         const torque = new THREE.Vector3();
         for (const part of snapshot.parts) {
+          if (part.bodyId !== snapshot.rootBodyId) continue;
           if (part.type !== 'Thruster' && part.type !== 'VectorThruster') continue;
           const command = computeMixerCommandFromTorque(
               part.localTorque, pilot,
@@ -258,52 +266,54 @@
       }
 
       function missionPayloadPositionVector(snapshot = null) {
-        const anchor = snapshot?.corePosition ? snapshot.corePosition.clone() : new THREE.Vector3();
+        const anchor = snapshot?.coreAssemblyPosition ? snapshot.coreAssemblyPosition.clone() : new THREE.Vector3();
         return anchor.add(new THREE.Vector3(MISSION_PAYLOAD_POSITION.x, MISSION_PAYLOAD_POSITION.y, MISSION_PAYLOAD_POSITION.z));
       }
 
       function buildLoadedSnapshot(baseSnapshot, payloadMass = 0) {
         const safePayloadMass = Math.max(0, Number(payloadMass) || 0);
-        if (safePayloadMass <= 0 || baseSnapshot.mass <= 0) return baseSnapshot;
-        const payloadPosition = missionPayloadPositionVector(baseSnapshot);
-        const massProperties = MassProperties.compute([
-          ...baseSnapshot.parts.map(part => ({
-            id: part.blockId,
-            mass: part.def.mass || 0,
-            center: part.position,
-            halfExtents: [0.5, 0.5, 0.5]
-          })),
-          {
-            id: 'mission-payload',
-            mass: safePayloadMass,
-            center: payloadPosition,
-            halfExtents: [0.42, 0.42, 0.42]
-          }
-        ]);
-        const runtimeMass = massProperties.mass;
-        const runtimeCom = new THREE.Vector3(...massProperties.centerOfMass);
-        const inertia = new THREE.Vector3(...massProperties.inertiaDiagonal);
+        const payloadAssemblyPosition = missionPayloadPositionVector(baseSnapshot);
+        if (!baseSnapshot?.compiled?.ready) {
+          return {
+            ...baseSnapshot,
+            runtimePlan: null,
+            payloadMass: 0,
+            payloadAssemblyPosition,
+            payloadBodyLocalPosition: null,
+            payloadOwnerBodyId: null
+          };
+        }
+        const runtimePlan = RuntimeAssembly.createPlan(baseSnapshot.compiled, safePayloadMass > 0 ? {
+          payloadMass: safePayloadMass,
+          payloadAnchorBlockId: baseSnapshot.compiled.coreBlockId,
+          payloadAssemblyPosition: [payloadAssemblyPosition.x, payloadAssemblyPosition.y, payloadAssemblyPosition.z]
+        } : {});
+        const rootBody = RuntimeAssembly.rootBody(runtimePlan);
+        const plannedPartById = new Map(runtimePlan.parts.map(part => [part.blockId, part]));
         const parts = baseSnapshot.parts.map(part => {
-          const offset = part.position.clone().sub(runtimeCom);
-          const fullForce = (part.type === 'Thruster' || part.type === 'VectorThruster')
-            ? part.basis.chord.clone().multiplyScalar(part.def.force || 0)
-            : new THREE.Vector3();
-          return { ...part, offset, fullForce, localTorque: offset.clone().cross(fullForce) };
+          const planned = plannedPartById.get(part.blockId);
+          const bodyLocalPosition = new THREE.Vector3(...planned.bodyLocalPosition);
+          return {
+            ...part,
+            bodyLocalPosition,
+            localTorque: bodyLocalPosition.clone().cross(part.fullForce)
+          };
         });
-        const payloadOffset = payloadPosition.clone().sub(runtimeCom);
+        const payloadCollider = runtimePlan.rigidBodies.flatMap(body => body.colliders).find(collider => collider.payload) || null;
         return {
           ...baseSnapshot,
-          mass: runtimeMass,
-          weight: runtimeMass * AEROSTATIC_POLICY.gravity,
-          dragArea: baseSnapshot.dragArea + 0.2,
-          com: runtimeCom,
-          inertia,
+          runtimePlan,
+          mass: runtimePlan.rigidBodies.reduce((sum, body) => sum + body.massProperties.mass, 0),
+          weight: runtimePlan.rigidBodies.reduce((sum, body) => sum + body.massProperties.mass, 0) * AEROSTATIC_POLICY.gravity,
+          rootBodyInertia: new THREE.Vector3(...rootBody.massProperties.inertiaDiagonal),
           parts,
           payloadMass: safePayloadMass,
-          payloadPosition,
-          payloadOffset
+          payloadAssemblyPosition,
+          payloadBodyLocalPosition: payloadCollider ? new THREE.Vector3(...payloadCollider.center) : null,
+          payloadOwnerBodyId: payloadCollider?.bodyId || null
         };
       }
+
 
       function computeControlMetrics(snapshot) {
         const torqueMax = computeSnapshotTorqueMax(snapshot);
@@ -312,9 +322,9 @@
         const controlRating = { pitch: 0, yaw: 0, roll: 0 };
         const controlCoupling = { pitch: 0, yaw: 0, roll: 0 };
         const axisDefinitions = [
-          { control: 'roll', component: 'x', inertia: snapshot.inertia.x },
-          { control: 'yaw', component: 'y', inertia: snapshot.inertia.y },
-          { control: 'pitch', component: 'z', inertia: snapshot.inertia.z }
+          { control: 'roll', component: 'x', inertia: snapshot.rootBodyInertia.x },
+          { control: 'yaw', component: 'y', inertia: snapshot.rootBodyInertia.y },
+          { control: 'pitch', component: 'z', inertia: snapshot.rootBodyInertia.z }
         ];
         const gyroAuthority = snapshot.counts.Gyro * PHYSICS.gyroManualTorque;
         for (const axis of axisDefinitions) {
@@ -347,7 +357,7 @@
           weight: snapshot.weight,
           blockCount: snapshot.parts.length,
           fuelCapacity: snapshot.fuelCapacity,
-          com: snapshot.com.clone(),
+          com: snapshot.assemblyCenterOfMass.clone(),
           counts: { ...snapshot.counts },
           netThrust: new THREE.Vector3(),
           centerThrust: new THREE.Vector3(),
@@ -390,7 +400,7 @@
         const neighborDirs = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
         for (const part of snapshot.parts) {
           analysis.totalDurability += part.def.durability || 0;
-          const neighbors = neighborDirs.reduce((count, [dx,dy,dz]) => count + (craftKeys.has(makeKey(part.position.x+dx, part.position.y+dy, part.position.z+dz)) ? 1 : 0), 0);
+          const neighbors = neighborDirs.reduce((count, [dx,dy,dz]) => count + (craftKeys.has(makeKey(part.assemblyPosition.x+dx, part.assemblyPosition.y+dy, part.assemblyPosition.z+dz)) ? 1 : 0), 0);
           if (part.type !== 'Core' && neighbors <= 1) analysis.weakLinks += 1;
           if (part.type === 'Fuel' && neighbors <= 2) analysis.exposedFuel += 1;
         }
@@ -408,23 +418,23 @@
               STATE.thrusterPower
             );
             const force = part.fullForce.clone().multiplyScalar(command);
-            const torque = part.offset.clone().cross(force);
+            const torque = part.bodyLocalPosition.clone().cross(force);
             analysis.netThrust.add(force);
             analysis.trimTorque.add(torque);
             analysis.staticLift += force.y;
             const magnitude = force.length();
             if (magnitude > 0) {
-              analysis.centerThrust.add(part.position.clone().multiplyScalar(magnitude));
+              analysis.centerThrust.add(part.assemblyPosition.clone().multiplyScalar(magnitude));
               thrustWeight += magnitude;
             }
             nominalFuelRate += part.def.fuelRate * command;
           } else if (part.type === 'Balloon') {
             const liftMagnitude = part.def.force * STATE.balloonPower;
             const force = new THREE.Vector3(0, liftMagnitude, 0);
-            analysis.trimTorque.add(part.offset.clone().cross(force));
+            analysis.trimTorque.add(part.bodyLocalPosition.clone().cross(force));
             analysis.staticLift += liftMagnitude;
             if (liftMagnitude > 0) {
-              analysis.centerLift.add(part.position.clone().multiplyScalar(liftMagnitude));
+              analysis.centerLift.add(part.assemblyPosition.clone().multiplyScalar(liftMagnitude));
               liftWeight += liftMagnitude;
             }
             nominalFuelRate += part.def.fuelRate * STATE.balloonPower;
@@ -434,7 +444,7 @@
             analysis.cruiseDrag += loads.drag;
             const liftWeightForCenter = Math.max(0, loads.force.y);
             if (liftWeightForCenter > 0) {
-              analysis.centerLift.add(part.position.clone().multiplyScalar(liftWeightForCenter));
+              analysis.centerLift.add(part.assemblyPosition.clone().multiplyScalar(liftWeightForCenter));
               liftWeight += liftWeightForCenter;
             }
           }

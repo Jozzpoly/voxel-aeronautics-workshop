@@ -92,6 +92,8 @@
             redoCount: redoStack.length,
             undoParts: undoStack.reduce((sum, entry) => sum + (entry.blocks?.length || 0), 0),
             redoParts: redoStack.reduce((sum, entry) => sum + (entry.blocks?.length || 0), 0),
+            undoEntities: undoStack.reduce((sum, entry) => sum + (entry.blocks?.length || 0) + (entry.mechanicalLinks?.length || 0), 0),
+            redoEntities: redoStack.reduce((sum, entry) => sum + (entry.blocks?.length || 0) + (entry.mechanicalLinks?.length || 0), 0),
             maxSnapshots,
             maxStoredParts
           });

@@ -50,14 +50,9 @@
         plan = nextPlan;
         primaryBodyIdValue = nextRuntime ? choosePrimaryBodyId(nextPlan, requestedPrimaryBodyId) : null;
         state.flight.assembly = nextRuntime;
-        state.flight.assemblyRuntime = nextRuntime; // Deprecated alias; same object, never a second source of truth.
         state.flight.assemblyPlan = nextPlan;
         state.flight.primaryBodyId = primaryBodyIdValue;
         state.flight.visualRootByBodyId = visualRootByBodyId;
-
-        // Deprecated single-body compatibility accessors. New code must use the neutral methods below.
-        state.flight.primaryBody = nextRuntime?.bodyById?.get(primaryBodyIdValue)?.body || null;
-        state.flight.body = state.flight.primaryBody;
       }
 
       function clearPublishedState() {
@@ -66,11 +61,8 @@
         primaryBodyIdValue = null;
         cleanupPending = false;
         state.flight.assembly = null;
-        state.flight.assemblyRuntime = null;
         state.flight.assemblyPlan = null;
         state.flight.primaryBodyId = null;
-        state.flight.primaryBody = null;
-        state.flight.body = null;
         state.flight.visualRootByBodyId = visualRootByBodyId;
       }
 
@@ -245,6 +237,12 @@
       function removeCollider(colliderId) { assertActive(); return runtime.removeCollider(colliderId); }
       function recenterBody(bodyId, shift) { assertActive(); return runtime.recenterBody(bodyId, shift); }
       function setBodyMassProperties(bodyId, properties) { assertActive(); return runtime.setBodyMassProperties(bodyId, properties); }
+      function constraintIdsForBody(bodyId) { assertActive(); return runtime.constraintIdsForBody(bodyId); }
+      function constraintIdsForEndpointBlock(blockId) { assertActive(); return runtime.constraintIdsForEndpointBlock(blockId); }
+      function breakConstraintsForEndpointBlock(blockId, reason) { assertActive(); return runtime.breakConstraintsForEndpointBlock(blockId, reason); }
+      function removeConstraint(constraintId) { assertActive(); return runtime.removeConstraint(constraintId); }
+      function setConstraintControl(constraintId, control) { assertActive(); return runtime.setConstraintControl(constraintId, control); }
+      function getConstraintState(constraintId) { assertActive(); return runtime.getConstraintState(constraintId); }
       function getVisualRoot(bodyId = primaryBodyIdValue) { return visualRootByBodyId.get(String(bodyId))?.root || null; }
       function getAssembly() { return runtime; }
       function getPlan() { return plan; }
@@ -282,6 +280,12 @@
         removeCollider,
         recenterBody,
         setBodyMassProperties,
+        constraintIdsForBody,
+        constraintIdsForEndpointBlock,
+        breakConstraintsForEndpointBlock,
+        removeConstraint,
+        setConstraintControl,
+        getConstraintState,
         registerTransient,
         registerVisualRoot,
         unregisterVisualRoot,

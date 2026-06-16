@@ -31,7 +31,7 @@ else:
  expected_sources=[path.relative_to(ROOT).as_posix() for path in source_files]
  if loader_sources != expected_sources:
   errors.append(f'Loader order mismatch: {loader_sources} != {expected_sources}')
-if 'const SAVE_VERSION = 10' not in js: errors.append('Unexpected save version')
+if 'const SAVE_VERSION = 11' not in js: errors.append('Unexpected save version')
 if 'voxel-aeronautics-blueprint-v6' not in js: errors.append('Missing v6 migration key')
 
 craft_model=sources[ROOT/'src/foundation/craft_model.js']

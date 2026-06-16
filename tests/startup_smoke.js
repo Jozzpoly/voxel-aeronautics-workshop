@@ -29,13 +29,13 @@ const document={
 };
 for(const e of elements.values())body.appendChild(e);
 const windowListeners=new Map();
-global.window=global;global.document=document;global.navigator={userAgent:'smoke'};global.innerWidth=1280;global.innerHeight=720;global.devicePixelRatio=1;global.performance={now:()=>0};global.localStorage={getItem:()=>null,setItem(){},removeItem(){}};global.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}});global.addEventListener=(type,fn)=>{if(!windowListeners.has(type))windowListeners.set(type,[]);windowListeners.get(type).push(fn)};global.removeEventListener=(type,fn)=>{if(windowListeners.has(type))windowListeners.set(type,windowListeners.get(type).filter(x=>x!==fn))};global.dispatchWindowEvent=(type,event={})=>{event.type=type;event.key=event.key||'';event.code=event.code||'';event.ctrlKey=!!event.ctrlKey;event.metaKey=!!event.metaKey;event.shiftKey=!!event.shiftKey;event.repeat=!!event.repeat;event.preventDefault=event.preventDefault||(()=>{event.defaultPrevented=true});for(const fn of windowListeners.get(type)||[])fn(event);return event};global.URL={createObjectURL:()=>'',revokeObjectURL(){}};global.Blob=class{};global.FileReader=class{readAsText(){}};global.alert=()=>{};global.confirm=()=>true;global.setTimeout=(fn)=>0;global.clearTimeout=()=>{};
+global.window=global;global.document=document;global.navigator={userAgent:'smoke'};global.innerWidth=1280;global.innerHeight=720;global.devicePixelRatio=1;global.performance={now:()=>0};global.localStorage={getItem:()=>null,setItem(){},removeItem(){}};global.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}});global.addEventListener=(type,fn)=>{if(!windowListeners.has(type))windowListeners.set(type,[]);windowListeners.get(type).push(fn)};global.removeEventListener=(type,fn)=>{if(windowListeners.has(type))windowListeners.set(type,windowListeners.get(type).filter(x=>x!==fn))};global.dispatchWindowEvent=(type,event={})=>{event.type=type;event.key=event.key||'';event.code=event.code||'';event.ctrlKey=!!event.ctrlKey;event.metaKey=!!event.metaKey;event.shiftKey=!!event.shiftKey;event.repeat=!!event.repeat;event.preventDefault=event.preventDefault||(()=>{event.defaultPrevented=true});for(const fn of windowListeners.get(type)||[])fn(event);return event};global.URL={createObjectURL:()=>'',revokeObjectURL(){}};global.Blob=class{};global.FileReader=class{readAsText(file){this.result=file?.content||'';if(typeof this.onload==='function')this.onload()}};global.alert=()=>{};global.confirm=()=>true;global.setTimeout=(fn)=>0;global.clearTimeout=()=>{};
 vm.runInThisContext(fs.readFileSync(path.join(__dirname,'browser_stub_libs.js'),'utf8'),{filename:'stub-libs.js'});
 try{
  for(const sourceFile of sourceFiles){
    vm.runInThisContext(fs.readFileSync(sourceFile,'utf8'),{filename:path.basename(sourceFile)});
  }
- if(!global.VAW_RUNTIME) throw new Error('Foundation runtime was not exposed.');
+ if(!global.VAW || !global.VAW.require('runtime.active-context')) throw new Error('Active runtime context was not composed.');
  const assert=(condition,message)=>{if(!condition)throw new Error(message)};
  assert(elements.get('ui-blocks').textContent==='0','Fresh v8 workspace must start empty.');
  assert(all.some(el=>el.dataset.tool==='Core'),'Command Core must be available in the tool palette.');
@@ -104,8 +104,17 @@ try{
  assert(elements.get('ui-mode').textContent==='FLIGHT','Fullscreen transitions must not replace or lose the active flight session.');
  dispatchWindowEvent('pagehide');
  assert(elements.get('ui-mode').textContent==='BUILD','Pagehide must close the active flight session without leaving a stale flight mode.');
- elements.get('btn-build').click();
+ const articulatedBlueprint=fs.readFileSync(path.join(__dirname,'..','examples','articulated_hinge_v11.json'),'utf8');
+ const blueprintInput=elements.get('blueprint-file');
+ blueprintInput.files=[{name:'articulated_hinge_v11.json',content:articulatedBlueprint}];
+ blueprintInput.dispatchEvent({type:'change'});
+ assert(elements.get('ui-blocks').textContent==='5','The shipped articulated v11 blueprint must import through the production UI path.');
+ assert(elements.get('mechanical-link-list').children.some(option=>option.value==='mechanical:example-arm'),'Imported mechanical link must be visible in the workshop UI.');
+ elements.get('btn-flight').click();
+ assert(elements.get('ui-mode').textContent==='FLIGHT','An imported articulated blueprint must launch through the normal Flight button.');
+ dispatchWindowEvent('pagehide');
+ assert(elements.get('ui-mode').textContent==='BUILD','Articulated pagehide cleanup must return to build mode.');
  elements.get('btn-clear').click();
  assert(elements.get('ui-blocks').textContent==='0','New blueprint must return to a truly empty workspace.');
- console.log('STARTUP_OK', {ids:ids.length,elements:all.length,modules:global.VAW.inspect().initialized.length,sources:sourceFiles.length,interaction:'ok',lifecycle:'ok'});
+ console.log('STARTUP_OK', {ids:ids.length,elements:all.length,modules:global.VAW.inspect().initialized.length,sources:sourceFiles.length,interaction:'ok',singleBodyLifecycle:'ok',articulatedUiLifecycle:'ok'});
 }catch(e){console.error(e.stack||e);process.exit(1)}

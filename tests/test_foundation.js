@@ -14,10 +14,16 @@ const sourceFiles = [
   'src/foundation/catalog.js',
   'src/foundation/orientation.js',
   'src/foundation/blueprint.js',
+  'src/foundation/diagnostics.js',
+  'src/foundation/transform_math.js',
   'src/foundation/craft_model.js',
   'src/foundation/craft_history.js',
   'src/foundation/control_frame.js',
   'src/foundation/mass_properties.js',
+  'src/foundation/structural_graph_compiler.js',
+  'src/foundation/mechanical_authoring_resolver.js',
+  'src/foundation/rigid_island_compiler.js',
+  'src/foundation/mechanical_graph_compiler.js',
   'src/foundation/craft_compiler.js',
   'src/foundation/runtime_assembly.js',
   'src/foundation/input_profile.js',
@@ -36,10 +42,29 @@ for (const relative of sourceFiles) {
   vm.runInThisContext(fs.readFileSync(path.join(ROOT, relative), 'utf8'), { filename: relative });
 }
 
-const { Config, Catalog, Orientation, Blueprint, CraftModel, CraftHistory, ControlFrame, MassProperties, CraftCompiler, RuntimeAssembly, AssemblyBuilder, HeadlessPhysicsBackend, InputProfile, UIWorkspace, MissionEvaluator, Aerostatics, FlightControl, State, PhysicsPort, Physics, Capabilities } = global.VAW_RUNTIME;
+const Config = VAW.require('foundation.config');
+const Catalog = VAW.require('foundation.catalog');
+const Orientation = VAW.require('foundation.orientation');
+const Blueprint = VAW.require('foundation.blueprint');
+const CraftModel = VAW.require('foundation.craft-model');
+const CraftHistory = VAW.require('foundation.craft-history');
+const ControlFrame = VAW.require('foundation.control-frame');
+const MassProperties = VAW.require('foundation.mass-properties');
+const CraftCompiler = VAW.require('foundation.craft-compiler');
+const RuntimeAssembly = VAW.require('foundation.runtime-assembly');
+const AssemblyBuilder = VAW.require('runtime.assembly-builder');
+const HeadlessPhysicsBackend = VAW.require('runtime.headless-physics-backend');
+const InputProfile = VAW.require('foundation.input-profile');
+const UIWorkspace = VAW.require('foundation.ui-workspace');
+const MissionEvaluator = VAW.require('foundation.mission-evaluator');
+const Aerostatics = VAW.require('foundation.aerostatics');
+const FlightControl = VAW.require('foundation.flight-control');
+const State = VAW.require('foundation.state');
+const PhysicsPort = VAW.require('runtime.physics-port');
+const { Physics, Capabilities } = VAW.require('runtime.active-context');
 assert(Object.isFrozen(Config));
 assert(Object.isFrozen(Config.GRID));
-assert.strictEqual(Config.SAVE_VERSION, 10);
+assert.strictEqual(Config.SAVE_VERSION, 11);
 assert.strictEqual(Config.TEST_RANGE.maxAltitude, 160);
 assert.strictEqual(typeof Config.PHYSICS.wingStallStart, 'number');
 assert(Object.isFrozen(Catalog.BLOCKS));
@@ -48,8 +73,8 @@ assert.strictEqual(Catalog.getContractById('courier').payloadMass, 10);
 assert.strictEqual(Catalog.getContractById('missing'), null);
 assert(Catalog.knownContractIds().has('heavy_lift'));
 assert.strictEqual(Capabilities.physicsBackend, 'cannon');
-assert.strictEqual(Capabilities.physicsBoundary, 'phase-1d3e-neutral-assembly-api');
-assert.strictEqual(Capabilities.runtimeAssembly, 'runtime-builder-v1');
+assert.strictEqual(Capabilities.physicsBoundary, 'phase-1d4a-neutral-mechanical-assembly-api');
+assert.strictEqual(Capabilities.runtimeAssembly, 'runtime-assembly-plan-v2');
 assert.strictEqual(Capabilities.headlessHarness, 'deterministic-free-flight-v1');
 assert.strictEqual(Capabilities.missionEvaluation, 'phase-1d2b-multi-pad-ground-state');
 assert.strictEqual(Capabilities.aerostatics, 'altitude-lift-damped-settling-v2');
@@ -184,7 +209,8 @@ const document = Blueprint.createDocument({
   thrusterPower: 2, balloonPower: -1, stabilityAssist: 0.5,
   controlAxis: 'invalid', controlSign: 99
 });
-assert.strictEqual(document.version, 10);
+assert.strictEqual(document.version, 11);
+assert.deepStrictEqual(document.mechanicalLinks, []);
 assert.strictEqual(document.blocks[0].type, 'Core');
 assert.strictEqual(document.selectedBlock, 'Core');
 assert.strictEqual(document.symmetry, 'NONE');

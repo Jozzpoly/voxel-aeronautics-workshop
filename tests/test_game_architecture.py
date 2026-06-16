@@ -40,6 +40,8 @@ for filename in EXPECTED_MODULES:
 assert entry_index == len(ordered) - 1, 'game.js must remain the final composition entrypoint'
 
 main = GAME_MAIN.read_text(encoding='utf-8')
+assert 'window.VAW_RUNTIME' not in main, 'composition root must use explicit kernel modules, not a private aggregate global'
+assert "window.VAW.require('runtime.active-context')" in main
 assert len(main.splitlines()) <= 2500, f'game.js regrew to {len(main.splitlines())} lines'
 assert len(main.encode('utf-8')) <= 120_000, f'game.js regrew to {len(main.encode("utf-8"))} bytes'
 
@@ -78,10 +80,14 @@ assert flight_session_source.count('AssemblyBuilder.build({') == 1
 assert 'state.flight.assembly = nextRuntime' in flight_session_source
 assert 'cleanupPending' in flight_session_source and 'retry stop()' in flight_session_source
 flight_integrity_source = paths['flight_integrity.js'].read_text(encoding='utf-8')
-assert 'primary-rigid-island-only' in flight_integrity_source
+assert 'per-rigid-island-static-frame-guard' in flight_integrity_source
+assert 'connected-body-recenter-blocked' in flight_integrity_source
+assert 'mechanical-endpoint-failure' in flight_integrity_source
 assert 'Backend rejected collider removal' in flight_integrity_source
 assert 'state.flight.primaryBody || state.flight.body' not in flight_integrity_source
 assert 'STATE.flight.body' not in main, 'game.js must use FlightSession rather than the deprecated native-body alias'
+assert 'assemblyRuntime' not in main and 'flight.group' not in main
+assert not __import__('re').search(r'\bprimaryBody\b', main)
 assert 'STATE.flight.body' not in paths['mission_controller.js'].read_text(encoding='utf-8')
 assert 'STATE.flight.bodyById' not in main and 'STATE.flight.bodies' not in main
 for path in GAME_MODULE_DIR.glob('*.js'):

@@ -1,263 +1,121 @@
 (() => {
   'use strict';
 
-  window.VAW.define(
-    'foundation.craft-compiler',
-    ['foundation.config', 'foundation.catalog', 'foundation.orientation', 'foundation.blueprint', 'foundation.control-frame', 'foundation.mass-properties'],
-    (config, catalog, orientation, blueprint, ControlFrame, MassProperties) => {
-      const { GRID, NEIGHBOR_DIRECTIONS } = config;
-      const { BLOCKS } = catalog;
-      const cache = new WeakMap();
-
-      function deepFreeze(value, seen = new Set()) {
-        if (!value || typeof value !== 'object' || seen.has(value)) return value;
-        seen.add(value);
-        for (const nested of Object.values(value)) deepFreeze(nested, seen);
-        return Object.freeze(value);
-      }
-
-      function vec(x = 0, y = 0, z = 0) { return [x, y, z]; }
-      function sub(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; }
-      function scale(a, scalar) { return [a[0] * scalar, a[1] * scalar, a[2] * scalar]; }
-      function cross(a, b) {
-        return [
-          a[1] * b[2] - a[2] * b[1],
-          a[2] * b[0] - a[0] * b[2],
-          a[0] * b[1] - a[1] * b[0]
-        ];
-      }
-
-      function basisValues(orientationId) {
-        const basis = orientation.ORIENTATION_BASES[orientation.normalizeOrientationId(orientationId)];
-        return {
-          forward: vec(basis.forward.x, basis.forward.y, basis.forward.z),
-          up: vec(basis.up.x, basis.up.y, basis.up.z),
-          span: vec(basis.span.x, basis.span.y, basis.span.z)
-        };
-      }
-
-      function stableHash(text) {
-        let hash = 0x811c9dc5;
-        for (let index = 0; index < text.length; index += 1) {
-          hash ^= text.charCodeAt(index);
-          hash = Math.imul(hash, 0x01000193) >>> 0;
-        }
-        return hash.toString(16).padStart(8, '0');
-      }
-
-      function canonicalInput(source) {
-        if (source && typeof source.snapshot === 'function' && typeof source.revision === 'number') {
-          const snapshot = source.snapshot();
-          return { model: source, revision: snapshot.revision, blocks: snapshot.blocks };
-        }
-        if (Array.isArray(source)) return { model: null, revision: -1, blocks: source };
-        if (source && Array.isArray(source.blocks)) {
-          return { model: null, revision: Number.isInteger(source.revision) ? source.revision : -1, blocks: source.blocks };
-        }
-        return { model: null, revision: -1, blocks: [] };
-      }
-
-      function compile(source) {
-        const input = canonicalInput(source);
-        if (input.model) {
-          const cached = cache.get(input.model);
-          if (cached && cached.revision === input.revision) return cached.compiled;
-        }
-
-        const errors = [];
-        const warnings = [];
-        const normalized = [];
-        const seen = new Set();
-        const seenBlockIds = new Set();
-        let coreCount = 0;
-
-        if (input.blocks.length > GRID.maxBlocks) errors.push('block-limit');
-        for (const raw of input.blocks.slice(0, GRID.maxBlocks)) {
-          const x = Number(raw?.x);
-          const y = Number(raw?.y);
-          const z = Number(raw?.z);
-          if (![x, y, z].every(Number.isInteger) || !blueprint.isWithinGrid(x, y, z) || !BLOCKS[raw?.type]) {
-            errors.push('invalid-block');
-            continue;
-          }
-          const key = blueprint.makeKey(x, y, z);
-          if (seen.has(key)) {
-            errors.push('duplicate-position');
-            continue;
-          }
-          seen.add(key);
-          const requestedBlockId = blueprint.normalizeBlockId(raw.blockId);
-          const blockId = blueprint.allocateBlockId(requestedBlockId, x, y, z, seenBlockIds);
-          if (requestedBlockId && seenBlockIds.has(requestedBlockId)) errors.push('duplicate-block-id');
-          seenBlockIds.add(blockId);
-          if (raw.type === 'Core') coreCount += 1;
-          const orientationMode = BLOCKS[raw.type].orientationMode || 'none';
-          normalized.push({
-            blockId,
-            key,
-            x,
-            y,
-            z,
-            type: raw.type,
-            orientation: orientationMode === 'none'
-              ? orientation.DEFAULT_ORIENTATION
-              : orientation.normalizeOrientationId(raw.orientation),
-            controlAxis: blueprint.normalizeControlAxis(raw.controlAxis),
-            controlSign: blueprint.normalizeControlSign(raw.controlSign)
-          });
-        }
-
-        normalized.sort((a, b) => (a.y - b.y) || (a.x - b.x) || (a.z - b.z) || a.type.localeCompare(b.type));
-        if (normalized.length === 0) errors.push('empty-craft');
-        if (coreCount === 0) errors.push('missing-core');
-        if (coreCount > 1) errors.push('multiple-cores');
-
-        const keyToIndex = Object.create(null);
-        const blockIdToIndex = Object.create(null);
-        normalized.forEach((block, index) => { keyToIndex[block.key] = index; blockIdToIndex[block.blockId] = index; });
-        const adjacency = normalized.map(() => []);
-        for (let index = 0; index < normalized.length; index += 1) {
-          const block = normalized[index];
-          for (const [dx, dy, dz] of NEIGHBOR_DIRECTIONS) {
-            const neighbor = keyToIndex[blueprint.makeKey(block.x + dx, block.y + dy, block.z + dz)];
-            if (neighbor !== undefined) adjacency[index].push(neighbor);
-          }
-          adjacency[index].sort((a, b) => a - b);
-        }
-
-        let connectedCount = 0;
-        if (normalized.length) {
-          const visited = new Set([0]);
-          const queue = [0];
-          for (let cursor = 0; cursor < queue.length; cursor += 1) {
-            for (const neighbor of adjacency[queue[cursor]]) {
-              if (!visited.has(neighbor)) {
-                visited.add(neighbor);
-                queue.push(neighbor);
-              }
-            }
-          }
-          connectedCount = visited.size;
-          if (connectedCount !== normalized.length) errors.push('disconnected');
-        }
-
-        const counts = Object.fromEntries(Object.keys(BLOCKS).map(type => [type, 0]));
-        let fuelCapacity = 0;
-        let dragArea = 0;
-        const massElements = [];
-        for (const block of normalized) {
-          const def = BLOCKS[block.type];
-          massElements.push({
-            id: block.blockId,
-            mass: Number(def.mass) || 0,
-            center: [block.x, block.y, block.z],
-            halfExtents: [0.5, 0.5, 0.5]
-          });
-          fuelCapacity += Number(def.fuelCapacity) || 0;
-          dragArea += Number(def.dragArea) || 0;
-          counts[block.type] += 1;
-        }
-        const massProperties = MassProperties.compute(massElements);
-        const mass = massProperties.mass;
-        const com = [...massProperties.centerOfMass];
-        const inertia = [...massProperties.inertiaDiagonal];
-        const parts = [];
-        const functionalByType = Object.fromEntries(Object.keys(BLOCKS).map(type => [type, []]));
-        const colliderPlan = [];
-        let coreIndex = -1;
-
-        for (let index = 0; index < normalized.length; index += 1) {
-          const block = normalized[index];
-          const def = BLOCKS[block.type];
-          const partMass = Number(def.mass) || 0;
-          const position = [block.x, block.y, block.z];
-          const offset = sub(position, com);
-          const basis = basisValues(block.orientation);
-          const fullForce = block.type === 'Thruster' || block.type === 'VectorThruster'
-            ? scale(basis.forward, Number(def.force) || 0)
-            : vec();
-          const localTorque = cross(offset, fullForce);
-          if (block.type === 'Core') coreIndex = index;
-
-          const part = {
-            index,
-            blockId: block.blockId,
-            key: block.key,
-            grid: position,
-            type: block.type,
-            orientation: block.orientation,
-            controlAxis: block.controlAxis,
-            controlSign: block.controlSign,
-            basis,
-            mass: partMass,
-            offset,
-            fullForce,
-            localTorque,
-            neighbors: adjacency[index],
-            properties: {
-              force: Number(def.force) || 0,
-              fuelRate: Number(def.fuelRate) || 0,
-              fuelCapacity: Number(def.fuelCapacity) || 0,
-              wingArea: Number(def.wingArea) || 0,
-              dragArea: Number(def.dragArea) || 0,
-              durability: Number(def.durability) || 60,
-              structural: Number(def.structural) || 0
-            }
-          };
-          parts.push(part);
-          functionalByType[block.type].push(index);
-          colliderPlan.push({ partIndex: index, kind: 'box', center: offset, halfExtents: [0.5, 0.5, 0.5] });
-        }
-
-        const controlFrame = ControlFrame.fromCore(coreIndex >= 0 ? parts[coreIndex] : null);
-
-        if (normalized.length === 1) warnings.push('single-block-craft');
-        if (counts.Thruster + counts.VectorThruster + counts.Balloon === 0) warnings.push('no-propulsion');
-        if (normalized.length > config.PHYSICS.maxFlightParts) warnings.push('flight-part-limit');
-
-        const canonicalSignature = normalized.map(block => [
-          block.blockId, block.x, block.y, block.z, block.type, block.orientation, block.controlAxis, block.controlSign
-        ]);
-        const signature = stableHash(JSON.stringify(canonicalSignature));
-        const uniqueErrors = [...new Set(errors)];
-        const compiled = deepFreeze({
-          format: 'VAW_COMPILED_CRAFT_V3',
-          sourceRevision: input.revision,
-          signature,
-          ready: uniqueErrors.length === 0,
-          errors: uniqueErrors,
-          warnings: [...new Set(warnings)],
-          blockCount: normalized.length,
-          connectedCount,
-          coreIndex,
-          coreKey: coreIndex >= 0 ? normalized[coreIndex].key : null,
-          corePosition: coreIndex >= 0 ? [normalized[coreIndex].x, normalized[coreIndex].y, normalized[coreIndex].z] : null,
-          controlFrame,
-          mass,
-          gravity: config.AEROSTATICS.gravity,
-          weight: mass * config.AEROSTATICS.gravity,
-          fuelCapacity,
-          dragArea,
-          com,
-          inertia,
-          counts,
-          keyToIndex,
-          blockIdToIndex,
-          adjacency,
-          parts,
-          functionalByType,
-          colliderPlan
-        });
-
-        if (input.model) cache.set(input.model, { revision: input.revision, compiled });
-        return compiled;
-      }
-
-      function invalidate(model) {
-        if (model && typeof model === 'object') cache.delete(model);
-      }
-
-      return Object.freeze({ compile, invalidate, stableHash });
+  window.VAW.define('foundation.craft-compiler', [
+    'foundation.config', 'foundation.catalog', 'foundation.control-frame', 'foundation.mass-properties',
+    'foundation.diagnostics', 'foundation.structural-graph-compiler', 'foundation.mechanical-authoring-resolver',
+    'foundation.rigid-island-compiler', 'foundation.mechanical-graph-compiler'
+  ], (config, catalog, ControlFrame, MassProperties, Diagnostics, StructuralGraphCompiler, MechanicalAuthoringResolver, RigidIslandCompiler, MechanicalGraphCompiler) => {
+    const { BLOCKS } = catalog; const cache = new WeakMap();
+    function deepFreeze(value, seen = new Set()) {
+      if (!value || typeof value !== 'object' || seen.has(value)) return value;
+      seen.add(value); for (const nested of Object.values(value)) deepFreeze(nested, seen); return Object.freeze(value);
     }
-  );
+    function stableHash(text) {
+      let hash = 0x811c9dc5;
+      for (let index = 0; index < text.length; index += 1) { hash ^= text.charCodeAt(index); hash = Math.imul(hash, 0x01000193) >>> 0; }
+      return hash.toString(16).padStart(8, '0');
+    }
+    function canonicalInput(source) {
+      if (source && typeof source.snapshot === 'function' && typeof source.revision === 'number') {
+        const snapshot = source.snapshot();
+        return { model: source, revision: snapshot.revision, blocks: snapshot.blocks || [], mechanicalLinks: snapshot.mechanicalLinks || [] };
+      }
+      if (Array.isArray(source)) return { model: null, revision: -1, blocks: source, mechanicalLinks: [] };
+      if (source && Array.isArray(source.blocks)) return {
+        model: null, revision: Number.isInteger(source.revision) ? source.revision : -1,
+        blocks: source.blocks, mechanicalLinks: Array.isArray(source.mechanicalLinks) ? source.mechanicalLinks : []
+      };
+      return { model: null, revision: -1, blocks: [], mechanicalLinks: [] };
+    }
+
+    function compile(source) {
+      const input = canonicalInput(source);
+      if (input.model) {
+        const cached = cache.get(input.model);
+        if (cached && cached.revision === input.revision) return cached.compiled;
+      }
+
+      const structural = StructuralGraphCompiler.compile(input.blocks);
+      const authoring = MechanicalAuthoringResolver.compile(input.mechanicalLinks, structural);
+      const rigid = RigidIslandCompiler.compile(structural, authoring.cutEdgeIds);
+      const mechanical = MechanicalGraphCompiler.compile(authoring, rigid);
+      const diagnostics = [
+        ...structural.diagnostics, ...authoring.diagnostics, ...rigid.diagnostics, ...mechanical.diagnostics
+      ];
+
+      const counts = Object.fromEntries(Object.keys(BLOCKS).map(type => [type, 0]));
+      let fuelCapacity = 0; let dragArea = 0;
+      for (const block of structural.blocks) {
+        const definition = BLOCKS[block.type]; counts[block.type] += 1;
+        fuelCapacity += Number(definition.fuelCapacity) || 0; dragArea += Number(definition.dragArea) || 0;
+      }
+      if (structural.blocks.length === 1) diagnostics.push(Diagnostics.create('single-block-craft', 'warning'));
+      if (counts.Thruster + counts.VectorThruster + counts.Balloon === 0) diagnostics.push(Diagnostics.create('no-propulsion', 'warning'));
+      if (structural.blocks.length > config.PHYSICS.maxFlightParts) diagnostics.push(Diagnostics.create('flight-part-limit', 'warning', [], { limit: config.PHYSICS.maxFlightParts }));
+
+      const aggregateMass = MassProperties.compute(structural.blocks.map(block => ({
+        id: block.blockId, mass: Number(BLOCKS[block.type].mass) || 0, center: block.assemblyPosition, halfExtents: [0.5, 0.5, 0.5]
+      })));
+      const parts = [...rigid.parts].sort((a, b) => {
+        const pa = a.assemblyPosition; const pb = b.assemblyPosition;
+        return (pa[1] - pb[1]) || (pa[0] - pb[0]) || (pa[2] - pb[2]) || a.blockId.localeCompare(b.blockId);
+      }).map((part, index) => ({ ...part, index }));
+      const blockIdToIndex = Object.fromEntries(parts.map((part, index) => [part.blockId, index]));
+      const gridKeyToIndex = Object.fromEntries(parts.map((part, index) => [part.gridKey, index]));
+      const adjacency = parts.map(part => part.rigidNeighborBlockIds.map(id => blockIdToIndex[id]).filter(Number.isInteger).sort((a, b) => a - b));
+      const functionalByType = Object.fromEntries(Object.keys(BLOCKS).map(type => [type, []]));
+      parts.forEach((part, index) => functionalByType[part.type].push(index));
+      const coreIndex = parts.findIndex(part => part.type === 'Core');
+      const controlFrame = ControlFrame.fromCore(coreIndex >= 0 ? parts[coreIndex] : null);
+      const colliderPlan = parts.map(part => ({
+        colliderId: `collider:${part.blockId}`, blockId: part.blockId, bodyId: part.bodyId,
+        kind: 'box', bodyLocalPosition: [...part.bodyLocalPosition], halfExtents: [0.5, 0.5, 0.5]
+      }));
+      const cutByEdgeId = Object.fromEntries(authoring.resolvedLinks.map(link => [link.cutEdgeId, link.mechanicalLinkId]));
+      const structuralGraph = {
+        blocks: structural.blocks,
+        edges: structural.edges.map(edge => ({ ...edge, cutByMechanicalLinkId: cutByEdgeId[edge.edgeId] || null })),
+        adjacencyByBlockId: structural.adjacencyByBlockId
+      };
+      const canonicalSignature = {
+        blocks: structural.blocks.map(block => [block.blockId, ...block.assemblyPosition, block.type, block.orientation, block.controlAxis, block.controlSign]),
+        mechanicalLinks: [...input.mechanicalLinks].map(link => ({
+          mechanicalLinkId: String(link?.mechanicalLinkId ?? ''), kind: String(link?.kind ?? ''),
+          endpointA: [String(link?.endpointA?.blockId ?? ''), String(link?.endpointA?.face ?? '')],
+          endpointB: [String(link?.endpointB?.blockId ?? ''), String(link?.endpointB?.face ?? '')],
+          axis: String(link?.axis ?? ''), collideConnected: link?.collideConnected === true,
+          maxForce: Number(link?.maxForce ?? 1000000), frictionTorque: Number(link?.frictionTorque ?? 0),
+          limits: link?.limits == null ? null : [
+            Number(link.limits.minAngle), Number(link.limits.maxAngle), Number(link.limits.tolerance ?? 0.01),
+            Number(link.limits.maxTorque ?? 80), Number(link.limits.maxSpeed ?? 5),
+            Number(link.limits.positionGain ?? 16), Number(link.limits.velocityDamping ?? 1.5)
+          ]
+        })).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))
+      };
+      const canonicalDiagnostics = Diagnostics.canonicalize(diagnostics);
+      const compiled = deepFreeze({
+        format: 'VAW_COMPILED_CRAFT_V4', sourceRevision: input.revision,
+        signature: stableHash(JSON.stringify(canonicalSignature)),
+        ready: Diagnostics.ready(canonicalDiagnostics), diagnostics: canonicalDiagnostics,
+        errors: Diagnostics.codes(canonicalDiagnostics, 'error'), warnings: Diagnostics.codes(canonicalDiagnostics, 'warning'),
+        blockCount: parts.length, rigidIslandCount: rigid.rigidIslands.length, mechanicalLinkCount: mechanical.constraints.length,
+        rootBodyId: rigid.rootBodyId, coreIndex, coreBlockId: coreIndex >= 0 ? parts[coreIndex].blockId : null,
+        coreKey: coreIndex >= 0 ? parts[coreIndex].gridKey : null,
+        coreAssemblyPosition: coreIndex >= 0 ? [...parts[coreIndex].assemblyPosition] : null,
+        controlFrame,
+        mass: aggregateMass.mass, weight: aggregateMass.mass * config.AEROSTATICS.gravity,
+        gravity: config.AEROSTATICS.gravity, fuelCapacity, dragArea,
+        assemblyCenterOfMass: [...aggregateMass.centerOfMass], aggregateInertiaDiagonal: [...aggregateMass.inertiaDiagonal],
+        counts, parts, blockIdToIndex, gridKeyToIndex, adjacency, functionalByType, colliderPlan,
+        structuralGraph, rigidIslands: rigid.rigidIslands, mechanicalGraph: mechanical,
+        blockIdToBodyId: rigid.blockIdToBodyId, bodyById: rigid.bodyById,
+        rigidAdjacencyByBlockId: rigid.rigidAdjacencyByBlockId
+      });
+      if (input.model) cache.set(input.model, { revision: input.revision, compiled });
+      return compiled;
+    }
+    function invalidate(model) { if (model && typeof model === 'object') cache.delete(model); }
+    return Object.freeze({ compile, invalidate, stableHash });
+  });
 })();

@@ -133,18 +133,18 @@ print(json.dumps({
 
 # Structural-control stage requirements.
 for token in [
-    "ControlSurface:", "VectorThruster:", "function detachRuntimePart",
-    "function detachDisconnectedRuntimeParts", "function applyImpactDamage",
+    "ControlSurface:", "VectorThruster:",
+    "function applyImpactDamage",
     "function applyControlSurfaceAerodynamics", "function computeVectorThrusterForceCannon",
     "function applyStructuralLoadDamage", "flight-load overstress",
     "voxel-aeronautics-blueprint-v7", "voxel-aeronautics-blueprint-v6",
 ]:
     assert token in GAME, f'missing structural-control token: {token}'
 
-assert "controlAxis: normalizeControlAxis(raw.controlAxis)" in GAME
-assert "controlSign: normalizeControlSign(raw.controlSign)" in GAME
+assert "controlAxis: normalizeControlAxis(part.controlAxis)" in GAME
+assert "controlSign: normalizeControlSign(part.controlSign)" in GAME
 assert "STATE.flight.leakingFuelRate" in GAME
-assert "connection to core was severed" in GAME
+assert "rigid connection to body anchor was severed" in GAME
 
 print(json.dumps({
     'structural_damage': 'ok',

@@ -9,12 +9,13 @@
       return Object.freeze(value);
     }
 
-    const APP_VERSION = '0.6.4-foundation.1d3e';
-    const RELEASE_ID = 'foundation-1d3e-gate-a-convergence';
+    const APP_VERSION = '0.7.0-foundation.1d4a';
+    const RELEASE_ID = 'foundation-1d4a-rigid-islands-mechanical-graph';
     const GRID = { halfExtent: 18, minY: 0, maxY: 20, maxBlocks: 2500 };
-    const SAVE_VERSION = 10;
-    const SAVE_KEY = 'voxel-aeronautics-blueprint-v10';
+    const SAVE_VERSION = 11;
+    const SAVE_KEY = 'voxel-aeronautics-blueprint-v11';
     const LEGACY_SAVE_KEYS = [
+      'voxel-aeronautics-blueprint-v10',
       'voxel-aeronautics-blueprint-v9',
       'voxel-aeronautics-blueprint-v8',
       'voxel-aeronautics-blueprint-v7',

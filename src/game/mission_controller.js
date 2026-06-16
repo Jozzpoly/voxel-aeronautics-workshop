@@ -423,13 +423,13 @@
         const voxelExtent = MissionEvaluator.boxVerticalHalfExtent(transform.quaternion, { x: 0.5, y: 0.5, z: 0.5 });
         let lowestWorldY = Number.POSITIVE_INFINITY;
         for (const part of STATE.flight.runtimeParts) {
-          if (!part.attached || !part.localPos || part.bodyId !== bodyId) continue;
-          const centerY = MissionEvaluator.projectLocalPointY(transform.position, transform.quaternion, part.localPos);
+          if (!part.attached || !part.bodyLocalPosition || part.bodyId !== bodyId) continue;
+          const centerY = MissionEvaluator.projectLocalPointY(transform.position, transform.quaternion, part.bodyLocalPosition);
           lowestWorldY = Math.min(lowestWorldY, centerY - voxelExtent);
         }
         const payload = STATE.flight.payload;
-        if (payload?.attached && payload.localPos && payload.bodyId === bodyId) {
-          const payloadCenterY = MissionEvaluator.projectLocalPointY(transform.position, transform.quaternion, payload.localPos);
+        if (payload?.attached && payload.bodyLocalPosition && payload.bodyId === bodyId) {
+          const payloadCenterY = MissionEvaluator.projectLocalPointY(transform.position, transform.quaternion, payload.bodyLocalPosition);
           const payloadExtent = MissionEvaluator.boxVerticalHalfExtent(transform.quaternion, { x: 0.42, y: 0.42, z: 0.42 });
           lowestWorldY = Math.min(lowestWorldY, payloadCenterY - payloadExtent);
         }

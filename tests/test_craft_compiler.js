@@ -13,9 +13,14 @@ for (const relative of [
   'src/foundation/catalog.js',
   'src/foundation/orientation.js',
   'src/foundation/blueprint.js',
+  'src/foundation/diagnostics.js',
   'src/foundation/craft_model.js',
   'src/foundation/control_frame.js',
   'src/foundation/mass_properties.js',
+  'src/foundation/structural_graph_compiler.js',
+  'src/foundation/mechanical_authoring_resolver.js',
+  'src/foundation/rigid_island_compiler.js',
+  'src/foundation/mechanical_graph_compiler.js',
   'src/foundation/craft_compiler.js'
 ]) {
   vm.runInThisContext(fs.readFileSync(path.join(ROOT, relative), 'utf8'), { filename: relative });
@@ -27,7 +32,7 @@ const Config = global.VAW.require('foundation.config');
 const Catalog = global.VAW.require('foundation.catalog');
 
 function block(x, y, z, type = 'Hull', orientation = 0) {
-  return { x, y, z, type, orientation, controlAxis: 'pitch', controlSign: 0 };
+  return { blockId: `block:${x}:${y}:${z}:${type}`, x, y, z, type, orientation, controlAxis: 'pitch', controlSign: 0 };
 }
 
 const empty = CraftCompiler.compile(CraftModel.create());
@@ -50,7 +55,7 @@ const rocket = CraftModel.create([
 const compiled = CraftCompiler.compile(rocket);
 assert(compiled.ready);
 assert.strictEqual(compiled.coreKey, '0,2,0');
-assert.deepStrictEqual(compiled.corePosition, [0, 2, 0]);
+assert.deepStrictEqual(compiled.coreAssemblyPosition, [0, 2, 0]);
 assert.deepStrictEqual(compiled.controlFrame.forward, [1, 0, 0]);
 assert.deepStrictEqual(compiled.controlFrame.up, [0, 1, 0]);
 assert.deepStrictEqual(compiled.controlFrame.right, [0, 0, 1]);
@@ -59,7 +64,7 @@ assert.strictEqual(typeof compiled.parts[0].blockId, 'string');
 assert.strictEqual(compiled.blockIdToIndex[compiled.parts[0].blockId], 0);
 assert.strictEqual(compiled.gravity, Config.AEROSTATICS.gravity);
 assert.strictEqual(compiled.weight, compiled.mass * compiled.gravity);
-assert.strictEqual(compiled.connectedCount, 4);
+assert.strictEqual(compiled.rigidIslandCount, 1);
 assert.strictEqual(compiled.colliderPlan.length, 4);
 assert.strictEqual(compiled.parts[compiled.coreIndex].type, 'Core');
 assert.strictEqual(compiled.counts.Thruster, 1);
@@ -107,8 +112,8 @@ const disconnected = CraftModel.create([
 ]);
 const disconnectedCompiled = CraftCompiler.compile(disconnected);
 assert.strictEqual(disconnectedCompiled.ready, false);
-assert(disconnectedCompiled.errors.includes('disconnected'));
-assert.strictEqual(disconnectedCompiled.connectedCount, 1);
+assert(disconnectedCompiled.errors.includes('assembly-disconnected'));
+assert.strictEqual(disconnectedCompiled.rigidIslandCount, 2);
 
 const maximumBlocks = [];
 outer: for (let y = Config.GRID.minY; y <= Config.GRID.maxY; y += 1) {

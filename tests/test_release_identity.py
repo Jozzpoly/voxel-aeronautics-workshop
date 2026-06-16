@@ -25,7 +25,7 @@ runtime_release = release_match.group(1)
 
 assert package['version'] == module.APP_VERSION == manifest['appVersion'] == runtime_version
 assert module.RELEASE_ID == manifest['releaseId'] == runtime_release
-assert 'Foundation Phase 1D.3E' in html
+assert 'Foundation Phase 1D.4A' in html
 assert module.APP_VERSION in module.build_single_html(ROOT)
 assert module.RELEASE_ID in module.build_single_html(ROOT)
 

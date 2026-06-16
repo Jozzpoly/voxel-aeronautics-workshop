@@ -1,140 +1,89 @@
-# Critical Code Review — Foundation Phase 1D.3E
+# Code Review Report — Foundation Phase 1D.4A
 
-## Zakres i metoda
+## Scope
 
-Review wykonano względem czystego baseline Phase 1D.3D (`5cf38926623a17290ff2c6caad24d1c36fe77ad3`). Objęło ono cały przepływ:
+Independent principal-level second review of Blueprint v11, migration boundaries, CraftModel transactions, compiler layering, RuntimeAssemblyPlan V2, real-Cannon runtime, game-shell consumers, controls, tests, build tooling and release documentation.
+
+## P1 findings fixed
+
+### Current schema could silently suffix duplicate explicit block IDs
+`Blueprint.createDocument` previously used permissive canonicalization for all blocks. Explicit current-version IDs are now strict; only absent authoring IDs may be allocated. CraftModel initialization normalizes the supplied document rather than rebuilding it through a permissive path.
+
+### Duplicate mechanical-link diagnostics depended on input order
+Raw links are now canonically sorted before duplicate resolution. The same invalid document produces the same diagnostics and signature projection regardless of array order.
+
+### Invalid hinge numeric configuration could reach runtime compilation
+MechanicalAuthoringResolver rejects invalid `maxForce`, negative friction and malformed limits as structured diagnostics before plan/backend allocation.
+
+### Mutable command state leaked into immutable mechanical graph
+Compiled constraints no longer contain current motor/servo commands. Plan V2 creates initial `free` runtime control; later commands live only in RuntimeAssembly/backend state.
+
+### Private global runtime aggregate crossed application boundaries
+The final entrypoint still consumed `window.VAW_RUNTIME`, despite modular internals. The aggregate was removed. `game.js` now obtains explicit kernel modules and the validated `runtime.active-context`; architecture tests forbid reintroduction.
+
+### Collision fallback still used a removed global lower bound
+A no-contact-point collision could fall back to geometry derived from the wrong body. Each body now owns its own lowest body-local Y, preserving owner-space interpretation through the whole collision pipeline.
+
+### Root pilot commands could drive actuators on passive sub-bodies
+The default mixer and torque envelope previously considered all parts in the assembly. Pilot-controlled thrusters, gyros and control surfaces are now selected from the Core/root body only. Passive aero remains per body.
+
+### Startup smoke did not prove the articulated UI production path
+The harness now imports `examples/articulated_hinge_v11.json` via FileReader/input change, checks the visible workshop hinge, launches with the ordinary Flight button and verifies two-body lifecycle cleanup.
+
+### Ambiguous runtime position naming
+Gameplay and integrity runtime parts now use `bodyLocalPosition`; compiled and plan fields distinguish assembly, body-local and world spaces.
+
+## P2 findings fixed
+
+### Runtime plan construction repeatedly filtered every part per island
+Parts are indexed by body once before body-plan construction, removing the `islands × all parts` scan.
+
+### Body-to-part index absent from plan
+Plan V2 exposes deterministic `bodyIdToPartBlockIds` in addition to block/body and body/constraint maps.
+
+### History inspection counted blocks only
+History diagnostics expose entity counts including mechanical links while preserving legacy block metrics.
+
+### Obsolete single-body wrappers and aliases survived the convergence
+Dead `body:root`, native-body, `STATE.flight.body`, `assemblyRuntime`, `group` and old contiguity/helper seams were removed rather than maintained as a second contract.
+
+## Reviewed invariants
+
+- No production body ID uses array index.
+- Mechanical link/constraint IDs are persistent and backend-neutral.
+- Signatures, body IDs, edges and diagnostics are deterministic under input permutation.
+- Every part belongs to exactly one rigid island.
+- Every constraint connects two existing distinct bodies.
+- Local pivots map to one assembly pivot.
+- Payload changes only its owner body and recalculates owner-side pivots.
+- All bodies spawn through `spawnTransform × assemblyPose`.
+- Damage cannot select another body's part at the same local coordinate.
+- Cut edges do not propagate rigid damage.
+- Constraint removal precedes collider/body cleanup.
+- Failed cleanup retains retry ownership.
+- Connected-body recenter fails before frame mutation.
+- `game.js` does not allocate assembly bodies/constraints or compile topology.
+- Physics Port remains the sole backend boundary.
+- The root-body camera, mission and pilot-control policy is explicit, not Map-order dependent.
+- Current v11 normalization never invents a replacement for duplicate explicit IDs.
+
+## Review searches
+
+Repository-wide searches found no production occurrences of:
 
 ```text
-CraftModel -> CraftCompiler -> RuntimeAssemblyPlan
--> AssemblyBuilder -> Physics Port -> backend
+window.VAW_RUNTIME
+body:root
+body:${index}
+part.offset
+payloadLocalPos
+STATE.flight.body
+assemblyRuntime
+flight.group
 ```
 
-oraz:
+Raw grid-neighbor use remains in authoring/compilation where it belongs; flight damage/support consumers use compiled `rigidNeighborBlockIds`.
 
-```text
-FlightSession -> RuntimeAssembly ownership
--> visuals / mission / HUD / camera
--> FlightIntegrity / payload / debris
--> stop / retry / restart
-```
+## Open items
 
-Przejrzano również oba backendy, testy, loader, build, source manifest, wersję, dokumenty kanoniczne i wpływ zmian na Gate B–E. Diff źródłowy obejmuje ponad dwa tysiące dodanych linii i nie jest kosmetycznym przeniesieniem kodu.
-
-## Werdykt
-
-**Gate A można zamknąć.** Lifecycle lotu ma jedno źródło prawdy, destrukcyjne operacje wymagają dokładnego ownershipu, wizuale są własnością konkretnych body, a częściowo nieudany cleanup zachowuje uchwyty do retry.
-
-**Gate B nie został rozpoczęty.** Produkcyjny `CraftCompiler` nadal emituje jedną rigid island; brak mechanical authoring schema, migracji i pure rigid-island/mechanical compilerów. Zatrzymanie wydania na ukończonym Gate A jest właściwsze niż pozostawienie częściowego blueprint v11.
-
-## Znaleziska krytyczne i naprawy
-
-### CR-1 — deklarowane seamy nie posiadały lifecycle
-
-Baseline miał `game.flight-session`, ale `game.js` nadal wywoływał `AssemblyBuilder.build`, publikował równoległe mapy i posiadał launch/stop state.
-
-**Naprawa:** jedyny produkcyjny callsite buildera znajduje się w `FlightSession.start()`. Sesja publikuje jeden `RuntimeAssembly`, wybiera primary body, posiada zasoby transient i zatrzymuje je w kontrolowanej kolejności.
-
-### CR-2 — fałszywe źródła prawdy
-
-`assembly`, `assemblyRuntime`, `bodyById`, `bodies`, `primaryBody` i `body` mogły być traktowane jako równoległe modele pojazdu.
-
-**Naprawa:** kanoniczny jest `STATE.flight.assembly`. `primaryBodyId` jest polityką/query. Pozostałe native aliases są jedynie deprecated same-object compatibility fields i nie mają aktywnych konsumentów w game modules.
-
-### CR-3 — utrata retry handles podczas cleanupu
-
-Wczesne czyszczenie state po częściowej awarii uniemożliwiłoby dokończenie cleanupu.
-
-**Naprawa:** RuntimeAssembly i FlightSession zachowują niezakończone constraints, listenery, collidery, body i visual roots. `disposed` jest ustawiane dopiero po pełnym sukcesie. Kolejne `stop()` kontynuuje pracę.
-
-### CR-4 — niewłaściwa kolejność usuwania zasobów
-
-Body nie może zniknąć, dopóki constraint lub collider nadal je referencjonuje.
-
-**Naprawa:** obowiązuje kolejność:
-
-```text
-constraint -> collision listener / collider -> body -> visual -> published state
-```
-
-Backend mutation następuje przed mutation map/runtime state.
-
-### CR-5 — globalny visual root kodował jeden rigid body
-
-Jeden root powodowałby wspólny obrót wszystkich wysp articulated craftu.
-
-**Naprawa:** `visualRootByBodyId`, stabilne `part.bodyId`, lokalna pozycja części względem właściwego body i niezależna synchronizacja transformów.
-
-### CR-6 — damage mógł trafić do niewłaściwego body
-
-Fallback „brak ownershipu → primary body” jest destrukcyjny w multi-body assembly.
-
-**Naprawa:** exact block/part/collider/body lookup. Brak lub mismatch kończy operację błędem. Gameplay detach ma jawny kontrakt `primary-rigid-island-only` do czasu zaprojektowania split/subassembly ownership.
-
-### CR-7 — integralność primary body używała mianownika całego assembly
-
-Pierwsza implementacja po refaktorze liczyła health primary island względem wszystkich wysp, więc articulated craft startowałby z zaniżonym HUD integrity.
-
-**Naprawa:** initial/current integrity są liczone dla jawnie wybranego primary body. Osobna wyspa nie zmienia jego procentu.
-
-### CR-8 — presentation hook mógł przerwać zatwierdzoną mutację
-
-Po udanym backendowym usunięciu collidera wyjątek z efektu wizualnego mógł pozostawić logikę w stanie pośrednim.
-
-**Naprawa:** zwykłe hooki prezentacji są izolowane i raportowane diagnostycznie. Cleanup hooki nadal propagują błąd, aby zachować retry semantics.
-
-### CR-9 — debris wyciekało przez composition root i native body fields
-
-Tworzenie, synchronizacja oraz disposal fizycznych odłamków pozostawały dużą domeną w `game.js`.
-
-**Naprawa:** `game.debris-runtime` izoluje backend/scene adapter, używa neutralnego `getBodyTransform`, robi allocation rollback i staged retry-safe dispose. `FlightIntegrity` posiada listę i lifecycle debris.
-
-### CR-10 — mission/HUD/camera czytały jeden natywny body
-
-Semantyka articulated craftu była przypadkowa i zależna od aliasu lub kolejności mapy.
-
-**Naprawa:** deterministyczna primary policy (`explicit -> rootBodyId -> root role -> stable ID sort`) oraz neutralny sample transform/linear/angular velocity.
-
-### CR-11 — visual setup nie był atomowy
-
-Błąd sceny po udanym buildzie mógł pozostawić aktywne assembly bez pełnego presentation state.
-
-**Naprawa:** rejestracja ownershipu poprzedza scene allocation, a cały setup jest otoczony rollbackiem do `cleanupFlightState()`. Pierwotny błąd pozostaje główny, cleanup errors są dołączone osobno.
-
-### CR-12 — `pagehide` nie zamykał aktywnej sesji
-
-Stary smoke wykonywał `pagehide` dopiero po zakończeniu lotu i nie dowodził aktywnego lifecycle.
-
-**Naprawa:** aktywny `pagehide` przechodzi normalną ścieżką do BUILD i wykonuje cleanup; `fullscreenchange` pozostaje niedestrukcyjny.
-
-### CR-13 — dokumentacja udawała starszy stan
-
-Kanoniczne pliki miały nagłówki 1D.3C, a raport 1D.3D mógł zostać błędnie odczytany jako pełne zamknięcie Gate A.
-
-**Naprawa:** dokumenty bieżące opisują 1D.3E, historyczny 1D.3D ma ostrzeżenie, a test kontraktu wymaga current 1D.3E / next 1D.4A i ADR 0029–0032.
-
-## Sprawdzone granice architektury
-
-- `CraftModel` nadal jest workshop source of truth.
-- `CraftCompiler` nadal jest jedyną drogą do `CompiledCraft`.
-- `AssemblyBuilder` nie został zduplikowany w `game.js`.
-- Physics Port pozostaje jedyną granicą głównych body/colliderów/constraintów.
-- Nie dodano globalnego `window.*` poza istniejącym loaderem modułów.
-- Structural, mechanical i przyszły signal graph nie zostały scalone.
-- Runtime constraint command nie zmienia planu mechanical graphu.
-- Publiczne game APIs nie wystawiają `CANNON.Body` ani `CANNON.HingeConstraint`.
-- Identyfikacja nie opiera się na indeksie body w tablicy.
-- Source inventory pozostaje sterowany przez `APP_SOURCES`.
-
-## Świadome ograniczenia i ryzyka po review
-
-1. Produkcyjny compiler nadal jest single-island; test multi-body potwierdza lifecycle/planner/builder, nie authoring gracza.
-2. Pełny split assembly po detach nie istnieje; ograniczenie primary island jest zamierzone i blokuje niebezpieczne użycie.
-3. Soft hinge limits pozostają soft i wykazują niewielki overshoot.
-4. One-collider-per-voxel oraz koszt kontaktów nadal ograniczają flight cap 480.
-5. Nie ma browser/WebGL CI; istnieje headless DOM startup smoke.
-6. Deprecated aliases powinny zostać usunięte dopiero po potwierdzeniu braku external compatibility consumers.
-7. Gate B wymaga osobnego ADR/schema review i prawdopodobnej decyzji o blueprint v11.
-
-## Ostateczna decyzja
-
-Diff nie pozostawia dwóch aktywnych źródeł prawdy i nie wprowadza częściowego Gate B. Zmiany są gotowe do wydania jako **Foundation Phase 1D.3E — Gate A Foundation Convergence** po końcowej walidacji ZIP-a i patcha.
+No open P0–P2 is accepted in the delivered Gate B scope. P3/future capability: atomic body-frame rebase and dynamic rigid-body split for generalized articulated damage. The current guard is explicit, documented and tested.

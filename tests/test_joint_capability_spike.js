@@ -35,7 +35,8 @@ function bodyPlan(bodyId, blockId, mass, inertiaDiagonal) {
     bodyId,
     role: bodyId === 'body:root' ? 'root' : 'subassembly',
     blockIds: [blockId],
-    sourceCenterOfMass: [0, 0, 0],
+    sourceAssemblyCenterOfMass: [0, 0, 0],
+    assemblyPose: { position: bodyId === 'body:root' ? [0, 0, 0] : [0, 1.6, 0], quaternion: [0, 0, 0, 1] },
     massProperties: { mass, centerOfMass: [0, 0, 0], inertiaDiagonal },
     colliders: [{
       colliderId: `collider:${blockId}`,
@@ -61,6 +62,8 @@ function makePlan(options = {}) {
       kind: 'hinge',
       bodyAId: 'body:root',
       bodyBId: 'body:rotor',
+      endpointA: { blockId: 'core', face: 'PY' },
+      endpointB: { blockId: 'rotor', face: 'NY' },
       pivotA: [0, 0.8, 0],
       pivotB: [0, -0.8, 0],
       axisA: [0, 0, 1],

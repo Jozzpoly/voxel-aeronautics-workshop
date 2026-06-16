@@ -22,7 +22,7 @@ function makePlan(mass = 2, inertia = [2, 3, 4]) {
     format: 'HARNESS_PLAN',
     rootBodyId: 'body:root',
     rigidBodies: [{
-      bodyId: 'body:root', role: 'root', blockIds: ['core'], sourceCenterOfMass: [0, 0, 0],
+      bodyId: 'body:root', role: 'root', blockIds: ['core'], sourceAssemblyCenterOfMass: [0, 0, 0], assemblyPose: { position: [0, 0, 0], quaternion: [0, 0, 0, 1] },
       massProperties: { mass, centerOfMass: [0, 0, 0], inertiaDiagonal: inertia },
       colliders: [{ colliderId: 'collider:core', blockId: 'core', bodyId: 'body:root', kind: 'box', center: [0, 0, 0], halfExtents: [0.5, 0.5, 0.5] }]
     }],

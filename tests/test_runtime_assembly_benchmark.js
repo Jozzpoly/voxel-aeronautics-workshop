@@ -30,7 +30,7 @@ function makePlan(count) {
   return {
     format: 'BENCHMARK_PLAN', rootBodyId: 'body:root', constraints: [], signalLinks: [], parts,
     rigidBodies: [{
-      bodyId: 'body:root', role: 'root', blockIds, sourceCenterOfMass: [0, 0, 0],
+      bodyId: 'body:root', role: 'root', blockIds, sourceAssemblyCenterOfMass: [0, 0, 0], assemblyPose: { position: [0, 0, 0], quaternion: [0, 0, 0, 1] },
       massProperties: { mass: count, centerOfMass: [0, 0, 0], inertiaDiagonal: [count, count, count] },
       colliders
     }]

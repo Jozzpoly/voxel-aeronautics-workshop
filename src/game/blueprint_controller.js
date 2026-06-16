@@ -106,7 +106,7 @@
         /** @type {HTMLInputElement} */ (document.getElementById('balloon-power')).value = String(Math.round(STATE.balloonPower * 100));
         /** @type {HTMLInputElement} */ (document.getElementById('stability')).value = String(Math.round(STATE.stabilityAssist * 100));
 
-        const replacement = CRAFT.replace(normalized.blocks, 'load-blueprint');
+        const replacement = CRAFT.replaceDocument(normalized, 'load-blueprint');
         if (!replacement.ok) {
           console.error('CraftModel rejected a normalized blueprint:', replacement.reason);
           const fallback = CRAFT.clear('load-fallback-empty');

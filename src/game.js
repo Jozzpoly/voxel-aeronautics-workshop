@@ -1,7 +1,6 @@
 'use strict';
 
-    const FOUNDATION = window.VAW_RUNTIME;
-    if (!FOUNDATION) throw new Error('Foundation runtime was not initialized before game.js.');
+    if (!window.VAW) throw new Error('Foundation kernel was not initialized before game.js.');
 
     const SceneEnvironment = window.VAW.require('game.scene-environment');
     const CareerService = window.VAW.require('game.career-service');
@@ -16,11 +15,27 @@
     const FlightIntegrity = window.VAW.require('game.flight-integrity');
     const DebrisRuntime = window.VAW.require('game.debris-runtime');
 
-    const { Config, Catalog, Orientation, Blueprint, ControlFrame, MassProperties, CraftCompiler, RuntimeAssembly, AssemblyBuilder, InputProfile, UIWorkspace, MissionEvaluator, Aerostatics, FlightControl, State, Physics } = FOUNDATION;
+    const Config = window.VAW.require('foundation.config');
+    const Catalog = window.VAW.require('foundation.catalog');
+    const Orientation = window.VAW.require('foundation.orientation');
+    const Blueprint = window.VAW.require('foundation.blueprint');
+    const ControlFrame = window.VAW.require('foundation.control-frame');
+    const MassProperties = window.VAW.require('foundation.mass-properties');
+    const CraftCompiler = window.VAW.require('foundation.craft-compiler');
+    const RuntimeAssembly = window.VAW.require('foundation.runtime-assembly');
+    const AssemblyBuilder = window.VAW.require('runtime.assembly-builder');
+    const InputProfile = window.VAW.require('foundation.input-profile');
+    const UIWorkspace = window.VAW.require('foundation.ui-workspace');
+    const MissionEvaluator = window.VAW.require('foundation.mission-evaluator');
+    const Aerostatics = window.VAW.require('foundation.aerostatics');
+    const FlightControl = window.VAW.require('foundation.flight-control');
+    const State = window.VAW.require('foundation.state');
+    const { Physics } = window.VAW.require('runtime.active-context');
+
     const {
       GRID, SAVE_VERSION, SAVE_KEY, LEGACY_SAVE_KEYS,
       CAREER_SAVE_KEY, CAREER_SAVE_VERSION, UI_SAVE_VERSION, UI_SAVE_KEY, LEGACY_UI_SAVE_KEYS,
-      NEIGHBOR_DIRECTIONS, COLLISION_GROUP, TEST_RANGE, MISSION, AEROSTATICS,
+      COLLISION_GROUP, TEST_RANGE, MISSION, AEROSTATICS,
       MISSION_PAYLOAD_POSITION, PHYSICS, AXIS_LABELS,
       SYMMETRY_MODES, CONTROL_AXES, CONTROL_SIGNS
     } = Config;
@@ -583,9 +598,6 @@
       return CRAFT.validateAddMany(plan).ok;
     }
 
-    function isStructureContiguous() {
-      return CRAFT.isContiguous();
-    }
 
     function refreshRaycastList() {
       WORKSHOP.rootMeshes.length = 0;
@@ -615,6 +627,66 @@
       return true;
     }
 
+    function disposeMechanicalLinkVisual(linkId) {
+      const visual = WORKSHOP.mechanicalLinkVisualsById.get(String(linkId));
+      if (!visual) return false;
+      scene.remove(visual);
+      WORKSHOP.mechanicalLinkVisualsById.delete(String(linkId));
+      disposeObjectTree(visual);
+      return true;
+    }
+
+    function createMechanicalLinkVisual(link) {
+      const blockA = CRAFT.getById(link.endpointA.blockId);
+      const blockB = CRAFT.getById(link.endpointB.blockId);
+      if (!blockA || !blockB) return null;
+      const midpoint = new THREE.Vector3((blockA.x + blockB.x) * 0.5, (blockA.y + blockB.y) * 0.5, (blockA.z + blockB.z) * 0.5);
+      const axis = Blueprint.FACE_VECTORS[link.axis] || [0, 1, 0];
+      const group = new THREE.Group();
+      group.userData.mechanicalLinkId = link.mechanicalLinkId;
+      const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([
+          midpoint.clone().add(new THREE.Vector3(...axis).multiplyScalar(-0.58)),
+          midpoint.clone().add(new THREE.Vector3(...axis).multiplyScalar(0.58))
+        ]),
+        new THREE.LineBasicMaterial({ color: 0x22d3ee })
+      );
+      const pivot = new THREE.Mesh(
+        new THREE.SphereGeometry(0.12, 10, 8),
+        new THREE.MeshBasicMaterial({ color: 0xf59e0b })
+      );
+      pivot.position.copy(midpoint);
+      group.add(line, pivot);
+      scene.add(group);
+      WORKSHOP.mechanicalLinkVisualsById.set(link.mechanicalLinkId, group);
+      return group;
+    }
+
+    function refreshMechanicalLinkList() {
+      const select = document.getElementById('mechanical-link-list');
+      if (!select) return;
+      const previous = select.value;
+      select.innerHTML = '';
+      const links = CRAFT.mechanicalLinks();
+      if (!links.length) {
+        const option = document.createElement('option'); option.value = ''; option.textContent = 'NO LINKS'; select.appendChild(option);
+      } else {
+        for (const link of links) {
+          const option = document.createElement('option');
+          option.value = link.mechanicalLinkId;
+          option.textContent = `${link.mechanicalLinkId} • ${link.axis}`;
+          select.appendChild(option);
+        }
+        if (links.some(link => link.mechanicalLinkId === previous)) select.value = previous;
+      }
+    }
+
+    function rebuildMechanicalLinkVisuals() {
+      for (const linkId of [...WORKSHOP.mechanicalLinkVisualsById.keys()]) disposeMechanicalLinkVisual(linkId);
+      for (const link of CRAFT.mechanicalLinks()) createMechanicalLinkVisual(link);
+      refreshMechanicalLinkList();
+    }
+
     function rebuildWorkshopView() {
       for (const mesh of WORKSHOP.meshesByKey.values()) {
         scene.remove(mesh);
@@ -624,6 +696,7 @@
       WORKSHOP.rootMeshes.length = 0;
       for (const block of CRAFT.values()) addWorkshopVisual(block);
       refreshRaycastList();
+      rebuildMechanicalLinkVisuals();
     }
 
     function assertWorkshopViewConsistency() {
@@ -646,6 +719,7 @@
         for (const block of event.added) addWorkshopVisual(block);
         for (const change of event.updated) addWorkshopVisual(change.after);
         refreshRaycastList();
+        if (event.mechanicalLinksAdded.length || event.mechanicalLinksRemoved.length || event.mechanicalLinksUpdated.length || event.updated.length) rebuildMechanicalLinkVisuals();
         assertWorkshopViewConsistency();
       } catch (error) {
         console.error('Incremental workshop view update failed; rebuilding from CraftModel.', error);
@@ -740,10 +814,12 @@
       flightSession,
       MassProperties,
       makeKey,
-      neighborDirections: NEIGHBOR_DIRECTIONS,
       clamp: THREE.MathUtils.clamp,
       hooks: {
-        onDiagnostic({ hook, error }) { console.error(`FlightIntegrity hook failed: ${hook}`, error); },
+        onDiagnostic(diagnostic) {
+          if (diagnostic?.error) console.error(`FlightIntegrity hook failed: ${diagnostic.hook || 'unknown'}`, diagnostic.error);
+          else if (diagnostic?.code) console.warn(`FlightIntegrity diagnostic: ${diagnostic.code}`, diagnostic);
+        },
         onPartDamaged(part) { updateRuntimePartVisual(part); },
         onPartDetached(part) { createDetachedDebris(part); },
         onRecenter() { recomputeThrusterTorqueEnvelope(); },
@@ -759,7 +835,7 @@
             payload.coupler = null;
           }
           if (payload.visual) {
-            createDebrisFromVisual(payload.visual, payload.mass, payload.localPos, payload.bodyId);
+            createDebrisFromVisual(payload.visual, payload.mass, payload.bodyLocalPosition, payload.bodyId);
             payload.visual = null;
           }
           showStatus('PAYLOAD LOST', 1500);
@@ -774,7 +850,6 @@
       // Independent debris is cleaned first; an error leaves the assembly and retry handles intact.
       flightIntegrity.disposeAllDebris();
       flightSession.stop();
-      STATE.flight.group = null; // Deprecated single-root alias.
       STATE.flight.functionalBlocks = [];
       STATE.flight.fuel = 0;
       STATE.flight.fuelMax = 0;
@@ -801,7 +876,7 @@
       STATE.flight.structuralFailures = 0;
       STATE.flight.initialHealth = 0;
       STATE.flight.gyroAuthority = 0;
-      STATE.flight.payloadLocalPos = null;
+      STATE.flight.payloadBodyLocalPosition = null;
       STATE.flight.payload = null;
       STATE.flight.pendingImpacts = [];
       STATE.flight.structuralAccumulator = 0;
@@ -932,6 +1007,8 @@
 
     function updateGhost() {
       if (STATE.mode !== 'BUILD' || !STATE.input.pointerInside) {
+        for (const visual of WORKSHOP.mechanicalLinkVisualsById.values()) visual.visible = false;
+        setMechanicalAuthoring(false, false);
         ghost.visible = false;
         ghostArrow.visible = false;
         ghostNormalArrow.visible = false;
@@ -1023,11 +1100,11 @@
       return flightIntegrity.recompute(force);
     }
 
-    function createDebrisFromVisual(visual, mass, localPos, bodyId = flightSession.primaryBodyId()) {
+    function createDebrisFromVisual(visual, mass, bodyLocalPosition, bodyId = flightSession.primaryBodyId()) {
       const group = flightSession.getVisualRoot(bodyId);
       if (!flightSession.hasBody(bodyId) || !group || !visual) return;
-      const worldPosition = flightSession.pointToWorldFrame(bodyId, localPos);
-      const worldVelocity = flightSession.getBodyPointVelocity(bodyId, localPos);
+      const worldPosition = flightSession.pointToWorldFrame(bodyId, bodyLocalPosition);
+      const worldVelocity = flightSession.getBodyPointVelocity(bodyId, bodyLocalPosition);
       const angularVelocity = flightSession.getBodyAngularVelocity(bodyId);
       const transform = flightSession.getBodyTransform(bodyId);
       const craftQuaternion = new THREE.Quaternion(
@@ -1065,17 +1142,17 @@
 
     function createDetachedDebris(part) {
       if (!part?.visual) return;
-      createDebrisFromVisual(part.visual, part.mass, part.localPos, flightIntegrity.requireOwnedPart(part));
+      createDebrisFromVisual(part.visual, part.mass, part.bodyLocalPosition, flightIntegrity.requireOwnedPart(part));
       part.visual = null;
     }
 
     function recomputeThrusterTorqueEnvelope() {
       const max = new THREE.Vector3();
       for (const part of STATE.flight.runtimeParts) {
-        if (!part.attached || (part.type !== 'Thruster' && part.type !== 'VectorThruster')) continue;
+        if (!part.attached || !part.pilotControlled || (part.type !== 'Thruster' && part.type !== 'VectorThruster')) continue;
         const force = Physics.vec3(part.localAxis.x * part.force, part.localAxis.y * part.force, part.localAxis.z * part.force);
         const torque = Physics.vec3();
-        part.localPos.cross(force, torque);
+        part.bodyLocalPosition.cross(force, torque);
         part.localTorque.copy(torque);
         max.x = Math.max(max.x, Math.abs(torque.x));
         max.y = Math.max(max.y, Math.abs(torque.y));
@@ -1085,51 +1162,12 @@
     }
 
 
-    function computeRuntimeMassProperties(attached, payload = null) {
-      return MassProperties.compute([
-        ...attached.map(part => ({
-          id: part.blockId,
-          mass: part.mass,
-          center: part.localPos,
-          halfExtents: [0.5, 0.5, 0.5]
-        })),
-        ...(payload ? [{
-          id: 'mission-payload',
-          mass: payload.mass,
-          center: payload.localPos,
-          halfExtents: [0.42, 0.42, 0.42]
-        }] : [])
-      ]);
-    }
-
-    function recenterCraftBody() {
-      return flightIntegrity.recenterBody(flightSession.primaryBodyId());
-    }
-
-    function collectDisconnectedRuntimeParts() {
-      return flightIntegrity.collectDisconnected(flightSession.primaryBodyId());
-    }
-
-
     function detachRuntimeParts(entries, cascade = true) {
       return flightIntegrity.detachParts(entries, cascade);
     }
 
-    function detachRuntimePart(part, reason = 'structural failure', cascade = true) {
-      return flightIntegrity.detachParts([{ part, reason }], cascade) > 0;
-    }
-
-    function detachDisconnectedRuntimeParts() {
-      const disconnected = flightIntegrity.collectDisconnected(flightSession.primaryBodyId());
-      return flightIntegrity.detachParts(disconnected.map(part => ({ part, reason: 'connection to core was severed' })), false);
-    }
-
     function applyDamageOnly(part, amount, reason = 'impact') {
       return flightIntegrity.applyDamageOnly(part, amount, reason);
-    }
-
-    function damageRuntimePart(part, amount, reason = 'impact') {
-      return flightIntegrity.damagePart(part, amount, reason);
     }
 
     function updatePayloadVisual() {
@@ -1147,25 +1185,25 @@
       return flightIntegrity.damagePayload(amount, reason);
     }
 
-    function applyImpactDamage(localImpact, impact, collisionKind = 'ground') {
-      const candidates = STATE.flight.runtimeParts.filter(part => part.attached);
+    function applyImpactDamage(bodyId, localImpact, impact, collisionKind = 'ground') {
+      const candidates = STATE.flight.runtimeParts.filter(part => part.attached && part.bodyId === bodyId);
       if (!candidates.length) return;
       let nearest = candidates[0];
       let nearestDistance = Infinity;
       for (const part of candidates) {
-        const dx = part.localPos.x - localImpact.x;
-        const dy = part.localPos.y - localImpact.y;
-        const dz = part.localPos.z - localImpact.z;
-        const distance = dx*dx + dy*dy + dz*dz;
+        const dx = part.bodyLocalPosition.x - localImpact.x;
+        const dy = part.bodyLocalPosition.y - localImpact.y;
+        const dz = part.bodyLocalPosition.z - localImpact.z;
+        const distance = dx * dx + dy * dy + dz * dz;
         if (distance < nearestDistance) { nearestDistance = distance; nearest = part; }
       }
       const payload = STATE.flight.payload;
       let payloadNearest = false;
-      if (payload?.attached) {
-        const dx = payload.localPos.x - localImpact.x;
-        const dy = payload.localPos.y - localImpact.y;
-        const dz = payload.localPos.z - localImpact.z;
-        payloadNearest = dx*dx + dy*dy + dz*dz < nearestDistance;
+      if (payload?.attached && payload.bodyId === bodyId) {
+        const dx = payload.bodyLocalPosition.x - localImpact.x;
+        const dy = payload.bodyLocalPosition.y - localImpact.y;
+        const dz = payload.bodyLocalPosition.z - localImpact.z;
+        payloadNearest = dx * dx + dy * dy + dz * dz < nearestDistance;
       }
       const multiplier = collisionKind === 'obstacle' ? 4.4 : (collisionKind === 'debris' ? 3.7 : 3.2);
       const energyDamage = Math.max(0, (impact - 3.5) ** 2 * multiplier);
@@ -1175,13 +1213,13 @@
       if (payloadNearest) {
         damagePayload(energyDamage * 0.72, reason);
         const core = getRuntimeCore();
-        if (core && applyDamageOnly(core, energyDamage * 0.18, 'payload mount transferred impact')) failures.push({ part: core, reason: 'payload mount transferred impact' });
+        if (core?.bodyId === bodyId && applyDamageOnly(core, energyDamage * 0.18, 'payload mount transferred impact')) failures.push({ part: core, reason: 'payload mount transferred impact' });
       } else {
         if (applyDamageOnly(nearest, energyDamage, reason)) failures.push({ part: nearest, reason });
-        for (const [dx,dy,dz] of NEIGHBOR_DIRECTIONS) {
-          const neighbor = STATE.flight.runtimePartByKey.get(makeKey(nearest.grid.x+dx, nearest.grid.y+dy, nearest.grid.z+dz));
-          if (neighbor?.attached && applyDamageOnly(neighbor, energyDamage * PHYSICS.damagePropagation, 'load propagated through connection')) {
-            failures.push({ part: neighbor, reason: 'load propagated through connection' });
+        for (const neighborId of nearest.rigidNeighborBlockIds || []) {
+          const neighbor = STATE.flight.runtimePartById.get(neighborId);
+          if (neighbor?.attached && neighbor.bodyId === bodyId && applyDamageOnly(neighbor, energyDamage * PHYSICS.damagePropagation, 'load propagated through rigid connection')) {
+            failures.push({ part: neighbor, reason: 'load propagated through rigid connection' });
           }
         }
       }
@@ -1191,41 +1229,46 @@
 
     function runtimeNeighborCount(part) {
       let count = 0;
-      for (const [dx,dy,dz] of NEIGHBOR_DIRECTIONS) {
-        const neighbor = STATE.flight.runtimePartByKey.get(makeKey(part.grid.x+dx, part.grid.y+dy, part.grid.z+dz));
-        if (neighbor?.attached) count += 1;
+      for (const neighborId of part.rigidNeighborBlockIds || []) {
+        const neighbor = STATE.flight.runtimePartById.get(neighborId);
+        if (neighbor?.attached && neighbor.bodyId === part.bodyId) count += 1;
       }
       return count;
     }
 
-    function applyStructuralLoadDamage(dt, totalThrust, totalLift, totalDrag) {
-      const bodyId = primaryFlightBodyId();
-      if (!bodyId || STATE.flight.runtimeMass <= 0) return;
-      const loadAcceleration = (Math.abs(totalThrust) + Math.abs(totalLift) + Math.abs(totalDrag)) / Math.max(1, STATE.flight.runtimeMass);
-      const angularVelocity = flightSession.getBodyAngularVelocity(bodyId);
-      const spin = Math.hypot(angularVelocity.x, angularVelocity.y, angularVelocity.z);
+    function applyStructuralLoadDamage(dt, loadsByBodyId) {
       const failures = [];
-      const candidates = STATE.flight.runtimeParts.filter(part => part.attached && part.type !== 'Core');
-      for (const part of candidates) {
-        const support = runtimeNeighborCount(part);
-        const lever = part.localPos.length();
-        const structural = Math.max(0.2, part.def.structural || 1);
-        const supportFactor = 0.72 + support * 0.42;
-        const translationalStress = loadAcceleration * (0.24 + lever * 0.12);
-        const rotationalStress = spin * spin * lever * 1.55;
-        const stress = (translationalStress + rotationalStress) / (structural * supportFactor);
-        if (stress > 42 && applyDamageOnly(part, (stress - 42) * dt * 1.7, 'flight-load overstress')) failures.push({ part, reason: 'flight-load overstress' });
+      for (const [bodyId, loads] of loadsByBodyId) {
+        if (!flightSession.hasBody(bodyId)) continue;
+        const bodyPlan = STATE.flight.assemblyPlan?.rigidBodies?.find(body => body.bodyId === bodyId);
+        const bodyMass = bodyPlan?.massProperties?.mass || 0;
+        if (bodyMass <= 0) continue;
+        const loadAcceleration = (Math.abs(loads.thrust) + Math.abs(loads.lift) + Math.abs(loads.drag)) / Math.max(1, bodyMass);
+        const angularVelocity = flightSession.getBodyAngularVelocity(bodyId);
+        const spin = Math.hypot(angularVelocity.x, angularVelocity.y, angularVelocity.z);
+        const candidates = STATE.flight.runtimeParts.filter(part => part.attached && part.bodyId === bodyId && part.type !== 'Core');
+        for (const part of candidates) {
+          const support = runtimeNeighborCount(part);
+          const lever = part.bodyLocalPosition.length();
+          const structural = Math.max(0.2, part.def.structural || 1);
+          const supportFactor = 0.72 + support * 0.42;
+          const translationalStress = loadAcceleration * (0.24 + lever * 0.12);
+          const rotationalStress = spin * spin * lever * 1.55;
+          const stress = (translationalStress + rotationalStress) / (structural * supportFactor);
+          if (stress > 42 && applyDamageOnly(part, (stress - 42) * dt * 1.7, 'flight-load overstress')) failures.push({ part, reason: 'flight-load overstress' });
+        }
       }
       if (failures.length) detachRuntimeParts(failures, true);
       recomputeFlightIntegrity();
     }
+
 
     function processPendingImpacts() {
       if (!primaryFlightBodyId() || !STATE.flight.pendingImpacts.length) return;
       const impacts = STATE.flight.pendingImpacts.splice(0);
       for (const entry of impacts) {
         if (!primaryFlightBodyId()) break;
-        applyImpactDamage(entry.localImpact, entry.impact, entry.collisionKind);
+        applyImpactDamage(entry.bodyId, entry.localImpact, entry.impact, entry.collisionKind);
         if (entry.impact >= PHYSICS.severeImpactSpeed && !STATE.flight.severeImpact) {
           STATE.flight.severeImpact = true;
           showStatus(entry.collisionKind === 'obstacle' ? 'SEVERE COLLISION' : (entry.collisionKind === 'debris' ? 'DEBRIS IMPACT' : 'SEVERE IMPACT'), 1800);
@@ -1243,7 +1286,7 @@
       cleanupFlightState();
 
       const analysis = computeCraftAnalysis();
-      if (!analysis.snapshot.ready || analysis.mass <= 0 || !isStructureContiguous()) {
+      if (!analysis.snapshot.ready || analysis.mass <= 0) {
         const reason = analysis.snapshot.errors?.[0] || 'invalid-craft';
         showStatus(`CANNOT LAUNCH: ${String(reason).replaceAll('-', ' ').toUpperCase()}`, 2200);
         return false;
@@ -1251,8 +1294,8 @@
       const contract = getSelectedContract();
       const payloadMass = Math.max(0, contract.payloadMass || 0);
       const snapshot = buildLoadedSnapshot(analysis.snapshot, payloadMass);
-      const payloadPosition = snapshot.payloadPosition || missionPayloadPositionVector(snapshot);
-      const assemblyPlan = RuntimeAssembly.createPlan(snapshot);
+      const payloadPosition = snapshot.payloadAssemblyPosition || missionPayloadPositionVector(snapshot);
+      const assemblyPlan = snapshot.runtimePlan;
       const rootBodyPlan = RuntimeAssembly.rootBody(assemblyPlan);
       if (!rootBodyPlan) throw new Error('Runtime assembly plan has no root body.');
       const runtimeMass = rootBodyPlan.massProperties.mass;
@@ -1264,10 +1307,24 @@
           if (collider.payload) payloadColliderPlan = collider;
         }
       }
-      const runtimeCom = snapshot.com;
+      const runtimeCom = new THREE.Vector3(...rootBodyPlan.assemblyPose.position);
       STATE.flight.com.copy(runtimeCom);
-      let lowestLocalY = Math.min(...rootBodyPlan.colliders.map(collider => collider.center[1] - collider.halfExtents[1]));
-      if (!Number.isFinite(lowestLocalY)) lowestLocalY = -0.5;
+      let lowestAssemblyY = Infinity;
+      const lowestBodyLocalYByBodyId = new Map();
+      for (const bodyPlan of assemblyPlan.rigidBodies) {
+        let lowestBodyLocalY = Infinity;
+        for (const collider of bodyPlan.colliders) {
+          const colliderBottomLocalY = collider.center[1] - collider.halfExtents[1];
+          lowestBodyLocalY = Math.min(lowestBodyLocalY, colliderBottomLocalY);
+          lowestAssemblyY = Math.min(lowestAssemblyY, bodyPlan.assemblyPose.position[1] + colliderBottomLocalY);
+        }
+        lowestBodyLocalYByBodyId.set(bodyPlan.bodyId, Number.isFinite(lowestBodyLocalY) ? lowestBodyLocalY : -0.5);
+      }
+      if (!Number.isFinite(lowestAssemblyY)) lowestAssemblyY = -0.5;
+      const spawnTransform = {
+        position: [TEST_RANGE.spawn.x, -0.45 - lowestAssemblyY, TEST_RANGE.spawn.z],
+        quaternion: [0, 0, 0, 1]
+      };
 
       try {
         const started = flightSession.start({
@@ -1278,9 +1335,14 @@
           allowSleep: false,
           collisionGroup: COLLISION_GROUP.craft,
           collisionMask: COLLISION_GROUP.world | COLLISION_GROUP.debris,
-          position: bodyPlan.bodyId === rootBodyPlan.bodyId
-            ? { x: TEST_RANGE.spawn.x + runtimeCom.x, y: -0.45 - lowestLocalY, z: TEST_RANGE.spawn.z + runtimeCom.z }
-            : { x: TEST_RANGE.spawn.x, y: TEST_RANGE.spawn.y, z: TEST_RANGE.spawn.z }
+          position: (() => {
+            const pose = RuntimeAssembly.worldBodyPose(spawnTransform, bodyPlan);
+            return { x: pose.position[0], y: pose.position[1], z: pose.position[2] };
+          })(),
+          quaternion: (() => {
+            const pose = RuntimeAssembly.worldBodyPose(spawnTransform, bodyPlan);
+            return { x: pose.quaternion[0], y: pose.quaternion[1], z: pose.quaternion[2], w: pose.quaternion[3] };
+          })()
         }),
         classifyCollision(otherBody) {
           if (otherBody === groundBody) return 'ground';
@@ -1297,7 +1359,7 @@
           if (collision.kind === 'ground') STATE.mission.lastGroundContact = STATE.mission.elapsed;
           const damageNow = STATE.mission.elapsed;
           if (impact > 3.5 && damageNow - STATE.flight.lastImpactAt > 0.25) {
-            let localImpact = { x: 0, y: STATE.flight.lowestLocalY, z: 0 };
+            let localImpact = { x: 0, y: lowestBodyLocalYByBodyId.get(bodyId) ?? -0.5, z: 0 };
             if (collision.relativePoint) localImpact = flightSession.vectorToLocalFrame(bodyId, collision.relativePoint);
             STATE.flight.pendingImpacts.push({
               bodyId,
@@ -1318,12 +1380,10 @@
         scene.add(root);
         visualRootByBodyId.set(bodyPlan.bodyId, root);
       }
-      const group = visualRootByBodyId.get(started.primaryBodyId);
-      STATE.flight.group = group; // Deprecated compatibility alias for the primary visual root.
 
       const functionalBlocks = [];
       const runtimeParts = [];
-      STATE.flight.payloadLocalPos = null;
+      STATE.flight.payloadBodyLocalPosition = null;
       STATE.flight.payload = null;
       const thrusterTorqueMax = new THREE.Vector3();
       let gyroCount = 0;
@@ -1353,29 +1413,29 @@
         const runtimePart = {
           blockId: part.blockId,
           bodyId,
-          key, grid: { x: part.position.x, y: part.position.y, z: part.position.z }, type: part.type, def: part.def,
-          visual, localPos: localOffset.clone(), orientation: part.orientation,
+          key, grid: { x: part.assemblyPosition.x, y: part.assemblyPosition.y, z: part.assemblyPosition.z }, type: part.type, def: part.def,
+          visual, bodyLocalPosition: localOffset.clone(), orientation: part.orientation,
           localAxis: Physics.vec3(part.basis.chord.x, part.basis.chord.y, part.basis.chord.z),
           localNormal: Physics.vec3(part.basis.normal.x, part.basis.normal.y, part.basis.normal.z),
           localSpan: Physics.vec3(part.basis.span.x, part.basis.span.y, part.basis.span.z),
           localTorque, force: part.def.force || 0, wingArea: part.def.wingArea || 0, fuelRate: part.def.fuelRate || 0,
           controlAxis: normalizeControlAxis(part.controlAxis), controlSign: normalizeControlSign(part.controlSign),
           mass: part.def.mass || 0, maxHealth: part.def.durability || 60, health: part.def.durability || 60,
+          rigidNeighborBlockIds: [...part.rigidNeighborBlockIds], pilotControlled: bodyId === started.primaryBodyId,
           attached: true, lastCommand: 0, gimbalA: 0, gimbalB: 0, controlDeflection: 0
         };
         runtimeParts.push(runtimePart);
-        if (part.type === 'Thruster' || part.type === 'VectorThruster') {
+        if (runtimePart.pilotControlled && (part.type === 'Thruster' || part.type === 'VectorThruster')) {
           thrusterTorqueMax.x = Math.max(thrusterTorqueMax.x, Math.abs(localTorque.x));
           thrusterTorqueMax.y = Math.max(thrusterTorqueMax.y, Math.abs(localTorque.y));
           thrusterTorqueMax.z = Math.max(thrusterTorqueMax.z, Math.abs(localTorque.z));
         }
-        if (part.type === 'Gyro') gyroCount += 1;
+        if (runtimePart.pilotControlled && part.type === 'Gyro') gyroCount += 1;
         if (['Thruster','VectorThruster','Balloon','Wing','ControlSurface','Gyro','Fuel'].includes(part.type)) functionalBlocks.push(runtimePart);
       }
 
       if (payloadMass > 0) {
         if (!payloadColliderPlan) throw new Error('Runtime assembly is missing the mission payload collider.');
-        const payloadOffsetThree = snapshot.payloadOffset || payloadPosition.clone().sub(runtimeCom);
         const payloadOffset = Physics.vec3(...payloadColliderPlan.center);
         const payloadBodyId = payloadColliderPlan.bodyId;
         const payloadOwnership = flightSession.getColliderOwnership(payloadColliderPlan.colliderId);
@@ -1384,7 +1444,7 @@
         }
         const payloadRoot = visualRootByBodyId.get(payloadBodyId);
         if (!payloadRoot) throw new Error(`Visual root is missing for payload body ${payloadBodyId}.`);
-        STATE.flight.payloadLocalPos = payloadOffset.clone();
+        STATE.flight.payloadBodyLocalPosition = payloadOffset.clone();
         const crate = new THREE.Mesh(
           new THREE.BoxGeometry(0.84, 0.84, 0.84),
           new THREE.MeshStandardMaterial({ color: 0x0ea5e9, roughness: 0.72, metalness: 0.18, emissive: 0x082f49, emissiveIntensity: 0.16 })
@@ -1401,12 +1461,12 @@
             new THREE.BoxGeometry(0.18, 0.24, 0.18),
             new THREE.MeshStandardMaterial({ color: 0x7dd3fc, roughness: 0.48, metalness: 0.45, emissive: 0x0c4a6e, emissiveIntensity: 0.12 })
           );
-          coupler.position.copy(payloadOffsetThree.clone().add(corePart.offset).multiplyScalar(0.5));
+          coupler.position.copy(snapshot.payloadBodyLocalPosition.clone().add(corePart.bodyLocalPosition).multiplyScalar(0.5));
           coupler.castShadow = true;
           payloadRoot.add(coupler);
         }
         const payloadMaxHealth = 80 + payloadMass * 2.5;
-        STATE.flight.payload = { bodyId: payloadBodyId, mass: payloadMass, localPos: payloadOffset, colliderId: payloadColliderPlan.colliderId, visual: crate, coupler, health: payloadMaxHealth, maxHealth: payloadMaxHealth, attached: true };
+        STATE.flight.payload = { bodyId: payloadBodyId, mass: payloadMass, bodyLocalPosition: payloadOffset, colliderId: payloadColliderPlan.colliderId, visual: crate, coupler, health: payloadMaxHealth, maxHealth: payloadMaxHealth, attached: true };
       }
 
 
@@ -1427,9 +1487,9 @@
       STATE.flight.severeImpact = false;
       STATE.flight.integrity = 100;
       STATE.flight.maxImpact = 0;
-      STATE.flight.lowestLocalY = Number.isFinite(lowestLocalY) ? lowestLocalY : -0.5;
+      STATE.flight.lowestLocalY = lowestBodyLocalYByBodyId.get(started.primaryBodyId) ?? -0.5;
       STATE.flight.runtimeMass = runtimeMass;
-      STATE.flight.currentInertia.copy(snapshot.inertia);
+      STATE.flight.currentInertia.copy(snapshot.rootBodyInertia);
       STATE.flight.payloadMass = payloadMass;
       STATE.flight.lastImpactAt = -Infinity;
       STATE.flight.lostParts = 0;
@@ -1456,6 +1516,7 @@
           cleanupErrors.push(cleanupError);
         }
         for (const mesh of WORKSHOP.meshesByKey.values()) mesh.visible = true;
+        for (const visual of WORKSHOP.mechanicalLinkVisualsById.values()) visual.visible = true;
         if (cleanupErrors.length) {
           Object.defineProperty(error, 'cleanupErrors', { value: cleanupErrors, enumerable: true, configurable: true });
         }
@@ -1552,10 +1613,67 @@
       camera.lookAt(STATE.camera.target);
     }
 
+    function signedFaceForDelta(dx, dy, dz) {
+      if (dx === 1) return 'PX'; if (dx === -1) return 'NX';
+      if (dy === 1) return 'PY'; if (dy === -1) return 'NY';
+      if (dz === 1) return 'PZ'; if (dz === -1) return 'NZ';
+      return null;
+    }
+
+    function setMechanicalAuthoring(active, refreshGhost = true) {
+      WORKSHOP.mechanicalAuthoring.active = Boolean(active);
+      WORKSHOP.mechanicalAuthoring.firstBlockId = null;
+      const button = document.getElementById('btn-hinge-link');
+      if (button) { button.textContent = `HINGE LINK: ${active ? 'ON' : 'OFF'}`; button.classList.toggle('active', Boolean(active)); }
+      const status = document.getElementById('ui-hinge-status');
+      if (status) status.textContent = active ? 'Click the first endpoint block.' : 'Select HINGE LINK, then click two face-adjacent blocks.';
+      if (refreshGhost) updateGhost();
+    }
+
+    function handleMechanicalEndpointSelection(target) {
+      const key = target?.root?.userData?.blockKey;
+      const block = key ? CRAFT.get(key) : null;
+      if (!block) { showStatus('HINGE ENDPOINT MUST BE A BLOCK', 1400); return false; }
+      const authoring = WORKSHOP.mechanicalAuthoring;
+      if (!authoring.firstBlockId) {
+        authoring.firstBlockId = block.blockId;
+        const status = document.getElementById('ui-hinge-status');
+        if (status) status.textContent = `First endpoint: ${block.blockId}. Click an adjacent second block.`;
+        showStatus('HINGE ENDPOINT A SELECTED', 700);
+        return true;
+      }
+      const first = CRAFT.getById(authoring.firstBlockId);
+      authoring.firstBlockId = null;
+      if (!first || first.blockId === block.blockId) { showStatus('SELECT TWO DIFFERENT BLOCKS', 1200); return false; }
+      const dx = block.x - first.x, dy = block.y - first.y, dz = block.z - first.z;
+      if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) !== 1) { showStatus('HINGE ENDPOINTS MUST SHARE A FACE', 1500); return false; }
+      const faceA = signedFaceForDelta(dx, dy, dz);
+      const faceB = Blueprint.OPPOSITE_FACE[faceA];
+      const axis = document.getElementById('hinge-axis')?.value || authoring.axis || 'PY';
+      const normal = Blueprint.FACE_VECTORS[faceA]; const axisVector = Blueprint.FACE_VECTORS[axis];
+      if (!axisVector || normal[0] * axisVector[0] + normal[1] * axisVector[1] + normal[2] * axisVector[2] !== 0) {
+        showStatus('HINGE AXIS MUST LIE IN THE SHARED FACE', 1800); return false;
+      }
+      const historyBefore = collectBlueprint();
+      const result = CRAFT.addMechanicalLink({
+        kind: 'hinge', endpointA: { blockId: first.blockId, face: faceA }, endpointB: { blockId: block.blockId, face: faceB },
+        axis, collideConnected: false, maxForce: 1000000, frictionTorque: 0, limits: null
+      }, 'author-hinge-link');
+      if (!result.ok) { showStatus(`HINGE ERROR: ${result.reason.toUpperCase()}`, 1800); return false; }
+      commitHistory(historyBefore); autoSave(false); updateTelemetry();
+      const compiled = CraftCompiler.compile(CRAFT);
+      const diagnostic = compiled.diagnostics.find(item => item.entities.some(entity => entity.kind === 'mechanical-link' && entity.id === result.link.mechanicalLinkId));
+      const status = document.getElementById('ui-hinge-status');
+      if (status) status.textContent = diagnostic ? `${result.link.mechanicalLinkId}: ${diagnostic.code}` : `${result.link.mechanicalLinkId} authored successfully.`;
+      showStatus(diagnostic ? diagnostic.code.replaceAll('-', ' ').toUpperCase() : 'HINGE LINK CREATED', 1600);
+      return true;
+    }
+
     function performBuildAction(button) {
       if (STATE.mode !== 'BUILD') return;
       const target = raycastBuildTarget(STATE.input.pointerNDC);
       if (!target) return;
+      if (button === 0 && WORKSHOP.mechanicalAuthoring.active) { handleMechanicalEndpointSelection(target); return; }
       if (button === 0) {
         addBlock(target.position.x, target.position.y, target.position.z, STATE.selectedBlock, STATE.orientation, true);
       } else if (button === 2 && target.kind === 'voxel') {
@@ -1762,6 +1880,17 @@
     document.getElementById('btn-control-axis')?.addEventListener('click', cycleControlAxis);
     document.getElementById('btn-control-sign')?.addEventListener('click', cycleControlSign);
     document.getElementById('btn-symmetry').addEventListener('click', toggleSymmetry);
+    document.getElementById('btn-hinge-link')?.addEventListener('click', () => setMechanicalAuthoring(!WORKSHOP.mechanicalAuthoring.active));
+    document.getElementById('hinge-axis')?.addEventListener('change', event => { WORKSHOP.mechanicalAuthoring.axis = event.target.value; });
+    document.getElementById('btn-remove-mechanical-link')?.addEventListener('click', () => {
+      const select = document.getElementById('mechanical-link-list');
+      const id = select?.value;
+      if (!id) { showStatus('NO MECHANICAL LINK SELECTED', 1000); return; }
+      const historyBefore = collectBlueprint();
+      const result = CRAFT.removeMechanicalLink(id, 'remove-authored-mechanical-link');
+      if (!result.ok) { showStatus('REMOVE LINK FAILED', 1200); return; }
+      commitHistory(historyBefore); autoSave(false); updateTelemetry(); showStatus('MECHANICAL LINK REMOVED', 1000);
+    });
     document.getElementById('btn-save').addEventListener('click', () => saveBlueprint());
     document.getElementById('btn-load').addEventListener('click', () => {
       if (!loadBlueprint(true)) showStatus('LOAD ERROR', 1400);
@@ -1983,7 +2112,7 @@
     }
 
     function applyWingAerodynamics(bodyId, mod) {
-      const pointVelocity = pointVelocityWorld(bodyId, mod.localPos);
+      const pointVelocity = pointVelocityWorld(bodyId, mod.bodyLocalPosition);
       const speed = pointVelocity.length();
       if (speed < 0.25) return { lift: 0, drag: 0 };
 
@@ -2007,7 +2136,7 @@
       const liftDirection = normalWorld.vsub(velocityDirection.scale(cannonDot(normalWorld, velocityDirection)));
       if (liftDirection.lengthSquared() < 0.0001) return { lift: 0, drag: Math.abs(dragMagnitude) };
       liftDirection.normalize();
-      const worldPoint = flightSession.pointToWorldFrame(bodyId, mod.localPos);
+      const worldPoint = flightSession.pointToWorldFrame(bodyId, mod.bodyLocalPosition);
       flightSession.applyBodyForce(bodyId, liftDirection.scale(liftMagnitude), worldPoint);
       flightSession.applyBodyForce(bodyId, velocityDirection.scale(-dragMagnitude), worldPoint);
       return { lift: Math.abs(liftMagnitude), drag: Math.abs(dragMagnitude) };
@@ -2015,9 +2144,9 @@
 
     function applyControlSurfaceAerodynamics(bodyId, mod) {
       if (!mod.attached) return { lift: 0, drag: 0 };
-      const pointVelocity = pointVelocityWorld(bodyId, mod.localPos);
+      const pointVelocity = pointVelocityWorld(bodyId, mod.bodyLocalPosition);
       const speed = pointVelocity.length();
-      const commandRaw = Number(STATE.pilot[mod.controlAxis]) || 0;
+      const commandRaw = mod.pilotControlled ? (Number(STATE.pilot[mod.controlAxis]) || 0) : 0;
       if (speed < 0.35) {
         mod.controlDeflection = commandRaw * runtimePartHealthFraction(mod);
         const flap = mod.visual?.getObjectByName('controlFlapPivot');
@@ -2033,7 +2162,7 @@
       const spanSpeed = cannonDot(pointVelocity, spanWorld);
       const coefficients = computeWingCoefficients(chordSpeed, normalSpeed);
       const targetAxis = controlAxisVector(mod.controlAxis);
-      const torqueVector = new THREE.Vector3(mod.localPos.x, mod.localPos.y, mod.localPos.z).cross(new THREE.Vector3(mod.localNormal.x, mod.localNormal.y, mod.localNormal.z));
+      const torqueVector = new THREE.Vector3(mod.bodyLocalPosition.x, mod.bodyLocalPosition.y, mod.bodyLocalPosition.z).cross(new THREE.Vector3(mod.localNormal.x, mod.localNormal.y, mod.localNormal.z));
       const autoSign = Math.sign(torqueVector.dot(targetAxis)) || 1;
       const sign = mod.controlSign || autoSign;
       const health = runtimePartHealthFraction(mod);
@@ -2047,7 +2176,7 @@
       const liftDirection = normalWorld.vsub(velocityDirection.scale(cannonDot(normalWorld, velocityDirection)));
       if (liftDirection.lengthSquared() < 0.0001) return { lift: 0, drag: Math.abs(dragMagnitude) };
       liftDirection.normalize();
-      const worldPoint = flightSession.pointToWorldFrame(bodyId, mod.localPos);
+      const worldPoint = flightSession.pointToWorldFrame(bodyId, mod.bodyLocalPosition);
       flightSession.applyBodyForce(bodyId, liftDirection.scale(liftMagnitude), worldPoint);
       flightSession.applyBodyForce(bodyId, velocityDirection.scale(-dragMagnitude), worldPoint);
       const flap = mod.visual?.getObjectByName('controlFlapPivot');
@@ -2062,9 +2191,9 @@
       const desired = Physics.vec3(pilot.roll || 0, pilot.yaw || 0, pilot.pitch || 0);
       const lateral = baseForce * Math.sin(PHYSICS.gimbalAngle);
       const torqueNormal = Physics.vec3();
-      mod.localPos.cross(mod.localNormal.scale(lateral), torqueNormal);
+      mod.bodyLocalPosition.cross(mod.localNormal.scale(lateral), torqueNormal);
       const torqueSpan = Physics.vec3();
-      mod.localPos.cross(mod.localSpan.scale(lateral), torqueSpan);
+      mod.bodyLocalPosition.cross(mod.localSpan.scale(lateral), torqueSpan);
       const desiredLength = THREE.MathUtils.clamp(desired.length(), 0, 1);
       const normalization = Math.max(0.0001, desired.length());
       let a = torqueNormal.lengthSquared() > 0.0001 ? cannonDot(desired, torqueNormal) / (normalization * torqueNormal.length()) * desiredLength : 0;
@@ -2117,6 +2246,7 @@
       if (!primaryBodyId) return;
 
       let totalDrag = 0;
+      const loadsByBodyId = new Map(flightSession.bodyIds().map(bodyId => [bodyId, { thrust: 0, lift: 0, drag: 0 }]));
       for (const bodyId of flightSession.bodyIds()) {
         const velocity = Physics.vec3(flightSession.getBodyLinearVelocity(bodyId));
         const speed = velocity.length();
@@ -2131,6 +2261,7 @@
         const transform = flightSession.getBodyTransform(bodyId);
         flightSession.applyBodyForce(bodyId, drag, transform.position);
         totalDrag += dragMagnitude;
+        loadsByBodyId.get(bodyId).drag += dragMagnitude;
       }
 
       const pilot = STATE.pilot;
@@ -2147,6 +2278,7 @@
 
       for (const mod of STATE.flight.functionalBlocks) {
         if (!mod.attached || !flightSession.hasBody(mod.bodyId)) continue;
+        if ((mod.type === 'Thruster' || mod.type === 'VectorThruster' || mod.type === 'Balloon' || mod.type === 'ControlSurface' || mod.type === 'Gyro') && !mod.pilotControlled) continue;
         if (mod.type === 'Thruster' || mod.type === 'VectorThruster') {
           const command = computeThrusterCommand(mod, pilot);
           mod.lastCommand = command;
@@ -2183,9 +2315,10 @@
         const forceMagnitude = localForce.length();
         if (forceMagnitude <= 0) continue;
         const worldForce = flightSession.vectorToWorldFrame(job.mod.bodyId, localForce);
-        const worldPoint = flightSession.pointToWorldFrame(job.mod.bodyId, job.mod.localPos);
+        const worldPoint = flightSession.pointToWorldFrame(job.mod.bodyId, job.mod.bodyLocalPosition);
         flightSession.applyBodyForce(job.mod.bodyId, worldForce, worldPoint);
         totalThrust += forceMagnitude;
+        loadsByBodyId.get(job.mod.bodyId).thrust += forceMagnitude;
       }
 
       const balloonEfficiency = Aerostatics.liftEfficiencyAtAltitude(currentAerostaticAltitude(), AEROSTATIC_POLICY);
@@ -2193,9 +2326,10 @@
         const liftMagnitude = job.mod.force * job.command * fuelScale * runtimePartHealthFraction(job.mod) * balloonEfficiency;
         job.mod.lastCommand = job.command * fuelScale;
         if (liftMagnitude <= 0) continue;
-        const worldPoint = flightSession.pointToWorldFrame(job.mod.bodyId, job.mod.localPos);
+        const worldPoint = flightSession.pointToWorldFrame(job.mod.bodyId, job.mod.bodyLocalPosition);
         flightSession.applyBodyForce(job.mod.bodyId, { x: 0, y: liftMagnitude, z: 0 }, worldPoint);
         totalLift += liftMagnitude;
+        loadsByBodyId.get(job.mod.bodyId).lift += liftMagnitude;
       }
 
       // Mission tuning intentionally evaluates vertical damping on the explicitly selected primary body.
@@ -2204,7 +2338,7 @@
       const aerostaticDamping = Aerostatics.verticalDampingForce({
         mass: STATE.flight.runtimeMass,
         verticalSpeed: primaryVelocity.y,
-        commandedLift: totalLift,
+        commandedLift: loadsByBodyId.get(primaryBodyId)?.lift || 0,
         weight: STATE.flight.runtimeMass * AEROSTATIC_POLICY.gravity
       }, AEROSTATIC_POLICY);
       if (Math.abs(aerostaticDamping) > 1e-6) {
@@ -2218,16 +2352,18 @@
           : applyWingAerodynamics(mod.bodyId, mod);
         totalLift += loads.lift;
         totalDrag += loads.drag;
+        const bodyLoads = loadsByBodyId.get(mod.bodyId);
+        if (bodyLoads) { bodyLoads.lift += loads.lift; bodyLoads.drag += loads.drag; }
       }
 
       const gyroBodies = new Set(
-        STATE.flight.runtimeParts.filter(part => part.attached && part.type === 'Gyro').map(part => part.bodyId)
+        STATE.flight.runtimeParts.filter(part => part.attached && part.type === 'Gyro' && part.pilotControlled).map(part => part.bodyId)
       );
       for (const bodyId of gyroBodies) applyGyroControl(bodyId);
 
       STATE.flight.structuralAccumulator += dt;
       if (STATE.flight.structuralAccumulator >= PHYSICS.structuralCheckInterval) {
-        applyStructuralLoadDamage(STATE.flight.structuralAccumulator, totalThrust, totalLift, totalDrag);
+        applyStructuralLoadDamage(STATE.flight.structuralAccumulator, loadsByBodyId);
         STATE.flight.structuralAccumulator = 0;
       }
       const impact = STATE.flight.lastLoads.impact || 0;

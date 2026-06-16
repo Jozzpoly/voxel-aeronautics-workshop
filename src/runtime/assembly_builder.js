@@ -74,6 +74,12 @@
         const bodyId = requireId(body.bodyId, 'Assembly bodyId');
         if (bodyIds.has(bodyId)) throw new Error(`Duplicate body id: ${bodyId}`);
         bodyIds.add(bodyId);
+        if (!body.assemblyPose || typeof body.assemblyPose !== 'object') throw new TypeError(`Body ${bodyId} requires assemblyPose.`);
+        vector3(body.assemblyPose.position, `Body ${bodyId} assemblyPose.position`);
+        const assemblyQuaternion = Array.isArray(body.assemblyPose.quaternion)
+          ? body.assemblyPose.quaternion
+          : [body.assemblyPose.quaternion?.x, body.assemblyPose.quaternion?.y, body.assemblyPose.quaternion?.z, body.assemblyPose.quaternion?.w];
+        if (assemblyQuaternion.length !== 4 || !assemblyQuaternion.map(Number).every(Number.isFinite)) throw new TypeError(`Body ${bodyId} assemblyPose.quaternion must contain finite numbers.`);
         validateMassProperties(body.massProperties, bodyId);
         if (!Array.isArray(body.blockIds)) throw new TypeError(`Body ${bodyId} blockIds must be an array.`);
         if (!Array.isArray(body.colliders)) throw new TypeError(`Body ${bodyId} colliders must be an array.`);
@@ -183,6 +189,9 @@
       const colliderByBlockId = new Map();
       const partByBlockId = new Map();
       const constraintById = new Map();
+      const constraintIdsByBodyId = new Map([...validation.bodyIds].map(bodyId => [bodyId, new Set()]));
+      const constraintIdsByEndpointBlockId = new Map();
+      const constraintFailureLog = [];
       const removedConstraints = new WeakSet();
       const unsubscribe = [];
       const addedBodies = [];
@@ -342,6 +351,11 @@
       function recenterBody(bodyId, shiftValue) {
         assertActive();
         const runtimeBody = runtimeBodyFor(bodyId);
+        const activeConstraints = [...(constraintIdsByBodyId.get(String(bodyId)) || [])]
+          .filter(constraintId => constraintById.has(constraintId));
+        if (activeConstraints.length) {
+          throw new Error(`Cannot recenter constrained body ${String(bodyId)}; active constraints: ${activeConstraints.join(', ')}`);
+        }
         const shift = PhysicsPort.normalizeVec3(shiftValue);
         const body = runtimeBody.body;
         const worldPosition = physics.pointToWorldFrame(body, shift);
@@ -349,10 +363,17 @@
         physics.shiftColliderOffsets(body, shift);
         physics.setBodyTransform(body, { position: worldPosition });
         physics.setBodyVelocity(body, { linear: linearVelocity });
-        return Object.freeze({
-          worldPosition: PhysicsPort.normalizeVec3(worldPosition),
-          linearVelocity: PhysicsPort.normalizeVec3(linearVelocity)
-        });
+        return Object.freeze({ worldPosition: PhysicsPort.normalizeVec3(worldPosition), linearVelocity: PhysicsPort.normalizeVec3(linearVelocity) });
+      }
+
+      function constraintIdsForBody(bodyId) {
+        assertActive();
+        return Object.freeze([...(constraintIdsByBodyId.get(String(bodyId)) || [])].filter(id => constraintById.has(id)).sort());
+      }
+
+      function constraintIdsForEndpointBlock(blockId) {
+        assertActive();
+        return Object.freeze([...(constraintIdsByEndpointBlockId.get(String(blockId)) || [])].filter(id => constraintById.has(id)).sort());
       }
 
       function disposeRuntimeConstraint(runtimeConstraint) {
@@ -369,7 +390,21 @@
         if (!runtimeConstraint || removedConstraints.has(runtimeConstraint)) return false;
         if (!disposeRuntimeConstraint(runtimeConstraint)) return false;
         constraintById.delete(constraintId);
+        for (const ids of constraintIdsByBodyId.values()) ids.delete(constraintId);
+        for (const ids of constraintIdsByEndpointBlockId.values()) ids.delete(constraintId);
         return true;
+      }
+
+      function breakConstraintsForEndpointBlock(blockId, reason = 'endpoint-failure') {
+        assertActive();
+        const ids = constraintIdsForEndpointBlock(blockId);
+        const removed = [];
+        for (const constraintId of ids) {
+          if (!removeConstraint(constraintId)) throw new Error(`Constraint removal failed for endpoint ${String(blockId)}: ${constraintId}`);
+          removed.push(constraintId);
+          constraintFailureLog.push(Object.freeze({ constraintId, blockId: String(blockId), reason: String(reason) }));
+        }
+        return Object.freeze(removed);
       }
 
       function setConstraintControl(constraintId, control) {
@@ -477,7 +512,7 @@
       }
 
       const runtime = {
-        format: 'VAW_RUNTIME_ASSEMBLY_V1',
+        format: 'VAW_RUNTIME_ASSEMBLY_V2',
         plan,
         physics,
         world,
@@ -486,6 +521,9 @@
         colliderByBlockId,
         partByBlockId,
         constraintById,
+        constraintIdsByBodyId,
+        constraintIdsByEndpointBlockId,
+        constraintFailureLog,
         rootBody: null,
         getBodyIds,
         getBodyPlan,
@@ -511,6 +549,9 @@
         removeColliderByBlockId,
         setBodyMassProperties,
         recenterBody,
+        constraintIdsForBody,
+        constraintIdsForEndpointBlock,
+        breakConstraintsForEndpointBlock,
         removeConstraint,
         setConstraintControl,
         getConstraintState,
@@ -628,6 +669,13 @@
               plan: constraintPlan
             });
             constraintById.set(constraintPlan.constraintId, runtimeConstraint);
+            constraintIdsByBodyId.get(constraintPlan.bodyAId)?.add(constraintPlan.constraintId);
+            constraintIdsByBodyId.get(constraintPlan.bodyBId)?.add(constraintPlan.constraintId);
+            for (const endpoint of [constraintPlan.endpointA, constraintPlan.endpointB]) {
+              if (!endpoint?.blockId) continue;
+              if (!constraintIdsByEndpointBlockId.has(endpoint.blockId)) constraintIdsByEndpointBlockId.set(endpoint.blockId, new Set());
+              constraintIdsByEndpointBlockId.get(endpoint.blockId).add(constraintPlan.constraintId);
+            }
           }
         }
 

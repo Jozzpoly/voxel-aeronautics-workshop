@@ -19,7 +19,7 @@ const RuntimeAssembly = { createPlan(snapshot) { return snapshot; } };
 
 function body(bodyId, blockId, x = 0, role = 'subassembly') {
   return {
-    bodyId, role, blockIds: [blockId], sourceCenterOfMass: [x, 0, 0],
+    bodyId, role, blockIds: [blockId], sourceAssemblyCenterOfMass: [x, 0, 0], assemblyPose: { position: [x, 0, 0], quaternion: [0, 0, 0, 1] },
     massProperties: { mass: 1, centerOfMass: [0, 0, 0], inertiaDiagonal: [1, 1, 1] },
     colliders: [{ colliderId: `collider:${blockId}`, blockId, bodyId, kind: 'box', center: [0, 0, 0], halfExtents: [0.5, 0.5, 0.5] }]
   };
@@ -30,13 +30,13 @@ function plan(ids = ['body:root']) {
     format: 'TEST_ASSEMBLY',
     rootBodyId: ids.includes('body:root') ? 'body:root' : ids[0],
     rigidBodies,
-    constraints: ids.length === 2 ? [{ constraintId: 'hinge:1', kind: 'hinge', bodyAId: ids[0], bodyBId: ids[1] }] : [],
+    constraints: ids.length === 2 ? [{ constraintId: 'hinge:1', mechanicalLinkId: 'hinge:1', kind: 'hinge', bodyAId: ids[0], bodyBId: ids[1], endpointA: { blockId: 'block:0', face: 'PX' }, endpointB: { blockId: 'block:1', face: 'NX' }, pivotA: [1, 0, 0], pivotB: [-1, 0, 0], axisA: [0, 1, 0], axisB: [0, 1, 0], maxForce: 1000000, frictionTorque: 0, limits: null, control: { mode: 'free' } }] : [],
     signalLinks: [],
     parts: rigidBodies.map((entry, index) => ({ blockId: `block:${index}`, bodyId: entry.bodyId, type: index ? 'Frame' : 'Core' }))
   };
 }
 function state() {
-  return { flight: { assembly: null, assemblyRuntime: null, assemblyPlan: null, primaryBodyId: null, primaryBody: null, body: null, visualRootByBodyId: new Map(), cleanupPending: false } };
+  return { flight: { assembly: null, assemblyPlan: null, primaryBodyId: null, visualRootByBodyId: new Map(), cleanupPending: false } };
 }
 function root() {
   return {
@@ -82,7 +82,7 @@ function root() {
   assert.strictEqual(session.primaryBodyId(), 'body:z');
   assert.deepStrictEqual(session.bodyIds(), ['body:a', 'body:z']);
   assert.strictEqual(flightState.flight.assembly, started.assembly);
-  assert.strictEqual(flightState.flight.assemblyRuntime, started.assembly, 'Compatibility alias must reference the same assembly.');
+  assert.strictEqual('assemblyRuntime' in flightState.flight, false, 'Removed compatibility aliases must not return.');
   assert.strictEqual(session.getBodyIdForBlock('block:1'), 'body:a');
   assert.deepStrictEqual(session.getColliderOwnershipByBlockId('block:1'), { colliderId: 'collider:block:1', blockId: 'block:1', bodyId: 'body:a' });
 

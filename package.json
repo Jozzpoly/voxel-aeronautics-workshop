@@ -1,8 +1,8 @@
 {
   "name": "voxel-aeronautics-workshop",
-  "version": "0.6.4-foundation.1d3e",
+  "version": "0.7.0-foundation.1d4a",
   "private": true,
-  "description": "Desktop voxel engineering sandbox with RuntimeAssembly-owned flight lifecycle, exact per-body integrity ownership, per-body visuals, retry-safe cleanup, real-Cannon hinge validation, deterministic headless physics, and a modular desktop game shell.",
+  "description": "Desktop voxel engineering sandbox with Blueprint v11 mechanical links, deterministic rigid-island compilation, per-body coordinate spaces, RuntimeAssemblyPlan V2, and a normal articulated-flight path.",
   "scripts": {
     "test": "python tests/run_all.py",
     "build": "python tools/build_release.py",

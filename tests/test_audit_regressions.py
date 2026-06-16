@@ -21,7 +21,7 @@ module = importlib.util.module_from_spec(spec)
 assert spec and spec.loader
 spec.loader.exec_module(module)
 single = module.build_single_html(ROOT)
-assert "const sources = [" not in single
+assert "const sources = [\n      'src/" not in single
 assert 'href="styles.css"' not in single
 assert f'/* BEGIN EMBEDDED STYLES */\n{CSS}\n/* END EMBEDDED STYLES */' in single
 assert '/* BEGIN EMBEDDED APPLICATION */' in single
@@ -38,12 +38,16 @@ assert 'function detachParts(entries, cascade = true)' in INTEGRITY
 assert 'Backend rejected collider removal' in INTEGRITY
 assert 'finalizeDetachedPart(part, reason);' in INTEGRITY
 assert 'state.flight.runtimePartById?.delete(part.blockId);' in INTEGRITY
-assert 'if (detached > 0) recenterBody(primaryBodyId);' in INTEGRITY
-assert 'primary-rigid-island-only' in INTEGRITY
+assert 'for (const bodyId of affectedBodies) recenterBody(bodyId);' in INTEGRITY
+assert 'per-rigid-island-static-frame-guard' in INTEGRITY
+assert 'connected-body-recenter-blocked' in INTEGRITY
+assert 'mechanical-endpoint-failure' in INTEGRITY
 
 # Neighbor lookup must remain O(1) per direction instead of scanning all runtime parts.
 neighbors = function_source('runtimeNeighborCount')
-assert 'runtimePartByKey.get' in neighbors
+assert 'runtimePartById.get' in neighbors
+assert 'rigidNeighborBlockIds' in neighbors
+assert 'runtimePartByKey.get' not in neighbors
 assert 'runtimeParts.filter' not in neighbors and 'for (const candidate of STATE.flight.runtimeParts)' not in neighbors
 
 # Structural stress is intentionally sampled below the 120 Hz solver rate.
@@ -118,9 +122,12 @@ assert 'core?.health > 0 && state.flight.initialHealth > 0' in INTEGRITY
 # Editing readiness is separated from flight readiness: empty/disconnected work-in-progress is saveable,
 # while CraftCompiler owns launch diagnostics and a movable Core.
 assert 'foundation.craft-compiler' in ALL_JS
-assert "errors.push('missing-core')" in ALL_JS
-assert "errors.push('disconnected')" in ALL_JS
-assert "corePosition" in ALL_JS
+assert "Diagnostics.create('missing-core'" in ALL_JS
+assert "Diagnostics.create('assembly-disconnected'" in ALL_JS
+assert "coreAssemblyPosition" in ALL_JS
+assert 'foundation.structural-graph-compiler' in ALL_JS
+assert 'foundation.rigid-island-compiler' in ALL_JS
+assert 'foundation.mechanical-graph-compiler' in ALL_JS
 assert "resetToEmptyCraft(false)" in GAME
 assert "tool === 'Core'" not in function_source('setSelectedTool')
 
@@ -156,7 +163,7 @@ assert 'activePointers' not in GAME and 'performTouchAction' not in GAME
 # Persistence rejects unknown future blueprint versions and sanitizes career data.
 validate = function_source('normalizeBlueprintData')
 assert 'Blueprint.normalize(data)' in validate
-assert 'dataVersion > SAVE_VERSION' in ALL_JS
+assert 'version > SAVE_VERSION' in ALL_JS
 normalize = function_source('normalizeCareerData')
 for token in ('knownContractIds()', 'clamp(', 'source.completed?.[contract.id] === true'):
     assert token in normalize
@@ -186,7 +193,7 @@ for element_id in ('workspace-toolbar', 'contract-panel'):
 for removed_id in ('btn-ui-contracts', 'mobile-topbar', 'mobile-controls', 'btn-touch-place'):
     assert f'id="{removed_id}"' not in HTML
 assert 'id="desktop-required"' in HTML
-assert 'Foundation Phase 1D.3E' in HTML
+assert 'Foundation Phase 1D.4A' in HTML
 assert 'Foundation Phase 1D.2B • Mission + Balloon Control Fix' not in HTML
 assert re.search(r'id="contract-panel"[^>]*\shidden', HTML)
 assert 'btn-contract-panel-open' not in HTML and 'btn-contract-panel-close' not in HTML

@@ -1,0 +1,31 @@
+{
+  "version": 11,
+  "blocks": [
+    { "blockId": "example:core", "x": 0, "y": 0, "z": 0, "type": "Core", "orientation": 0, "controlAxis": "pitch", "controlSign": 0 },
+    { "blockId": "example:root-frame", "x": 1, "y": 0, "z": 0, "type": "Frame", "orientation": 0, "controlAxis": "pitch", "controlSign": 0 },
+    { "blockId": "example:arm", "x": 2, "y": 0, "z": 0, "type": "Frame", "orientation": 0, "controlAxis": "pitch", "controlSign": 0 },
+    { "blockId": "example:arm-tip", "x": 3, "y": 0, "z": 0, "type": "Hull", "orientation": 0, "controlAxis": "pitch", "controlSign": 0 },
+    { "blockId": "example:thruster", "x": 0, "y": 1, "z": 0, "type": "Thruster", "orientation": 0, "controlAxis": "pitch", "controlSign": 0 }
+  ],
+  "mechanicalLinks": [
+    {
+      "mechanicalLinkId": "mechanical:example-arm",
+      "kind": "hinge",
+      "endpointA": { "blockId": "example:root-frame", "face": "PX" },
+      "endpointB": { "blockId": "example:arm", "face": "NX" },
+      "axis": "PY",
+      "collideConnected": false,
+      "maxForce": 1000000,
+      "frictionTorque": 0,
+      "limits": null
+    }
+  ],
+  "selectedBlock": "Hull",
+  "orientation": 0,
+  "symmetry": "NONE",
+  "thrusterPower": 0.7,
+  "balloonPower": 0.7,
+  "stabilityAssist": 0.18,
+  "controlAxis": "pitch",
+  "controlSign": 0
+}

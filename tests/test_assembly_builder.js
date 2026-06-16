@@ -21,7 +21,8 @@ function body(bodyId, blockId, x) {
     bodyId,
     role: bodyId === 'body:root' ? 'root' : 'subassembly',
     blockIds: [blockId],
-    sourceCenterOfMass: [x, 0, 0],
+    sourceAssemblyCenterOfMass: [x, 0, 0],
+    assemblyPose: { position: [x, 0, 0], quaternion: [0, 0, 0, 1] },
     massProperties: { mass: 2, centerOfMass: [0, 0, 0], inertiaDiagonal: [1, 2, 3] },
     colliders: [{
       colliderId: `collider:${blockId}`,
@@ -38,7 +39,7 @@ const plan = {
   format: 'TEST_ASSEMBLY',
   rootBodyId: 'body:root',
   rigidBodies: [body('body:root', 'core', 0), body('body:rotor', 'rotor', 2)],
-  constraints: [{ constraintId: 'hinge:rotor', kind: 'hinge', bodyAId: 'body:root', bodyBId: 'body:rotor' }],
+  constraints: [{ constraintId: 'hinge:rotor', mechanicalLinkId: 'hinge:rotor', kind: 'hinge', bodyAId: 'body:root', bodyBId: 'body:rotor', endpointA: { blockId: 'core', face: 'PX' }, endpointB: { blockId: 'rotor', face: 'NX' }, pivotA: [1, 0, 0], pivotB: [-1, 0, 0], axisA: [0, 1, 0], axisB: [0, 1, 0], collideConnected: false, maxForce: 1000000, frictionTorque: 0, limits: null, control: { mode: 'free' } }],
   signalLinks: [],
   parts: [
     { blockId: 'core', bodyId: 'body:root', type: 'Core' },
@@ -102,6 +103,11 @@ assert.deepStrictEqual(runtime.getBodyAngularVelocity('body:root'), { x: 0, y: 0
 
 const rotorBody = runtime.bodyById.get('body:rotor').body;
 Physics.setBodyVelocity(rotorBody, { linear: { x: 0, y: 0, z: 0 }, angular: { x: 0, y: 0, z: 2 } });
+assert.throws(() => runtime.recenterBody('body:rotor', { x: 1, y: 0, z: 0 }), /Cannot recenter constrained body/);
+assert.deepStrictEqual(runtime.constraintIdsForBody('body:rotor'), ['hinge:rotor']);
+assert.deepStrictEqual(runtime.constraintIdsForEndpointBlock('rotor'), ['hinge:rotor']);
+assert.deepStrictEqual(runtime.breakConstraintsForEndpointBlock('rotor', 'test-endpoint-break'), ['hinge:rotor']);
+assert.strictEqual(runtime.constraintFailureLog.length, 1);
 const recentered = runtime.recenterBody('body:rotor', { x: 1, y: 0, z: 0 });
 assert.strictEqual(recentered.worldPosition.x, 13);
 assert.strictEqual(recentered.linearVelocity.y, 2, 'Recenter must preserve the velocity of the new COM point.');
@@ -183,6 +189,8 @@ console.log(JSON.stringify({
   constraintExtensionPoint: 'ok',
   colliderRemoval: 'ok',
   recenterKinematics: 'ok',
+  constrainedRecenterGuard: 'ok',
+  endpointConstraintBreak: 'ok',
   lifecycleDisposal: 'ok',
   preallocationValidation: 'ok',
   reservedMetadata: 'ok',
