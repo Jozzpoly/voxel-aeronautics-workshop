@@ -55,9 +55,6 @@ jobs:
           git apply --check /tmp/hinge-authoring.patch
           git apply --index /tmp/hinge-authoring.patch
           git rm .recovery/hinge-authoring.patch.gz.b64
-          git rm -f .github/workflows/recovery-apply-hinge-authoring.yml
-          git show HEAD^:.github/workflows/recovery-validation.yml > .github/workflows/recovery-validation.yml
-          git add .github/workflows/recovery-validation.yml
           git diff --cached --check
           echo "applied=true" >> "$GITHUB_OUTPUT"
 
