@@ -5,7 +5,7 @@ on:
     branches:
       - recovery/2026-06-16-regression-repair
     paths:
-      - .recovery/thruster-stage.patch.gz.b64
+      - .recovery/hinge-stage.patch.gz.b64
 
 permissions:
   contents: write
@@ -38,23 +38,22 @@ jobs:
       - name: Decode and preflight patch
         run: |
           set -euo pipefail
-          base64 --decode .recovery/thruster-stage.patch.gz.b64 | gzip --decompress > /tmp/thruster-stage.patch
-          git apply --check /tmp/thruster-stage.patch
+          base64 --decode .recovery/hinge-stage.patch.gz.b64 | gzip --decompress > /tmp/hinge-stage.patch
+          git apply --check /tmp/hinge-stage.patch
 
-      - name: Apply exact thruster checkpoint
+      - name: Apply exact hinge checkpoint
         run: |
           set -euo pipefail
-          git apply --index /tmp/thruster-stage.patch
-          git rm .recovery/thruster-stage.patch.gz.b64
+          git apply --index /tmp/hinge-stage.patch
+          git rm .recovery/hinge-stage.patch.gz.b64
           git diff --cached --check
 
       - name: Run focused regression tests
         run: |
           set -euo pipefail
-          node --check src/game/flight_thruster_router.js
+          node --check src/game/flight_mechanical_visuals.js
           node --check src/game.js
-          node tests/test_flight_thruster_routing.js
-          node tests/test_flight_control.js
+          node tests/test_flight_mechanical_visuals.js
           python tests/test_game_architecture.py
           python tests/static_check.py
 
@@ -76,10 +75,10 @@ jobs:
           git diff --cached --check
           git status --short
 
-      - name: Commit verified thruster repair
+      - name: Commit verified hinge repair
         run: |
           set -euo pipefail
           git config user.name "VAW Recovery Bot"
           git config user.email "actions@users.noreply.github.com"
-          git commit -m "Fix thruster routing for articulated sub-bodies"
+          git commit -m "Fix runtime hinge visual synchronization"
           git push origin HEAD:recovery/2026-06-16-regression-repair
