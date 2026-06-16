@@ -60,6 +60,11 @@ try{
  elements.get('btn-starter-craft').click();
  assert(elements.get('ui-blocks').textContent==='17','Starter craft must load after an empty workspace.');
  elements.get('start-engineering').click();
+ const hingeToggle=elements.get('btn-hinge-link');
+ hingeToggle.click();
+ assert(hingeToggle.textContent==='HINGE LINK: ON' && hingeToggle.getAttribute('aria-pressed')==='true','Hinge authoring must stay enabled when toggled from the UI outside the canvas.');
+ hingeToggle.click();
+ assert(hingeToggle.textContent==='HINGE LINK: OFF' && hingeToggle.getAttribute('aria-pressed')==='false','Hinge authoring must toggle off cleanly.');
  const textInput=elements.get('thruster-power');
  textInput.focus();
  dispatchWindowEvent('keydown',{key:'f',code:'KeyF'});

@@ -14,7 +14,7 @@
       const { comSphere, axesHelper } = markers;
       const {
         cleanupFlightState, updateTelemetry, updateGhost, updateControlConfigurationUI,
-        syncHudVisibility, resetToEmptyCraft, updateHUD, showStatus
+        syncHudVisibility, resetToEmptyCraft, updateHUD, showStatus, setMechanicalAuthoring = () => {}
       } = callbacks;
       const DEFAULT_ORIENTATION = defaultOrientation;
       const localStorage = storage;
@@ -90,6 +90,7 @@
         const normalized = normalizeBlueprintData(data);
         if (!normalized) return false;
 
+        setMechanicalAuthoring(false, false);
         cleanupFlightState();
         STATE.mode = 'BUILD';
         STATE.statusText = 'DRYDOCK';
@@ -191,6 +192,7 @@
       }
 
       function newBlueprint() {
+        setMechanicalAuthoring(false, false);
         const historyBefore = collectBlueprint();
         STATE.selectedBlock = 'Hull';
         STATE.orientation = DEFAULT_ORIENTATION;

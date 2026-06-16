@@ -278,6 +278,23 @@ async function screenshot(cdp, filename) {
   await fs.writeFile(path.join(OUTPUT_DIR, filename), Buffer.from(data, 'base64'));
 }
 
+async function clickElement(cdp, selector) {
+  const point = await evaluate(cdp, `(() => {
+    const element = document.querySelector(${JSON.stringify(selector)});
+    if (!element) return null;
+    element.scrollIntoView({ block: 'center', inline: 'center' });
+    const rect = element.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    const hit = document.elementFromPoint(x, y);
+    return { x, y, hit: hit === element || element.contains(hit), hitId: hit?.id || '' };
+  })()`);
+  assert(point?.hit, `Physical click target ${selector} is obscured by ${point?.hitId || 'unknown'}.`);
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+}
+
 async function runScenario(cdp, baseUrl, targetName, browserMessages) {
   await cdp.call('Page.navigate', { url: `${baseUrl}/.recovery_browser_${targetName}.html?recovery=${Date.now()}` });
   await waitFor(cdp, 'Boolean(window.__VAW_RECOVERY_PROBE__ && window.__VAW_RECOVERY_PROBE__.snapshot)', `${targetName} app bootstrap`);
@@ -286,6 +303,13 @@ async function runScenario(cdp, baseUrl, targetName, browserMessages) {
   const loaded = await evaluate(cdp, `window.__VAW_RECOVERY_PROBE__.loadBlueprintData(${JSON.stringify(BLUEPRINT)})`);
   assert(loaded === true, `${targetName}: BlueprintController rejected the articulated recovery craft.`);
   await waitFor(cdp, `window.__VAW_RECOVERY_PROBE__.craft.size === 6 && Array.from(document.getElementById('mechanical-link-list').options).some(option => option.value)`, `${targetName} articulated blueprint import`);
+
+  await clickElement(cdp, '#btn-hinge-link');
+  const hingeEnabled = await evaluate(cdp, `(() => { const button = document.getElementById('btn-hinge-link'); return { text: button.textContent, pressed: button.getAttribute('aria-pressed'), active: window.__VAW_RECOVERY_PROBE__.workshop.mechanicalAuthoring.active }; })()`);
+  assert(hingeEnabled.active && hingeEnabled.text === 'HINGE LINK: ON' && hingeEnabled.pressed === 'true', `${targetName}: physical hinge toggle did not remain enabled outside the canvas.`);
+  await clickElement(cdp, '#btn-hinge-link');
+  const hingeDisabled = await evaluate(cdp, `(() => { const button = document.getElementById('btn-hinge-link'); return { text: button.textContent, pressed: button.getAttribute('aria-pressed'), active: window.__VAW_RECOVERY_PROBE__.workshop.mechanicalAuthoring.active }; })()`);
+  assert(!hingeDisabled.active && hingeDisabled.text === 'HINGE LINK: OFF' && hingeDisabled.pressed === 'false', `${targetName}: physical hinge toggle did not switch off cleanly.`);
 
   const focusResult = await evaluate(cdp, `(() => {
     const axis = document.getElementById('hinge-axis');

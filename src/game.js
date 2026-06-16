@@ -1034,7 +1034,6 @@
     function updateGhost() {
       if (STATE.mode !== 'BUILD' || !STATE.input.pointerInside) {
         for (const visual of WORKSHOP.mechanicalLinkVisualsById.values()) visual.visible = false;
-        setMechanicalAuthoring(false, false);
         ghost.visible = false;
         ghostArrow.visible = false;
         ghostNormalArrow.visible = false;
@@ -1592,7 +1591,7 @@
               updateHistoryButtons();
           return;
         }
-        STATE.mode = 'FLIGHT';
+        setMechanicalAuthoring(false, false); STATE.mode = 'FLIGHT';
         ghost.visible = false;
         ghostArrow.visible = false;
         ghostNormalArrow.visible = false;
@@ -1650,12 +1649,12 @@
     }
 
     function setMechanicalAuthoring(active, refreshGhost = true) {
-      WORKSHOP.mechanicalAuthoring.active = Boolean(active);
+      const nextActive = STATE.mode === 'BUILD' && Boolean(active); WORKSHOP.mechanicalAuthoring.active = nextActive;
       WORKSHOP.mechanicalAuthoring.firstBlockId = null;
       const button = document.getElementById('btn-hinge-link');
-      if (button) { button.textContent = `HINGE LINK: ${active ? 'ON' : 'OFF'}`; button.classList.toggle('active', Boolean(active)); }
+      if (button) { button.textContent = `HINGE LINK: ${nextActive ? 'ON' : 'OFF'}`; button.classList.toggle('active', nextActive); button.setAttribute('aria-pressed', String(nextActive)); }
       const status = document.getElementById('ui-hinge-status');
-      if (status) status.textContent = active ? 'Click the first endpoint block.' : 'Select HINGE LINK, then click two face-adjacent blocks.';
+      if (status) status.textContent = nextActive ? 'Click the first endpoint block.' : 'Select HINGE LINK, then click two face-adjacent blocks.';
       if (refreshGhost) updateGhost();
     }
 
@@ -1738,7 +1737,7 @@
       markers: { comSphere, axesHelper },
       callbacks: {
         cleanupFlightState, updateTelemetry, updateGhost, updateControlConfigurationUI,
-        syncHudVisibility, resetToEmptyCraft, updateHUD, showStatus
+        syncHudVisibility, resetToEmptyCraft, updateHUD, showStatus, setMechanicalAuthoring
       }
     });
     const {

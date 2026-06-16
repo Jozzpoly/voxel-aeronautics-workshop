@@ -32,6 +32,8 @@ The verified recovery branch is `recovery/2026-06-16-regression-repair`, based o
 
 Input focus is governed by one editable-interaction policy based on the event target and `document.activeElement`; key release and window blur always clear active flight actions. Manual flight intent remains root-frame-relative for the pilot, but `FlightThrusterRouter` remaps it through world space to each functional part's owning body and never falls back silently to the root body. `FlightMechanicalVisuals` owns FLIGHT-only hinge/link presentation, derives both endpoints from current body transforms, and is registered in the `FlightSession` transient lifecycle for idempotent cleanup.
 
+Mechanical hinge authoring is workshop state, not pointer-hover state: leaving the canvas only hides placement ghosts. Hinge authoring is cancelled explicitly on successful launch, blueprint load/import, undo/redo restoration and new blueprint creation.
+
 Dedicated regression coverage exists in `tests/test_input_focus_policy.js`, `tests/test_flight_thruster_routing.js`, `tests/test_flight_mechanical_visuals.js`, and `tests/run_browser_recovery.mjs`. Read `RECOVERY_AUDIT_2026-06-16.md`, `RECOVERY_BASELINE_TESTS.md`, `BROWSER_RECOVERY_SCENARIO_2026-06-16.md`, and `RECOVERY_VALIDATION_REPORT_2026-06-16.md` before changing these seams.
 
 ## Safety constraint
