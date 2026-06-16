@@ -40,6 +40,7 @@ def main() -> None:
     run('node', 'tests/test_flight_control.js')
     run('node', 'tests/test_craft_history.js')
     run('node', 'tests/test_game_services.js')
+    run('node', 'tests/test_input_focus_policy.js')
     run(sys.executable, 'tests/test_game_architecture.py')
     run(sys.executable, 'tests/test_algorithms.py')
     run(sys.executable, 'tests/test_missions.py')

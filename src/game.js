@@ -91,7 +91,8 @@
     const {
       axisLabelFromArray, syncControlFrameReadout, flightFocusSupported, syncFlightFocusStatus,
       refreshKeyboardLock, toggleFlightFocus, renderBindingControls, syncInputProfileUI,
-      updateInputAxis, commitBindingCapture, handleFullscreenChange, bindInputProfileControls
+      updateInputAxis, commitBindingCapture, handleFullscreenChange, bindInputProfileControls,
+      isEditableInteractionActive, releaseEditableInteraction
     } = inputSettingsController;
 
     function recomputePilotAxes() {
@@ -1796,6 +1797,7 @@
 
     renderer.domElement.addEventListener('pointerdown', (event) => {
       if (event.pointerType === 'touch' || isOverUI(event.target)) return;
+      releaseEditableInteraction();
       rayToNDC(event.clientX, event.clientY);
       STATE.input.downButton = event.button;
       STATE.input.downMoved = false;
@@ -1881,7 +1883,13 @@
     document.getElementById('btn-control-sign')?.addEventListener('click', cycleControlSign);
     document.getElementById('btn-symmetry').addEventListener('click', toggleSymmetry);
     document.getElementById('btn-hinge-link')?.addEventListener('click', () => setMechanicalAuthoring(!WORKSHOP.mechanicalAuthoring.active));
-    document.getElementById('hinge-axis')?.addEventListener('change', event => { WORKSHOP.mechanicalAuthoring.axis = event.target.value; });
+    document.getElementById('hinge-axis')?.addEventListener('change', event => {
+      WORKSHOP.mechanicalAuthoring.axis = event.target.value;
+      releaseEditableInteraction(event.currentTarget || event.target);
+    });
+    document.getElementById('mechanical-link-list')?.addEventListener('change', event => {
+      releaseEditableInteraction(event.currentTarget || event.target);
+    });
     document.getElementById('btn-remove-mechanical-link')?.addEventListener('click', () => {
       const select = document.getElementById('mechanical-link-list');
       const id = select?.value;
@@ -1957,6 +1965,13 @@
       const helpVisible = document.getElementById('help-modal').style.display !== 'none';
       if (helpVisible) {
         if (event.key === 'Escape') setHelpVisible(false);
+        return;
+      }
+      if (isEditableInteractionActive(event.target, document.activeElement)) {
+        if (event.key === 'Escape') {
+          releaseEditableInteraction();
+          clearControlActions();
+        }
         return;
       }
       // Flight controls use the user profile. Modifier bindings such as Left Ctrl
