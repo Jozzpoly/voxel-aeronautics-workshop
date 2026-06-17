@@ -17,11 +17,11 @@ Then open the printed local address. The generated one-file release in `dist/` c
 ## Validate and build
 
 ```bash
-python -u tests/run_all.py
-python tools/build_release.py
-python tools/verify_release.py
-git diff --check
+python tools/validate_fast.py
+python tools/validate_full.py
 ```
+
+Use targeted tests while editing. Run FULL once on a frozen release-sensitive candidate.
 
 ## Current contracts
 
@@ -30,7 +30,8 @@ git diff --check
 - RuntimeAssemblyPlan V2: explicit `assemblyPosition`, `bodyLocalPosition` and `assemblyPose`.
 - `mechanicalLinkId` maps 1:1 to runtime `constraintId`.
 - Connected-body recenter is intentionally blocked until atomic constraint rebasing is proven.
+- Gate C — Assembly Spaces / Sublevels — is next; Device/Port Schema and ControlRuntime remain deferred.
 
 ## Documentation
 
-Start with `PROJECT_VISION.md`, `AI_PROJECT_MEMORY.md`, `ARCHITECTURE.md`, `ROADMAP_NEXT.md`, `FOUNDATION_READINESS_REVIEW.md`, `PROGRAMMABLE_MACHINE_RESEARCH.md` and `docs/history/phases/PHASE_1D4A_REPORT.md`. Decisions for this phase are ADR 0033–0040.
+Start with [`docs/README.md`](docs/README.md). It classifies active product truth, workflow contracts, accepted ADRs, current supporting evidence, recovery evidence and historical reports.

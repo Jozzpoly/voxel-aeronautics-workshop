@@ -1,105 +1,146 @@
-# Agent Workflow — durable validation and delivery
+# Agent Workflow — Workflow V3 autonomous milestones
 
-This file is the operational contract for automated or assisted changes to Voxel Aeronautics Workshop.
-It complements `DELIVERY_WORKFLOW.md`; it does not replace product architecture, release identity, or gameplay decisions.
+This is the operational contract for automated or assisted VAW changes. Product architecture, accepted ADRs and the user's current decision remain higher authority.
 
-## 1. Start from an exact state
+## 1. Core rule
 
-Record the branch and full 40-character commit SHA before editing. Work on the dedicated branch named by the task.
-Do not write directly to `main` or a recovery branch unless the user explicitly changes the contract.
-Keep unrelated local changes out of the delivery.
+> One exact base, one coherent milestone, one frozen candidate, one final validation sequence, one normal commit, and one remote SHA read back after push.
 
-```bash
-git status --short
-git rev-parse HEAD
-git rev-parse --abbrev-ref HEAD
-```
+Safety means preventing irreversible errors, not maximizing patches, reports or repeated test runs.
 
-## 2. Keep increments reversible
+## 2. Start gate
 
-A workflow increment should be small enough to review and reproduce. Never use an uncontrolled `git add -A -- .` for a delivery. Prefer `git apply --index` so the reviewed patch defines the staged set. If indexed application is not possible, stage only a reviewed explicit path list with `git add -A -- <path>...` and use `git add -f -- <path>...` only for explicitly approved ignored files.
-Do not reset, clean, stage, commit, rebase, or push as a side effect of validation.
-Generated validation artifacts live under `.agent-validation/` and are never source changes.
-
-## 3. Validation entry points
-
-```bash
-python tools/validate_fast.py
-python tools/validate_full.py
-python tests/run_all.py
-```
-
-The validation runner records one directory per run containing:
-
-- `summary.json` — atomically replaced machine-readable state;
-- `events.jsonl` — flushed append-only event stream;
-- `logs/<stage>.log` — combined stdout/stderr for each stage;
-- `release/` — FULL-only HTML, ZIP and SHA256 artifacts isolated to that exact run.
-
-Useful runner controls:
-
-```bash
-python tools/validate_fast.py --list
-python tools/validate_full.py --only core-suite,release-build,release-verify
-python tools/validate_fast.py --from gate-b-compilers
-python tools/validate_full.py --resume .agent-validation/full-<run-id>
-```
-
-Resume is accepted only when the repository HEAD, working-tree fingerprint, and complete plan digest still match.
-A passed stage is reused; pending, failed, timed-out, or interrupted stages run again.
-
-## 4. Interpret results honestly
-
-Stage states are `pending`, `pass`, `fail`, `timeout`, and `not-run`.
-A host interruption is not a pass. Timeout and controlled SIGINT/SIGTERM/SIGHUP interruption terminate the
-known process family and persist a non-pass summary. An uncatchable SIGKILL, abrupt host loss, or platform
-failure can only leave the last durable non-pass state; it cannot be claimed as a completed result.
-
-The runner compares final-state identities for tracked files, ordinary untracked files, ignored files,
-file modes, and symlink targets. Only its explicit artifact root (`.agent-validation/` or the selected run
-folder) is exempt. Therefore creation of `dist/...` or `*.log` outside that root is a side effect even when
-Git ignores it. Delete-and-recreate with byte-identical final content is intentionally outside this
-final-state model. The runner reports side effects and never repairs, resets, cleans, or stages them.
-
-## 5. Durable checkpoint
-
-A completed increment ends in one of two forms:
-
-1. a real remote commit whose SHA is confirmed by reading the remote branch again; or
-2. a patch generated against the exact declared base, with SHA-256, test evidence, path list, and a successful `git apply --check` on a fresh copy.
-
-Never describe a local synthetic commit as a remote checkpoint. Never force-push. Never use an unrelated historical branch as transport.
-
-
-Before committing a patch delivery, verify the exact staged set against its approved manifest:
-
-```bash
-git apply --check <delivery.patch>
-git apply --index <delivery.patch>
-git diff --cached --check
-git diff --cached --name-status
-git diff --cached --stat
-```
-
-Do not compensate for a missing staged path with repository-wide staging. Stop, inspect the patch and manifest, and correct the delivery source.
-
-## 6. Safe patch application
-
-Use `tools/apply-agent-delivery.ps1` from a clean checkout of the exact base on the dedicated
-`maintenance/workflow-repair-clean` branch. The script verifies the full base SHA, repository identity,
-clean tree, patch preflight, exact expected path set (including additions, deletions and renames), validation
-content fingerprints, dotfile-safe path normalization, post-commit clean-tree and reverse-apply completeness checks, and remote race before an optional normal push. It writes a durable phase record under
-`.git/` and refuses a blind rerun after interruption. It never force-pushes, resets, or cleans the repository.
-
-The PowerShell script remains experimental until its matrix is executed on Windows PowerShell 5.1 and pwsh 7.
-Review its printed plan and state file before using `-Commit` or `-Push`.
-
-Report these dimensions independently:
+Before editing, record:
 
 ```text
-IMPLEMENTATION_VALIDATION=PASS|FAIL|NOT-RUN
-FRESH_APPLY_VALIDATION=PASS|FAIL|BLOCKED
-REMOTE_DELIVERY=PASS|BLOCKED|NOT-ATTEMPTED
-WINDOWS_EXECUTION=PASS|FAIL|NOT-RUN
-OVERALL_GATE_STATUS=PASS|PARTIAL|BLOCKED
+REPOSITORY=
+ACTIVE_BRANCH=
+REMOTE_SHA=
+LOCAL_HEAD=
+MERGE_BASE=
+WORKTREE=clean|dirty
+MILESTONE=
+ALLOWED_PATHS=
+FORBIDDEN_PATHS=
+TARGET_PLATFORM_REQUIREMENTS=
+```
+
+Stop only when the base is ambiguous, unrelated changes cannot be isolated, the milestone conflicts with a current product decision, or continuing requires destructive history operations.
+
+Never write directly to `main` or a recovery branch without an explicit decision. Never extend or use `maintenance/workflow-bootstrap` as transport.
+
+## 3. Work modes
+
+### Mode R — direct Git
+
+Use a real checkout and safe write access:
+
+1. re-read remote SHA;
+2. work on the dedicated branch;
+3. use local commits only as internal checkpoints;
+4. validate the frozen candidate;
+5. create one normal milestone commit;
+6. push without force;
+7. re-read remote SHA;
+8. close active documentation in the same milestone.
+
+### Mode Z — one final milestone ZIP
+
+Use only when direct connector/Git publication is blocked:
+
+```text
+README_FIRST.md
+project/
+evidence/
+SHA256SUMS.txt
+```
+
+`project/` contains only repository-relative files intended for the commit. The user copies it once. Do not create a new ZIP after every targeted fix.
+
+### Mode F — complete file
+
+Use for one stable file replacement when the user already owns the checkout.
+
+### Mode P — patch
+
+Use only for recovery, independent audit or an environment where complete files cannot be copied.
+
+Priority:
+
+```text
+direct Git > one milestone ZIP > complete single file > patch
+```
+
+## 4. Milestone scope
+
+A milestone closes a reviewable capability or closure result. Do not stop after a plan, targeted PASS or local checkpoint.
+
+Good milestones include documentation convergence, cross-platform release reproducibility and one bounded Gate C capability. Do not mix gameplay, schema, workflow, release engineering and repository cosmetics without a direct dependency.
+
+Stage only the reviewed path set. Do not use uncontrolled repository-wide staging to conceal unknown files. Validation must not reset, clean, stage, commit, rebase or push as a side effect.
+
+## 5. Validation ladder
+
+```text
+T0 STATIC
+T1 TARGETED
+T2 COMPONENT
+T3 FAST
+T4 FULL
+T5 TARGET PLATFORM
+```
+
+- T1 may run repeatedly.
+- T2 runs after a complete class of changes.
+- FAST normally runs once or twice.
+- FULL runs once on the frozen candidate when release/integration scope requires it.
+- Repeat FULL only after a production or release-sensitive change.
+- Report Linux, Windows, browser and cross-platform claims separately.
+- A pre-existing independent failure is classified honestly instead of silently blocking unrelated work.
+
+Validation artifacts live only under `.agent-validation/` or the selected run directory. The runner records durable summaries, event logs and stage logs, detects tracked/untracked/ignored/mode/symlink side effects, and never repairs the worktree.
+
+## 6. Stop-loss and blockers
+
+Change strategy after the second same-class failure, repeated manual intervention, repeated packaging cycles, or long effort without increased capability or decisive evidence.
+
+For a real blocker, try at most three genuinely different safe mechanisms. Allowed progression is normal remote Git, normal local commit plus one ZIP, then complete files with explicit instructions.
+
+Never bypass safeguards, obfuscate payloads, split writes to evade controls, force-push, silently rewrite history or use a historical branch as transport.
+
+## 7. Documentation closeout
+
+Closeout is part of Definition of Done.
+
+Before publication:
+
+- update active current-state documents;
+- remove stale active unpublished markers, obsolete branch/SHA and patch-first instructions;
+- preserve historical reports as history;
+- make documentation tests reject stale active statuses;
+- identify the next exact remote base in the final report.
+
+## 8. Communication and final report
+
+Progress updates are informational and normally require no response. Ask only for a real product decision, credentials, data-loss risk or destructive/non-fast-forward operation.
+
+Final report:
+
+```text
+MILESTONE=
+BASE_SHA=
+COMMIT_SHA=
+REMOTE_SHA=
+LOCAL_EQUALS_REMOTE=
+CHANGED_PATHS=
+TARGETED=
+COMPONENT=
+FAST=
+FULL=
+TARGET_PLATFORM=
+WORKTREE_AFTER=
+KNOWN_NON_BLOCKING_RISKS=
+DEFERRED_SCOPE=
+NEXT_BASE_SHA=
+NEXT_RECOMMENDED_MILESTONE=
 ```

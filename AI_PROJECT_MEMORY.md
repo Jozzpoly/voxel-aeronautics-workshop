@@ -50,7 +50,7 @@ Do not start Device & Port Schema, ControlRuntime, walking, docking, broad inter
 
 Read `PROJECT_VISION.md`, `ARCHITECTURE.md`, `ROADMAP_NEXT.md`, `FOUNDATION_READINESS_REVIEW.md`, `PROGRAMMABLE_MACHINE_RESEARCH.md`, `docs/history/phases/PHASE_1D4A_REPORT.md`, accepted ADR 0033–0040 and current test/validation reports before changing foundations.
 
-## Workflow and repository state — Stage 1 closed 2026-06-17
+## Workflow and repository state — Stage 2 closed 2026-06-17
 
 - Active continuation branch: `maintenance/workflow-repair-clean`.
 - Published Stage 1 commit: `306d5690cae647066acc00a80bcf26a1d47c0441`.
@@ -61,6 +61,7 @@ Read `PROJECT_VISION.md`, `ARCHITECTURE.md`, `ROADMAP_NEXT.md`, `FOUNDATION_READ
 - Linux documentation, release, FAST and FULL validation passed for the published Stage 1 candidate with no repository side effects.
 - Windows targeted path/process-family/run-directory tests, the validation runner and FAST passed.
 - Windows FULL is `PARTIAL` only because the pre-existing raw-worktree `SOURCE_MANIFEST.json` contract is CRLF-sensitive. This is deferred to Stage 1.1 and is not a Stage 1 or gameplay regression.
-- The next infrastructure milestones are Documentation Convergence Stage 2 and, separately, Stage 1.1 Cross-platform release reproducibility.
-- After Stage 2 and Stage 1.1, freeze cosmetic repository reorganization and return to Gate C.
+- Documentation Convergence Stage 2 is closed: `docs/README.md` is the active authority index, Workflow V3 replaces patch-first micro-delivery, and superseded reviews live under `docs/history/reviews/`.
+- The next separate infrastructure milestone is Stage 1.1 Cross-platform release reproducibility.
+- Further cosmetic repository reorganization is frozen; after Stage 1.1 perform a stop-review and move to Gate C.
 - Current handoff: `docs/WORKFLOW_REPAIR_HANDOFF.md`.

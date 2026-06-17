@@ -1,19 +1,18 @@
 # Safe commit and push instructions
 
-## Current checkpoint
+## Active workflow
+
+Use Workflow V3:
 
 ```text
-repository=Jozzpoly/voxel-aeronautics-workshop
-branch=maintenance/workflow-repair-clean
-stage1_commit=306d5690cae647066acc00a80bcf26a1d47c0441
-publication=CONFIRMED
+direct Git > one final milestone ZIP > complete single file > patch for recovery/audit
 ```
 
-Stage 1 is already published. Do not reapply the old Stage 1-R1 patch and do not use `maintenance/workflow-bootstrap` as a work branch or transport.
+Stage 1 and Documentation Convergence Stage 2 are published milestones on `maintenance/workflow-repair-clean`. Always read the latest branch SHA before starting; do not hardcode an older checkpoint as the current base.
 
-## Default publication model
+`maintenance/workflow-bootstrap` is incomplete historical evidence and must not be extended, merged or used as transport.
 
-Use normal Git work from the latest verified remote SHA:
+## Normal publication
 
 ```powershell
 $Branch = 'maintenance/workflow-repair-clean'
@@ -28,7 +27,7 @@ if ($Base -ne $Remote) { throw "Local/remote mismatch: local=$Base remote=$Remot
 if (git status --porcelain=v1 --untracked-files=all) { throw 'Working tree is not clean.' }
 ```
 
-Record the exact base, allowed paths and forbidden paths before editing. Stage only the reviewed milestone path set. Do not use broad repository staging to conceal unknown files.
+Record milestone scope and stage only approved paths:
 
 ```powershell
 git add -A -- <approved-path-1> <approved-path-2>
@@ -37,9 +36,7 @@ git diff --cached --name-status
 git diff --cached --stat
 ```
 
-Run the validation ladder required by the milestone. Targeted tests may run repeatedly; FAST normally runs once or twice; FULL runs once on the frozen candidate when release-sensitive scope requires it.
-
-Then publish one normal commit and read the remote SHA back:
+Run the milestone validation ladder. FAST normally runs once or twice. FULL runs once on the frozen candidate only when release/integration scope requires it.
 
 ```powershell
 git commit -m '<bounded milestone message>'
@@ -57,11 +54,11 @@ git status --short
 $RemoteSha
 ```
 
-Never force-push, rewrite history silently, or publish directly to `main` or a recovery branch without an explicit product decision.
+Never force-push, silently rewrite history, publish directly to `main`/recovery without an explicit decision, or use broad staging to conceal unknown files.
 
-## Fallback delivery
+## ZIP fallback
 
-When direct publication is blocked, produce one final milestone ZIP only after the candidate is stable:
+When direct publication is blocked, produce one final milestone ZIP:
 
 ```text
 README_FIRST.md
@@ -70,15 +67,12 @@ evidence/
 SHA256SUMS.txt
 ```
 
-`project/` contains only repository-relative files intended for the commit. Keep patches, logs, helper scripts and nested archives out of `project/`. The user copies `project/` once.
-
-Patch delivery is recovery/audit-only, not the normal daily workflow.
+The user copies `project/` once. Keep patches, logs, helpers and nested archives out of `project/`.
 
 ## Current sequence
 
-1. Documentation Convergence Stage 2 and Workflow V3 alignment.
-2. Stage 1.1 Cross-platform release reproducibility as a separate commit.
-3. Stop-review, freeze cosmetic repository moves and create the Gate C development branch from the latest verified SHA.
-4. Gate C Assembly Spaces / Sublevels.
+1. Stage 1.1 Cross-platform release reproducibility.
+2. Stop-review and branch promotion.
+3. Gate C — Assembly Spaces / Sublevels.
 
-Do not begin Device/Port Schema, ControlRuntime, walking, docking or broad interiors before Gate C.
+Further cosmetic repository reorganization is frozen. Device/Port Schema, ControlRuntime, walking, docking and broad interiors remain deferred until Gate C closes.
