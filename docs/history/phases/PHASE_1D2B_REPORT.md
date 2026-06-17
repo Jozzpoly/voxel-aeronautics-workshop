@@ -40,7 +40,7 @@ Pierwsza licencja jest ćwiczeniem bezpiecznego wzniesienia i odzyskania statku,
 
 ## Testy
 
-Automatyczne testy obejmują przypadek ze screena, lądowanie bez nowych eventów `collide`, wybór najbliższego dozwolonego pada, aerostatykę, natychmiastowy refresh suwaka i hotkeye Page Up/Page Down. Szczegóły: `TEST_REPORT.md` i `VALIDATION_REPORT.md`.
+Automatyczne testy obejmują przypadek ze screena, lądowanie bez nowych eventów `collide`, wybór najbliższego dozwolonego pada, aerostatykę, natychmiastowy refresh suwaka i hotkeye Page Up/Page Down. Szczegóły: `../../../TEST_REPORT.md` i `../../../VALIDATION_REPORT.md`.
 
 ## Ograniczenie walidacji
 

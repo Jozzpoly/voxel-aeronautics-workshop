@@ -33,4 +33,4 @@ git diff --check
 
 ## Documentation
 
-Start with `PROJECT_VISION.md`, `AI_PROJECT_MEMORY.md`, `ARCHITECTURE.md`, `ROADMAP_NEXT.md`, `FOUNDATION_READINESS_REVIEW.md`, `PROGRAMMABLE_MACHINE_RESEARCH.md` and `PHASE_1D4A_REPORT.md`. Decisions for this phase are ADR 0033–0040.
+Start with `PROJECT_VISION.md`, `AI_PROJECT_MEMORY.md`, `ARCHITECTURE.md`, `ROADMAP_NEXT.md`, `FOUNDATION_READINESS_REVIEW.md`, `PROGRAMMABLE_MACHINE_RESEARCH.md` and `docs/history/phases/PHASE_1D4A_REPORT.md`. Decisions for this phase are ADR 0033–0040.

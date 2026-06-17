@@ -30,41 +30,61 @@ Bezpośrednie zapisywanie projektu do GitHub przez agenta nie jest domyślnym wo
 
 ## 4. Bezpieczna procedura publikacji
 
-Przed skopiowaniem nowego wydania:
+Patch, delivery ZIP i logi przechowuj poza repozytorium. Publikację wykonuj wyłącznie w prawdziwym klonie na jawnie wskazanym branchu i pełnym SHA bazowym.
+
+Preferowany wariant patchowy:
 
 ```powershell
-git checkout main
-git status
-git fetch origin
-git pull --rebase origin main
+git fetch origin --prune
+git switch <branch>
+git pull --ff-only origin <branch>
+git status --short
+git rev-parse HEAD
+Get-FileHash -Algorithm SHA256 -LiteralPath <patch>
+git apply --check <patch>
+git apply --index <patch>
+git diff --cached --check
+git diff --cached --name-status
+git diff --cached --stat
 ```
 
-Rozpakuj ZIP poza repo. Skopiuj jego zawartość do katalogu repozytorium, zachowując `.git`. Następnie:
+Porównaj `git diff --cached --name-status` z zatwierdzonym manifestem ścieżek. Patch ma definiować kompletny staged set. Nie używaj `git add -A -- .` do uzupełniania braków i nie trzymaj patcha, ZIP-a ani evidence w working tree.
+
+Jeżeli dostawa nie może użyć `git apply --index`, zastosuj zwykłe `git apply`, a następnie stage'uj wyłącznie jawną, zatwierdzoną listę ścieżek:
+
+```powershell
+git add -A -- <path-1> <path-2> <path-3>
+git diff --cached --check
+git diff --cached --name-status
+git diff --cached --stat
+```
+
+Uruchom wymaganą walidację na dokładnie tym staged tree:
 
 ```powershell
 python tests/run_all.py
 python tools/build_release.py
 python tools/verify_release.py
-git status
-git diff --stat
-git add -A
-git commit -m "<wiadomość podana dla wydania>"
-git fetch origin
-git rebase origin/main
-python tests/run_all.py
-git push origin HEAD:main
 ```
 
-Drugi test po rebase jest wymagany, gdy rebase rzeczywiście dołączył zdalne zmiany.
+Po walidacji i ponownym sprawdzeniu staged set:
+
+```powershell
+git commit -m '<wiadomość podana dla wydania>'
+$LocalSha = (git rev-parse HEAD).Trim()
+git push origin HEAD:refs/heads/<branch>
+$RemoteSha = ((git ls-remote origin refs/heads/<branch>) -split '\s+')[0].Trim()
+if ($LocalSha -ne $RemoteSha) { throw 'Remote SHA confirmation failed.' }
+```
 
 ## 5. Konflikty
 
-Przy konflikcie:
+Przy konflikcie zatrzymaj publikację i sprawdź zakres:
 
 ```powershell
 git status
-# popraw pliki
-git add -A
+# popraw wyłącznie jawnie zidentyfikowane pliki
+git add -- <resolved-path-1> <resolved-path-2>
 git rebase --continue
 ```
 

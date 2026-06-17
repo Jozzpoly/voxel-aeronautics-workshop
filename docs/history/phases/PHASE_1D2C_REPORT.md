@@ -54,4 +54,4 @@ Polityka domyślna:
 
 ## Decyzja wydaniowa
 
-Wersja jest kandydatem do pushu po przejściu manualnej checklisty `VALIDATION_REPORT.md`. Repozytorium nie zostało zmodyfikowane automatycznie.
+Wersja jest kandydatem do pushu po przejściu manualnej checklisty `../../../VALIDATION_REPORT.md`. Repozytorium nie zostało zmodyfikowane automatycznie.

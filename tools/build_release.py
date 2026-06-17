@@ -14,6 +14,7 @@ SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D4A_Mechanical_Platf
 ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D4A_Mechanical_Platform_Convergence.zip'
 MANIFEST_NAME = 'SOURCE_MANIFEST.json'
 ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_Phase_1D4A_MECHANICAL_PLATFORM_CONVERGENCE_READY_TO_PUSH'
+IGNORED_ARCHIVE_PARTS = {'dist', 'release', '.agent-validation', '__pycache__', '.pytest_cache', '.git', 'node_modules'}
 APP_SOURCES = (
     Path('src/foundation/kernel.js'),
     Path('src/foundation/config.js'),
@@ -184,12 +185,11 @@ def _deterministic_info(name: str) -> zipfile.ZipInfo:
 
 
 def write_zip(root: Path, destination: Path, single_file: Path | None = None) -> None:
-    ignored_parts = {'dist', 'release', '__pycache__', '.pytest_cache', '.git', 'node_modules'}
     ensure_source_manifest(root)
     destination.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(destination, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for path in sorted(root.rglob('*')):
-            if not path.is_file() or any(part in ignored_parts for part in path.parts):
+            if not path.is_file() or any(part in IGNORED_ARCHIVE_PARTS for part in path.parts):
                 continue
             if path.resolve() == destination.resolve():
                 continue

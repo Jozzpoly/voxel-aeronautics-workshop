@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import subprocess
+import sys
 import tempfile
 import zipfile
 from pathlib import Path
@@ -21,6 +22,8 @@ def embedded_source(single_text: str, relative: Path) -> str:
     finish = single_text.index(end, start)
     return single_text[start:finish]
 
+
+assert '.agent-validation' in module.IGNORED_ARCHIVE_PARTS
 
 module.ensure_source_manifest(ROOT)
 manifest_path = ROOT / module.MANIFEST_NAME
@@ -69,12 +72,29 @@ with tempfile.TemporaryDirectory() as temporary:
         required = {
             prefix + 'index.html', prefix + 'styles.css', prefix + 'src/game.js',
             prefix + module.MANIFEST_NAME,
-            prefix + 'README.md', prefix + 'CHANGELOG.md', prefix + 'CRITICAL_REVIEW.md', prefix + 'PHASE_1D2A_REPORT.md', prefix + 'PHASE_1D2B_REPORT.md', prefix + 'PHASE_1D2C_REPORT.md', prefix + 'PHASE_1D2D_REPORT.md',
+            prefix + 'README.md', prefix + 'CHANGELOG.md', prefix + 'CRITICAL_REVIEW.md',
             prefix + 'AI_PROJECT_MEMORY.md', prefix + 'ARCHITECTURE.md', prefix + 'FOUNDATION_REVIEW.md',
             prefix + 'ROADMAP_NEXT.md', prefix + 'TEST_REPORT.md', prefix + 'VALIDATION_REPORT.md',
-            prefix + 'PHASE_1D3B1_REPORT.md', prefix + 'GAME_MODULARIZATION_REVIEW.md',
+            prefix + 'GAME_MODULARIZATION_REVIEW.md',
             prefix + 'PROJECT_VISION.md', prefix + 'FOUNDATION_READINESS_REVIEW.md',
-            prefix + 'PROGRAMMABLE_MACHINE_RESEARCH.md', prefix + 'PHASE_1D3C_REPORT.md',
+            prefix + 'PROGRAMMABLE_MACHINE_RESEARCH.md',
+            prefix + 'docs/history/phases/README.md',
+            prefix + 'docs/history/phases/PHASE_1C2_REPORT.md',
+            prefix + 'docs/history/phases/PHASE_1D1_REPORT.md',
+            prefix + 'docs/history/phases/PHASE_1D2_REPORT.md',
+            prefix + 'docs/history/phases/PHASE_1D2A_REPORT.md',
+            prefix + 'docs/history/phases/PHASE_1D2B_REPORT.md',
+            prefix + 'docs/history/phases/PHASE_1D2C_REPORT.md',
+            prefix + 'docs/history/phases/PHASE_1D2D_REPORT.md',
+            prefix + 'docs/history/phases/PHASE_1D2E_REPORT.md',
+            prefix + 'docs/history/phases/PHASE_1D2F_REPORT.md',
+            prefix + 'docs/history/phases/PHASE_1D3A_REPORT.md',
+            prefix + 'docs/history/phases/PHASE_1D3B_REPORT.md',
+            prefix + 'docs/history/phases/PHASE_1D3B1_REPORT.md',
+            prefix + 'docs/history/phases/PHASE_1D3C_REPORT.md',
+            prefix + 'docs/history/phases/PHASE_1D3D_REPORT.md',
+            prefix + 'docs/history/phases/PHASE_1D3E_REPORT.md',
+            prefix + 'docs/history/phases/PHASE_1D4A_REPORT.md',
             prefix + 'docs/adr/0004-craft-model-is-authoritative.md',
             prefix + 'docs/adr/0005-atomic-editor-transactions-and-history.md',
             prefix + 'docs/adr/0009-passive-thrust-does-not-cap-pilot-authority.md',
@@ -91,7 +111,7 @@ with tempfile.TemporaryDirectory() as temporary:
             prefix + 'tests/test_joint_capability_spike.js', prefix + 'tests/test_release_identity.py',
             prefix + 'tests/test_documentation_contract.py',
             prefix + 'tests/test_gate_b_compilers.js', prefix + 'tests/test_gate_b_gameplay.js',
-            prefix + 'PHASE_1D4A_REPORT.md', prefix + 'CODE_REVIEW_REPORT.md',
+            prefix + 'CODE_REVIEW_REPORT.md',
             prefix + 'examples/articulated_hinge_v11.json',
             prefix + 'src/foundation/diagnostics.js', prefix + 'src/foundation/transform_math.js',
             prefix + 'src/foundation/structural_graph_compiler.js',
@@ -124,6 +144,25 @@ with tempfile.TemporaryDirectory() as temporary:
         missing = required - names
         assert not missing, f'missing release files: {sorted(missing)}'
         assert not any('/dist/' in name for name in names)
+        old_phase_paths = {prefix + name for name in (
+            'PHASE_1C2_REPORT.md',
+            'PHASE_1D1_REPORT.md',
+            'PHASE_1D2_REPORT.md',
+            'PHASE_1D2A_REPORT.md',
+            'PHASE_1D2B_REPORT.md',
+            'PHASE_1D2C_REPORT.md',
+            'PHASE_1D2D_REPORT.md',
+            'PHASE_1D2E_REPORT.md',
+            'PHASE_1D2F_REPORT.md',
+            'PHASE_1D3A_REPORT.md',
+            'PHASE_1D3B_REPORT.md',
+            'PHASE_1D3B1_REPORT.md',
+            'PHASE_1D3C_REPORT.md',
+            'PHASE_1D3D_REPORT.md',
+            'PHASE_1D3E_REPORT.md',
+            'PHASE_1D4A_REPORT.md',
+        )}
+        assert not (old_phase_paths & names), f'old root phase-report paths remain in ZIP: {sorted(old_phase_paths & names)}'
 
         # Source ZIP content must match the actual worktree used to build the HTML.
         for relative in module.MANIFEST_INPUTS:
@@ -142,6 +181,22 @@ with tempfile.TemporaryDirectory() as temporary:
     same_name_archive = temporary / 'repeat.zip'
     module.write_zip(ROOT, same_name_archive, same_name_single)
     assert archive.read_bytes() == same_name_archive.read_bytes(), 'source package build is not deterministic'
+
+    hashes = temporary / 'SHA256.txt'
+    hashes.write_text(
+        f'{module.sha256(single)}  {single.name}\n{module.sha256(archive)}  {archive.name}\n',
+        encoding='utf-8',
+    )
+    verified = subprocess.run(
+        [
+            sys.executable, str(ROOT / 'tools' / 'verify_release.py'),
+            '--single', str(single), '--zip', str(archive), '--hashes', str(hashes),
+        ],
+        cwd=ROOT, text=True, capture_output=True, check=True,
+    )
+    assert "'artifactSet': 'html+zip+sha256'" in verified.stdout
+    assert "'zipIntegrity': 'ok'" in verified.stdout
+    assert "'externalChecksums': 'ok'" in verified.stdout
 
 print({
     'single_file_syntax': 'ok',
