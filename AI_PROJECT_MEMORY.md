@@ -40,32 +40,27 @@ Dedicated regression coverage exists in `tests/test_input_focus_policy.js`, `tes
 
 Connected-body recenter is blocked until an atomic constraint-pivot rebase/rebuild with rollback is proven. Endpoint failure first breaks the constraint backend-first. Dynamic rigid-body split is not implemented.
 
-## Next work
+## Next product work
 
-Next gate is Gate C: real assembly spaces/sublevels built on the stable body-in-assembly seam. Do not start Device/Port Schema or ControlRuntime in parallel. No empty future APIs.
+Gate B is closed. The next product gate is Gate C: real Assembly Spaces / Sublevels built on the stable body-in-assembly seam.
+
+Do not start Device & Port Schema, ControlRuntime, walking, docking, broad interiors or empty future APIs before Gate C stabilizes spatial ownership.
 
 ## Mandatory reading
 
-Read `PROJECT_VISION.md`, `ARCHITECTURE.md`, `ROADMAP_NEXT.md`, `FOUNDATION_READINESS_REVIEW.md`, `PROGRAMMABLE_MACHINE_RESEARCH.md`, `docs/history/phases/PHASE_1D4A_REPORT.md`, ADR 0033–0040 and current test/validation reports before changing foundations.
+Read `PROJECT_VISION.md`, `ARCHITECTURE.md`, `ROADMAP_NEXT.md`, `FOUNDATION_READINESS_REVIEW.md`, `PROGRAMMABLE_MACHINE_RESEARCH.md`, `docs/history/phases/PHASE_1D4A_REPORT.md`, accepted ADR 0033–0040 and current test/validation reports before changing foundations.
 
-## Workflow repair state — 2026-06-17
+## Workflow and repository state — Stage 1 closed 2026-06-17
 
-- Trusted remote base: `d386bc56659b2fa99ed406dd68ed9781cc6dba1e` on `recovery/2026-06-16-regression-repair`.
-- `maintenance/workflow-bootstrap` is an incomplete remote branch at `a983f02f86184798fb804d582c0da15264fccab1`; it contains only four entry-point files and must not be merged or extended.
-- The clean delivery target is `maintenance/workflow-repair-clean`, created from the trusted base without rewriting the incomplete branch.
-- The remote clean branch exists and currently points exactly to `d386bc56659b2fa99ed406dd68ed9781cc6dba1e`. Stage 1 has not yet been published to it; use the complete Stage 1-R1 patch until a normal atomic publication from a real checkout is available.
-- The repaired validation candidate detects tracked, ordinary untracked and ignored final-state effects, file modes and symlink targets; controlled interruption and timeout clean the known process family and persist non-pass state.
-- FULL validation builds and verifies HTML, ZIP and SHA256 evidence inside the unique run directory (`.agent-validation/full-<run-id>/release/`); concurrent FULL runs do not share artifacts and no pre-existing `dist/` is required.
-- `tools/apply-agent-delivery.ps1` remains experimental. Dotfiles retain leading dots; after commit the helper requires a clean tree and successful reverse-apply check. Its Git semantic contract is tested outside Windows, but Windows PowerShell 5.1 and pwsh 7 execution remain `NOT-RUN` until real Windows evidence exists.
-- Independent review caught and blocked the former `TrimStart([char[]]'./')` dotfile corruption before acceptance. The matrix now includes `.gitignore` and `.github/workflows/example.yml`; do not regress this normalization contract.
-- Do not begin Gate 4 optimization from the abandoned P3 patch. Re-measure from the repaired candidate after remote/fresh-apply evidence is reviewed.
+- Active continuation branch: `maintenance/workflow-repair-clean`.
+- Published Stage 1 commit: `306d5690cae647066acc00a80bcf26a1d47c0441`.
+- Trusted parent commit: `d386bc56659b2fa99ed406dd68ed9781cc6dba1e`.
+- `maintenance/workflow-bootstrap` at `a983f02f86184798fb804d582c0da15264fccab1` is incomplete historical evidence. Do not merge it, extend it, use it as transport, reset it or force-push it.
+- Stage 1 delivered durable validation, exact resume identity, tracked/untracked/ignored/mode/symlink side-effect detection, controlled interruption and timeout cleanup, isolated FULL artifacts, delivery tooling and the first repository-structure migration.
+- All sixteen `PHASE_*_REPORT.md` files live under `docs/history/phases/`; do not restore root duplicates.
+- Linux documentation, release, FAST and FULL validation passed for the published Stage 1 candidate with no repository side effects.
+- Windows targeted path/process-family/run-directory tests, the validation runner and FAST passed.
+- Windows FULL is `PARTIAL` only because the pre-existing raw-worktree `SOURCE_MANIFEST.json` contract is CRLF-sensitive. This is deferred to Stage 1.1 and is not a Stage 1 or gameplay regression.
+- The next infrastructure milestones are Documentation Convergence Stage 2 and, separately, Stage 1.1 Cross-platform release reproducibility.
+- After Stage 2 and Stage 1.1, freeze cosmetic repository reorganization and return to Gate C.
 - Current handoff: `docs/WORKFLOW_REPAIR_HANDOFF.md`.
-
-## Repository structure increment — 2026-06-17
-
-- Workflow repair COMPLETE v2 is embedded in the local clean-branch checkpoint `3078ea95e3124635f81a00614ed4d849282062a5`; this SHA belongs to the synthetic local reconstruction and is not a GitHub commit.
-- Repository structure audit and target live in `docs/repository/REPOSITORY_STRUCTURE_AUDIT.md` and `docs/repository/REPOSITORY_STRUCTURE_TARGET.md`.
-- First migration checkpoint `727966e117fa7738d5b32ba759a932ae75014d10` moved all sixteen `PHASE_*_REPORT.md` files from root to `docs/history/phases/` with no compatibility copies.
-- Current Phase 1D.4A delivery evidence is now `docs/history/phases/PHASE_1D4A_REPORT.md`; active architecture documents and accepted ADRs remain authoritative.
-- Documentation, release ZIP, FAST and FULL validations pass with zero side effects and no lingering processes. Windows execution remains `NOT-RUN`; the remote clean branch remains at the trusted base and Stage 1 is unpublished.
-- Next repository migration should create an active docs index and classify reviews. Do not combine it with recovery, tools, tests, tracked releases or `src/` moves.

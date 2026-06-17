@@ -1,66 +1,84 @@
-# Safe local commit and push instructions
+# Safe commit and push instructions
 
-No Stage 1 push was performed by the delivery agent. Publish only from a real local clone with working GitHub credentials.
-
-Current publication target:
+## Current checkpoint
 
 ```text
 repository=Jozzpoly/voxel-aeronautics-workshop
 branch=maintenance/workflow-repair-clean
-expected_base=d386bc56659b2fa99ed406dd68ed9781cc6dba1e
+stage1_commit=306d5690cae647066acc00a80bcf26a1d47c0441
+publication=CONFIRMED
 ```
 
-Keep the patch, delivery ZIP and generated evidence outside the repository working tree. The preferred staging mechanism is `git apply --index`; the command below adds the project whitespace policy explicitly. On Windows PowerShell, set the paths and run:
+Stage 1 is already published. Do not reapply the old Stage 1-R1 patch and do not use `maintenance/workflow-bootstrap` as a work branch or transport.
+
+## Default publication model
+
+Use normal Git work from the latest verified remote SHA:
 
 ```powershell
-$Base = 'd386bc56659b2fa99ed406dd68ed9781cc6dba1e'
 $Branch = 'maintenance/workflow-repair-clean'
-$Patch = 'C:\Users\Jozz\Downloads\VAW-deliveries\VAW_REPOSITORY_REORGANIZATION_STAGE1_R1.patch'
-$Manifest = 'C:\Users\Jozz\Downloads\VAW-deliveries\VAW_REPOSITORY_REORGANIZATION_STAGE1_R1_PATHS.txt'
 
-# Run inside the real clone.
 git fetch origin --prune
 git switch $Branch
 git pull --ff-only origin $Branch
-if ((git rev-parse HEAD).Trim() -ne $Base) { throw 'Wrong base SHA; stop without applying the patch.' }
-if (git status --porcelain=v1 --untracked-files=all) { throw 'Working tree is not clean; stop.' }
 
-Get-FileHash -Algorithm SHA256 -LiteralPath $Patch
-git -c core.whitespace=cr-at-eol apply --check --whitespace=error-all $Patch
-git -c core.whitespace=cr-at-eol apply --index --whitespace=error-all $Patch
+$Base = (git rev-parse HEAD).Trim()
+$Remote = ((git ls-remote origin "refs/heads/$Branch") -split '\s+')[0].Trim()
+if ($Base -ne $Remote) { throw "Local/remote mismatch: local=$Base remote=$Remote" }
+if (git status --porcelain=v1 --untracked-files=all) { throw 'Working tree is not clean.' }
+```
+
+Record the exact base, allowed paths and forbidden paths before editing. Stage only the reviewed milestone path set. Do not use broad repository staging to conceal unknown files.
+
+```powershell
+git add -A -- <approved-path-1> <approved-path-2>
 git diff --cached --check
 git diff --cached --name-status
 git diff --cached --stat
-Get-Content -LiteralPath $Manifest
 ```
 
-Compare `git diff --cached --name-status` with the approved manifest before testing or committing. The patch must define the complete staged set. Do not run `git add -A -- .`; do not stage delivery ZIPs, patches, logs or unrelated local files.
+Run the validation ladder required by the milestone. Targeted tests may run repeatedly; FAST normally runs once or twice; FULL runs once on the frozen candidate when release-sensitive scope requires it.
 
-Then validate the exact staged tree:
-
-```powershell
-python tests/test_documentation_contract.py
-python tests/test_apply_agent_delivery_contract.py
-python tests/test_validation_runner.py
-python tests/test_release_build.py
-python tools/validate_fast.py
-python tools/validate_full.py
-
-git diff --cached --check
-git diff --cached --name-status
-git diff --cached --stat
-git status --short
-```
-
-If every required result is PASS and the staged paths still match the manifest:
+Then publish one normal commit and read the remote SHA back:
 
 ```powershell
-git commit -m 'Workflow repair and repository structure Stage 1-R1'
+git commit -m '<bounded milestone message>'
 $LocalSha = (git rev-parse HEAD).Trim()
-git push origin HEAD:refs/heads/maintenance/workflow-repair-clean
-$RemoteSha = ((git ls-remote origin refs/heads/maintenance/workflow-repair-clean) -split '\s+')[0].Trim()
+
+git fetch origin --prune
+$BeforePush = ((git ls-remote origin "refs/heads/$Branch") -split '\s+')[0].Trim()
+if ($BeforePush -ne $Base) { throw "Remote moved: expected=$Base actual=$BeforePush" }
+
+git push origin "HEAD:refs/heads/$Branch"
+$RemoteSha = ((git ls-remote origin "refs/heads/$Branch") -split '\s+')[0].Trim()
 if ($LocalSha -ne $RemoteSha) { throw "Remote SHA mismatch: local=$LocalSha remote=$RemoteSha" }
+
+git status --short
 $RemoteSha
 ```
 
-Do not use `git push --force`. Do not begin Stage 2 until the printed remote SHA exactly matches the local commit SHA.
+Never force-push, rewrite history silently, or publish directly to `main` or a recovery branch without an explicit product decision.
+
+## Fallback delivery
+
+When direct publication is blocked, produce one final milestone ZIP only after the candidate is stable:
+
+```text
+README_FIRST.md
+project/
+evidence/
+SHA256SUMS.txt
+```
+
+`project/` contains only repository-relative files intended for the commit. Keep patches, logs, helper scripts and nested archives out of `project/`. The user copies `project/` once.
+
+Patch delivery is recovery/audit-only, not the normal daily workflow.
+
+## Current sequence
+
+1. Documentation Convergence Stage 2 and Workflow V3 alignment.
+2. Stage 1.1 Cross-platform release reproducibility as a separate commit.
+3. Stop-review, freeze cosmetic repository moves and create the Gate C development branch from the latest verified SHA.
+4. Gate C Assembly Spaces / Sublevels.
+
+Do not begin Device/Port Schema, ControlRuntime, walking, docking or broad interiors before Gate C.
