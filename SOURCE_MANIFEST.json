@@ -93,8 +93,13 @@
     "src/runtime/headless_physics_backend.js": "833288a12298afd37d15f27a9fd18a3e7c2db441e8ad9f77ce3d36d0ac109047",
     "src/runtime/physics_port.js": "1b4e741e87a971a7b9c7ffe0af25b04380fc29171c1cb0cde8afe4a0939f79ce",
     "styles.css": "6283421d321ee24a721539c3173113d77b04412c091564b74c9de1b17ed5c998",
-    "tools/build_release.py": "837f33111274fb4f8ee8470bfd4f4943dc2e8d0b26b5a935cd5784ac8b52c191",
-    "tools/verify_release.py": "ca04b6adc7190519ba82f6b913b35660d96b9bad17c772e58ce9aa50fc7a2610"
+    "tools/build_release.py": "08ce389e006512f1ea1f9453e64daf0a9e2985aa31d43b9f3641b578104f083d",
+    "tools/verify_release.py": "7b6a9ab6b28d0fdee987e9c989102b0bf8b018ff28ef011d05103e79fff2ce9e"
   },
-  "releaseId": "foundation-1d4a-rigid-islands-mechanical-graph"
+  "releaseId": "foundation-1d4a-rigid-islands-mechanical-graph",
+  "sourceByteContract": {
+    "archive": "deterministic-stored-zip-v1",
+    "binary": "byte-exact",
+    "text": "utf-8-lf"
+  }
 }

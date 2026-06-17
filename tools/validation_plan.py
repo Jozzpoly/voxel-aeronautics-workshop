@@ -21,6 +21,8 @@ FAST_PLAN = Plan(
         Stage("foundation", command("node", "tests/test_foundation.js"), 30, "Foundation module and migration checks"),
         Stage("gate-b-compilers", command("node", "tests/test_gate_b_compilers.js"), 45, "Mechanical compiler regressions"),
         Stage("audit-regressions", command(PYTHON, "tests/test_audit_regressions.py"), 45, "Known product regression guards"),
+        Stage("release-reproducibility", command(PYTHON, "tests/test_cross_platform_release_reproducibility.py"), 180, "Full-tree LF/CRLF release parity"),
+        Stage("documentation-contract", command(PYTHON, "tests/test_documentation_contract.py"), 60, "Active documentation and Markdown contract"),
         Stage("validation-runner", command(PYTHON, "tests/test_validation_runner.py"), 360, "Comprehensive workflow runner safety contract"),
     ),
 )

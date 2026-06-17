@@ -70,7 +70,9 @@ VAW_<MILESTONE>_DELIVERY/
 - instrukcja zawiera maksymalnie jeden krótki blok walidacji i publikacji;
 - helper musi być przetestowany z dokładnego rozpakowanego układu paczki.
 
-## 5. Artefakty produktu
+## 5. Artefakty produktu i kontrakt bajtów
+
+Tekstowe źródła wydania są hashowane i pakowane jako canonical UTF-8/LF, a pliki binarne pozostają byte-exact. `SOURCE_MANIFEST.json`, single HTML, source ZIP i verifier korzystają z tego samego widoku kanonicznego. ZIP ma deterministyczne nazwy, sortowanie, timestampy, tryby plików oraz jawny format `deterministic-stored-zip-v1`. `.gitattributes` poprawia checkout consistency, ale poprawność nie może zależeć wyłącznie od lokalnego `core.autocrlf`.
 
 Single HTML, source ZIP i checksumy muszą pochodzić z jednego deterministycznego buildu i przechodzić source parity. Artefakty produktu są wymagane tylko wtedy, gdy milestone dotyka produktu lub release engineering; czysto dokumentacyjny milestone nie generuje nowego wydania dla samej kosmetyki.
 
@@ -87,7 +89,7 @@ T4 FULL
 T5 target platform
 ```
 
-FAST uruchamia się zwykle 1–2 razy. FULL uruchamia się raz na zamrożonym kandydacie tylko wtedy, gdy zakres jest release-sensitive. Wyniki Linux, Windows, browser i cross-platform raportuj osobno.
+FAST uruchamia się zwykle 1–2 razy. FULL uruchamia się raz na zamrożonym kandydacie tylko wtedy, gdy zakres jest release-sensitive. Wyniki Linux, Windows, browser i cross-platform raportuj osobno. Cross-platform PASS wymaga Linux FULL i Windows FULL na tym samym finalnym SHA; syntetyczna lub pełnodrzewowa macierz LF/CRLF nie zastępuje dowodu target-platform.
 
 ## 7. Konflikty i blokery
 
@@ -99,4 +101,4 @@ Przy prawdziwym blockerze wypróbuj maksymalnie trzy różne bezpieczne mechaniz
 
 Aktywny indeks dokumentacji: `docs/README.md`.
 
-Po Documentation Convergence Stage 2 dalsza kosmetyczna reorganizacja repozytorium jest zamrożona. Następne milestone'y to osobny Stage 1.1 cross-platform release reproducibility, stop-review i Gate C — Assembly Spaces / Sublevels. Device/Port Schema, ControlRuntime, walking, docking i szerokie interiors pozostają poza zakresem do zamknięcia Gate C.
+Po Documentation Convergence Stage 2 dalsza kosmetyczna reorganizacja repozytorium jest zamrożona. Po Stage 1.1 następuje formalny closeout, stop-review i Gate C — Assembly Spaces / Sublevels. Device/Port Schema, ControlRuntime, walking, docking i szerokie interiors pozostają poza zakresem do zamknięcia Gate C.

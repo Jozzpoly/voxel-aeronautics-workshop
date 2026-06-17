@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -61,6 +62,9 @@ required = {
     'docs/repository/REPOSITORY_STRUCTURE_TARGET.md',
     'docs/repository/REPOSITORY_STRUCTURE_MIGRATION_REPORT.md',
     'docs/repository/DOCUMENTATION_CONVERGENCE_STAGE2_REPORT.md',
+    'docs/repository/CROSS_PLATFORM_RELEASE_REPRODUCIBILITY_STAGE1_1.md',
+    '.gitattributes',
+    '.github/workflows/release-reproducibility.yml',
     *PHASE_REPORTS,
     *HISTORICAL_REVIEWS,
     *{f'docs/adr/{number:04d}-{name}.md' for number, name in [
@@ -112,6 +116,9 @@ push = texts['PUSH_INSTRUCTIONS.md']
 handoff = texts['docs/WORKFLOW_REPAIR_HANDOFF.md']
 phase_index = texts['docs/history/phases/README.md']
 review_index = texts['docs/history/reviews/README.md']
+reproducibility = texts['docs/repository/CROSS_PLATFORM_RELEASE_REPRODUCIBILITY_STAGE1_1.md']
+workflow = (ROOT / '.github/workflows/release-reproducibility.yml').read_text(encoding='utf-8')
+gitattributes = (ROOT / '.gitattributes').read_text(encoding='utf-8')
 
 for phrase in (
     'Sandbox przed checklistą',
@@ -164,10 +171,45 @@ assert 'direct Git > one final milestone ZIP > complete single file > patch' in 
 assert 'Mode R' in agent and 'Mode Z' in agent and 'Mode P' in agent
 assert 'three genuinely different safe mechanisms' in agent
 assert 'bezpośredni Git > jeden końcowy ZIP milestone' in delivery
-assert 'git push origin' in delivery and 'git push --force' in delivery
+assert 'git push origin' in delivery and 'force-push' in delivery
+assert 'git push --force' not in delivery
 assert 'git push origin' in push and 'Never force-push' in push
+assert 'git push --force' not in push
 assert 'Stage 1.1 Cross-platform release reproducibility' in handoff
+assert 'CROSS_PLATFORM_RELEASE_REPRODUCIBILITY=CI_PENDING' in handoff
+assert 'eaa5e01fcccef4d801106e150ff59a1761f11a87' in handoff
 assert 'Gate C' in handoff
+
+for phrase in (
+    'raw checkout bytes',
+    'canonical text bytes',
+    'Git blob bytes',
+    'exact archive bytes',
+    'utf-8-lf',
+    'byte-exact',
+    'deterministic-stored-zip-v1',
+    'Full-tree LF/CRLF',
+):
+    assert phrase in reproducibility, f'Stage 1.1 report misses byte contract: {phrase}'
+
+for phrase in (
+    'canonical UTF-8/LF',
+    'byte-exact',
+    'SOURCE_MANIFEST.json',
+    'deterministic-stored-zip-v1',
+):
+    assert phrase in delivery, f'Delivery workflow misses release contract: {phrase}'
+
+for phrase in (
+    'ubuntu-latest',
+    'windows-latest',
+    'test_cross_platform_release_reproducibility.py',
+    'tools/validate_full.py',
+):
+    assert phrase in workflow, f'CI workflow misses: {phrase}'
+
+for phrase in ('*.md text eol=lf', '*.json text eol=lf', '*.bat text eol=crlf', '*.bin binary'):
+    assert phrase in gitattributes, f'.gitattributes misses: {phrase}'
 
 STALE_ACTIVE_PHRASES = (
     'NOT-PUBLISHED',
@@ -181,6 +223,23 @@ for path in ACTIVE_DOCUMENTS:
     text = texts[path]
     for phrase in STALE_ACTIVE_PHRASES:
         assert phrase not in text, f'{path} contains stale active status: {phrase}'
+
+MARKDOWN_LINK = re.compile(r'\[[^\]]+\]\(([^)]+)\)')
+MARKDOWN_CONTRACT_DOCUMENTS = {
+    *ACTIVE_DOCUMENTS,
+    'docs/repository/CROSS_PLATFORM_RELEASE_REPRODUCIBILITY_STAGE1_1.md',
+}
+for path in sorted(MARKDOWN_CONTRACT_DOCUMENTS):
+    text = texts[path]
+    fence_count = sum(1 for line in text.splitlines() if line.lstrip().startswith('```'))
+    assert fence_count % 2 == 0, f'{path} contains an unclosed Markdown code fence'
+    for raw_target in MARKDOWN_LINK.findall(text):
+        target = raw_target.strip().strip('<>')
+        if not target or target.startswith(('#', 'http://', 'https://', 'mailto:')):
+            continue
+        target = target.split('#', 1)[0].split('?', 1)[0]
+        resolved = ((ROOT / path).parent / target).resolve()
+        assert resolved.exists(), f'{path} contains a broken relative link: {raw_target}'
 
 for publication_doc in ('AGENT_WORKFLOW.md', 'DELIVERY_WORKFLOW.md', 'PUSH_INSTRUCTIONS.md'):
     text = texts[publication_doc]
@@ -199,4 +258,6 @@ print({
     'nextGate': 'Gate C',
     'documentationIndex': 'ok',
     'workflowV3': 'ok',
+    'crossPlatformReleaseContract': 'ok',
+    'markdownLinksAndFences': 'ok',
 })

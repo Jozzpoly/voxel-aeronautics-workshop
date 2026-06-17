@@ -1,0 +1,42 @@
+name: Release Reproducibility
+
+on:
+  push:
+    branches:
+      - maintenance/workflow-repair-clean
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full:
+    name: FULL (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Prove full-tree LF and CRLF parity
+        run: python tests/test_cross_platform_release_reproducibility.py
+
+      - name: Run FULL validation
+        run: python tools/validate_full.py

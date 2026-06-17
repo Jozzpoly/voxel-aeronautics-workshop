@@ -30,7 +30,7 @@ Current product state: Foundation Phase 1D.4A, Gate B closed, Gate C — Assembl
 - [`../AGENT_WORKFLOW.md`](../AGENT_WORKFLOW.md) — Workflow V3 milestone execution.
 - [`../DELIVERY_WORKFLOW.md`](../DELIVERY_WORKFLOW.md) — Git-first publication and one-ZIP fallback.
 - [`../PUSH_INSTRUCTIONS.md`](../PUSH_INSTRUCTIONS.md) — safe normal commit/push procedure.
-- [`WORKFLOW_REPAIR_HANDOFF.md`](WORKFLOW_REPAIR_HANDOFF.md) — Stage 1/Stage 2 handoff and known platform evidence.
+- [`WORKFLOW_REPAIR_HANDOFF.md`](WORKFLOW_REPAIR_HANDOFF.md) — Stage 1, Stage 2 and Stage 1.1 handoff.
 
 The default transport order is:
 
@@ -56,6 +56,7 @@ Gate C requires a new accepted ADR before implementation expands spatial ownersh
 - [`repository/REPOSITORY_STRUCTURE_TARGET.md`](repository/REPOSITORY_STRUCTURE_TARGET.md)
 - [`repository/REPOSITORY_STRUCTURE_MIGRATION_REPORT.md`](repository/REPOSITORY_STRUCTURE_MIGRATION_REPORT.md)
 - [`repository/DOCUMENTATION_CONVERGENCE_STAGE2_REPORT.md`](repository/DOCUMENTATION_CONVERGENCE_STAGE2_REPORT.md)
+- [`repository/CROSS_PLATFORM_RELEASE_REPRODUCIBILITY_STAGE1_1.md`](repository/CROSS_PLATFORM_RELEASE_REPRODUCIBILITY_STAGE1_1.md)
 
 Supporting evidence explains or validates current contracts but does not outrank them.
 

@@ -50,7 +50,7 @@ Do not start Device & Port Schema, ControlRuntime, walking, docking, broad inter
 
 Read `PROJECT_VISION.md`, `ARCHITECTURE.md`, `ROADMAP_NEXT.md`, `FOUNDATION_READINESS_REVIEW.md`, `PROGRAMMABLE_MACHINE_RESEARCH.md`, `docs/history/phases/PHASE_1D4A_REPORT.md`, accepted ADR 0033–0040 and current test/validation reports before changing foundations.
 
-## Workflow and repository state — Stage 2 closed 2026-06-17
+## Workflow and repository state — Stage 1.1 candidate 2026-06-18
 
 - Active continuation branch: `maintenance/workflow-repair-clean`.
 - Published Stage 1 commit: `306d5690cae647066acc00a80bcf26a1d47c0441`.
@@ -62,6 +62,8 @@ Read `PROJECT_VISION.md`, `ARCHITECTURE.md`, `ROADMAP_NEXT.md`, `FOUNDATION_READ
 - Windows targeted path/process-family/run-directory tests, the validation runner and FAST passed.
 - Windows FULL is `PARTIAL` only because the pre-existing raw-worktree `SOURCE_MANIFEST.json` contract is CRLF-sensitive. This is deferred to Stage 1.1 and is not a Stage 1 or gameplay regression.
 - Documentation Convergence Stage 2 is closed: `docs/README.md` is the active authority index, Workflow V3 replaces patch-first micro-delivery, and superseded reviews live under `docs/history/reviews/`.
-- The next separate infrastructure milestone is Stage 1.1 Cross-platform release reproducibility.
-- Further cosmetic repository reorganization is frozen; after Stage 1.1 perform a stop-review and move to Gate C.
+- Stage 1.1 is based on the verified Stage 2 head `eaa5e01fcccef4d801106e150ff59a1761f11a87` and defines canonical UTF-8/LF text bytes, byte-exact binary files and deterministic stored ZIP metadata/order.
+- `SOURCE_MANIFEST.json`, single HTML, source ZIP and verifier consume the same canonical byte view; the main suite includes a full-tree LF/CRLF parity test.
+- Linux FULL and Windows FULL on one exact published SHA remain mandatory before formal Stage 1.1 closeout.
+- Further cosmetic repository reorganization is frozen; after Stage 1.1 closeout perform a stop-review and move to Gate C.
 - Current handoff: `docs/WORKFLOW_REPAIR_HANDOFF.md`.
