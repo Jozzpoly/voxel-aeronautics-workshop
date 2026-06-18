@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Voxel Aeronautics Workshop — Foundation Phase 1D.4A Mechanical Platform Convergence</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
-  <script src="https://unpkg.com/cannon@0.6.2/build/cannon.min.js"></script>
+  <title>Voxel Aeronautics Workshop — Gate C Future Hardening</title>
+  <script src="vendor/three-r128/three.min.js"></script>
+  <script src="vendor/cannon-0.6.2/cannon.min.js"></script>
+  <link rel="stylesheet" href="tailwind.generated.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -34,7 +34,7 @@
     <div class="workspace-panel-handle"><span>BUILD WORKSPACE</span><span class="workspace-panel-actions"><button type="button" data-panel-minimize="build" aria-label="Minimize build panel">—</button><button type="button" data-panel-close="build" aria-label="Close build panel">×</button></span></div>
     <div class="workspace-panel-scroll" data-panel-scroll="build" tabindex="0" role="region" aria-label="Build workspace content">
     <div class="flex items-center justify-between mb-1 gap-2">
-      <div><h1 class="text-xl font-black text-white">Voxel Aeronautics Workshop</h1><div class="text-[10px] uppercase tracking-[0.18em] text-sky-300">Foundation Phase 1D.4A • Mechanical Platform Convergence</div></div>
+      <div><h1 class="text-xl font-black text-white">Voxel Aeronautics Workshop</h1><div class="text-[10px] uppercase tracking-[0.18em] text-sky-300">Foundation Gate C • Future Hardening</div></div>
       <span id="ui-mode" class="chip text-amber-300">BUILD</span>
     </div>
     <p class="text-xs text-gray-400 mb-3">
@@ -77,6 +77,22 @@
       <button id="btn-import" class="mini-btn">IMPORT JSON</button>
       <input id="blueprint-file" type="file" accept="application/json,.json" hidden />
     </div>
+    <div class="mb-3 rounded border border-violet-900/70 bg-slate-950/45 p-2" id="assembly-space-panel">
+      <div class="text-[10px] uppercase tracking-[0.16em] text-violet-300 mb-2">Assembly spaces</div>
+      <select id="assembly-space-list" class="mini-btn w-full mb-2" aria-label="Active assembly space"><option value="space:root">ROOT • Root</option></select>
+      <div class="grid grid-cols-[1fr_auto] gap-2">
+        <input id="assembly-space-name" class="mini-btn min-w-0" maxlength="64" value="Root" aria-label="Assembly space name" />
+        <button id="btn-rename-assembly-space" class="mini-btn" type="button">RENAME</button>
+      </div>
+      <div class="grid grid-cols-3 gap-2 mt-2">
+        <button id="btn-create-assembly-space" class="mini-btn" type="button">CREATE CHILD</button>
+        <button id="btn-move-hovered-to-space" class="mini-btn" type="button">MOVE HOVERED</button>
+        <button id="btn-delete-assembly-space" class="mini-btn" type="button" disabled>DELETE</button>
+      </div>
+      <p id="ui-assembly-space-status" class="text-[10px] text-gray-400 mt-2">Root • 0 blocks</p>
+      <p class="text-[10px] text-gray-500 mt-1">Ordinary building stays in Root. Select a child space only when you need a local attached frame.</p>
+    </div>
+
     <div class="mb-3 rounded border border-cyan-900/70 bg-slate-950/45 p-2" id="mechanical-authoring-panel">
       <div class="text-[10px] uppercase tracking-[0.16em] text-cyan-300 mb-2">Mechanical links</div>
       <div class="grid grid-cols-2 gap-2">
@@ -153,6 +169,7 @@
     <div class="flex justify-between mb-2"><span class="text-gray-400">Blocks:</span><span id="ui-blocks" class="font-mono text-white">0</span></div>
     <div class="flex justify-between mb-2"><span class="text-gray-400">Fuel:</span><span id="ui-fuel" class="font-mono text-white">0 / 0</span></div>
     <div class="flex justify-between mb-2"><span class="text-gray-400">Damage:</span><span id="ui-damage-status" class="font-mono text-white">No active damage</span></div>
+    <div class="flex justify-between mb-2"><span class="text-gray-400">Simulation:</span><span id="ui-simulation-health" class="font-mono text-emerald-300">Healthy</span></div>
     <div class="flex justify-between mb-2"><span class="text-gray-400">Vertical support:</span><span id="ui-vertical-support" class="font-mono text-white">—</span></div>
 
     <div class="space-y-3 mt-3">
@@ -399,7 +416,7 @@
   <div id="fatal-error" class="fatal-error" hidden>
     <div class="panel max-w-[34rem]">
       <h2 class="text-xl font-bold text-rose-300 mb-2">Game libraries could not be loaded</h2>
-      <p class="text-sm text-gray-300">This build uses pinned Three.js and Cannon.js CDN files. Check the internet connection, disable script-blocking for this local page, and reload.</p>
+      <p class="text-sm text-gray-300">This build uses pinned local Three.js and Cannon.js files. Verify the vendor directory is present and reload.</p>
     </div>
   </div>
   <!-- BEGIN APP LOADER -->
@@ -414,7 +431,7 @@
       window.addEventListener('error', event => showFatal(event.error || event.message));
       window.addEventListener('unhandledrejection', event => showFatal(event.reason));
       if (!window.THREE || !window.CANNON) {
-        showFatal('Required Three.js or Cannon.js library is unavailable. Check the internet connection and reload.');
+        showFatal('Required local Three.js or Cannon.js runtime is unavailable. Verify the vendor directory and reload.');
         return;
       }
 
@@ -426,6 +443,7 @@
         'src/foundation/blueprint.js',
         'src/foundation/diagnostics.js',
         'src/foundation/transform_math.js',
+        'src/foundation/assembly_spaces.js',
         'src/foundation/craft_model.js',
         'src/foundation/craft_history.js',
         'src/foundation/control_frame.js',
@@ -441,6 +459,7 @@
         'src/foundation/mission_evaluator.js',
         'src/foundation/aerostatics.js',
         'src/foundation/flight_control.js',
+        'src/foundation/fixed_step_scheduler.js',
         'src/foundation/state.js',
         'src/runtime/physics_port.js',
         'src/runtime/cannon_physics_backend.js',
@@ -452,6 +471,7 @@
         'src/game/input_settings_controller.js',
         'src/game/orientation_service.js',
         'src/game/module_visual_factory.js',
+        'src/game/assembly_space_controller.js',
         'src/game/engineering_analysis.js',
         'src/game/blueprint_controller.js',
         'src/game/mission_controller.js',

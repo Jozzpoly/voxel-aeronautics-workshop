@@ -8,6 +8,7 @@
     const InputSettingsController = window.VAW.require('game.input-settings-controller');
     const OrientationService = window.VAW.require('game.orientation-service');
     const ModuleVisualFactory = window.VAW.require('game.module-visual-factory');
+    const AssemblySpaceController = window.VAW.require('game.assembly-space-controller');
     const EngineeringAnalysis = window.VAW.require('game.engineering-analysis');
     const BlueprintController = window.VAW.require('game.blueprint-controller');
     const MissionController = window.VAW.require('game.mission-controller');
@@ -21,6 +22,7 @@
     const Catalog = window.VAW.require('foundation.catalog');
     const Orientation = window.VAW.require('foundation.orientation');
     const Blueprint = window.VAW.require('foundation.blueprint');
+    const AssemblySpaces = window.VAW.require('foundation.assembly-spaces');
     const ControlFrame = window.VAW.require('foundation.control-frame');
     const MassProperties = window.VAW.require('foundation.mass-properties');
     const CraftCompiler = window.VAW.require('foundation.craft-compiler');
@@ -31,6 +33,7 @@
     const MissionEvaluator = window.VAW.require('foundation.mission-evaluator');
     const Aerostatics = window.VAW.require('foundation.aerostatics');
     const FlightControl = window.VAW.require('foundation.flight-control');
+    const FixedStepScheduler = window.VAW.require('foundation.fixed-step-scheduler');
     const State = window.VAW.require('foundation.state');
     const { Physics } = window.VAW.require('runtime.active-context');
 
@@ -51,6 +54,7 @@
     const STATE = State.createInitialState();
     const CRAFT = STATE.craft;
     const WORKSHOP = STATE.workshop;
+    let assemblySpaceController = null;
 
     const container = document.getElementById('canvas-container');
     const environment = SceneEnvironment.create({
@@ -64,10 +68,10 @@
       sharedGeometry, materials, cloneMaterial
     } = environment;
 
-    function makeKey(x, y, z) { return Blueprint.makeKey(x, y, z); }
+    function activeAssemblySpaceId() { return assemblySpaceController?.activeAssemblySpaceId() || AssemblySpaces.ROOT_ASSEMBLY_SPACE_ID; }
+    function makeKey(x, y, z, assemblySpaceId = activeAssemblySpaceId()) { return Blueprint.makeOwnedKey(assemblySpaceId, x, y, z); }
     function snapInt(v) { return Math.round(v); }
     function isOverUI(target) { return !!(target && target.closest && (target.closest('#ui-layer') || target.closest('#help-modal') || target.closest('#debrief-modal'))); }
-
 
     const careerService = CareerService.create({ state: STATE, storage: localStorage });
     const {
@@ -158,7 +162,6 @@
       const transform = primaryFlightTransform();
       return transform ? Math.max(0, transform.position.y - TEST_RANGE.groundY) : 0;
     }
-
 
     function verticalSupportSample() {
       const flight = STATE.mode === 'FLIGHT' && primaryFlightBodyId();
@@ -348,6 +351,8 @@
       setText('ui-loads', `${Math.round(loads.thrust)} / ${Math.round(loads.lift)} / ${Math.round(loads.drag)} N`);
       const payloadText = STATE.flight.payload?.attached ? ` • cargo ${Math.round(payloadHealthFraction() * 100)}%` : (STATE.flight.payload ? ' • cargo lost' : '');
       setText('ui-damage-status', STATE.mode === 'FLIGHT' ? `${STATE.flight.lostParts} lost • ${STATE.flight.leakingFuelRate.toFixed(2)}/s leak${payloadText}` : 'No active damage');
+      const timing = fixedStepScheduler.snapshot();
+      setText('ui-simulation-health', timing.droppedSeconds > 0 ? `${timing.droppedSeconds.toFixed(2)} s dropped • ${timing.overloadFrames} overloads` : 'Healthy');
       if (bodyId && STATE.mode === 'FLIGHT') {
         setText('ui-fuel', `${Math.max(0, Math.round(STATE.flight.fuel))} / ${Math.max(0, Math.round(STATE.flight.fuelMax))}`);
       }
@@ -587,6 +592,7 @@
         : [{ key: `${x},${z}`, x, z, mirrorX: false, mirrorZ: false }];
 
       return placements.map(p => ({
+        assemblySpaceId: activeAssemblySpaceId(),
         x: p.x,
         y,
         z: p.z,
@@ -610,9 +616,8 @@
     function addWorkshopVisual(block) {
       if (!block || WORKSHOP.meshesByKey.has(block.key)) return WORKSHOP.meshesByKey.get(block?.key) || null;
       const mesh = createModuleVisual(block.type, block.orientation);
-      mesh.position.set(block.x, block.y, block.z);
       mesh.userData.blockKey = block.key;
-      scene.add(mesh);
+      assemblySpaceController.attachBlockVisual(block, mesh);
       WORKSHOP.meshesByKey.set(block.key, mesh);
       addRootMesh(mesh);
       return mesh;
@@ -623,7 +628,7 @@
       if (!key) return false;
       const mesh = WORKSHOP.meshesByKey.get(key);
       if (!mesh) return false;
-      scene.remove(mesh);
+      assemblySpaceController.detachBlockVisual(mesh);
       removeRootMesh(mesh);
       WORKSHOP.meshesByKey.delete(key);
       disposeObjectTree(mesh);
@@ -643,8 +648,11 @@
       const blockA = CRAFT.getById(link.endpointA.blockId);
       const blockB = CRAFT.getById(link.endpointB.blockId);
       if (!blockA || !blockB) return null;
-      const midpoint = new THREE.Vector3((blockA.x + blockB.x) * 0.5, (blockA.y + blockB.y) * 0.5, (blockA.z + blockB.z) * 0.5);
-      const axis = Blueprint.FACE_VECTORS[link.axis] || [0, 1, 0];
+      const pointA = assemblySpaceController.blockRootPosition(blockA);
+      const pointB = assemblySpaceController.blockRootPosition(blockB);
+      const midpoint = new THREE.Vector3((pointA[0] + pointB[0]) * 0.5, (pointA[1] + pointB[1]) * 0.5, (pointA[2] + pointB[2]) * 0.5);
+      const ownerAxis = Blueprint.FACE_VECTORS[link.axis] || [0, 1, 0];
+      const axis = assemblySpaceController.spaceVectorToRoot(link.assemblySpaceId, ownerAxis);
       const group = new THREE.Group();
       group.userData.mechanicalLinkId = link.mechanicalLinkId;
       const line = new THREE.Line(
@@ -691,6 +699,7 @@
     }
 
     function rebuildWorkshopView() {
+      assemblySpaceController.syncRoots();
       for (const mesh of WORKSHOP.meshesByKey.values()) {
         scene.remove(mesh);
         disposeObjectTree(mesh);
@@ -717,6 +726,7 @@
 
     function handleCraftModelChange(event) {
       try {
+        assemblySpaceController?.syncRoots();
         for (const block of event.removed) removeWorkshopVisual(block);
         for (const change of event.updated) removeWorkshopVisual(change.before);
         for (const block of event.added) addWorkshopVisual(block);
@@ -895,6 +905,7 @@
       STATE.flight.lastImpactAt = -Infinity;
       STATE.flight.runtimeParts = [];
       STATE.flight.runtimePartById = new Map();
+      STATE.flight.runtimePartsByBodyId = new Map();
       STATE.flight.currentInertia.set(0, 0, 0);
       STATE.flight.lostParts = 0;
       STATE.flight.leakingFuelRate = 0;
@@ -906,6 +917,7 @@
       STATE.flight.payload = null;
       STATE.flight.pendingImpacts = [];
       STATE.flight.structuralAccumulator = 0;
+      fixedStepScheduler.reset({ resetMetrics: true });
       STATE.flight.runtimePartByKey = new Map();
       STATE.flight.metricsDirty = true;
       thrustSphere.visible = false;
@@ -963,8 +975,7 @@
 
     function removeBlock(x, y, z) {
       if (STATE.mode !== 'BUILD') return false;
-      x = snapInt(x); y = snapInt(y); z = snapInt(z);
-      const key = makeKey(x, y, z);
+      const key = typeof x === 'string' ? x : makeKey(snapInt(x), snapInt(y), snapInt(z));
       const block = CRAFT.get(key);
       if (!block) return false;
       const mesh = WORKSHOP.meshesByKey.get(key);
@@ -998,9 +1009,10 @@
 
       const hit = hits[0];
       if (hit.object === basePlane || hit.object.userData.isBuildSurface) {
+        const local = assemblySpaceController.rootPointToActive([hit.point.x, hit.point.y, hit.point.z]);
         return {
           kind: 'surface',
-          position: new THREE.Vector3(snapInt(hit.point.x), 0, snapInt(hit.point.z)),
+          position: new THREE.Vector3(snapInt(local[0]), snapInt(local[1]), snapInt(local[2])),
           root: null,
           normal: new THREE.Vector3(0, 1, 0)
         };
@@ -1009,11 +1021,13 @@
       const root = getRootVoxelFromHit(hit.object);
       if (!root || !hit.face) return null;
 
+      const block = CRAFT.get(root.userData.blockKey);
+      if (!block || block.assemblySpaceId !== activeAssemblySpaceId()) return null;
       const normal = hit.face.normal.clone().round();
-      const position = root.position.clone().add(normal);
+      const position = new THREE.Vector3(block.x, block.y, block.z).add(normal);
       position.set(snapInt(position.x), snapInt(position.y), snapInt(position.z));
       if (position.y < GRID.minY) position.y = GRID.minY;
-      return { kind: 'voxel', position, root, normal };
+      return { kind: 'voxel', position, root, normal, block };
     }
 
     function hideSymmetryGhosts() {
@@ -1173,7 +1187,7 @@
 
     function recomputeThrusterTorqueEnvelope() {
       const max = new THREE.Vector3();
-      for (const part of STATE.flight.runtimeParts) {
+      for (const part of STATE.flight.functionalBlocks) {
         if (!part.attached || !part.pilotControlled || (part.type !== 'Thruster' && part.type !== 'VectorThruster')) continue;
         const force = Physics.vec3(part.localAxis.x * part.force, part.localAxis.y * part.force, part.localAxis.z * part.force);
         const torque = Physics.vec3();
@@ -1211,7 +1225,7 @@
     }
 
     function applyImpactDamage(bodyId, localImpact, impact, collisionKind = 'ground') {
-      const candidates = STATE.flight.runtimeParts.filter(part => part.attached && part.bodyId === bodyId);
+      const candidates = (STATE.flight.runtimePartsByBodyId.get(String(bodyId)) || []).filter(part => part.attached);
       if (!candidates.length) return;
       let nearest = candidates[0];
       let nearestDistance = Infinity;
@@ -1265,13 +1279,13 @@
       const failures = [];
       for (const [bodyId, loads] of loadsByBodyId) {
         if (!flightSession.hasBody(bodyId)) continue;
-        const bodyPlan = STATE.flight.assemblyPlan?.rigidBodies?.find(body => body.bodyId === bodyId);
+        const bodyPlan = STATE.flight.assemblyPlan?.bodyById?.[bodyId];
         const bodyMass = bodyPlan?.massProperties?.mass || 0;
         if (bodyMass <= 0) continue;
         const loadAcceleration = (Math.abs(loads.thrust) + Math.abs(loads.lift) + Math.abs(loads.drag)) / Math.max(1, bodyMass);
         const angularVelocity = flightSession.getBodyAngularVelocity(bodyId);
         const spin = Math.hypot(angularVelocity.x, angularVelocity.y, angularVelocity.z);
-        const candidates = STATE.flight.runtimeParts.filter(part => part.attached && part.bodyId === bodyId && part.type !== 'Core');
+        const candidates = (STATE.flight.runtimePartsByBodyId.get(String(bodyId)) || []).filter(part => part.attached && part.type !== 'Core');
         for (const part of candidates) {
           const support = runtimeNeighborCount(part);
           const lever = part.bodyLocalPosition.length();
@@ -1500,6 +1514,11 @@
       STATE.flight.functionalBlocks = functionalBlocks;
       STATE.flight.runtimeParts = runtimeParts;
       STATE.flight.runtimePartById = new Map(runtimeParts.map(part => [part.blockId, part]));
+      STATE.flight.runtimePartsByBodyId = new Map();
+      for (const part of runtimeParts) {
+        if (!STATE.flight.runtimePartsByBodyId.has(part.bodyId)) STATE.flight.runtimePartsByBodyId.set(part.bodyId, []);
+        STATE.flight.runtimePartsByBodyId.get(part.bodyId).push(part);
+      }
       STATE.flight.runtimePartByKey = new Map(runtimeParts.map(part => [part.key, part]));
       STATE.flight.fuelMax = Math.max(0, analysis.fuelCapacity);
       STATE.flight.fuel = STATE.flight.fuelMax;
@@ -1660,41 +1679,9 @@
 
     function handleMechanicalEndpointSelection(target) {
       const key = target?.root?.userData?.blockKey;
-      const block = key ? CRAFT.get(key) : null;
-      if (!block) { showStatus('HINGE ENDPOINT MUST BE A BLOCK', 1400); return false; }
-      const authoring = WORKSHOP.mechanicalAuthoring;
-      if (!authoring.firstBlockId) {
-        authoring.firstBlockId = block.blockId;
-        const status = document.getElementById('ui-hinge-status');
-        if (status) status.textContent = `First endpoint: ${block.blockId}. Click an adjacent second block.`;
-        showStatus('HINGE ENDPOINT A SELECTED', 700);
-        return true;
-      }
-      const first = CRAFT.getById(authoring.firstBlockId);
-      authoring.firstBlockId = null;
-      if (!first || first.blockId === block.blockId) { showStatus('SELECT TWO DIFFERENT BLOCKS', 1200); return false; }
-      const dx = block.x - first.x, dy = block.y - first.y, dz = block.z - first.z;
-      if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) !== 1) { showStatus('HINGE ENDPOINTS MUST SHARE A FACE', 1500); return false; }
-      const faceA = signedFaceForDelta(dx, dy, dz);
-      const faceB = Blueprint.OPPOSITE_FACE[faceA];
-      const axis = document.getElementById('hinge-axis')?.value || authoring.axis || 'PY';
-      const normal = Blueprint.FACE_VECTORS[faceA]; const axisVector = Blueprint.FACE_VECTORS[axis];
-      if (!axisVector || normal[0] * axisVector[0] + normal[1] * axisVector[1] + normal[2] * axisVector[2] !== 0) {
-        showStatus('HINGE AXIS MUST LIE IN THE SHARED FACE', 1800); return false;
-      }
-      const historyBefore = collectBlueprint();
-      const result = CRAFT.addMechanicalLink({
-        kind: 'hinge', endpointA: { blockId: first.blockId, face: faceA }, endpointB: { blockId: block.blockId, face: faceB },
-        axis, collideConnected: false, maxForce: 1000000, frictionTorque: 0, limits: null
-      }, 'author-hinge-link');
-      if (!result.ok) { showStatus(`HINGE ERROR: ${result.reason.toUpperCase()}`, 1800); return false; }
-      commitHistory(historyBefore); autoSave(false); updateTelemetry();
-      const compiled = CraftCompiler.compile(CRAFT);
-      const diagnostic = compiled.diagnostics.find(item => item.entities.some(entity => entity.kind === 'mechanical-link' && entity.id === result.link.mechanicalLinkId));
-      const status = document.getElementById('ui-hinge-status');
-      if (status) status.textContent = diagnostic ? `${result.link.mechanicalLinkId}: ${diagnostic.code}` : `${result.link.mechanicalLinkId} authored successfully.`;
-      showStatus(diagnostic ? diagnostic.code.replaceAll('-', ' ').toUpperCase() : 'HINGE LINK CREATED', 1600);
-      return true;
+      const blockId = key ? CRAFT.get(key)?.blockId : null;
+      const axis = document.getElementById('hinge-axis')?.value || WORKSHOP.mechanicalAuthoring.axis || 'PY';
+      return assemblySpaceController.authorHingeEndpoint(blockId, axis);
     }
 
     function performBuildAction(button) {
@@ -1705,7 +1692,7 @@
       if (button === 0) {
         addBlock(target.position.x, target.position.y, target.position.z, STATE.selectedBlock, STATE.orientation, true);
       } else if (button === 2 && target.kind === 'voxel') {
-        removeBlock(target.root.position.x, target.root.position.y, target.root.position.z);
+        removeBlock(target.root.userData.blockKey);
       }
     }
 
@@ -1746,6 +1733,29 @@
       normalizeBlueprintData, loadBlueprintData, persistBlueprint, saveBlueprint,
       autoSave, flushPendingAutosave, loadBlueprint, newBlueprint, exportBlueprint, importBlueprintFile
     } = blueprintController;
+
+    assemblySpaceController = AssemblySpaceController.create({
+      THREE, craft: CRAFT, state: STATE, scene, document,
+      callbacks: {
+        collectBlueprint,
+        commitHistory,
+        autoSave,
+        updateTelemetry,
+        updateGhost,
+        showStatus,
+        compileCraft: () => CraftCompiler.compile(CRAFT),
+        attachAuthoringObjects(group) {
+          for (const object of [ghost, ghostArrow, ghostNormalArrow, ...symmetryGhosts]) group?.add(object);
+        }
+      }
+    });
+    assemblySpaceController.bindUI({
+      hoveredBlockId: () => {
+        const key = STATE.hovered.root?.userData?.blockKey;
+        return key ? CRAFT.get(key)?.blockId || null : null;
+      }
+    });
+    assemblySpaceController.setActiveAssemblySpace(AssemblySpaces.ROOT_ASSEMBLY_SPACE_ID);
 
     const missionController = MissionController.create({
       THREE, Physics, state: STATE, craft: CRAFT, document,
@@ -2248,8 +2258,8 @@
     }
 
     function applyGyroControl(bodyId) {
-      const gyroCount = STATE.flight.runtimeParts
-        .filter(part => part.attached && part.type === 'Gyro' && part.bodyId === bodyId)
+      const gyroCount = (STATE.flight.runtimePartsByBodyId.get(String(bodyId)) || [])
+        .filter(part => part.attached && part.type === 'Gyro')
         .reduce((sum, part) => sum + runtimePartHealthFraction(part), 0);
       if (gyroCount <= 0) return;
 
@@ -2293,8 +2303,8 @@
         const velocity = Physics.vec3(flightSession.getBodyLinearVelocity(bodyId));
         const speed = velocity.length();
         if (speed <= 0.001) continue;
-        const bodyDragArea = STATE.flight.runtimeParts
-          .filter(part => part.attached && part.bodyId === bodyId)
+        const bodyDragArea = (STATE.flight.runtimePartsByBodyId.get(String(bodyId)) || [])
+          .filter(part => part.attached)
           .reduce((sum, part) => sum + (part.def.dragArea || 0) * Math.max(0.15, runtimePartHealthFraction(part)), 0)
           + (STATE.flight.payload?.attached && STATE.flight.payload.bodyId === bodyId ? 0.2 : 0);
         if (bodyDragArea <= 0) continue;
@@ -2403,7 +2413,7 @@
       }
 
       const gyroBodies = new Set(
-        STATE.flight.runtimeParts.filter(part => part.attached && part.type === 'Gyro' && part.pilotControlled).map(part => part.bodyId)
+        STATE.flight.functionalBlocks.filter(part => part.attached && part.type === 'Gyro' && part.pilotControlled).map(part => part.bodyId)
       );
       for (const bodyId of gyroBodies) applyGyroControl(bodyId);
 
@@ -2425,25 +2435,17 @@
       }
     }
 
-    let physicsAccumulator = 0;
+    const fixedStepScheduler = FixedStepScheduler.create({ fixedDt: PHYSICS.fixedDt, maxSubSteps: PHYSICS.maxSubSteps, maxFrameDelta: 0.08 });
     let hudAccumulator = 0;
     function animate() {
       requestAnimationFrame(animate);
-      const delta = Math.min(clock.getDelta(), 0.08);
+      const delta = clock.getDelta();
 
       if (STATE.mode === 'FLIGHT' && primaryFlightBodyId()) {
-        if (!STATE.mission.paused) {
-          physicsAccumulator = Math.min(physicsAccumulator + delta, PHYSICS.fixedDt * PHYSICS.maxSubSteps);
-          let subSteps = 0;
-          while (physicsAccumulator >= PHYSICS.fixedDt && subSteps < PHYSICS.maxSubSteps && !STATE.mission.paused) {
-            stepFlightPhysics(PHYSICS.fixedDt);
-            Physics.step(world, PHYSICS.fixedDt);
-            processPendingImpacts();
-            updateMission(PHYSICS.fixedDt);
-            physicsAccumulator -= PHYSICS.fixedDt;
-            subSteps += 1;
-          }
-        }
+        fixedStepScheduler.advance(delta, dt => {
+          stepFlightPhysics(dt); Physics.step(world, dt);
+          processPendingImpacts(); updateMission(dt);
+        }, { paused: STATE.mission.paused });
         syncFlightVisuals();
         syncDebris(delta);
         updateFlameVisibility();
@@ -2453,7 +2455,7 @@
           updateFlightFeedback();
         }
       } else {
-        physicsAccumulator = 0;
+        fixedStepScheduler.reset();
         hudAccumulator = 0;
       }
 

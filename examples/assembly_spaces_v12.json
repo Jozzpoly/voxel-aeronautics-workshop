@@ -1,0 +1,46 @@
+{
+  "version": 12,
+  "assemblySpaces": [
+    {
+      "assemblySpaceId": "space:root",
+      "parentAssemblySpaceId": null,
+      "name": "Root",
+      "localPose": { "position": [0, 0, 0], "quaternion": [0, 0, 0, 1] }
+    },
+    {
+      "assemblySpaceId": "space:example-arm",
+      "parentAssemblySpaceId": "space:root",
+      "name": "Example Arm",
+      "localPose": { "position": [2, 0, 0], "quaternion": [0, 0, 0, 1] }
+    }
+  ],
+  "blocks": [
+    { "blockId": "space-example:core", "assemblySpaceId": "space:root", "x": 0, "y": 0, "z": 0, "type": "Core", "orientation": 0, "controlAxis": "pitch", "controlSign": 0 },
+    { "blockId": "space-example:root-edge", "assemblySpaceId": "space:root", "x": 1, "y": 0, "z": 0, "type": "Frame", "orientation": 0, "controlAxis": "pitch", "controlSign": 0 },
+    { "blockId": "space-example:arm-edge", "assemblySpaceId": "space:example-arm", "x": 0, "y": 0, "z": 0, "type": "Frame", "orientation": 0, "controlAxis": "pitch", "controlSign": 0 },
+    { "blockId": "space-example:arm-tip", "assemblySpaceId": "space:example-arm", "x": 1, "y": 0, "z": 0, "type": "Hull", "orientation": 0, "controlAxis": "pitch", "controlSign": 0 },
+    { "blockId": "space-example:thruster", "assemblySpaceId": "space:root", "x": 0, "y": 1, "z": 0, "type": "Thruster", "orientation": 0, "controlAxis": "pitch", "controlSign": 0 }
+  ],
+  "mechanicalLinks": [
+    {
+      "mechanicalLinkId": "mechanical:space-example-arm",
+      "assemblySpaceId": "space:root",
+      "kind": "hinge",
+      "endpointA": { "blockId": "space-example:root-edge", "face": "PX" },
+      "endpointB": { "blockId": "space-example:arm-edge", "face": "NX" },
+      "axis": "PY",
+      "collideConnected": false,
+      "maxForce": 1000000,
+      "frictionTorque": 0,
+      "limits": null
+    }
+  ],
+  "selectedBlock": "Hull",
+  "orientation": 0,
+  "symmetry": "NONE",
+  "thrusterPower": 0.7,
+  "balloonPower": 0.7,
+  "stabilityAssist": 0.18,
+  "controlAxis": "pitch",
+  "controlSign": 0
+}

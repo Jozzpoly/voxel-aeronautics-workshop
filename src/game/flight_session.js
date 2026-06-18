@@ -95,6 +95,7 @@
                 kind: typeof classifyCollision === 'function' ? classifyCollision(event?.otherBody || null) : 'unknown'
               }),
               bodyId: bodyPlan.bodyId,
+              assemblySpaceId: bodyPlan.assemblySpaceId || 'space:root',
               bodyPlan,
               assembly: builtRuntime
             })
@@ -126,7 +127,8 @@
         if (!runtime.getBodyIds().includes(id)) throw new Error(`Cannot register visual root for unknown body: ${id}`);
         if (!root || typeof root !== 'object') throw new TypeError('Visual root must be an object.');
         if (visualRootByBodyId.has(id)) throw new Error(`Visual root already registered for body: ${id}`);
-        visualRootByBodyId.set(id, { root, disposer });
+        const assemblySpaceId = runtime.getAssemblySpaceIdForBody(id);
+        visualRootByBodyId.set(id, { root, disposer, assemblySpaceId });
         return root;
       }
 
@@ -214,7 +216,7 @@
 
       function bodyIds() { assertActive(); return runtime.getBodyIds(); }
       function primaryBodyId() { return primaryBodyIdValue; }
-      function hasBody(bodyId) { return Boolean(runtime && runtime.getBodyIds().includes(String(bodyId))); }
+      function hasBody(bodyId) { return Boolean(runtime?.hasBody(bodyId)); }
       function ownsBody(body) { return Boolean(runtime?.ownsBody(body)); }
       function getBodyTransform(bodyId = primaryBodyIdValue) { assertActive(); return runtime.getBodyTransform(bodyId); }
       function getBodyLinearVelocity(bodyId = primaryBodyIdValue) { assertActive(); return runtime.getBodyLinearVelocity(bodyId); }
@@ -230,6 +232,9 @@
       function applyBodyForce(bodyId, force, worldPoint) { assertActive(); return runtime.applyBodyForce(bodyId, force, worldPoint); }
       function addBodyTorque(bodyId, torque) { assertActive(); return runtime.addBodyTorque(bodyId, torque); }
       function getBodyIdForBlock(blockId) { assertActive(); return runtime.getBodyIdForBlock(blockId); }
+      function getAssemblySpaceIdForBody(bodyId) { assertActive(); return runtime.getAssemblySpaceIdForBody(bodyId); }
+      function getAssemblySpaceIdForBlock(blockId) { assertActive(); return runtime.getAssemblySpaceIdForBlock(blockId); }
+      function bodyIdsForAssemblySpace(assemblySpaceId) { assertActive(); return runtime.getBodyIdsForAssemblySpace(assemblySpaceId); }
       function getPartDescriptor(blockId) { assertActive(); return runtime.getPartDescriptor(blockId); }
       function getColliderOwnership(colliderId) { assertActive(); return runtime.getColliderOwnership(colliderId); }
       function getColliderOwnershipByBlockId(blockId) { assertActive(); return runtime.getColliderOwnershipByBlockId(blockId); }
@@ -244,6 +249,24 @@
       function setConstraintControl(constraintId, control) { assertActive(); return runtime.setConstraintControl(constraintId, control); }
       function getConstraintState(constraintId) { assertActive(); return runtime.getConstraintState(constraintId); }
       function getVisualRoot(bodyId = primaryBodyIdValue) { return visualRootByBodyId.get(String(bodyId))?.root || null; }
+      function getVisualRootForBlock(blockId) {
+        if (!runtime) return null;
+        const bodyId = runtime.getBodyIdForBlock(blockId);
+        return bodyId ? getVisualRoot(bodyId) : null;
+      }
+      function getVisualOwnership(bodyId = primaryBodyIdValue) {
+        const id = String(bodyId);
+        const entry = visualRootByBodyId.get(id);
+        if (!entry) return null;
+        return Object.freeze({ bodyId: id, assemblySpaceId: entry.assemblySpaceId, root: entry.root });
+      }
+      function getVisualRootsForAssemblySpace(assemblySpaceId) {
+        const owner = String(assemblySpaceId);
+        return Object.freeze([...visualRootByBodyId.entries()]
+          .filter(([, entry]) => entry.assemblySpaceId === owner)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([bodyId, entry]) => Object.freeze({ bodyId, assemblySpaceId: owner, root: entry.root })));
+      }
       function getAssembly() { return runtime; }
       function getPlan() { return plan; }
       function isActive() { return Boolean(runtime && !runtime.disposed && !cleanupPending); }
@@ -273,6 +296,9 @@
         applyBodyForce,
         addBodyTorque,
         getBodyIdForBlock,
+        getAssemblySpaceIdForBody,
+        getAssemblySpaceIdForBlock,
+        bodyIdsForAssemblySpace,
         getPartDescriptor,
         getColliderOwnership,
         getColliderOwnershipByBlockId,
@@ -290,6 +316,9 @@
         registerVisualRoot,
         unregisterVisualRoot,
         getVisualRoot,
+        getVisualRootForBlock,
+        getVisualOwnership,
+        getVisualRootsForAssemblySpace,
         syncVisuals
       });
     }

@@ -149,11 +149,21 @@ try{
  assert(elements.get('ui-mode').textContent==='FLIGHT','An imported articulated blueprint must launch after transient UI focus ends.');
  dispatchWindowEvent('pagehide');
  assert(elements.get('ui-mode').textContent==='BUILD','Articulated pagehide cleanup must return to build mode.');
+ const multiSpaceBlueprint=fs.readFileSync(path.join(__dirname,'..','examples','assembly_spaces_v12.json'),'utf8');
+ blueprintInput.files=[{name:'assembly_spaces_v12.json',content:multiSpaceBlueprint}];
+ blueprintInput.dispatchEvent({type:'change'});
+ assert(elements.get('ui-blocks').textContent==='5','The shipped v12 multi-space blueprint must import through the production UI path.');
+ assert(elements.get('assembly-space-list').children.some(option=>option.value==='space:example-arm'),'Imported child Assembly Space must be visible in the authoring UI.');
+ dispatchWindowEvent('keydown',{key:'f',code:'KeyF'});
+ assert(elements.get('ui-mode').textContent==='FLIGHT','A v12 multi-space blueprint must launch through the normal browser path.');
+ assert(elements.get('ui-simulation-health').textContent==='Healthy','Fresh multi-space launch must start with healthy simulation timing.');
+ dispatchWindowEvent('pagehide');
+ assert(elements.get('ui-mode').textContent==='BUILD','Multi-space pagehide cleanup must return to build mode.');
  elements.get('btn-save').focus();
  dispatchWindowEvent('keydown',{key:'f',code:'KeyF'});
  assert(elements.get('ui-mode').textContent==='FLIGHT','A normal UI button must not be treated as a persistent text editor.');
  dispatchWindowEvent('pagehide');
  elements.get('btn-clear').click();
  assert(elements.get('ui-blocks').textContent==='0','New blueprint must return to a truly empty workspace.');
- console.log('STARTUP_OK', {ids:ids.length,elements:all.length,modules:global.VAW.inspect().initialized.length,sources:sourceFiles.length,interaction:'ok',singleBodyLifecycle:'ok',articulatedUiLifecycle:'ok'});
+ console.log('STARTUP_OK', {ids:ids.length,elements:all.length,modules:global.VAW.inspect().initialized.length,sources:sourceFiles.length,interaction:'ok',singleBodyLifecycle:'ok',articulatedUiLifecycle:'ok',multiSpaceUiLifecycle:'ok'});
 }catch(e){console.error(e.stack||e);process.exit(1)}

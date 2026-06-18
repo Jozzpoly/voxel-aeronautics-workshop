@@ -1,21 +1,9 @@
-# Foundation Readiness Review — after Phase 1D.4A
+# Foundation Readiness Review — Gate C Hardening
 
-## Executive verdict
+## Verdict
 
-Gate B is complete and the project is ready to design Gate C. There are no known open P0–P2 defects in the delivered scope. The previous “Single-body flight ownership” limitation has been replaced by real rigid islands and mechanical compilation, while root-body mission/control policy remains intentional.
+The project is ready to design Gate D. Gate C data, ownership, compilation, runtime lifecycle and browser production paths are deterministic and testable. The hardening pass also closes backup corruption, hostile import, strict physics, offline distribution and scaling hot-path risks.
 
-## Gate status
+No open P0–P2 is known inside the hardened Gate C scope. Gate D must preserve `{blockId, portId}` identity, backend-neutral compilation and schema/version boundaries. Signal graph, ControlRuntime, dynamic fracture and broad interiors remain out of scope.
 
-- Single-body flight ownership: superseded by multi-body RuntimeAssembly with explicit root policy.
-- Rigid Islands & Mechanical Compilation: complete in Phase 1D.4A.
-- Assembly Spaces / Sublevels: next gate; not implemented.
-- Device & Port Schema: not implemented; Gate D.
-- Deterministic Control Kernel: not implemented; Gate E.
-
-## Readiness evidence
-
-The normal UI document path can author a hinge, compile it into deterministic bodies, build it through FlightSession and run it in real Cannon. Body-local frames, payload ownership, pivots, collision routing and rigid damage neighbors are explicit. Fifty compiled articulated lifecycle cycles leave no body/constraint/visual ownership behind.
-
-## Remaining risk
-
-Connected-body frame rebasing is guarded rather than generalized. This is safe for the current normal path but blocks arbitrary connected-body fracture or loaded-COM mutation. Gate C must not weaken the guard. Gate D/E must preserve graph separation and immutable-plan versus mutable-command ownership.
+See `FUTURE_READINESS_REVIEW.md` for resolved findings and deliberately deferred risks.

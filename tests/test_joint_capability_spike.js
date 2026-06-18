@@ -5,9 +5,11 @@ const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
 global.window = global;
-global.CANNON = require(path.join(ROOT, 'tests/vendor/cannon-0.6.2/cannon.min.js'));
+global.CANNON = require(path.join(ROOT, 'vendor/cannon-0.6.2/cannon.min.js'));
 for (const relative of [
   'src/foundation/kernel.js',
+  'src/foundation/transform_math.js',
+  'src/foundation/assembly_spaces.js',
   'src/runtime/physics_port.js',
   'src/runtime/cannon_physics_backend.js',
   'src/runtime/assembly_builder.js'

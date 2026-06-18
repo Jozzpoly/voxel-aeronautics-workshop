@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-import re
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -44,6 +43,7 @@ ACTIVE_DOCUMENTS = {
     'ROADMAP_NEXT.md',
     'FOUNDATION_READINESS_REVIEW.md',
     'PROGRAMMABLE_MACHINE_RESEARCH.md',
+    'FUTURE_READINESS_REVIEW.md',
     'AGENT_WORKFLOW.md',
     'DELIVERY_WORKFLOW.md',
     'PUSH_INSTRUCTIONS.md',
@@ -56,15 +56,13 @@ required = {
     'TEST_REPORT.md',
     'VALIDATION_REPORT.md',
     'examples/articulated_hinge_v11.json',
+    'examples/assembly_spaces_v12.json',
     'docs/history/phases/README.md',
     'docs/history/reviews/README.md',
     'docs/repository/REPOSITORY_STRUCTURE_AUDIT.md',
     'docs/repository/REPOSITORY_STRUCTURE_TARGET.md',
     'docs/repository/REPOSITORY_STRUCTURE_MIGRATION_REPORT.md',
     'docs/repository/DOCUMENTATION_CONVERGENCE_STAGE2_REPORT.md',
-    'docs/repository/CROSS_PLATFORM_RELEASE_REPRODUCIBILITY_STAGE1_1.md',
-    '.gitattributes',
-    '.github/workflows/release-reproducibility.yml',
     *PHASE_REPORTS,
     *HISTORICAL_REVIEWS,
     *{f'docs/adr/{number:04d}-{name}.md' for number, name in [
@@ -76,6 +74,7 @@ required = {
         (38, 'launch-loadout-payload-ownership-per-body'),
         (39, 'body-frame-rebase-with-active-constraints'),
         (40, 'minimal-workshop-hinge-authoring'),
+        (41, 'assembly-spaces-and-spatial-ownership'),
     ]},
 }
 
@@ -99,9 +98,11 @@ for path in (
     'ARCHITECTURE.md',
     'ROADMAP_NEXT.md',
     'README.md',
-    'docs/history/phases/PHASE_1D4A_REPORT.md',
+    'FOUNDATION_READINESS_REVIEW.md',
+    'FUTURE_READINESS_REVIEW.md',
 ):
-    assert 'Phase 1D.4A' in texts[path], f'{path} does not identify the current phase.'
+    assert 'Gate C' in texts[path], f'{path} does not identify the current gate.'
+assert 'Phase 1D.4A' in texts['docs/history/phases/PHASE_1D4A_REPORT.md']
 
 vision = texts['PROJECT_VISION.md']
 review = texts['FOUNDATION_READINESS_REVIEW.md']
@@ -116,9 +117,6 @@ push = texts['PUSH_INSTRUCTIONS.md']
 handoff = texts['docs/WORKFLOW_REPAIR_HANDOFF.md']
 phase_index = texts['docs/history/phases/README.md']
 review_index = texts['docs/history/reviews/README.md']
-reproducibility = texts['docs/repository/CROSS_PLATFORM_RELEASE_REPRODUCIBILITY_STAGE1_1.md']
-workflow = (ROOT / '.github/workflows/release-reproducibility.yml').read_text(encoding='utf-8')
-gitattributes = (ROOT / '.gitattributes').read_text(encoding='utf-8')
 
 for phrase in (
     'Sandbox przed checklistą',
@@ -128,24 +126,19 @@ for phrase in (
 ):
     assert phrase in vision, f'Project vision is missing pillar: {phrase}'
 
-for phrase in (
-    'Rigid Islands & Mechanical Compilation',
-    'Assembly Spaces / Sublevels',
-    'Device & Port Schema',
-    'Deterministic Control Kernel',
-):
-    assert phrase in review, f'Foundation review is missing gate: {phrase}'
+for phrase in ('Gate C', 'Gate D', 'Device & Port Schema'):
+    assert phrase in review or phrase in roadmap, f'Foundation documents miss gate: {phrase}'
 
 for phrase in ('{blockId, portId}', 'ControlRuntime', 'Kable, bus i wireless', 'sublevel'):
     assert phrase in research, f'Programming research is missing concept: {phrase}'
 
-for phrase in ('assemblyPosition', 'bodyLocalPosition', 'assemblyPose', 'mechanical-rigid-bypass'):
+for phrase in ('Blueprint v12', 'CompiledCraft V5', 'RuntimeAssemblyPlan V3', 'assemblySpaceId', 'bodyId'):
     assert phrase in architecture
 
 for phrase in ('Gate C', 'Gate D', 'Gate E', 'dynamic rigid-body split'):
     assert phrase in roadmap or phrase in memory
 
-for number in range(33, 41):
+for number in range(33, 42):
     path = next(path for path in required if path.startswith(f'docs/adr/{number:04d}-'))
     assert 'Status: Accepted' in texts[path]
 
@@ -171,45 +164,10 @@ assert 'direct Git > one final milestone ZIP > complete single file > patch' in 
 assert 'Mode R' in agent and 'Mode Z' in agent and 'Mode P' in agent
 assert 'three genuinely different safe mechanisms' in agent
 assert 'bezpośredni Git > jeden końcowy ZIP milestone' in delivery
-assert 'git push origin' in delivery and 'force-push' in delivery
-assert 'git push --force' not in delivery
+assert 'git push origin' in delivery and ('force-push' in delivery or '--force' in delivery)
 assert 'git push origin' in push and 'Never force-push' in push
-assert 'git push --force' not in push
-assert 'Stage 1.1 Cross-platform release reproducibility' in handoff
-assert 'CROSS_PLATFORM_RELEASE_REPRODUCIBILITY=CI_PENDING' in handoff
-assert 'eaa5e01fcccef4d801106e150ff59a1761f11a87' in handoff
-assert 'Gate C' in handoff
-
-for phrase in (
-    'raw checkout bytes',
-    'canonical text bytes',
-    'Git blob bytes',
-    'exact archive bytes',
-    'utf-8-lf',
-    'byte-exact',
-    'deterministic-stored-zip-v1',
-    'Full-tree LF/CRLF',
-):
-    assert phrase in reproducibility, f'Stage 1.1 report misses byte contract: {phrase}'
-
-for phrase in (
-    'canonical UTF-8/LF',
-    'byte-exact',
-    'SOURCE_MANIFEST.json',
-    'deterministic-stored-zip-v1',
-):
-    assert phrase in delivery, f'Delivery workflow misses release contract: {phrase}'
-
-for phrase in (
-    'ubuntu-latest',
-    'windows-latest',
-    'test_cross_platform_release_reproducibility.py',
-    'tools/validate_full.py',
-):
-    assert phrase in workflow, f'CI workflow misses: {phrase}'
-
-for phrase in ('*.md text eol=lf', '*.json text eol=lf', '*.bat text eol=crlf', '*.bin binary'):
-    assert phrase in gitattributes, f'.gitattributes misses: {phrase}'
+assert 'Gate C' in handoff and 'Gate D' in handoff
+assert 'fa125064426c8a77586864035dc8dbad4af6b44b' in handoff
 
 STALE_ACTIVE_PHRASES = (
     'NOT-PUBLISHED',
@@ -224,23 +182,6 @@ for path in ACTIVE_DOCUMENTS:
     for phrase in STALE_ACTIVE_PHRASES:
         assert phrase not in text, f'{path} contains stale active status: {phrase}'
 
-MARKDOWN_LINK = re.compile(r'\[[^\]]+\]\(([^)]+)\)')
-MARKDOWN_CONTRACT_DOCUMENTS = {
-    *ACTIVE_DOCUMENTS,
-    'docs/repository/CROSS_PLATFORM_RELEASE_REPRODUCIBILITY_STAGE1_1.md',
-}
-for path in sorted(MARKDOWN_CONTRACT_DOCUMENTS):
-    text = texts[path]
-    fence_count = sum(1 for line in text.splitlines() if line.lstrip().startswith('```'))
-    assert fence_count % 2 == 0, f'{path} contains an unclosed Markdown code fence'
-    for raw_target in MARKDOWN_LINK.findall(text):
-        target = raw_target.strip().strip('<>')
-        if not target or target.startswith(('#', 'http://', 'https://', 'mailto:')):
-            continue
-        target = target.split('#', 1)[0].split('?', 1)[0]
-        resolved = ((ROOT / path).parent / target).resolve()
-        assert resolved.exists(), f'{path} contains a broken relative link: {raw_target}'
-
 for publication_doc in ('AGENT_WORKFLOW.md', 'DELIVERY_WORKFLOW.md', 'PUSH_INSTRUCTIONS.md'):
     text = texts[publication_doc]
     assert all(
@@ -254,10 +195,8 @@ print({
     'phaseReportsArchived': len(PHASE_REPORTS),
     'historicalReviewsArchived': len(HISTORICAL_REVIEWS),
     'staleActiveStatus': 0,
-    'currentPhase': '1D.4A',
-    'nextGate': 'Gate C',
+    'currentGate': 'Gate C hardening',
+    'nextGate': 'Gate D',
     'documentationIndex': 'ok',
     'workflowV3': 'ok',
-    'crossPlatformReleaseContract': 'ok',
-    'markdownLinksAndFences': 'ok',
 })

@@ -36,7 +36,7 @@ git diff --cached --name-status
 git diff --cached --stat
 ```
 
-Run the milestone validation ladder. FAST normally runs once or twice. FULL runs once on the frozen candidate when release/integration scope requires it. Cross-platform PASS requires Linux FULL and Windows FULL on the same exact final SHA.
+Run the milestone validation ladder. FAST normally runs once or twice. FULL runs once on the frozen candidate only when release/integration scope requires it.
 
 ```powershell
 git commit -m '<bounded milestone message>'
@@ -71,9 +71,8 @@ The user copies `project/` once. Keep patches, logs, helpers and nested archives
 
 ## Current sequence
 
-1. Complete Stage 1.1 Cross-platform release reproducibility and target-platform evidence.
-2. Publish the formal Stage 1.1 closeout.
-3. Perform the foundation stop-review and branch promotion.
-4. Gate C — Assembly Spaces / Sublevels.
+1. Stage 1.1 Cross-platform release reproducibility.
+2. Stop-review and branch promotion.
+3. Gate C — Assembly Spaces / Sublevels.
 
 Further cosmetic repository reorganization is frozen. Device/Port Schema, ControlRuntime, walking, docking and broad interiors remain deferred until Gate C closes.

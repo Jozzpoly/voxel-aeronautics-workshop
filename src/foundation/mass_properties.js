@@ -73,18 +73,26 @@
     function compute(rawElements) {
       if (!Array.isArray(rawElements)) throw new TypeError('Mass properties require an array of elements.');
       const elements = rawElements.map(normalizeElement).filter(element => element.mass > 0);
-      let mass = 0;
-      const weighted = [0, 0, 0];
-      for (const element of elements) {
-        mass += element.mass;
-        weighted[0] += element.center[0] * element.mass;
-        weighted[1] += element.center[1] * element.mass;
-        weighted[2] += element.center[2] * element.mass;
+      function kahanAdd(state, value) {
+        const corrected = value - state.compensation;
+        const next = state.sum + corrected;
+        state.compensation = (next - state.sum) - corrected;
+        state.sum = next;
       }
+      const massState = { sum: 0, compensation: 0 };
+      const weightedState = Array.from({ length: 3 }, () => ({ sum: 0, compensation: 0 }));
+      for (const element of elements) {
+        kahanAdd(massState, element.mass);
+        kahanAdd(weightedState[0], element.center[0] * element.mass);
+        kahanAdd(weightedState[1], element.center[1] * element.mass);
+        kahanAdd(weightedState[2], element.center[2] * element.mass);
+      }
+      const mass = massState.sum;
+      const weighted = weightedState.map(state => state.sum);
       const centerOfMass = mass > EPSILON
         ? [weighted[0] / mass, weighted[1] / mass, weighted[2] / mass]
         : [0, 0, 0];
-      const inertiaDiagonal = [0, 0, 0];
+      const inertiaState = Array.from({ length: 3 }, () => ({ sum: 0, compensation: 0 }));
       const resolvedElements = elements.map(element => {
         const offset = [
           element.center[0] - centerOfMass[0],
@@ -92,11 +100,12 @@
           element.center[2] - centerOfMass[2]
         ];
         const local = boxInertiaDiagonal(element.mass, element.halfExtents);
-        inertiaDiagonal[0] += local[0] + element.mass * (offset[1] ** 2 + offset[2] ** 2);
-        inertiaDiagonal[1] += local[1] + element.mass * (offset[0] ** 2 + offset[2] ** 2);
-        inertiaDiagonal[2] += local[2] + element.mass * (offset[0] ** 2 + offset[1] ** 2);
+        kahanAdd(inertiaState[0], local[0] + element.mass * (offset[1] ** 2 + offset[2] ** 2));
+        kahanAdd(inertiaState[1], local[1] + element.mass * (offset[0] ** 2 + offset[2] ** 2));
+        kahanAdd(inertiaState[2], local[2] + element.mass * (offset[0] ** 2 + offset[1] ** 2));
         return Object.freeze({ ...element, offset: Object.freeze(offset), localInertiaDiagonal: Object.freeze(local) });
       });
+      const inertiaDiagonal = inertiaState.map(state => state.sum);
       return Object.freeze({
         mass,
         centerOfMass: Object.freeze(centerOfMass),

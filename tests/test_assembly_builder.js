@@ -6,6 +6,8 @@ const ROOT = path.resolve(__dirname, '..');
 global.window = global;
 for (const relative of [
   'src/foundation/kernel.js',
+  'src/foundation/transform_math.js',
+  'src/foundation/assembly_spaces.js',
   'src/runtime/physics_port.js',
   'src/runtime/headless_physics_backend.js',
   'src/runtime/assembly_builder.js'
@@ -84,12 +86,15 @@ assert.deepStrictEqual(runtime.getBodyIds(), ['body:root', 'body:rotor']);
 assert(Object.isFrozen(runtime.getBodyIds()));
 assert.strictEqual(runtime.getBodyPlan('body:rotor').bodyId, 'body:rotor');
 assert.strictEqual(runtime.getBodyIdForBlock('rotor'), 'body:rotor');
+assert.strictEqual(runtime.getAssemblySpaceIdForBody('body:rotor'), 'space:root');
+assert.strictEqual(runtime.getAssemblySpaceIdForBlock('rotor'), 'space:root');
+assert.deepStrictEqual(runtime.getBodyIdsForAssemblySpace('space:root'), ['body:root', 'body:rotor']);
 assert.strictEqual(runtime.getPartDescriptor('rotor').bodyId, 'body:rotor');
 assert.deepStrictEqual(runtime.getColliderOwnershipByBlockId('rotor'), {
-  colliderId: 'collider:rotor', blockId: 'rotor', bodyId: 'body:rotor'
+  colliderId: 'collider:rotor', blockId: 'rotor', bodyId: 'body:rotor', assemblySpaceId: 'space:root'
 });
 assert.deepStrictEqual(runtime.getColliderOwnership('collider:rotor'), {
-  colliderId: 'collider:rotor', blockId: 'rotor', bodyId: 'body:rotor'
+  colliderId: 'collider:rotor', blockId: 'rotor', bodyId: 'body:rotor', assemblySpaceId: 'space:root'
 });
 assert.deepStrictEqual(runtime.getBodyTransform('body:root').position, { x: 10, y: 4, z: 0 });
 runtime.setBodyVelocity('body:root', { linear: { x: 2, y: 3, z: 4 }, angular: { x: 0.1, y: 0.2, z: 0.3 } });

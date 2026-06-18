@@ -174,9 +174,7 @@ async function prepareHermeticTargets() {
 
   const rewriteDependencies = html => html
     .replace('<head>', '<head><link rel="icon" href="data:,">')
-    .replace('<script src="https://cdn.tailwindcss.com"></script>', '')
-    .replace('<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>', '<script src=".recovery_browser_three_stub.js"></script>')
-    .replace('<script src="https://unpkg.com/cannon@0.6.2/build/cannon.min.js"></script>', '<script src="tests/vendor/cannon-0.6.2/cannon.min.js"></script>');
+    .replace('<script src="vendor/three-r128/three.min.js"></script>', '<script src=".recovery_browser_three_stub.js"></script>');
 
   let sourceHtml = rewriteDependencies(await fs.readFile(path.join(ROOT, 'index.html'), 'utf8'));
   sourceHtml = sourceHtml.replace("        'src/game.js'", "        '.recovery_browser_game.js'");
@@ -186,6 +184,9 @@ async function prepareHermeticTargets() {
   const distName = (await fs.readdir(distDir)).find(name => name.endsWith('.html'));
   assert(distName, 'Built distribution HTML is missing.');
   let distHtml = rewriteDependencies(await fs.readFile(path.join(distDir, distName), 'utf8'));
+  const embeddedThree = /<script>\s*\/\* BEGIN EMBEDDED THREE R128 \*\/[\s\S]*?\/\* END EMBEDDED THREE R128 \*\/\s*<\/script>/;
+  assert(embeddedThree.test(distHtml), 'Built distribution is missing the marked embedded Three r128 block.');
+  distHtml = distHtml.replace(embeddedThree, '<script src=".recovery_browser_three_stub.js"></script>');
   distHtml = injectProbe(distHtml);
   await fs.writeFile(path.join(ROOT, '.recovery_browser_dist.html'), distHtml);
 }

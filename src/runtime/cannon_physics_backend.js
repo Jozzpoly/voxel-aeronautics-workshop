@@ -11,8 +11,10 @@
       const constraintsByWorld = new WeakMap();
 
       function vec3(x = 0, y = 0, z = 0) {
-        if (x && typeof x === 'object') return new CANNON.Vec3(Number(x.x) || 0, Number(x.y) || 0, Number(x.z) || 0);
-        return new CANNON.Vec3(Number(x) || 0, Number(y) || 0, Number(z) || 0);
+        const value = x && typeof x === 'object'
+          ? PhysicsPort.normalizeRequiredVec3(x, 'Physics vector')
+          : PhysicsPort.normalizeRequiredVec3({ x, y, z }, 'Physics vector');
+        return new CANNON.Vec3(value.x, value.y, value.z);
       }
 
       function clamp(value, minimum, maximum) {
@@ -38,17 +40,20 @@
       function setBodyTransform(body, value = {}) {
         if (!body) throw new TypeError('Body is required.');
         if (value.position) {
-          const position = PhysicsPort.normalizeVec3(value.position);
+          const position = PhysicsPort.normalizeRequiredVec3(value.position, 'Body position');
           body.position.set(position.x, position.y, position.z);
         }
         if (value.quaternion) {
-          const quaternion = PhysicsPort.normalizeQuaternion(value.quaternion);
+          const quaternion = PhysicsPort.normalizeRequiredQuaternion(value.quaternion, 'Body quaternion');
           body.quaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
         }
         if (value.axisAngle) {
-          const axis = PhysicsPort.normalizeVec3(value.axisAngle.axis, { x: 1, y: 0, z: 0 });
-          const angle = Number.isFinite(value.axisAngle.angle) ? value.axisAngle.angle : 0;
-          body.quaternion.setFromAxisAngle(vec3(axis), angle);
+          const axis = PhysicsPort.normalizeRequiredVec3(value.axisAngle.axis, 'Body axisAngle.axis');
+          const length = Math.hypot(axis.x, axis.y, axis.z);
+          if (!(length > 1e-8)) throw new RangeError('Body axisAngle.axis must have non-zero length.');
+          const angle = Number(value.axisAngle.angle);
+          if (!Number.isFinite(angle)) throw new TypeError('Body axisAngle.angle must be finite.');
+          body.quaternion.setFromAxisAngle(vec3(axis.x / length, axis.y / length, axis.z / length), angle);
         }
         markBodyDirty(body);
         return body;
@@ -57,11 +62,11 @@
       function setBodyVelocity(body, value = {}) {
         if (!body) throw new TypeError('Body is required.');
         if (value.linear) {
-          const linear = PhysicsPort.normalizeVec3(value.linear);
+          const linear = PhysicsPort.normalizeRequiredVec3(value.linear, 'Body linear velocity');
           body.velocity.set(linear.x, linear.y, linear.z);
         }
         if (value.angular) {
-          const angular = PhysicsPort.normalizeVec3(value.angular);
+          const angular = PhysicsPort.normalizeRequiredVec3(value.angular, 'Body angular velocity');
           body.angularVelocity.set(angular.x, angular.y, angular.z);
         }
         return body;
@@ -70,19 +75,19 @@
       function getBodyTransform(body) {
         if (!body) throw new TypeError('Body is required.');
         return Object.freeze({
-          position: PhysicsPort.normalizeVec3(body.position),
-          quaternion: PhysicsPort.normalizeQuaternion(body.quaternion)
+          position: PhysicsPort.normalizeRequiredVec3(body.position, 'Backend body position'),
+          quaternion: PhysicsPort.normalizeRequiredQuaternion(body.quaternion, 'Backend body quaternion')
         });
       }
 
       function getBodyLinearVelocity(body) {
         if (!body) throw new TypeError('Body is required.');
-        return PhysicsPort.normalizeVec3(body.velocity);
+        return PhysicsPort.normalizeRequiredVec3(body.velocity, 'Backend body linear velocity');
       }
 
       function getBodyAngularVelocity(body) {
         if (!body) throw new TypeError('Body is required.');
-        return PhysicsPort.normalizeVec3(body.angularVelocity);
+        return PhysicsPort.normalizeRequiredVec3(body.angularVelocity, 'Backend body angular velocity');
       }
 
       function createBody(value = {}) {

@@ -8,7 +8,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 from source_inventory import ALL_JS, FOUNDATION, GAME, RUNTIME, function_source
 HTML = (ROOT / 'index.html').read_text(encoding='utf-8')
-CSS = (ROOT / 'styles.css').read_text(encoding='utf-8').rstrip()
+GENERATED_CSS = (ROOT / 'tailwind.generated.css').read_text(encoding='utf-8').rstrip()
+CUSTOM_CSS = (ROOT / 'styles.css').read_text(encoding='utf-8').rstrip()
+CSS = GENERATED_CSS + '\n\n' + CUSTOM_CSS
 INTEGRITY = (ROOT / 'src/game/flight_integrity.js').read_text(encoding='utf-8')
 SESSION = (ROOT / 'src/game/flight_session.js').read_text(encoding='utf-8')
 ENTRY = (ROOT / 'src/game.js').read_text(encoding='utf-8')
@@ -23,6 +25,7 @@ spec.loader.exec_module(module)
 single = module.build_single_html(ROOT)
 assert "const sources = [\n      'src/" not in single
 assert 'href="styles.css"' not in single
+assert 'href="tailwind.generated.css"' not in single
 assert f'/* BEGIN EMBEDDED STYLES */\n{CSS}\n/* END EMBEDDED STYLES */' in single
 assert '/* BEGIN EMBEDDED APPLICATION */' in single
 for relative in module.APP_SOURCES:
@@ -57,7 +60,10 @@ assert 'PHYSICS.structuralCheckInterval' in step
 assert re.search(r'structuralCheckInterval:\s*1\s*/\s*30', ALL_JS)
 
 # Collider mutation happens only after world.step.
-assert re.search(r'Physics\.step\(world, PHYSICS\.fixedDt\);\s*processPendingImpacts\(\);\s*updateMission', GAME)
+fixed_step_start = GAME.index('fixedStepScheduler.advance(')
+fixed_step_end = GAME.index('});', fixed_step_start)
+fixed_step_source = GAME[fixed_step_start:fixed_step_end]
+assert fixed_step_source.index('Physics.step(world, dt)') < fixed_step_source.index('processPendingImpacts()') < fixed_step_source.index('updateMission(dt)')
 callback_start = GAME.index('collisionListener: ({ bodyId, collision }) => {')
 callback = GAME[callback_start:GAME.index('const visualRootByBodyId = new Map();', callback_start)]
 assert 'applyImpactDamage(' not in callback
@@ -193,7 +199,7 @@ for element_id in ('workspace-toolbar', 'contract-panel'):
 for removed_id in ('btn-ui-contracts', 'mobile-topbar', 'mobile-controls', 'btn-touch-place'):
     assert f'id="{removed_id}"' not in HTML
 assert 'id="desktop-required"' in HTML
-assert 'Foundation Phase 1D.4A' in HTML
+assert 'Foundation Gate C • Future Hardening' in HTML
 assert 'Foundation Phase 1D.2B • Mission + Balloon Control Fix' not in HTML
 assert re.search(r'id="contract-panel"[^>]*\shidden', HTML)
 assert 'btn-contract-panel-open' not in HTML and 'btn-contract-panel-close' not in HTML

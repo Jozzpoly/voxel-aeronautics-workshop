@@ -422,8 +422,8 @@
         const { bodyId, transform } = sample;
         const voxelExtent = MissionEvaluator.boxVerticalHalfExtent(transform.quaternion, { x: 0.5, y: 0.5, z: 0.5 });
         let lowestWorldY = Number.POSITIVE_INFINITY;
-        for (const part of STATE.flight.runtimeParts) {
-          if (!part.attached || !part.bodyLocalPosition || part.bodyId !== bodyId) continue;
+        for (const part of STATE.flight.runtimePartsByBodyId?.get(String(bodyId)) || []) {
+          if (!part.attached || !part.bodyLocalPosition) continue;
           const centerY = MissionEvaluator.projectLocalPointY(transform.position, transform.quaternion, part.bodyLocalPosition);
           lowestWorldY = Math.min(lowestWorldY, centerY - voxelExtent);
         }

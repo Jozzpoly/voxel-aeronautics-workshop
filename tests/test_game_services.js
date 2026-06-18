@@ -54,6 +54,9 @@ const normalized = career.normalizeCareerData({
 });
 if (normalized.credits !== 1_000_000_000) throw new Error('Career credits must preserve the historical upper clamp.');
 if (normalized.selectedContractId !== 'hover_license') throw new Error('Locked selected contract must fall back.');
+state.career.selectedContractId = 'removed-future-contract';
+if (career.getSelectedContract().id !== 'hover_license') throw new Error('Unknown selected contract must recover safely.');
+if (career.isContractUnlocked(null) !== false) throw new Error('Missing contract must not be treated as unlocked.');
 if (normalized.best.hover_license.stars !== 3 || normalized.best.hover_license.fuelFraction !== 1 || normalized.best.hover_license.integrity !== 0) {
   throw new Error('Career result bounds were not enforced.');
 }

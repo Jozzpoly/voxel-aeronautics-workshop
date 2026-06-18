@@ -1,28 +1,22 @@
-# Roadmap after Foundation Phase 1D.4A
+# Roadmap after Gate C Hardening
 
-## Closed: Gate B — Rigid Islands & Mechanical Graph Compiler
+## Closed
 
-Blueprint v11, stable link/body identity, pure topology compilers, per-island mass frames, Plan V2, real-Cannon vertical slice, body-correct collision/damage and minimal workshop hinge authoring are complete.
+- Gate B — deterministic rigid islands and mechanical graph.
+- Gate C — durable Assembly Spaces, ownership, migration, runtime presentation and minimal authoring.
+- Future-readiness hardening — strict import/physics boundaries, offline dependencies, fixed-step health, indexed hot paths and persistence recovery.
 
-## Next: Gate C — Assembly Spaces / Sublevels
+## Next: Gate D — Device & Port Schema
 
-Gate C must introduce durable assembly-space ownership and transforms for interior/local simulation without changing block, link or body identity. Required outcomes:
+Define stable endpoints as `{blockId, portId}`. Keep configuration serializable, versioned and compiler-driven. Do not persist `bodyId`. Do not implement signal execution or ControlRuntime in Gate D.
 
-1. define `assemblySpaceId` separately from `bodyId`;
-2. make space transforms pure and serializable;
-3. support root-space plus attached/local spaces without storing world pose in blueprint;
-4. establish anchor/split ownership rules;
-5. prove rendering, camera and runtime lookup through space changes;
-6. preserve the Gate B compiler and normal flight path.
+## Later
 
-Do not implement walking, docking or broad interior gameplay until the space contract and tests are complete.
+- Gate E — deterministic control kernel and runtime commands by neutral IDs.
+- Broader content/gameplay only after Gate D/E contracts.
 
-## Later gates
+## Deferred blockers
 
-- Gate D — Device & Port Schema using stable `{blockId, portId}` endpoints.
-- Gate E — Deterministic Control Kernel / `ControlRuntime`, fixed tick and runtime commands by neutral IDs.
-- Phase 1E — broader gameplay/content only after foundation gates.
+Dynamic articulated fracture, atomic constrained-body rebase, transform gizmos, WebGL context recovery, low-end GPU support matrix, multiplayer and external mod loading remain separate milestones.
 
-## Blockers carried deliberately
-
-Atomic body-frame rebase with active constraints and dynamic rigid-body split remain required before generalized articulated damage. No placeholder signal links, ports, logic nodes or empty runtime classes should be added early.
+dynamic rigid-body split remains deferred until atomic constrained-body rebase and rollback are proven.

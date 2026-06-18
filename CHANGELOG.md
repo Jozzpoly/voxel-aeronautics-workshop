@@ -1,36 +1,29 @@
 # Changelog
 
-## 0.7.0-foundation.1d4a — 2026-06-16
+## 0.8.1-foundation.gate-c-hardening — 2026-06-18
 
 ### Added
 
-- Blueprint v11 mechanical-link entities and pure stepwise legacy migration through v11.
-- Atomic CraftModel block/link transactions, copy remapping and revision-aware compiler cache.
-- Structured diagnostics with entity references.
-- StructuralGraphCompiler, MechanicalAuthoringResolver, RigidIslandCompiler and MechanicalGraphCompiler.
-- Anchor-based rigid-island body IDs and per-island mass properties.
-- CompiledCraft V4 and RuntimeAssemblyPlan V2 with explicit coordinate spaces and body assembly poses.
-- Owner-body launch payload compilation and pivot recalculation.
-- Runtime block/body/part/collider/constraint indexes.
-- Minimal workshop Hinge Link authoring and visualization.
-- Normal compiled two-body real-Cannon gameplay path.
-- Endpoint constraint break and connected-body rebase guard.
-- Gate B deterministic, fuzz, performance, real-Cannon and 50-cycle lifecycle tests.
-- Example `examples/articulated_hinge_v11.json`.
+- Blueprint v12 Assembly Spaces, CompiledCraft V5 and RuntimeAssemblyPlan V3.
+- Deep-hierarchy-safe canonical ownership indexes and atomic reparent/reassignment.
+- Fixed-step scheduler health metrics and bounded diagnostics.
+- Offline vendored Three r128/Cannon 0.6.2 and generated UI CSS.
+- Future-hardening, hostile-import, persistence, backend parity and dependency tests.
 
-### Changed
+### Fixed
 
-- Collision/damage routing retains body identity and selects parts only inside the impacted body.
-- Structural support and damage propagation use compiled rigid neighbors rather than raw grid adjacency.
-- Root body remains Core-owned for camera, mission and default pilot policy; other bodies use their own transforms and forces.
-- Release identity advanced to Foundation Phase 1D.4A.
+- corrupt primary save overwriting a valid backup;
+- order-dependent anonymous IDs across spaces;
+- silent invalid actuator/physics values;
+- owner-space hinge-axis validation;
+- headless/Cannon axis-angle mismatch;
+- repeated whole-craft runtime scans;
+- authoring-only names perturbing executable signatures.
 
-### Removed
+### Deferred
 
-- Production `body:root` hardcoding, obsolete native-body compatibility aliases and the private `window.VAW_RUNTIME` aggregate.
-- Global-COM interpretation of multi-body part/collider locations.
-- Test-only topology as evidence of gameplay support.
+Dynamic articulated fracture, atomic constrained rebase, WebGL context recovery, transform gizmos, multiplayer, mobile/touch and external mod loading.
 
-### Known limitation
+## 0.7.0-foundation.1d4a — 2026-06-16
 
-- Dynamic connected-body frame rebase/split is not implemented; non-zero recenter with active constraints is rejected before mutation.
+Gate B Mechanical Platform Convergence. Historical details remain in `docs/history/phases/PHASE_1D4A_REPORT.md`.

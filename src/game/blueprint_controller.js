@@ -2,7 +2,7 @@
   'use strict';
 
   window.VAW.define('game.blueprint-controller', ['foundation.config', 'foundation.blueprint'], (Config, Blueprint) => {
-    const { SAVE_VERSION, SAVE_KEY, LEGACY_SAVE_KEYS } = Config;
+    const { SAVE_VERSION, SAVE_KEY, SAVE_BACKUP_KEY, LEGACY_SAVE_KEYS, IMPORT_POLICY } = Config;
 
     function create({
       state: STATE, craft: CRAFT, document: documentRef = window.document,
@@ -90,8 +90,16 @@
         const normalized = normalizeBlueprintData(data);
         if (!normalized) return false;
 
+        // CraftModel replacement is atomic. Do not mutate UI/settings or clear the
+        // current craft until the normalized document has been accepted.
         setMechanicalAuthoring(false, false);
         cleanupFlightState();
+        const replacement = CRAFT.replaceDocument(normalized, 'load-blueprint');
+        if (!replacement.ok) {
+          console.error('CraftModel rejected a normalized blueprint:', replacement.reason);
+          return false;
+        }
+
         STATE.mode = 'BUILD';
         STATE.statusText = 'DRYDOCK';
         STATE.selectedBlock = normalized.selectedBlock;
@@ -106,16 +114,6 @@
         /** @type {HTMLInputElement} */ (document.getElementById('thruster-power')).value = String(Math.round(STATE.thrusterPower * 100));
         /** @type {HTMLInputElement} */ (document.getElementById('balloon-power')).value = String(Math.round(STATE.balloonPower * 100));
         /** @type {HTMLInputElement} */ (document.getElementById('stability')).value = String(Math.round(STATE.stabilityAssist * 100));
-
-        const replacement = CRAFT.replaceDocument(normalized, 'load-blueprint');
-        if (!replacement.ok) {
-          console.error('CraftModel rejected a normalized blueprint:', replacement.reason);
-          const fallback = CRAFT.clear('load-fallback-empty');
-          if (!fallback.ok) throw new Error(`Unable to restore empty workshop: ${fallback.reason}`);
-          updateTelemetry();
-          return false;
-        }
-
         document.querySelectorAll('.tool-btn').forEach(element => {
           const btn = /** @type {HTMLElement} */ (element);
           btn.classList.toggle('active', btn.dataset.tool === STATE.selectedBlock);
@@ -130,14 +128,34 @@
       }
 
       let autosaveTimer = null;
+      let lastSaveErrorAt = -Infinity;
+      function validStoredBlueprint(raw) {
+        if (typeof raw !== 'string' || !raw) return false;
+        try { return Blueprint.normalize(JSON.parse(raw)) !== null; }
+        catch (_) { return false; }
+      }
+      function utf8ByteLength(text) {
+        const source = String(text ?? '');
+        if (typeof TextEncoder === 'function') return new TextEncoder().encode(source).byteLength;
+        if (typeof Blob === 'function') return new Blob([source]).size;
+        return unescape(encodeURIComponent(source)).length;
+      }
       function persistBlueprint(showToast = false) {
         try {
-          localStorage.setItem(SAVE_KEY, JSON.stringify(collectBlueprint()));
+          const payload = JSON.stringify(collectBlueprint());
+          const previous = localStorage.getItem(SAVE_KEY);
+          if (previous && previous !== payload && validStoredBlueprint(previous)) {
+            try { localStorage.setItem(SAVE_BACKUP_KEY, previous); }
+            catch (backupError) { console.warn('Blueprint backup save failed:', backupError); }
+          }
+          localStorage.setItem(SAVE_KEY, payload);
           if (showToast) showStatus('SAVED', 800);
           return true;
         } catch (error) {
           console.error('Blueprint save failed:', error);
-          showStatus('SAVE ERROR', 1400);
+          const now = Date.now();
+          if (showToast || now - lastSaveErrorAt > 5000) showStatus('SAVE ERROR', 1400);
+          lastSaveErrorAt = now;
           return false;
         }
       }
@@ -173,7 +191,7 @@
 
       function loadBlueprint(recordHistory = false) {
         const previous = recordHistory ? collectBlueprint() : null;
-        const keys = [SAVE_KEY, ...LEGACY_SAVE_KEYS];
+        const keys = [SAVE_KEY, SAVE_BACKUP_KEY, ...LEGACY_SAVE_KEYS];
         for (const key of keys) {
           try {
             const raw = localStorage.getItem(key);
@@ -236,10 +254,18 @@
 
       function importBlueprintFile(file) {
         if (!file) return;
+        const maxBytes = Number(IMPORT_POLICY?.maxBlueprintBytes) || 8 * 1024 * 1024;
+        if (Number.isFinite(file.size) && file.size > maxBytes) {
+          showStatus('BLUEPRINT TOO LARGE', 1800);
+          console.warn(`Blueprint import rejected: ${file.size} bytes exceeds ${maxBytes}.`);
+          return;
+        }
         const reader = new FileReader();
         reader.onload = () => {
           try {
-            const parsed = JSON.parse(String(reader.result || ''));
+            const source = String(reader.result || '').replace(/^\uFEFF/, '');
+            if (utf8ByteLength(source) > maxBytes) throw new Error('Blueprint text exceeds safe import budget.');
+            const parsed = JSON.parse(source);
             const historyBefore = collectBlueprint();
             if (!loadBlueprintData(parsed)) throw new Error('Blueprint validation failed');
             commitHistory(historyBefore);

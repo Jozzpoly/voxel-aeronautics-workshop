@@ -14,6 +14,7 @@ EXPECTED_MODULES = {
     'input_settings_controller.js': 'game.input-settings-controller',
     'orientation_service.js': 'game.orientation-service',
     'module_visual_factory.js': 'game.module-visual-factory',
+    'assembly_space_controller.js': 'game.assembly-space-controller',
     'engineering_analysis.js': 'game.engineering-analysis',
     'blueprint_controller.js': 'game.blueprint-controller',
     'mission_controller.js': 'game.mission-controller',

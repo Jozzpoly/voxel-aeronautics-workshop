@@ -84,46 +84,85 @@
       return Object.freeze({ x, y, z, w });
     }
 
+    function normalizeRequiredQuaternion(value, label = 'Quaternion') {
+      const source = Array.isArray(value)
+        ? { x: value[0], y: value[1], z: value[2], w: value[3] }
+        : value;
+      if (!source || typeof source !== 'object') throw new TypeError(`${label} must be a quaternion.`);
+      const x = requiredFiniteNumber(source.x, `${label}.x`);
+      const y = requiredFiniteNumber(source.y, `${label}.y`);
+      const z = requiredFiniteNumber(source.z, `${label}.z`);
+      const w = requiredFiniteNumber(source.w, `${label}.w`);
+      const length = Math.hypot(x, y, z, w);
+      if (!(length > 1e-12)) throw new RangeError(`${label} must have non-zero length.`);
+      return Object.freeze({ x: x / length, y: y / length, z: z / length, w: w / length });
+    }
+
+    function optionalVec3(value, label, fallback) {
+      return value == null ? normalizeRequiredVec3(fallback, label) : normalizeRequiredVec3(value, label);
+    }
+
+    function optionalQuaternion(value, label, fallback = { x: 0, y: 0, z: 0, w: 1 }) {
+      return value == null ? normalizeRequiredQuaternion(fallback, label) : normalizeRequiredQuaternion(value, label);
+    }
+
     function normalizeWorldDescriptor(value = {}) {
       const descriptor = value && typeof value === 'object' ? value : {};
-      const broadphase = descriptor.broadphase === 'naive' ? 'naive' : 'sap';
+      const broadphase = descriptor.broadphase == null || descriptor.broadphase === 'sap'
+        ? 'sap'
+        : descriptor.broadphase === 'naive'
+          ? 'naive'
+          : (() => { throw new Error(`Unsupported broadphase: ${String(descriptor.broadphase)}`); })();
+      const solverIterations = descriptor.solverIterations == null ? 10 : requiredFiniteNumber(descriptor.solverIterations, 'World solverIterations');
+      if (!Number.isInteger(solverIterations) || solverIterations < 1) throw new RangeError('World solverIterations must be a positive integer.');
       return Object.freeze({
-        gravity: normalizeVec3(descriptor.gravity, { x: 0, y: -9.81, z: 0 }),
+        gravity: optionalVec3(descriptor.gravity, 'World gravity', { x: 0, y: -9.81, z: 0 }),
         broadphase,
-        solverIterations: Math.max(1, Math.floor(finiteNumber(descriptor.solverIterations, 10))),
-        solverTolerance: positiveNumber(descriptor.solverTolerance, 0.0001),
+        solverIterations,
+        solverTolerance: requiredPositiveNumber(descriptor.solverTolerance, 'World solverTolerance', 0.0001),
         allowSleep: descriptor.allowSleep !== false
       });
     }
 
     function normalizeBodyDescriptor(value = {}) {
       const descriptor = value && typeof value === 'object' ? value : {};
-      const mass = positiveNumber(descriptor.mass, 0);
+      const mass = requiredNonNegativeNumber(descriptor.mass, 'Body mass', 0);
+      if (descriptor.type != null && !Object.values(BODY_TYPES).includes(descriptor.type)) {
+        throw new Error(`Unsupported body type: ${String(descriptor.type)}`);
+      }
+      if (descriptor.type === BODY_TYPES.STATIC && mass > 0) {
+        throw new RangeError('Static body mass must be zero.');
+      }
+      if (descriptor.type === BODY_TYPES.DYNAMIC && !(mass > 0)) {
+        throw new RangeError('Dynamic body mass must be greater than zero.');
+      }
+      if (descriptor.collisionGroup != null && !Number.isInteger(descriptor.collisionGroup)) throw new TypeError('Body collisionGroup must be an integer.');
+      if (descriptor.collisionMask != null && !Number.isInteger(descriptor.collisionMask)) throw new TypeError('Body collisionMask must be an integer.');
       return Object.freeze({
         type: descriptor.type === BODY_TYPES.DYNAMIC || mass > 0 ? BODY_TYPES.DYNAMIC : BODY_TYPES.STATIC,
         mass,
-        linearDamping: positiveNumber(descriptor.linearDamping, 0),
-        angularDamping: positiveNumber(descriptor.angularDamping, 0),
+        linearDamping: requiredNonNegativeNumber(descriptor.linearDamping, 'Body linearDamping', 0),
+        angularDamping: requiredNonNegativeNumber(descriptor.angularDamping, 'Body angularDamping', 0),
         allowSleep: descriptor.allowSleep !== false,
-        collisionGroup: Number.isInteger(descriptor.collisionGroup) ? descriptor.collisionGroup : 1,
-        collisionMask: Number.isInteger(descriptor.collisionMask) ? descriptor.collisionMask : -1,
-        position: normalizeVec3(descriptor.position),
-        quaternion: normalizeQuaternion(descriptor.quaternion),
+        collisionGroup: descriptor.collisionGroup ?? 1,
+        collisionMask: descriptor.collisionMask ?? -1,
+        position: optionalVec3(descriptor.position, 'Body position', { x: 0, y: 0, z: 0 }),
+        quaternion: optionalQuaternion(descriptor.quaternion, 'Body quaternion'),
         userData: descriptor.userData && typeof descriptor.userData === 'object' ? descriptor.userData : null
       });
     }
 
     function normalizeBoxDescriptor(value = {}) {
       const descriptor = value && typeof value === 'object' ? value : {};
-      const halfExtents = normalizeVec3(descriptor.halfExtents, { x: 0.5, y: 0.5, z: 0.5 });
+      const halfExtents = optionalVec3(descriptor.halfExtents, 'Box halfExtents', { x: 0.5, y: 0.5, z: 0.5 });
       if (halfExtents.x <= 0 || halfExtents.y <= 0 || halfExtents.z <= 0) {
         throw new RangeError('Box collider half extents must be greater than zero.');
       }
       return Object.freeze({
         type: SHAPE_TYPES.BOX,
         halfExtents,
-        offset: normalizeVec3(descriptor.offset),
-        quaternion: normalizeQuaternion(descriptor.quaternion)
+        offset: optionalVec3(descriptor.offset, 'Box offset', { x: 0, y: 0, z: 0 }),
+        quaternion: optionalQuaternion(descriptor.quaternion, 'Box quaternion')
       });
     }
 
@@ -131,22 +170,19 @@
       const descriptor = value && typeof value === 'object' ? value : {};
       return Object.freeze({
         type: SHAPE_TYPES.PLANE,
-        offset: normalizeVec3(descriptor.offset),
-        quaternion: normalizeQuaternion(descriptor.quaternion)
+        offset: optionalVec3(descriptor.offset, 'Plane offset', { x: 0, y: 0, z: 0 }),
+        quaternion: optionalQuaternion(descriptor.quaternion, 'Plane quaternion')
       });
     }
 
     function normalizeMassProperties(value = {}) {
       const descriptor = value && typeof value === 'object' ? value : {};
-      const inertia = normalizeVec3(descriptor.inertiaDiagonal, { x: 0, y: 0, z: 0 });
+      const inertia = optionalVec3(descriptor.inertiaDiagonal, 'Mass inertiaDiagonal', { x: 0, y: 0, z: 0 });
+      if (inertia.x < 0 || inertia.y < 0 || inertia.z < 0) throw new RangeError('Mass inertiaDiagonal cannot be negative.');
       return Object.freeze({
-        mass: positiveNumber(descriptor.mass, 0),
-        centerOfMass: normalizeVec3(descriptor.centerOfMass),
-        inertiaDiagonal: Object.freeze({
-          x: positiveNumber(inertia.x, 0),
-          y: positiveNumber(inertia.y, 0),
-          z: positiveNumber(inertia.z, 0)
-        })
+        mass: requiredNonNegativeNumber(descriptor.mass, 'Mass value', 0),
+        centerOfMass: optionalVec3(descriptor.centerOfMass, 'Mass centerOfMass', { x: 0, y: 0, z: 0 }),
+        inertiaDiagonal: Object.freeze({ x: inertia.x, y: inertia.y, z: inertia.z })
       });
     }
 
@@ -215,8 +251,8 @@
       const event = value && typeof value === 'object' ? value : {};
       return Object.freeze({
         otherBody: event.otherBody || null,
-        impactSpeed: positiveNumber(event.impactSpeed, 0),
-        relativePoint: event.relativePoint ? normalizeVec3(event.relativePoint) : null
+        impactSpeed: requiredNonNegativeNumber(event.impactSpeed, 'Collision impactSpeed', 0),
+        relativePoint: event.relativePoint ? normalizeRequiredVec3(event.relativePoint, 'Collision relativePoint') : null
       });
     }
 
@@ -242,7 +278,9 @@
       CONSTRAINT_MODES,
       REQUIRED_BACKEND_METHODS,
       normalizeVec3,
+      normalizeRequiredVec3,
       normalizeQuaternion,
+      normalizeRequiredQuaternion,
       normalizeWorldDescriptor,
       normalizeBodyDescriptor,
       normalizeMassProperties,

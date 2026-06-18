@@ -11,6 +11,7 @@ const FOUNDATION_SOURCES = [
   'src/foundation/blueprint.js',
   'src/foundation/diagnostics.js',
   'src/foundation/transform_math.js',
+  'src/foundation/assembly_spaces.js',
   'src/foundation/craft_model.js',
   'src/foundation/craft_history.js',
   'src/foundation/control_frame.js',
@@ -20,7 +21,8 @@ const FOUNDATION_SOURCES = [
   'src/foundation/rigid_island_compiler.js',
   'src/foundation/mechanical_graph_compiler.js',
   'src/foundation/craft_compiler.js',
-  'src/foundation/runtime_assembly.js'
+  'src/foundation/runtime_assembly.js',
+  'src/foundation/fixed_step_scheduler.js'
 ];
 const RUNTIME_SOURCES = [
   'src/runtime/physics_port.js',
