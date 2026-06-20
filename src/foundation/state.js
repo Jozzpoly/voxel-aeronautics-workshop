@@ -16,6 +16,8 @@
           craft: CraftModel.create(),
           workshop: {
             meshesByKey: new Map(),
+            assemblySpaceRootById: new Map(),
+            activeAssemblySpaceId: 'space:root',
             rootMeshes: [],
             mechanicalLinkVisualsById: new Map(),
             mechanicalAuthoring: { active: false, firstBlockId: null, axis: 'PY' }
@@ -47,6 +49,7 @@
             lastImpactAt: -Infinity,
             runtimeParts: [],
             runtimePartById: new Map(),
+            runtimePartsByBodyId: new Map(),
             currentInertia: new THREE.Vector3(),
             debris: [],
             lostParts: 0,

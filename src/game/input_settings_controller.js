@@ -16,6 +16,29 @@
       let pendingBindingCapture = null;
       let keyboardLockActive = false;
 
+      function isEditableElement(element) {
+        let current = element && typeof element === 'object' ? element : null;
+        while (current) {
+          const tagName = String(current.tagName || '').toUpperCase();
+          if ((tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') && !current.disabled) return true;
+          if (current.isContentEditable === true) return true;
+          const contentEditable = typeof current.getAttribute === 'function' ? current.getAttribute('contenteditable') : null;
+          if (contentEditable != null && String(contentEditable).toLowerCase() !== 'false') return true;
+          current = current.parentElement || null;
+        }
+        return false;
+      }
+
+      function isEditableInteractionActive(eventTarget, activeElement = document.activeElement) {
+        return isEditableElement(eventTarget) || isEditableElement(activeElement);
+      }
+
+      function releaseEditableInteraction(element = document.activeElement) {
+        if (!isEditableElement(element) || typeof element.blur !== 'function') return false;
+        element.blur();
+        return true;
+      }
+
       function axisLabelFromArray(vector) {
         const values = Array.isArray(vector) ? vector : [0, 0, 0];
         let best = 0;
@@ -205,7 +228,8 @@
       return Object.freeze({
         axisLabelFromArray, syncControlFrameReadout, flightFocusSupported, syncFlightFocusStatus,
         refreshKeyboardLock, toggleFlightFocus, renderBindingControls, syncInputProfileUI,
-        updateInputAxis, commitBindingCapture, handleFullscreenChange, bindInputProfileControls
+        updateInputAxis, commitBindingCapture, handleFullscreenChange, bindInputProfileControls,
+        isEditableInteractionActive, releaseEditableInteraction
       });
     }
 

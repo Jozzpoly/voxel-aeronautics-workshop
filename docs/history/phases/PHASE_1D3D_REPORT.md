@@ -1,6 +1,6 @@
 # Phase 1D.3D Report — Assembly-Centric Flight Lifecycle
 
-> **Dokument historyczny.** Phase 1D.3D była częściową migracją i nie zamknęła Gate A. Aktualny stan po pełnej konwergencji opisują `PHASE_1D3E_REPORT.md`, `ARCHITECTURE.md` i `FOUNDATION_CONVERGENCE_REVIEW.md`. Poniższe deklaracje należy czytać jako opis seamów z baseline'u, nie jako aktualny kontrakt produkcyjny.
+> **Dokument historyczny.** Phase 1D.3D była częściową migracją i nie zamknęła Gate A. Aktualny stan po pełnej konwergencji opisują `PHASE_1D3E_REPORT.md`, `../../../ARCHITECTURE.md` i `../../../FOUNDATION_CONVERGENCE_REVIEW.md`. Poniższe deklaracje należy czytać jako opis seamów z baseline'u, nie jako aktualny kontrakt produkcyjny.
 
 
 This phase moves flight runtime ownership toward RuntimeAssembly as the source of truth. The launched craft now records `STATE.flight.assembly`, `assemblyRuntime`, `bodyById`, `bodies`, and an explicit `primaryBody`. The legacy `STATE.flight.body` is retained only as a compatibility alias for current single-body gameplay and camera/HUD paths.

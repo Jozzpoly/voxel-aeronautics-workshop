@@ -5,10 +5,12 @@ const vm = require('vm');
 const { performance } = require('perf_hooks');
 
 const ROOT = path.resolve(__dirname, '..');
-const CANNON = require(path.join(__dirname, 'vendor/cannon-0.6.2/cannon.min.js'));
+const CANNON = require(path.join(__dirname, '..', 'vendor/cannon-0.6.2/cannon.min.js'));
 global.window = global;
 for (const relative of [
   'src/foundation/kernel.js',
+  'src/foundation/transform_math.js',
+  'src/foundation/assembly_spaces.js',
   'src/foundation/mass_properties.js',
   'src/runtime/physics_port.js',
   'src/runtime/cannon_physics_backend.js',

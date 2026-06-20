@@ -8,12 +8,13 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE_ID = 'foundation-1d4a-rigid-islands-mechanical-graph'
-APP_VERSION = '0.7.0-foundation.1d4a'
-SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D4A_Mechanical_Platform_Convergence.html'
-ZIP_NAME = 'Voxel_Aeronautics_Workshop_Foundation_Phase_1D4A_Mechanical_Platform_Convergence.zip'
+RELEASE_ID = 'foundation-gate-c-future-hardening'
+APP_VERSION = '0.8.1-foundation.gate-c-hardening'
+SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Gate_C_Future_Hardening.html'
+ZIP_NAME = 'Voxel_Aeronautics_Workshop_Gate_C_Future_Hardening.zip'
 MANIFEST_NAME = 'SOURCE_MANIFEST.json'
-ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_Phase_1D4A_MECHANICAL_PLATFORM_CONVERGENCE_READY_TO_PUSH'
+ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_GATE_C_FUTURE_HARDENING_READY_TO_PUSH'
+IGNORED_ARCHIVE_PARTS = {'dist', 'release', '.agent-validation', '__pycache__', '.pytest_cache', '.git', 'node_modules'}
 APP_SOURCES = (
     Path('src/foundation/kernel.js'),
     Path('src/foundation/config.js'),
@@ -22,6 +23,7 @@ APP_SOURCES = (
     Path('src/foundation/blueprint.js'),
     Path('src/foundation/diagnostics.js'),
     Path('src/foundation/transform_math.js'),
+    Path('src/foundation/assembly_spaces.js'),
     Path('src/foundation/craft_model.js'),
     Path('src/foundation/craft_history.js'),
     Path('src/foundation/control_frame.js'),
@@ -37,6 +39,7 @@ APP_SOURCES = (
     Path('src/foundation/mission_evaluator.js'),
     Path('src/foundation/aerostatics.js'),
     Path('src/foundation/flight_control.js'),
+    Path('src/foundation/fixed_step_scheduler.js'),
     Path('src/foundation/state.js'),
     Path('src/runtime/physics_port.js'),
     Path('src/runtime/cannon_physics_backend.js'),
@@ -48,10 +51,13 @@ APP_SOURCES = (
     Path('src/game/input_settings_controller.js'),
     Path('src/game/orientation_service.js'),
     Path('src/game/module_visual_factory.js'),
+    Path('src/game/assembly_space_controller.js'),
     Path('src/game/engineering_analysis.js'),
     Path('src/game/blueprint_controller.js'),
     Path('src/game/mission_controller.js'),
     Path('src/game/flight_session.js'),
+    Path('src/game/flight_thruster_router.js'),
+    Path('src/game/flight_mechanical_visuals.js'),
     Path('src/game/flight_integrity.js'),
     Path('src/game/debris_runtime.js'),
     Path('src/foundation/bootstrap.js'),
@@ -59,7 +65,11 @@ APP_SOURCES = (
 )
 MANIFEST_INPUTS = (
     Path('index.html'),
+    Path('tailwind.generated.css'),
     Path('styles.css'),
+    Path('vendor/three-r128/three.min.js'),
+    Path('vendor/cannon-0.6.2/cannon.min.js'),
+    Path('tools/generate_tailwind_css.js'),
     Path('package.json'),
     Path('tools/build_release.py'),
     Path('tools/verify_release.py'),
@@ -125,7 +135,11 @@ def replace_loader(html: str, replacement: str) -> str:
 
 def build_single_html(root: Path = ROOT) -> str:
     html = (root / 'index.html').read_text(encoding='utf-8')
-    css = (root / 'styles.css').read_text(encoding='utf-8').rstrip()
+    generated_css = (root / 'tailwind.generated.css').read_text(encoding='utf-8').rstrip()
+    custom_css = (root / 'styles.css').read_text(encoding='utf-8').rstrip()
+    css = generated_css + '\n\n' + custom_css
+    three = (root / 'vendor/three-r128/three.min.js').read_text(encoding='utf-8').rstrip()
+    cannon = (root / 'vendor/cannon-0.6.2/cannon.min.js').read_text(encoding='utf-8').rstrip()
     manifest = manifest_text(root).encode('utf-8')
     provenance = (
         f'<!-- RELEASE_ID: {RELEASE_ID} -->\n'
@@ -137,14 +151,32 @@ def build_single_html(root: Path = ROOT) -> str:
     else:
         html = provenance + html
 
-    link = '<link rel="stylesheet" href="styles.css" />'
-    if link not in html:
-        raise RuntimeError('Expected styles.css link was not found in index.html')
+    generated_link = '<link rel="stylesheet" href="tailwind.generated.css" />'
+    custom_link = '<link rel="stylesheet" href="styles.css" />'
+    if generated_link not in html or custom_link not in html:
+        raise RuntimeError('Expected generated and custom stylesheet links were not found in index.html')
     html = html.replace(
-        link,
+        generated_link + '\n  ' + custom_link,
         f'<style>\n/* BEGIN EMBEDDED STYLES */\n{css}\n/* END EMBEDDED STYLES */\n  </style>',
         1,
     )
+    three_script = '<script src="vendor/three-r128/three.min.js"></script>'
+    if three_script not in html:
+        raise RuntimeError('Expected local Three.js script was not found in index.html')
+    html = html.replace(
+        three_script,
+        f'<script>\n/* BEGIN EMBEDDED THREE R128 */\n{three}\n/* END EMBEDDED THREE R128 */\n  </script>',
+        1,
+    )
+    cannon_script = '<script src="vendor/cannon-0.6.2/cannon.min.js"></script>'
+    if cannon_script not in html:
+        raise RuntimeError('Expected local Cannon script was not found in index.html')
+    html = html.replace(
+        cannon_script,
+        f'<script>\n/* BEGIN EMBEDDED CANNON 0.6.2 */\n{cannon}\n/* END EMBEDDED CANNON 0.6.2 */\n  </script>',
+        1,
+    )
+
 
     bundle = source_bundle(root)
     inline = f'''  <script>
@@ -158,7 +190,7 @@ def build_single_html(root: Path = ROOT) -> str:
       window.addEventListener('error', event => showFatal(event.error || event.message));
       window.addEventListener('unhandledrejection', event => showFatal(event.reason));
       if (!window.THREE || !window.CANNON) {{
-        showFatal('Required Three.js or Cannon.js library is unavailable. Check the internet connection and reload.');
+        showFatal('Required embedded Three.js or Cannon.js runtime is unavailable.');
         return;
       }}
       try {{
@@ -182,12 +214,11 @@ def _deterministic_info(name: str) -> zipfile.ZipInfo:
 
 
 def write_zip(root: Path, destination: Path, single_file: Path | None = None) -> None:
-    ignored_parts = {'dist', 'release', '__pycache__', '.pytest_cache', '.git', 'node_modules'}
     ensure_source_manifest(root)
     destination.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(destination, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for path in sorted(root.rglob('*')):
-            if not path.is_file() or any(part in ignored_parts for part in path.parts):
+            if not path.is_file() or any(part in IGNORED_ARCHIVE_PARTS for part in path.parts):
                 continue
             if path.resolve() == destination.resolve():
                 continue

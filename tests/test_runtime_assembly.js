@@ -21,11 +21,11 @@ const links = [{
 }];
 const model = CraftModel.create({ version: 11, blocks, mechanicalLinks: links });
 const compiled = CraftCompiler.compile(model);
-assert.strictEqual(compiled.format, 'VAW_COMPILED_CRAFT_V4');
+assert.strictEqual(compiled.format, 'VAW_COMPILED_CRAFT_V5');
 assert(compiled.ready, compiled.errors.join(', '));
 const plan = RuntimeAssembly.createPlan(compiled);
 assert(Object.isFrozen(plan));
-assert.strictEqual(plan.format, 'VAW_RUNTIME_ASSEMBLY_PLAN_V2');
+assert.strictEqual(plan.format, 'VAW_RUNTIME_ASSEMBLY_PLAN_V3');
 assert.strictEqual(plan.rigidBodies.length, 2);
 assert.strictEqual(plan.constraints.length, 1);
 assert.strictEqual(plan.signalLinks.length, 0);
@@ -70,6 +70,8 @@ assert.deepStrictEqual(loadedHinge.pivotA.map((v, i) => v + loaded.rigidBodies.f
 assert.deepStrictEqual(loadedHinge.pivotB.map((v, i) => v + loaded.rigidBodies.find(b => b.bodyId === loadedHinge.bodyBId).assemblyPose.position[i]), loadedHinge.assemblyPivotPosition);
 
 const spawn = { position: [10, 4, -3], quaternion: [0, 0, Math.SQRT1_2, Math.SQRT1_2] };
+assert.throws(() => RuntimeAssembly.worldBodyPoses(plan, { position: [NaN, 0, 0], quaternion: [0, 0, 0, 1] }), /finite 3D vector/);
+assert.throws(() => RuntimeAssembly.worldBodyPoses(plan, { position: [0, 0, 0], quaternion: [0, 0, 0, 0] }), /non-zero length/);
 const poses = RuntimeAssembly.worldBodyPoses(plan, spawn);
 for (const body of plan.rigidBodies) {
   assert.deepStrictEqual(poses[body.bodyId], RuntimeAssembly.worldBodyPose(spawn, body));
@@ -77,7 +79,7 @@ for (const body of plan.rigidBodies) {
   assert.deepStrictEqual(poses[body.bodyId].position, TransformMath.transformPoint(spawn, assemblyPoint));
 }
 
-assert.throws(() => RuntimeAssembly.createPlan({ format: 'VAW_COMPILED_CRAFT_V3' }), /CompiledCraft V4/);
+assert.throws(() => RuntimeAssembly.createPlan({ format: 'VAW_COMPILED_CRAFT_V3' }), /CompiledCraft V5/);
 assert.throws(() => RuntimeAssembly.createPlan({ ...compiled, ready: false, errors: ['synthetic'] }), /unready craft/);
 console.log(JSON.stringify({
   planV2: 'ok', multiBodyCoordinates: 'ok', hingePivotRoundTrip: 'ok',

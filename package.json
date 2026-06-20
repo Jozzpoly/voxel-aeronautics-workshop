@@ -1,13 +1,15 @@
 {
   "name": "voxel-aeronautics-workshop",
-  "version": "0.7.0-foundation.1d4a",
+  "version": "0.8.1-foundation.gate-c-hardening",
   "private": true,
-  "description": "Desktop voxel engineering sandbox with Blueprint v11 mechanical links, deterministic rigid-island compilation, per-body coordinate spaces, RuntimeAssemblyPlan V2, and a normal articulated-flight path.",
+  "description": "Desktop voxel engineering sandbox with Blueprint v12 Assembly Spaces, deterministic multi-body compilation, hardened save/history/runtime diagnostics, and articulated flight.",
   "scripts": {
     "test": "python tests/run_all.py",
     "build": "python tools/build_release.py",
     "serve": "python tools/serve.py",
-    "verify-release": "python tools/verify_release.py"
+    "verify-release": "python tools/verify_release.py",
+    "check:css": "node tools/generate_tailwind_css.js --check",
+    "generate:css": "node tools/generate_tailwind_css.js"
   },
   "engines": {
     "node": ">=18",

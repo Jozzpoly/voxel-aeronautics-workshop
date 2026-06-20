@@ -6,6 +6,8 @@ const ROOT = path.resolve(__dirname, '..');
 global.window = global;
 for (const relative of [
   'src/foundation/kernel.js',
+  'src/foundation/transform_math.js',
+  'src/foundation/assembly_spaces.js',
   'src/runtime/physics_port.js',
   'src/runtime/headless_physics_backend.js',
   'src/runtime/assembly_builder.js'

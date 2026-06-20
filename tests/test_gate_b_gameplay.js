@@ -5,7 +5,7 @@ const vm = require('vm');
 const { ROOT, FOUNDATION_SOURCES, RUNTIME_SOURCES, load } = require('./load_runtime');
 
 load([...FOUNDATION_SOURCES, ...RUNTIME_SOURCES], { stubs: true });
-global.CANNON = require(path.join(ROOT, 'tests/vendor/cannon-0.6.2/cannon.min.js'));
+global.CANNON = require(path.join(ROOT, 'vendor/cannon-0.6.2/cannon.min.js'));
 vm.runInThisContext(fs.readFileSync(path.join(ROOT, 'src/game/flight_session.js'), 'utf8'), { filename: 'src/game/flight_session.js' });
 
 const CraftModel = VAW.require('foundation.craft-model');
@@ -62,7 +62,7 @@ let disposedVisuals = 0;
 const session = FlightSession.create({ state, RuntimeAssembly, AssemblyBuilder, Physics, world, removeVisualRoot: () => { disposedVisuals += 1; } });
 
 const started = session.start({ snapshot: compiled, bodyDescriptor: descriptor });
-assert.strictEqual(started.plan.format, 'VAW_RUNTIME_ASSEMBLY_PLAN_V2');
+assert.strictEqual(started.plan.format, 'VAW_RUNTIME_ASSEMBLY_PLAN_V3');
 assert.strictEqual(started.primaryBodyId, 'body:core');
 assert.deepStrictEqual(session.bodyIds(), ['body:arm', 'body:core']);
 assert.strictEqual(world.bodies.length, 2);

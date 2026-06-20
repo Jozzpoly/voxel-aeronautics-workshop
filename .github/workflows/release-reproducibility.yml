@@ -1,0 +1,70 @@
+name: Release Reproducibility
+
+on:
+  push:
+    branches:
+      - maintenance/workflow-repair-clean
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full:
+    name: FULL (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Prove full-tree LF and CRLF parity
+        run: python tests/test_cross_platform_release_reproducibility.py
+
+      - name: Run FULL validation
+        run: python tools/validate_full.py
+
+      - name: Print FULL diagnostics on failure
+        if: failure()
+        shell: pwsh
+        run: |
+          Write-Host "===== VALIDATION DIAGNOSTICS ====="
+
+          $Summary = Get-ChildItem -Path .agent-validation -Recurse -Filter summary.json -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+
+          $CoreLog = Get-ChildItem -Path .agent-validation -Recurse -Filter core-suite.log -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+
+          if ($Summary) {
+            Write-Host "`n===== SUMMARY ====="
+            Get-Content -LiteralPath $Summary.FullName -Raw
+          } else {
+            Write-Host "summary.json was not found."
+          }
+
+          if ($CoreLog) {
+            Write-Host "`n===== CORE SUITE LOG ====="
+            Get-Content -LiteralPath $CoreLog.FullName -Raw
+          } else {
+            Write-Host "core-suite.log was not found."
+          }

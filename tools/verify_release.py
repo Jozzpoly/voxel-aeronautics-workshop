@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
 import json
 import sys
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,6 +21,14 @@ def embedded_source(single_text: str, relative: Path) -> str:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description='Verify release identity, source parity and exact artifacts.')
+    parser.add_argument('--single', type=Path, help='explicit single-file artifact to verify')
+    parser.add_argument('--zip', dest='zip_path', type=Path, help='explicit ZIP artifact to verify')
+    parser.add_argument('--hashes', type=Path, help='explicit checksum file to verify')
+    args = parser.parse_args()
+    if (args.zip_path is None) != (args.hashes is None):
+        raise SystemExit('--zip and --hashes must be supplied together.')
+
     manifest_path = ROOT / build_release.MANIFEST_NAME
     if not manifest_path.exists():
         raise SystemExit(f'Missing {manifest_path.name}; run npm run build first.')
@@ -33,11 +43,11 @@ def main() -> None:
             raise SystemExit(f'Source hash mismatch: {relative}')
 
     expected_name = build_release.SINGLE_NAME
-    candidates = [
+    candidates = [args.single] if args.single is not None else [
         ROOT / 'dist' / expected_name,
         ROOT / 'release' / expected_name,
     ]
-    single = next((candidate for candidate in candidates if candidate.exists()), None)
+    single = next((candidate for candidate in candidates if candidate is not None and candidate.exists()), None)
     if single is None:
         raise SystemExit(f'No packaged {expected_name} found in dist/ or release/.')
     text = single.read_text(encoding='utf-8')
@@ -48,12 +58,59 @@ def main() -> None:
         if embedded_source(text, relative) != expected:
             raise SystemExit(f'Embedded source mismatch: {relative}')
 
+    artifact_set = 'single-only'
+    zip_path = args.zip_path
+    hashes_path = args.hashes
+    if zip_path is not None and hashes_path is not None:
+        if not zip_path.is_file():
+            raise SystemExit(f'Missing ZIP artifact: {zip_path}')
+        if not hashes_path.is_file():
+            raise SystemExit(f'Missing checksum artifact: {hashes_path}')
+
+        expected_hash_lines = {
+            single.name: build_release.sha256(single),
+            zip_path.name: build_release.sha256(zip_path),
+        }
+        actual_hash_lines: dict[str, str] = {}
+        for line in hashes_path.read_text(encoding='utf-8').splitlines():
+            digest, separator, filename = line.partition('  ')
+            if not separator or not digest or not filename:
+                raise SystemExit(f'Malformed checksum line: {line!r}')
+            actual_hash_lines[filename] = digest
+        if actual_hash_lines != expected_hash_lines:
+            raise SystemExit(
+                f'Checksum artifact mismatch: expected={expected_hash_lines!r} actual={actual_hash_lines!r}'
+            )
+
+        prefix = build_release.ARCHIVE_ROOT + '/'
+        with zipfile.ZipFile(zip_path) as archive:
+            corrupt = archive.testzip()
+            if corrupt is not None:
+                raise SystemExit(f'Corrupt ZIP member: {corrupt}')
+            for relative in build_release.MANIFEST_INPUTS:
+                archived = archive.read(prefix + relative.as_posix())
+                current = (ROOT / relative).read_bytes()
+                if archived != current:
+                    raise SystemExit(f'ZIP source mismatch: {relative}')
+            packaged_single = archive.read(prefix + 'release/' + single.name)
+            if packaged_single != single.read_bytes():
+                raise SystemExit('ZIP packaged single-file artifact differs from the verified HTML.')
+            packaged_hash = archive.read(prefix + 'release/SHA256.txt').decode('utf-8')
+            expected_packaged_hash = f'{build_release.sha256(single)}  {single.name}\n'
+            if packaged_hash != expected_packaged_hash:
+                raise SystemExit('ZIP internal single-file checksum mismatch.')
+        artifact_set = 'html+zip+sha256'
+
     print({
         'releaseId': build_release.RELEASE_ID,
         'manifestFiles': len(manifest['files']),
         'embeddedSources': len(build_release.APP_SOURCES),
         'singleFile': single.name,
         'sourceParity': 'ok',
+        'artifactSet': artifact_set,
+        'zipIntegrity': 'ok' if zip_path is not None else 'not-requested',
+        'externalChecksums': 'ok' if hashes_path is not None else 'not-requested',
+        'zipSourceParity': 'ok' if zip_path is not None else 'not-requested',
     })
 
 

@@ -16,6 +16,7 @@ const sourceFiles = [
   'src/foundation/blueprint.js',
   'src/foundation/diagnostics.js',
   'src/foundation/transform_math.js',
+  'src/foundation/assembly_spaces.js',
   'src/foundation/craft_model.js',
   'src/foundation/craft_history.js',
   'src/foundation/control_frame.js',
@@ -31,6 +32,7 @@ const sourceFiles = [
   'src/foundation/mission_evaluator.js',
   'src/foundation/aerostatics.js',
   'src/foundation/flight_control.js',
+  'src/foundation/fixed_step_scheduler.js',
   'src/foundation/state.js',
   'src/runtime/physics_port.js',
   'src/runtime/cannon_physics_backend.js',
@@ -64,7 +66,7 @@ const PhysicsPort = VAW.require('runtime.physics-port');
 const { Physics, Capabilities } = VAW.require('runtime.active-context');
 assert(Object.isFrozen(Config));
 assert(Object.isFrozen(Config.GRID));
-assert.strictEqual(Config.SAVE_VERSION, 11);
+assert.strictEqual(Config.SAVE_VERSION, 12);
 assert.strictEqual(Config.TEST_RANGE.maxAltitude, 160);
 assert.strictEqual(typeof Config.PHYSICS.wingStallStart, 'number');
 assert(Object.isFrozen(Catalog.BLOCKS));
@@ -209,7 +211,7 @@ const document = Blueprint.createDocument({
   thrusterPower: 2, balloonPower: -1, stabilityAssist: 0.5,
   controlAxis: 'invalid', controlSign: 99
 });
-assert.strictEqual(document.version, 11);
+assert.strictEqual(document.version, 12);
 assert.deepStrictEqual(document.mechanicalLinks, []);
 assert.strictEqual(document.blocks[0].type, 'Core');
 assert.strictEqual(document.selectedBlock, 'Core');

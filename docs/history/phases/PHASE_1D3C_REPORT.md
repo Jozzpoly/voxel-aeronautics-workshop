@@ -24,7 +24,7 @@ potrafi bez obejścia w `game.js` obsłużyć pierwszą relację mechaniczną po
 - dodano runtime API sterowania, odczytu i usuwania constraintu;
 - pełny cleanup assembly jest retry-safe również po chwilowym odrzuceniu constraint removal;
 - dodano deterministyczny test joint capability do głównego runnera;
-- dodano `PROJECT_VISION.md`, pełny foundation readiness review i research programowalnych maszyn;
+- dodano `../../../PROJECT_VISION.md`, pełny foundation readiness review i research programowalnych maszyn;
 - dodano test kontraktu dokumentacji oraz obowiązkową obecność nowych materiałów w ZIP-ie.
 
 ## Najważniejsze znaleziska

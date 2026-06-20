@@ -31,7 +31,7 @@ else:
  expected_sources=[path.relative_to(ROOT).as_posix() for path in source_files]
  if loader_sources != expected_sources:
   errors.append(f'Loader order mismatch: {loader_sources} != {expected_sources}')
-if 'const SAVE_VERSION = 11' not in js: errors.append('Unexpected save version')
+if 'const SAVE_VERSION = 12' not in js: errors.append('Unexpected save version')
 if 'voxel-aeronautics-blueprint-v6' not in js: errors.append('Missing v6 migration key')
 
 craft_model=sources[ROOT/'src/foundation/craft_model.js']
@@ -47,9 +47,9 @@ if 'STATE.voxels' in game: errors.append('Legacy STATE.voxels coupling still exi
 if 'meshesByKey' not in game: errors.append('Workshop view map is missing')
 for expected in [
  'foundation.config', 'foundation.catalog', 'foundation.orientation',
- 'foundation.blueprint', 'foundation.craft-model', 'foundation.craft-history', 'foundation.control-frame', 'foundation.mass-properties', 'foundation.craft-compiler', 'foundation.runtime-assembly', 'foundation.input-profile', 'foundation.ui-workspace', 'foundation.mission-evaluator', 'foundation.aerostatics', 'foundation.flight-control', 'foundation.state', 'runtime.physics-port', 'runtime.cannon-physics-backend', 'runtime.headless-physics-backend', 'runtime.assembly-builder',
+ 'foundation.blueprint', 'foundation.craft-model', 'foundation.craft-history', 'foundation.control-frame', 'foundation.mass-properties', 'foundation.craft-compiler', 'foundation.runtime-assembly', 'foundation.input-profile', 'foundation.ui-workspace', 'foundation.mission-evaluator', 'foundation.aerostatics', 'foundation.flight-control', 'foundation.fixed-step-scheduler', 'foundation.state', 'runtime.physics-port', 'runtime.cannon-physics-backend', 'runtime.headless-physics-backend', 'runtime.assembly-builder',
  'game.scene-environment', 'game.career-service', 'game.workspace-controller',
- 'game.input-settings-controller', 'game.orientation-service', 'game.module-visual-factory',
+ 'game.input-settings-controller', 'game.orientation-service', 'game.module-visual-factory', 'game.assembly-space-controller',
  'game.engineering-analysis', 'game.blueprint-controller', 'game.mission-controller',
  'game.flight-session', 'game.flight-integrity'
 ]:

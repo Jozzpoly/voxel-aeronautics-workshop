@@ -9,12 +9,14 @@
       return Object.freeze(value);
     }
 
-    const APP_VERSION = '0.7.0-foundation.1d4a';
-    const RELEASE_ID = 'foundation-1d4a-rigid-islands-mechanical-graph';
+    const APP_VERSION = '0.8.1-foundation.gate-c-hardening';
+    const RELEASE_ID = 'foundation-gate-c-future-hardening';
     const GRID = { halfExtent: 18, minY: 0, maxY: 20, maxBlocks: 2500 };
-    const SAVE_VERSION = 11;
-    const SAVE_KEY = 'voxel-aeronautics-blueprint-v11';
+    const SAVE_VERSION = 12;
+    const SAVE_KEY = 'voxel-aeronautics-blueprint-v12';
+    const SAVE_BACKUP_KEY = `${SAVE_KEY}:backup`;
     const LEGACY_SAVE_KEYS = [
+      'voxel-aeronautics-blueprint-v11',
       'voxel-aeronautics-blueprint-v10',
       'voxel-aeronautics-blueprint-v9',
       'voxel-aeronautics-blueprint-v8',
@@ -100,15 +102,16 @@
     const SYMMETRY_MODES = ['NONE', 'X', 'Z', 'XZ'];
     const CONTROL_AXES = ['pitch', 'yaw', 'roll'];
     const CONTROL_SIGNS = [0, 1, -1];
-    const HISTORY_POLICY = { maxSnapshots: 80, maxStoredParts: 12000 };
+    const HISTORY_POLICY = { maxSnapshots: 80, maxStoredParts: 12000, maxStoredBytes: 16 * 1024 * 1024 };
+    const IMPORT_POLICY = { maxBlueprintBytes: 8 * 1024 * 1024 };
 
     return deepFreeze({
-      APP_VERSION, RELEASE_ID, GRID, SAVE_VERSION, SAVE_KEY, LEGACY_SAVE_KEYS,
+      APP_VERSION, RELEASE_ID, GRID, SAVE_VERSION, SAVE_KEY, SAVE_BACKUP_KEY, LEGACY_SAVE_KEYS,
       CAREER_SAVE_KEY, CAREER_SAVE_VERSION, UI_SAVE_VERSION, UI_SAVE_KEY, LEGACY_UI_SAVE_KEYS,
       NEIGHBOR_DIRECTIONS, COLLISION_GROUP, TEST_RANGE, MISSION, AEROSTATICS,
       MISSION_PAYLOAD_POSITION, PHYSICS, AXIS_VECTORS,
       AXIS_LABELS, SYMMETRY_MODES, CONTROL_AXES,
-      CONTROL_SIGNS, HISTORY_POLICY, deepFreeze
+      CONTROL_SIGNS, HISTORY_POLICY, IMPORT_POLICY, deepFreeze
     });
   });
 })();

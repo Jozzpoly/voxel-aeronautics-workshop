@@ -6,13 +6,14 @@ const ids=[...html.matchAll(/<([a-zA-Z0-9-]+)[^>]*\sid="([^"]+)"[^>]*>/g)].map(m
 class ClassList{constructor(el){this.el=el;this.s=new Set((el.className||'').split(/\s+/).filter(Boolean));}add(...x){x.forEach(v=>this.s.add(v));this.sync()}remove(...x){x.forEach(v=>this.s.delete(v));this.sync()}toggle(x,on){if(on===undefined){this.s.has(x)?this.s.delete(x):this.s.add(x)}else on?this.s.add(x):this.s.delete(x);this.sync();return this.s.has(x)}contains(x){return this.s.has(x)}sync(){this.el.className=[...this.s].join(' ')}}
 const all=[];
 class El{
- constructor(tag='div',id=''){this.tagName=tag.toUpperCase();this.id=id;this.children=[];this.parentElement=null;this.style={};this.dataset={};this.className='';this.classList=new ClassList(this);this.textContent='';this._innerHTML='';this.hidden=false;this.disabled=false;this.value=tag==='input'?'70':'';this.files=[];this.type='';this.userData={};this.width=0;this.height=0;this.listeners=new Map();all.push(this)}
+ constructor(tag='div',id=''){this.tagName=tag.toUpperCase();this.id=id;this.children=[];this.parentElement=null;this.style={};this.dataset={};this.className='';this.classList=new ClassList(this);this.textContent='';this._innerHTML='';this.hidden=false;this.disabled=false;this.isContentEditable=false;this.value=tag==='input'?'70':'';this.files=[];this.type='';this.userData={};this.width=0;this.height=0;this.listeners=new Map();all.push(this)}
  appendChild(c){if(c){c.parentElement=this;this.children.push(c)}return c} removeChild(c){this.children=this.children.filter(x=>x!==c)} remove(){if(this.parentElement)this.parentElement.removeChild(this)}
  addEventListener(type,fn){if(!this.listeners.has(type))this.listeners.set(type,[]);this.listeners.get(type).push(fn)} removeEventListener(type,fn){if(this.listeners.has(type))this.listeners.set(type,this.listeners.get(type).filter(x=>x!==fn))} dispatchEvent(event={}){event.type=event.type||'event';event.target=event.target||this;event.currentTarget=this;event.preventDefault=event.preventDefault||(()=>{event.defaultPrevented=true});event.stopPropagation=event.stopPropagation||(()=>{});for(const fn of this.listeners.get(event.type)||[])fn(event);return !event.defaultPrevented} click(){if(!this.disabled)this.dispatchEvent({type:'click'})} closest(sel){if(sel.startsWith('#')){let e=this;while(e){if('#'+e.id===sel)return e;e=e.parentElement}}return null}
  querySelectorAll(sel){return query(sel,this)} querySelector(sel){return this.querySelectorAll(sel)[0]||null}
  set innerHTML(v){this._innerHTML=String(v)} get innerHTML(){return this._innerHTML}
  getBoundingClientRect(){return {left:0,top:0,width:1280,height:720,right:1280,bottom:720}}
- setAttribute(k,v){this[k]=v} getContext(){return {}}
+ focus(){document.activeElement=this;this.dispatchEvent({type:'focus'})} blur(){if(document.activeElement===this)document.activeElement=body;this.dispatchEvent({type:'blur'})}
+ setAttribute(k,v){this[k]=v} getAttribute(k){return Object.prototype.hasOwnProperty.call(this,k)?this[k]:null} getContext(){return {}}
 }
 const elements=new Map();
 for(const [id,tag] of ids){const e=new El(tag,id);elements.set(id,e)}
@@ -21,7 +22,7 @@ function descendants(root){const out=[];const walk=e=>{for(const c of e.children
 function query(sel,root=null){let pool=root?descendants(root):all;if(sel.startsWith('.'))return pool.filter(e=>e.classList.contains(sel.slice(1)) || e.className.split(/\s+/).includes(sel.slice(1)));if(sel.startsWith('#')){const e=elements.get(sel.slice(1));return e?[e]:[]}if(sel==='button')return pool.filter(e=>e.tagName==='BUTTON');return []}
 const documentListeners=new Map();
 const document={
- body,head,hidden:false,fullscreenElement:null,
+ body,head,hidden:false,fullscreenElement:null,activeElement:body,
  createElement:t=>new El(t),getElementById:id=>elements.get(id)||null,querySelectorAll:s=>query(s),querySelector:s=>query(s)[0]||null,
  addEventListener(type,fn){if(!documentListeners.has(type))documentListeners.set(type,[]);documentListeners.get(type).push(fn)},
  removeEventListener(type,fn){if(documentListeners.has(type))documentListeners.set(type,documentListeners.get(type).filter(x=>x!==fn))},
@@ -29,7 +30,7 @@ const document={
 };
 for(const e of elements.values())body.appendChild(e);
 const windowListeners=new Map();
-global.window=global;global.document=document;global.navigator={userAgent:'smoke'};global.innerWidth=1280;global.innerHeight=720;global.devicePixelRatio=1;global.performance={now:()=>0};global.localStorage={getItem:()=>null,setItem(){},removeItem(){}};global.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}});global.addEventListener=(type,fn)=>{if(!windowListeners.has(type))windowListeners.set(type,[]);windowListeners.get(type).push(fn)};global.removeEventListener=(type,fn)=>{if(windowListeners.has(type))windowListeners.set(type,windowListeners.get(type).filter(x=>x!==fn))};global.dispatchWindowEvent=(type,event={})=>{event.type=type;event.key=event.key||'';event.code=event.code||'';event.ctrlKey=!!event.ctrlKey;event.metaKey=!!event.metaKey;event.shiftKey=!!event.shiftKey;event.repeat=!!event.repeat;event.preventDefault=event.preventDefault||(()=>{event.defaultPrevented=true});for(const fn of windowListeners.get(type)||[])fn(event);return event};global.URL={createObjectURL:()=>'',revokeObjectURL(){}};global.Blob=class{};global.FileReader=class{readAsText(file){this.result=file?.content||'';if(typeof this.onload==='function')this.onload()}};global.alert=()=>{};global.confirm=()=>true;global.setTimeout=(fn)=>0;global.clearTimeout=()=>{};
+global.window=global;global.document=document;global.navigator={userAgent:'smoke'};global.innerWidth=1280;global.innerHeight=720;global.devicePixelRatio=1;global.performance={now:()=>0};global.localStorage={getItem:()=>null,setItem(){},removeItem(){}};global.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}});global.addEventListener=(type,fn)=>{if(!windowListeners.has(type))windowListeners.set(type,[]);windowListeners.get(type).push(fn)};global.removeEventListener=(type,fn)=>{if(windowListeners.has(type))windowListeners.set(type,windowListeners.get(type).filter(x=>x!==fn))};global.dispatchWindowEvent=(type,event={})=>{event.type=type;event.key=event.key||'';event.code=event.code||'';event.target=event.target||document.activeElement||body;event.ctrlKey=!!event.ctrlKey;event.metaKey=!!event.metaKey;event.shiftKey=!!event.shiftKey;event.repeat=!!event.repeat;event.preventDefault=event.preventDefault||(()=>{event.defaultPrevented=true});event.stopPropagation=event.stopPropagation||(()=>{});for(const fn of windowListeners.get(type)||[])fn(event);return event};global.URL={createObjectURL:()=>'',revokeObjectURL(){}};global.Blob=class{};global.FileReader=class{readAsText(file){this.result=file?.content||'';if(typeof this.onload==='function')this.onload()}};global.alert=()=>{};global.confirm=()=>true;global.setTimeout=(fn)=>0;global.clearTimeout=()=>{};
 vm.runInThisContext(fs.readFileSync(path.join(__dirname,'browser_stub_libs.js'),'utf8'),{filename:'stub-libs.js'});
 try{
  for(const sourceFile of sourceFiles){
@@ -59,8 +60,19 @@ try{
  elements.get('btn-starter-craft').click();
  assert(elements.get('ui-blocks').textContent==='17','Starter craft must load after an empty workspace.');
  elements.get('start-engineering').click();
- elements.get('btn-flight').click();
- assert(elements.get('ui-mode').textContent==='FLIGHT','A compiled starter craft must enter flight mode.');
+ const hingeToggle=elements.get('btn-hinge-link');
+ hingeToggle.click();
+ assert(hingeToggle.textContent==='HINGE LINK: ON' && hingeToggle.getAttribute('aria-pressed')==='true','Hinge authoring must stay enabled when toggled from the UI outside the canvas.');
+ hingeToggle.click();
+ assert(hingeToggle.textContent==='HINGE LINK: OFF' && hingeToggle.getAttribute('aria-pressed')==='false','Hinge authoring must toggle off cleanly.');
+ const textInput=elements.get('thruster-power');
+ textInput.focus();
+ dispatchWindowEvent('keydown',{key:'f',code:'KeyF'});
+ assert(elements.get('ui-mode').textContent==='BUILD','F must not launch while an editable input owns the interaction.');
+ dispatchWindowEvent('keydown',{key:'Escape',code:'Escape'});
+ assert(document.activeElement===body,'Escape must release active editable focus.');
+ dispatchWindowEvent('keydown',{key:'f',code:'KeyF'});
+ assert(elements.get('ui-mode').textContent==='FLIGHT','F must launch after editable focus is released.');
  elements.get('thruster-power').value='70';
  elements.get('thruster-power').dispatchEvent({type:'input'});
  const thrusterUpEvent=dispatchWindowEvent('keydown',{key:'+',code:'Equal'});
@@ -77,7 +89,13 @@ try{
  assert(elements.get('ui-balloon-power').textContent==='70%','Comma must decrease balloon power by 2%.');
  dispatchWindowEvent('keydown',{key:'w',code:'KeyW'});
  assert(elements.get('ui-surge-value').textContent==='100%','W must drive the forward translation axis.');
+ textInput.focus();
  dispatchWindowEvent('keyup',{key:'w',code:'KeyW'});
+ assert(elements.get('ui-surge-value').textContent==='0%','Keyup must clear a held action after focus moves into UI.');
+ textInput.blur();
+ dispatchWindowEvent('keydown',{key:'w',code:'KeyW'});
+ dispatchWindowEvent('blur');
+ assert(elements.get('ui-surge-value').textContent==='0%','Window blur must clear active flight actions.');
  dispatchWindowEvent('keydown',{key:' ',code:'Space'});
  assert(elements.get('ui-lift-command-value').textContent==='100%','Space must drive the upward translation axis.');
  dispatchWindowEvent('keyup',{key:' ',code:'Space'});
@@ -110,11 +128,42 @@ try{
  blueprintInput.dispatchEvent({type:'change'});
  assert(elements.get('ui-blocks').textContent==='5','The shipped articulated v11 blueprint must import through the production UI path.');
  assert(elements.get('mechanical-link-list').children.some(option=>option.value==='mechanical:example-arm'),'Imported mechanical link must be visible in the workshop UI.');
- elements.get('btn-flight').click();
- assert(elements.get('ui-mode').textContent==='FLIGHT','An imported articulated blueprint must launch through the normal Flight button.');
+ const hingeAxis=elements.get('hinge-axis');
+ hingeAxis.focus();
+ dispatchWindowEvent('keydown',{key:'f',code:'KeyF'});
+ assert(elements.get('ui-mode').textContent==='BUILD','F must not launch while the hinge-axis select is active.');
+ hingeAxis.dispatchEvent({type:'change'});
+ assert(document.activeElement===body,'Hinge-axis change must release transient select focus.');
+ const mechanicalList=elements.get('mechanical-link-list');
+ mechanicalList.focus();
+ dispatchWindowEvent('keydown',{key:'f',code:'KeyF'});
+ assert(elements.get('ui-mode').textContent==='BUILD','Mechanical-link selection must suppress hotkeys only while active.');
+ mechanicalList.dispatchEvent({type:'change'});
+ assert(document.activeElement===body,'Mechanical-link selection must release transient select focus.');
+ textInput.focus();
+ const canvas=all.find(el=>el.tagName==='CANVAS');
+ assert(canvas,'Renderer canvas must exist in the browser harness.');
+ canvas.dispatchEvent({type:'pointerdown',pointerType:'mouse',button:0,clientX:20,clientY:20,pointerId:1});
+ assert(document.activeElement===body,'Clicking the canvas must restore game keyboard ownership.');
+ dispatchWindowEvent('keydown',{key:'f',code:'KeyF'});
+ assert(elements.get('ui-mode').textContent==='FLIGHT','An imported articulated blueprint must launch after transient UI focus ends.');
  dispatchWindowEvent('pagehide');
  assert(elements.get('ui-mode').textContent==='BUILD','Articulated pagehide cleanup must return to build mode.');
+ const multiSpaceBlueprint=fs.readFileSync(path.join(__dirname,'..','examples','assembly_spaces_v12.json'),'utf8');
+ blueprintInput.files=[{name:'assembly_spaces_v12.json',content:multiSpaceBlueprint}];
+ blueprintInput.dispatchEvent({type:'change'});
+ assert(elements.get('ui-blocks').textContent==='5','The shipped v12 multi-space blueprint must import through the production UI path.');
+ assert(elements.get('assembly-space-list').children.some(option=>option.value==='space:example-arm'),'Imported child Assembly Space must be visible in the authoring UI.');
+ dispatchWindowEvent('keydown',{key:'f',code:'KeyF'});
+ assert(elements.get('ui-mode').textContent==='FLIGHT','A v12 multi-space blueprint must launch through the normal browser path.');
+ assert(elements.get('ui-simulation-health').textContent==='Healthy','Fresh multi-space launch must start with healthy simulation timing.');
+ dispatchWindowEvent('pagehide');
+ assert(elements.get('ui-mode').textContent==='BUILD','Multi-space pagehide cleanup must return to build mode.');
+ elements.get('btn-save').focus();
+ dispatchWindowEvent('keydown',{key:'f',code:'KeyF'});
+ assert(elements.get('ui-mode').textContent==='FLIGHT','A normal UI button must not be treated as a persistent text editor.');
+ dispatchWindowEvent('pagehide');
  elements.get('btn-clear').click();
  assert(elements.get('ui-blocks').textContent==='0','New blueprint must return to a truly empty workspace.');
- console.log('STARTUP_OK', {ids:ids.length,elements:all.length,modules:global.VAW.inspect().initialized.length,sources:sourceFiles.length,interaction:'ok',singleBodyLifecycle:'ok',articulatedUiLifecycle:'ok'});
+ console.log('STARTUP_OK', {ids:ids.length,elements:all.length,modules:global.VAW.inspect().initialized.length,sources:sourceFiles.length,interaction:'ok',singleBodyLifecycle:'ok',articulatedUiLifecycle:'ok',multiSpaceUiLifecycle:'ok'});
 }catch(e){console.error(e.stack||e);process.exit(1)}

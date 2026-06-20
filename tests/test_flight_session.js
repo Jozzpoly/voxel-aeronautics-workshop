@@ -6,6 +6,8 @@ const ROOT = path.resolve(__dirname, '..');
 global.window = global;
 for (const relative of [
   'src/foundation/kernel.js',
+  'src/foundation/transform_math.js',
+  'src/foundation/assembly_spaces.js',
   'src/runtime/physics_port.js',
   'src/runtime/headless_physics_backend.js',
   'src/runtime/assembly_builder.js',
@@ -84,7 +86,7 @@ function root() {
   assert.strictEqual(flightState.flight.assembly, started.assembly);
   assert.strictEqual('assemblyRuntime' in flightState.flight, false, 'Removed compatibility aliases must not return.');
   assert.strictEqual(session.getBodyIdForBlock('block:1'), 'body:a');
-  assert.deepStrictEqual(session.getColliderOwnershipByBlockId('block:1'), { colliderId: 'collider:block:1', blockId: 'block:1', bodyId: 'body:a' });
+  assert.deepStrictEqual(session.getColliderOwnershipByBlockId('block:1'), { colliderId: 'collider:block:1', blockId: 'block:1', bodyId: 'body:a', assemblySpaceId: 'space:root' });
 
   const rootZ = root();
   const rootA = root();

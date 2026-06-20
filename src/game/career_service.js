@@ -15,11 +15,12 @@
       function getContractById(id) { return Catalog.getContractById(id); }
       function knownContractIds() { return Catalog.knownContractIds(); }
       function isContractUnlocked(contract) {
-        return !contract.prerequisite || Boolean(state.career.completed[contract.prerequisite]);
+        return Boolean(contract) && (!contract.prerequisite || Boolean(state.career.completed[contract.prerequisite]));
       }
       function getSelectedContract() {
         const selected = getContractById(state.career.selectedContractId);
-        const fallback = CONTRACTS.find(contract => contract.id === 'hover_license') || CONTRACTS[0];
+        const fallback = CONTRACTS.find(contract => contract.id === 'hover_license') || CONTRACTS[0] || null;
+        if (!fallback) throw new Error('Contract catalog is empty.');
         return isContractUnlocked(selected) ? selected : fallback;
       }
       function normalizeCareerData(data) {
@@ -49,7 +50,7 @@
           totalStars: 0
         };
         const selected = getContractById(selectedContractId);
-        if (selected.prerequisite && !completed[selected.prerequisite]) normalized.selectedContractId = 'hover_license';
+        if (!selected || (selected.prerequisite && !completed[selected.prerequisite])) normalized.selectedContractId = 'hover_license';
         normalized.totalStars = Object.values(best).reduce((sum, result) => sum + result.stars, 0);
         return normalized;
       }

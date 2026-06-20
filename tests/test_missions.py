@@ -159,8 +159,13 @@ print(json.dumps({
 assert 'pendingImpacts: []' in GAME
 assert 'STATE.flight.pendingImpacts.push({' in GAME
 assert 'function processPendingImpacts()' in GAME
-step_sequence = re.search(r"Physics\.step\(world, PHYSICS\.fixedDt\);\s*processPendingImpacts\(\);\s*updateMission", GAME)
-assert step_sequence, 'impact processing must happen after world.step and before mission evaluation'
+fixed_step_start = GAME.index('fixedStepScheduler.advance(')
+fixed_step_end = GAME.index('});', fixed_step_start)
+fixed_step_source = GAME[fixed_step_start:fixed_step_end]
+solver_index = fixed_step_source.index('Physics.step(world, dt)')
+impact_index = fixed_step_source.index('processPendingImpacts()')
+mission_index = fixed_step_source.index('updateMission(dt)')
+assert solver_index < impact_index < mission_index, 'impact processing must happen after each world step and before mission evaluation'
 callback_start = GAME.index('collisionListener: ({ bodyId, collision }) => {')
 callback_end = GAME.index('const visualRootByBodyId = new Map();', callback_start)
 callback_source = GAME[callback_start:callback_end]

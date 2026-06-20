@@ -12,6 +12,8 @@ for (const relative of [
   'src/foundation/config.js',
   'src/foundation/catalog.js',
   'src/foundation/orientation.js',
+  'src/foundation/transform_math.js',
+  'src/foundation/assembly_spaces.js',
   'src/foundation/blueprint.js',
   'src/foundation/diagnostics.js',
   'src/foundation/craft_model.js',
@@ -30,6 +32,7 @@ const CraftModel = global.VAW.require('foundation.craft-model');
 const CraftCompiler = global.VAW.require('foundation.craft-compiler');
 const Config = global.VAW.require('foundation.config');
 const Catalog = global.VAW.require('foundation.catalog');
+const AssemblySpaces = global.VAW.require('foundation.assembly-spaces');
 
 function block(x, y, z, type = 'Hull', orientation = 0) {
   return { blockId: `block:${x}:${y}:${z}:${type}`, x, y, z, type, orientation, controlAxis: 'pitch', controlSign: 0 };
@@ -106,6 +109,45 @@ const orderB = CraftCompiler.compile([
 ]);
 assert.strictEqual(orderA.signature, orderB.signature, 'Compilation signature must not depend on insertion order.');
 
+const strictV12RootBlock = {
+  blockId: 'strict-core',
+  assemblySpaceId: AssemblySpaces.ROOT_ASSEMBLY_SPACE_ID,
+  x: 0,
+  y: 0,
+  z: 0,
+  type: 'Core',
+  orientation: 0,
+  controlAxis: 'pitch',
+  controlSign: 0
+};
+for (const [label, assemblySpaces] of [
+  ['missing', undefined],
+  ['null', null],
+  ['empty', []],
+  ['wrong-type', 'space:root'],
+  ['missing-root', [{
+    assemblySpaceId: 'space:child',
+    parentAssemblySpaceId: AssemblySpaces.ROOT_ASSEMBLY_SPACE_ID,
+    name: 'Child',
+    localPose: { position: [1, 0, 0], quaternion: [0, 0, 0, 1] }
+  }]]
+]) {
+  const strict = CraftCompiler.compile({
+    version: 12,
+    assemblySpaces,
+    blocks: [strictV12RootBlock],
+    mechanicalLinks: []
+  });
+  assert.strictEqual(strict.ready, false, `Strict Blueprint v12 with ${label} assemblySpaces must not compile ready.`);
+  assert(strict.errors.includes('assembly-space-missing-root'), `Strict Blueprint v12 with ${label} assemblySpaces must report missing root.`);
+}
+const legacyWithoutSpaces = CraftCompiler.compile({
+  version: 11,
+  blocks: [{ ...strictV12RootBlock, assemblySpaceId: undefined }],
+  mechanicalLinks: []
+});
+assert.strictEqual(legacyWithoutSpaces.ready, true, 'Legacy v11 compiler fallback may still synthesize Root ownership.');
+
 const disconnected = CraftModel.create([
   block(0, 0, 0, 'Core'),
   block(5, 0, 0, 'Hull')
@@ -147,6 +189,7 @@ console.log(JSON.stringify({
   maximumCompileMs: Number(compileMs.toFixed(2)),
   maximumParts: maximumCompiled.parts.length,
   overLimitWorkCap: 'ok',
+  strictBlueprintV12AssemblySpaces: 'ok',
   persistentBlockMapping: 'ok',
   configuredGravity: 'ok'
 }, null, 2));

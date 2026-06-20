@@ -13,6 +13,8 @@ for (const relative of [
   'src/foundation/config.js',
   'src/foundation/catalog.js',
   'src/foundation/orientation.js',
+  'src/foundation/transform_math.js',
+  'src/foundation/assembly_spaces.js',
   'src/foundation/blueprint.js',
   'src/foundation/craft_model.js'
 ]) {
@@ -22,6 +24,7 @@ for (const relative of [
 const CraftModel = global.VAW.require('foundation.craft-model');
 const Blueprint = global.VAW.require('foundation.blueprint');
 const Config = global.VAW.require('foundation.config');
+const AssemblySpaces = global.VAW.require('foundation.assembly-spaces');
 
 function block(x, y, z, type = 'Hull', extra = {}) {
   return { x, y, z, type, orientation: 0, controlAxis: 'pitch', controlSign: 0, ...extra };
@@ -171,6 +174,53 @@ const overflow = [...maximumBlocks, block(0, Config.GRID.maxY, Config.GRID.halfE
 assert.strictEqual(maxCraft.replace(overflow, 'overflow').ok, false);
 assert.strictEqual(maxCraft.size, Config.GRID.maxBlocks, 'Rejected scale edits must be atomic.');
 
+const rootSpace = AssemblySpaces.createRootSpace();
+const childSpace = {
+  assemblySpaceId: 'space:arm',
+  parentAssemblySpaceId: AssemblySpaces.ROOT_ASSEMBLY_SPACE_ID,
+  name: 'Arm',
+  localPose: { position: [10, 0, 0], quaternion: [0, 0, 0, 1] }
+};
+const hingedDocument = Blueprint.createDocument({
+  assemblySpaces: [rootSpace, childSpace],
+  blocks: [
+    block(0, 0, 0, 'Core', { blockId: 'core', assemblySpaceId: childSpace.assemblySpaceId }),
+    block(1, 0, 0, 'Hull', { blockId: 'hinge-peer', assemblySpaceId: childSpace.assemblySpaceId })
+  ],
+  mechanicalLinks: [{
+    mechanicalLinkId: 'mechanical:child-hinge',
+    assemblySpaceId: childSpace.assemblySpaceId,
+    kind: 'hinge',
+    endpointA: { blockId: 'core', face: 'PX' },
+    endpointB: { blockId: 'hinge-peer', face: 'NX' },
+    axis: 'PY',
+    collideConnected: false,
+    maxForce: 1000000,
+    frictionTorque: 0,
+    limits: null
+  }]
+});
+const hinged = CraftModel.create(hingedDocument);
+assert.strictEqual(hinged.getMechanicalLink('mechanical:child-hinge').assemblySpaceId, childSpace.assemblySpaceId);
+const beforeRootMoveRevision = hinged.revision;
+const rootMove = hinged.replace(hinged.values().map(value => ({
+  ...value,
+  assemblySpaceId: AssemblySpaces.ROOT_ASSEMBLY_SPACE_ID
+})), 'replace-child-to-root');
+assert(rootMove.ok, rootMove.reason);
+assert.strictEqual(hinged.getById('core').assemblySpaceId, AssemblySpaces.ROOT_ASSEMBLY_SPACE_ID);
+assert.strictEqual(hinged.getById('hinge-peer').assemblySpaceId, AssemblySpaces.ROOT_ASSEMBLY_SPACE_ID);
+assert.strictEqual(hinged.getMechanicalLink('mechanical:child-hinge').assemblySpaceId, AssemblySpaces.ROOT_ASSEMBLY_SPACE_ID, 'replace() must re-own surviving mechanical links after block space changes.');
+assert(rootMove.event.mechanicalLinksUpdated.some(change => change.before.assemblySpaceId === childSpace.assemblySpaceId && change.after.assemblySpaceId === AssemblySpaces.ROOT_ASSEMBLY_SPACE_ID));
+assert.strictEqual(hinged.revision, beforeRootMoveRevision + 1);
+
+const beforeRejected = hinged.snapshot();
+const rejectedReplace = hinged.replace(hinged.values().map(value => value.blockId === 'hinge-peer'
+  ? { ...value, assemblySpaceId: 'space:missing' }
+  : value), 'replace-invalid-space');
+assert.strictEqual(rejectedReplace.ok, false);
+assert.deepStrictEqual(hinged.snapshot(), beforeRejected, 'Rejected replace() must not partially mutate blocks or link ownership.');
+
 const independent = CraftModel.create([block(0, 4, 0, 'Core')]);
 assert.notStrictEqual(independent, stress);
 assert.strictEqual(independent.size, 1);
@@ -188,5 +238,6 @@ console.log(JSON.stringify({
   deterministicStressSteps: 600,
   finalStressBlocks: stress.size,
   maximumCraftBlocks: maxCraft.size,
-  maximumReplaceMs: Number(scaleMilliseconds.toFixed(2))
+  maximumReplaceMs: Number(scaleMilliseconds.toFixed(2)),
+  replaceReownsMechanicalLinks: 'ok'
 }, null, 2));

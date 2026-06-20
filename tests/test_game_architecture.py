@@ -14,10 +14,13 @@ EXPECTED_MODULES = {
     'input_settings_controller.js': 'game.input-settings-controller',
     'orientation_service.js': 'game.orientation-service',
     'module_visual_factory.js': 'game.module-visual-factory',
+    'assembly_space_controller.js': 'game.assembly-space-controller',
     'engineering_analysis.js': 'game.engineering-analysis',
     'blueprint_controller.js': 'game.blueprint-controller',
     'mission_controller.js': 'game.mission-controller',
     'flight_session.js': 'game.flight-session',
+    'flight_thruster_router.js': 'game.flight-thruster-router',
+    'flight_mechanical_visuals.js': 'game.flight-mechanical-visuals',
     'flight_integrity.js': 'game.flight-integrity',
     'debris_runtime.js': 'game.debris-runtime',
 }

@@ -29,7 +29,7 @@ assert.strictEqual(v10.mechanicalLinks, undefined);
 assert.deepStrictEqual(Blueprint.normalize(v10).blocks.map(item => item.blockId), ['core', 'hull']);
 const legacyV3 = { version: 3, blocks: [block(undefined, 0, 0, 0, 'Core')] };
 const migratedLegacy = Blueprint.migrateToCurrent(legacyV3);
-assert.strictEqual(migratedLegacy.version, 11);
+assert.strictEqual(migratedLegacy.version, 12);
 assert.deepStrictEqual(migratedLegacy.mechanicalLinks, []);
 assert.strictEqual(legacyV3.version, 3, 'Stepwise migration must not mutate the source document.');
 
@@ -100,7 +100,7 @@ const exampleCompiled = CraftCompiler.compile(exampleModel);
 assert(exampleCompiled.ready, exampleCompiled.errors.join(', '));
 assert.strictEqual(exampleCompiled.rigidIslands.length, 2);
 assert.strictEqual(exampleCompiled.mechanicalGraph.constraints.length, 1);
-assert.strictEqual(Blueprint.normalize(exampleModel.toDocument()).version, 11);
+assert.strictEqual(Blueprint.normalize(exampleModel.toDocument()).version, 12);
 
 const extended = CraftCompiler.compile({ blocks: [...baseBlocks, block('zz-extra', 4, 0, 0)], mechanicalLinks: [baseLink] });
 assert.strictEqual(extended.blockIdToBodyId.arm, 'body:arm', 'Adding a non-anchor block must not change bodyId.');

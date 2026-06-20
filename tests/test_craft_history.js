@@ -12,6 +12,8 @@ for (const relative of [
   'src/foundation/config.js',
   'src/foundation/catalog.js',
   'src/foundation/orientation.js',
+  'src/foundation/transform_math.js',
+  'src/foundation/assembly_spaces.js',
   'src/foundation/blueprint.js',
   'src/foundation/craft_history.js'
 ]) {

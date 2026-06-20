@@ -77,8 +77,14 @@
         return flightSession.removeColliderByBlockId(part.blockId) === true;
       }
 
+      function partsForBody(bodyId) {
+        const indexed = state.flight.runtimePartsByBodyId?.get(String(bodyId));
+        const source = Array.isArray(indexed) ? indexed : state.flight.runtimeParts;
+        return source.filter(part => part.attached && bodyIdForPart(part) === bodyId);
+      }
+
       function getRuntimeCore(bodyId = flightSession.primaryBodyId()) {
-        return state.flight.runtimeParts.find(part => part.attached && part.type === 'Core' && bodyIdForPart(part) === bodyId) || null;
+        return partsForBody(bodyId).find(part => part.type === 'Core') || null;
       }
 
       function markMetricsDirty() { state.flight.metricsDirty = true; }
@@ -86,7 +92,7 @@
       function recompute(force = false) {
         if (!force && !state.flight.metricsDirty) return false;
         const primaryBodyId = flightSession.primaryBodyId();
-        const attached = state.flight.runtimeParts.filter(part => part.attached && bodyIdForPart(part) === primaryBodyId);
+        const attached = partsForBody(primaryBodyId);
         const health = attached.reduce((sum, part) => sum + Math.max(0, part.health), 0);
         const core = getRuntimeCore(primaryBodyId);
         state.flight.integrity = core?.health > 0 && state.flight.initialHealth > 0
@@ -105,7 +111,7 @@
       }
 
       function computeBodyMassProperties(bodyId) {
-        const parts = state.flight.runtimeParts.filter(part => part.attached && bodyIdForPart(part) === bodyId);
+        const parts = partsForBody(bodyId);
         const payload = state.flight.payload?.attached && state.flight.payload.bodyId === bodyId ? state.flight.payload : null;
         return MassProperties.compute([
           ...parts.map(part => ({ id: part.blockId, mass: part.mass, center: part.bodyLocalPosition, halfExtents: [0.5, 0.5, 0.5] })),
@@ -119,7 +125,7 @@
 
       function recenterBody(bodyId = flightSession.primaryBodyId()) {
         if (!flightSession.hasBody(bodyId)) throw new Error(`Cannot recenter missing body: ${bodyId}`);
-        const parts = state.flight.runtimeParts.filter(part => part.attached && bodyIdForPart(part) === bodyId);
+        const parts = partsForBody(bodyId);
         const payload = state.flight.payload?.attached && state.flight.payload.bodyId === bodyId ? state.flight.payload : null;
         const massProperties = computeBodyMassProperties(bodyId);
         if (!(massProperties.mass > 0)) return null;
@@ -156,7 +162,7 @@
 
 
       function collectDisconnected(bodyId = flightSession.primaryBodyId()) {
-        const parts = state.flight.runtimeParts.filter(part => part.attached && bodyIdForPart(part) === bodyId);
+        const parts = partsForBody(bodyId);
         if (!parts.length) return [];
         const bodyPlan = state.flight.assemblyPlan?.rigidBodies?.find(body => body.bodyId === bodyId);
         const anchor = parts.find(part => part.type === 'Core')
@@ -361,6 +367,7 @@
         requireOwnedPart,
         colliderForBlock,
         removePartCollider,
+        partsForBody,
         getRuntimeCore,
         recompute,
         computeBodyMassProperties,

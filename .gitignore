@@ -4,3 +4,7 @@ __pycache__/
 node_modules/
 *.log
 .DS_Store
+recovery-artifacts/
+.agent-validation/
+
+tests/windows/matrix-results/

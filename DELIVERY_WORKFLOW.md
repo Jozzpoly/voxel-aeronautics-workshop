@@ -1,117 +1,102 @@
-# Delivery Workflow — aktualizacja repozytorium po dostawie plików
+# Delivery Workflow — Workflow V3
 
-Ten dokument jest stałym kontraktem dla kolejnych agentów i wydań projektu.
+Ten dokument określa sposób przekazywania i publikowania pełnych milestone'ów VAW.
 
-## 1. Obowiązkowa zawartość każdej dostawy
+## 1. Zasada podstawowa
 
-Każda odpowiedź przekazująca zmieniony projekt musi zawierać:
+Jedna dokładna baza, jeden spójny milestone, jeden zamrożony kandydat, jedna końcowa sekwencja walidacji, jeden normalny commit i ponowny odczyt remote SHA.
 
-1. link do pełnego ZIP-a źródłowego;
-2. link do odpowiadającego mu jednoplikowego HTML;
-3. link do patcha, gdy został wygenerowany;
-4. link do raportu etapu, walidacji i `SHA256.txt`;
-5. wskazanie, który artefakt jest źródłem prawdy;
-6. dokładne komendy aktualizacji repozytorium;
-7. proponowaną wiadomość commita;
-8. informację, czy repozytorium zostało zmienione przez agenta.
+Użytkownik nie jest ręcznym CI. Domyślnie agent wykonuje publikację samodzielnie, gdy ma bezpieczny dostęp do Git.
 
-## 2. Źródło prawdy
+## 2. Kolejność transportu
 
-Pełny ZIP źródeł jest przeznaczony do aktualizacji repozytorium. Single HTML służy do szybkiego uruchomienia, testu i prezentacji. Patch jest pomocą audytową, nie zastępuje pełnej paczki.
-
-ZIP i single HTML muszą pochodzić z jednego deterministycznego buildu i przechodzić `sourceParity: ok`.
-
-
-## 3. Domyślny model publikacji
-
-Agent przygotowuje kompletny, zweryfikowany ZIP projektu oraz artefakty wydania. Użytkownik rozpakowuje paczkę, uruchamia testy i wykonuje commit/push lokalnie według `PUSH_INSTRUCTIONS.md`.
-
-Bezpośrednie zapisywanie projektu do GitHub przez agenta nie jest domyślnym workflow. Może być użyte wyłącznie po wyraźnej prośbie użytkownika i tylko wtedy, gdy narzędzia pozwalają przesłać całe drzewo projektu atomowo, bez plików pośrednich, fragmentów ani tymczasowych workflow.
-
-## 4. Bezpieczna procedura publikacji
-
-Przed skopiowaniem nowego wydania:
-
-```powershell
-git checkout main
-git status
-git fetch origin
-git pull --rebase origin main
+```text
+bezpośredni Git > jeden końcowy ZIP milestone'u > pełny pojedynczy plik > patch
 ```
 
-Rozpakuj ZIP poza repo. Skopiuj jego zawartość do katalogu repozytorium, zachowując `.git`. Następnie:
+Patch jest wyłącznie mechanizmem recovery/audytu. Nie jest domyślnym workflow i nie może wymuszać mikro-dostaw po każdej poprawce.
+
+## 3. Mode R — bezpośredni Git
+
+1. Odczytaj ponownie remote SHA brancha.
+2. Potwierdź czysty worktree i dokładną bazę.
+3. Pracuj na jednym dedykowanym branchu.
+4. Stage'uj wyłącznie zatwierdzony zestaw ścieżek.
+5. Uruchom targetowane testy, komponent, FAST i — gdy zakres tego wymaga — jeden FULL na zamrożonym kandydacie.
+6. Utwórz jeden normalny commit milestone'u.
+7. Sprawdź, czy remote nie przesunął się przed publikacją.
+8. Wykonaj zwykły push bez `--force`.
+9. Odczytaj remote SHA i porównaj go z lokalnym commitem.
+10. Zamknij dokumentację w tym samym milestone'ie.
+
+Przykładowy bezpieczny finał w PowerShell:
 
 ```powershell
-python tests/run_all.py
-python tools/build_release.py
-python tools/verify_release.py
-git status
-git diff --stat
-git add -A
-git commit -m "<wiadomość podana dla wydania>"
-git fetch origin
-git rebase origin/main
-python tests/run_all.py
-git push origin HEAD:main
+$Branch = '<dedicated-branch>'
+$Base = (git rev-parse HEAD).Trim()
+$RemoteBefore = ((git ls-remote origin "refs/heads/$Branch") -split '\s+')[0].Trim()
+if ($Base -ne $RemoteBefore) { throw 'Remote moved before publication.' }
+
+git add -A -- <approved-paths>
+git diff --cached --check
+git diff --cached --name-status
+git diff --cached --stat
+git commit -m '<bounded milestone message>'
+
+$LocalSha = (git rev-parse HEAD).Trim()
+git push origin "HEAD:refs/heads/$Branch"
+$RemoteSha = ((git ls-remote origin "refs/heads/$Branch") -split '\s+')[0].Trim()
+if ($LocalSha -ne $RemoteSha) { throw 'Remote SHA confirmation failed.' }
 ```
 
-Drugi test po rebase jest wymagany, gdy rebase rzeczywiście dołączył zdalne zmiany.
+Nie używaj niekontrolowanego `git add -A -- .`, force-pusha, cichego rewrite historii ani historycznego brancha jako transportu.
 
-## 5. Konflikty
+## 4. Mode Z — jeden końcowy ZIP
 
-Przy konflikcie:
+Gdy bezpośrednia publikacja jest zablokowana, po ustabilizowaniu kandydata przygotuj dokładnie jedną paczkę:
 
-```powershell
-git status
-# popraw pliki
-git add -A
-git rebase --continue
+```text
+VAW_<MILESTONE>_DELIVERY/
+├── README_FIRST.md
+├── project/
+├── evidence/
+│   └── FINAL_STATUS.md
+└── SHA256SUMS.txt
 ```
 
-Aby przerwać:
+- `project/` zawiera wyłącznie pliki przeznaczone do repozytorium, w dokładnych ścieżkach względnych;
+- patchy, logów, helperów i zagnieżdżonych ZIP-ów nie umieszczaj w `project/`;
+- użytkownik kopiuje `project/` jeden raz;
+- instrukcja zawiera maksymalnie jeden krótki blok walidacji i publikacji;
+- helper musi być przetestowany z dokładnego rozpakowanego układu paczki.
 
-```powershell
-git rebase --abort
+## 5. Artefakty produktu
+
+Single HTML, source ZIP i checksumy muszą pochodzić z jednego deterministycznego buildu i przechodzić source parity. Artefakty produktu są wymagane tylko wtedy, gdy milestone dotyka produktu lub release engineering; czysto dokumentacyjny milestone nie generuje nowego wydania dla samej kosmetyki.
+
+`tools/build_release.py::APP_SOURCES` pozostaje kanoniczną kolejnością źródeł aplikacji. Zmiana modułu wymaga równoczesnej aktualizacji loadera, testów architektury, release build i identity checks.
+
+## 6. Walidacja
+
+```text
+T0 static
+T1 targeted
+T2 component
+T3 FAST
+T4 FULL
+T5 target platform
 ```
 
-Nie używać `git push --force` jako standardowego rozwiązania non-fast-forward. Nie kopiować wydania na working tree z niezapisanymi zmianami bez świadomego commita lub `git stash`.
+FAST uruchamia się zwykle 1–2 razy. FULL uruchamia się raz na zamrożonym kandydacie tylko wtedy, gdy zakres jest release-sensitive. Wyniki Linux, Windows, browser i cross-platform raportuj osobno.
 
-## 6. Weryfikacja bazowej wersji
+## 7. Konflikty i blokery
 
-Przed rozpoczęciem kolejnego etapu agent powinien sprawdzić aktualny `main` repozytorium i oprzeć pracę na jego najnowszym commicie albo na jawnie wskazanej przez użytkownika nowszej paczce. Nie wolno zakładać, że luźny katalog z wcześniejszej sesji jest aktualniejszy od zweryfikowanego ZIP-a lub repozytorium.
+Przy konflikcie zatrzymaj publikację i popraw wyłącznie jawnie zidentyfikowane pliki. Nie rozwiązuj non-fast-forward force-pushem.
 
-## 7. Wydania z wieloma modułami aplikacji
+Przy prawdziwym blockerze wypróbuj maksymalnie trzy różne bezpieczne mechanizmy. Nie obfuskowuj payloadu, nie dziel blokowanych zapisów w celu obejścia safeguardów i nie wykorzystuj `maintenance/workflow-bootstrap`.
 
-`tools/build_release.py::APP_SOURCES` jest kanonicznym manifestem kolejności źródeł. Dodając lub usuwając moduł należy jednocześnie:
+## 8. Dokumentacja i obecny kierunek
 
-1. zaktualizować `APP_SOURCES`;
-2. zaktualizować loader w `index.html` w tej samej kolejności;
-3. uruchomić `tests/test_game_architecture.py` i pełne `tests/run_all.py`;
-4. zbudować single HTML i ZIP;
-5. potwierdzić `sourceParity: ok`.
+Aktywny indeks dokumentacji: `docs/README.md`.
 
-Nie utrzymywać ręcznej kopii listy źródeł w testach. Testy powinny korzystać z `tests/source_inventory.py`.
-
-## 8. Spójność tożsamości wydania
-
-Każde wydanie utrzymuje jedną wartość wersji i release id w:
-
-- `package.json`;
-- `tools/build_release.py`;
-- `SOURCE_MANIFEST.json`;
-- `foundation.config`;
-- brandingu `index.html`.
-
-`tests/test_release_identity.py` jest obowiązkową częścią głównej baterii. Sam zielony `sourceParity` nie wystarcza, gdy runtime zgłasza starą wersję.
-
-## 9. Foundation gate przed dużym nowym systemem
-
-Przed sublevelami, systemem programowania, multiplayerem lub zmianą backendu dostawa musi zawierać:
-
-1. review wpływu na istniejące source-of-truth i lifecycle;
-2. jawne ADR lub direction document;
-3. aktualizację `AI_PROJECT_MEMORY.md`, `ARCHITECTURE.md` i `ROADMAP_NEXT.md`;
-4. testy granic, migracji i cleanupu;
-5. listę rzeczy świadomie niezaimplementowanych.
-
-Research innych gier jest materiałem decyzyjnym. Nie wolno kopiować ich API bez dopasowania do browserowego runtime i reguł VAW.
+Po Documentation Convergence Stage 2 dalsza kosmetyczna reorganizacja repozytorium jest zamrożona. Następne milestone'y to osobny Stage 1.1 cross-platform release reproducibility, stop-review i Gate C — Assembly Spaces / Sublevels. Device/Port Schema, ControlRuntime, walking, docking i szerokie interiors pozostają poza zakresem do zamknięcia Gate C.

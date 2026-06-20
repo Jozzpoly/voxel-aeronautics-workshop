@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  window.VAW.define('runtime.assembly-builder', ['runtime.physics-port'], PhysicsPort => {
+  window.VAW.define('runtime.assembly-builder', ['runtime.physics-port', 'foundation.assembly-spaces'], (PhysicsPort, AssemblySpaces) => {
     function requireId(value, label) {
       if (typeof value !== 'string' || value.trim() === '') throw new TypeError(`${label} must be a non-empty string.`);
       return value;
@@ -44,6 +44,7 @@
         ...(defaults.userData && typeof defaults.userData === 'object' ? defaults.userData : {}),
         ...(override.userData && typeof override.userData === 'object' ? override.userData : {}),
         assemblyBodyId: bodyPlan.bodyId,
+        assemblySpaceId: bodyPlan.assemblySpaceId || AssemblySpaces.ROOT_ASSEMBLY_SPACE_ID,
         assemblyRole: bodyPlan.role || 'body'
       });
       return {
@@ -63,6 +64,20 @@
       }
 
       const rootBodyId = requireId(plan.rootBodyId, 'Assembly rootBodyId');
+      const strictSpaces = plan.format === 'VAW_RUNTIME_ASSEMBLY_PLAN_V3';
+      if (strictSpaces && (!plan.bodyIdToAssemblySpaceId || typeof plan.bodyIdToAssemblySpaceId !== 'object')) {
+        throw new TypeError('RuntimeAssemblyPlan V3 requires bodyIdToAssemblySpaceId.');
+      }
+      if (strictSpaces && (!plan.blockIdToAssemblySpaceId || typeof plan.blockIdToAssemblySpaceId !== 'object')) {
+        throw new TypeError('RuntimeAssemblyPlan V3 requires blockIdToAssemblySpaceId.');
+      }
+      if (strictSpaces && (!plan.bodyById || typeof plan.bodyById !== 'object')) {
+        throw new TypeError('RuntimeAssemblyPlan V3 requires bodyById.');
+      }
+      const indexedSpaces = AssemblySpaces.validateAndIndex(plan.assemblySpaces, { allowDefaultRoot: !strictSpaces });
+      if (!indexedSpaces.ok) throw new Error(`Invalid assembly spaces: ${indexedSpaces.diagnostics.map(item => item.code).join(', ')}`);
+      const assemblySpaceIds = new Set(indexedSpaces.spaces.map(space => space.assemblySpaceId));
+      const bodyIdsByAssemblySpaceId = new Map(indexedSpaces.spaces.map(space => [space.assemblySpaceId, new Set()]));
       const bodyIds = new Set();
       const colliderIds = new Set();
       const blockIds = new Set();
@@ -73,7 +88,13 @@
         if (!body || typeof body !== 'object') throw new TypeError('Assembly body plan must be an object.');
         const bodyId = requireId(body.bodyId, 'Assembly bodyId');
         if (bodyIds.has(bodyId)) throw new Error(`Duplicate body id: ${bodyId}`);
+        const assemblySpaceId = strictSpaces
+          ? requireId(body.assemblySpaceId, `Body ${bodyId} assemblySpaceId`)
+          : (body.assemblySpaceId || AssemblySpaces.ROOT_ASSEMBLY_SPACE_ID);
+        if (!assemblySpaceIds.has(assemblySpaceId)) throw new Error(`Body ${bodyId} references missing assembly space ${assemblySpaceId}.`);
+        if (strictSpaces && (!body.bodyPoseInSpace || typeof body.bodyPoseInSpace !== 'object')) throw new TypeError(`Body ${bodyId} requires bodyPoseInSpace.`);
         bodyIds.add(bodyId);
+        bodyIdsByAssemblySpaceId.get(assemblySpaceId).add(bodyId);
         if (!body.assemblyPose || typeof body.assemblyPose !== 'object') throw new TypeError(`Body ${bodyId} requires assemblyPose.`);
         vector3(body.assemblyPose.position, `Body ${bodyId} assemblyPose.position`);
         const assemblyQuaternion = Array.isArray(body.assemblyPose.quaternion)
@@ -97,6 +118,7 @@
           if (colliderIds.has(colliderId)) throw new Error(`Duplicate collider id: ${colliderId}`);
           colliderIds.add(colliderId);
           if (collider.bodyId !== bodyId) throw new Error(`Collider ${colliderId} points to the wrong body.`);
+          if (strictSpaces && collider.assemblySpaceId !== assemblySpaceId) throw new Error(`Collider ${colliderId} points to the wrong assembly space.`);
           if (collider.kind !== 'box') throw new Error(`Unsupported assembly collider kind: ${collider.kind}`);
           vector3(collider.center, `Collider ${colliderId} center`);
           vector3(collider.halfExtents, `Collider ${colliderId} halfExtents`, { positive: true });
@@ -130,6 +152,10 @@
         const bodyId = requireId(part.bodyId, `Part ${blockId} bodyId`);
         if (partBlockIds.has(blockId)) throw new Error(`Duplicate runtime part mapping: ${blockId}`);
         if (!bodyIds.has(bodyId)) throw new Error(`Part ${blockId} references missing body ${bodyId}.`);
+        if (strictSpaces) {
+          const ownerSpace = plan.bodyIdToAssemblySpaceId?.[bodyId];
+          if (!ownerSpace || part.assemblySpaceId !== ownerSpace) throw new Error(`Part ${blockId} has invalid assembly space ownership.`);
+        }
         if (declaredBodyByBlockId.get(blockId) !== bodyId) {
           throw new Error(`Part ${blockId} is not declared by body ${bodyId}.`);
         }
@@ -151,6 +177,10 @@
           throw new Error(`Constraint ${constraintId} references a missing body.`);
         }
         if (bodyAId === bodyBId) throw new Error(`Constraint ${constraintId} cannot connect a body to itself.`);
+        if (strictSpaces) {
+          const owner = requireId(constraint.assemblySpaceId, `Constraint ${constraintId} assemblySpaceId`);
+          if (!assemblySpaceIds.has(owner)) throw new Error(`Constraint ${constraintId} references missing assembly space ${owner}.`);
+        }
         const normalizedConstraint = PhysicsPort.normalizeConstraintPlan(constraint);
         constraintIds.add(constraintId);
         normalizedConstraints.set(constraintId, normalizedConstraint);
@@ -166,8 +196,17 @@
           if (plan.blockIdToPartIndex[part.blockId] !== index) throw new Error(`blockIdToPartIndex mismatch for ${part.blockId}.`);
         });
       }
+      if (strictSpaces) {
+        for (const body of plan.rigidBodies) {
+          if (plan.bodyIdToAssemblySpaceId[body.bodyId] !== body.assemblySpaceId) throw new Error(`bodyIdToAssemblySpaceId mismatch for ${body.bodyId}.`);
+          if (plan.bodyById[body.bodyId] !== body) throw new Error(`bodyById mismatch for ${body.bodyId}.`);
+        }
+        for (const part of plan.parts) {
+          if (plan.blockIdToAssemblySpaceId[part.blockId] !== part.assemblySpaceId) throw new Error(`blockIdToAssemblySpaceId mismatch for ${part.blockId}.`);
+        }
+      }
 
-      return { bodyIds, colliderIds, blockIds, constraintIds, normalizedConstraints };
+      return { bodyIds, colliderIds, blockIds, constraintIds, normalizedConstraints, assemblySpaceIds, bodyIdsByAssemblySpaceId };
     }
 
     function build(options = {}) {
@@ -185,6 +224,7 @@
         }
       }
       const bodyById = new Map();
+      const bodyIdByHandle = new WeakMap();
       const colliderById = new Map();
       const colliderByBlockId = new Map();
       const partByBlockId = new Map();
@@ -192,6 +232,7 @@
       const constraintIdsByBodyId = new Map([...validation.bodyIds].map(bodyId => [bodyId, new Set()]));
       const constraintIdsByEndpointBlockId = new Map();
       const constraintFailureLog = [];
+      const bodyIdsByAssemblySpaceId = new Map(validation.bodyIdsByAssemblySpaceId || []);
       const removedConstraints = new WeakSet();
       const unsubscribe = [];
       const addedBodies = [];
@@ -213,6 +254,10 @@
       function getBodyIds() {
         assertActive();
         return Object.freeze([...bodyById.keys()].sort());
+      }
+
+      function hasBody(bodyId) {
+        return !disposed && bodyById.has(String(bodyId));
       }
 
       function getBodyPlan(bodyId) {
@@ -281,14 +326,29 @@
       }
 
       function ownsBody(body) {
-        if (!body || disposed) return false;
-        for (const entry of bodyById.values()) if (entry.body === body) return true;
-        return false;
+        return Boolean(body && !disposed && bodyIdByHandle.has(body));
       }
 
       function getBodyIdForBlock(blockId) {
         assertActive();
         return partByBlockId.get(String(blockId))?.plan?.bodyId || null;
+      }
+
+      function getAssemblySpaceIdForBody(bodyId) {
+        assertActive();
+        const plan = bodyById.get(String(bodyId))?.plan;
+        return plan ? (plan.assemblySpaceId || AssemblySpaces.ROOT_ASSEMBLY_SPACE_ID) : null;
+      }
+
+      function getAssemblySpaceIdForBlock(blockId) {
+        assertActive();
+        const plan = partByBlockId.get(String(blockId))?.plan;
+        return plan ? (plan.assemblySpaceId || AssemblySpaces.ROOT_ASSEMBLY_SPACE_ID) : null;
+      }
+
+      function getBodyIdsForAssemblySpace(assemblySpaceId) {
+        assertActive();
+        return Object.freeze([...(bodyIdsByAssemblySpaceId.get(String(assemblySpaceId)) || [])].sort());
       }
 
       function getPartDescriptor(blockId) {
@@ -303,7 +363,8 @@
         return Object.freeze({
           colliderId: runtimeCollider.plan.colliderId,
           blockId: runtimeCollider.plan.blockId,
-          bodyId: runtimeCollider.bodyPlan.bodyId
+          bodyId: runtimeCollider.bodyPlan.bodyId,
+          assemblySpaceId: runtimeCollider.bodyPlan.assemblySpaceId || AssemblySpaces.ROOT_ASSEMBLY_SPACE_ID
         });
       }
 
@@ -314,7 +375,8 @@
         return Object.freeze({
           colliderId: runtimeCollider.plan.colliderId,
           blockId: runtimeCollider.plan.blockId || null,
-          bodyId: runtimeCollider.bodyPlan.bodyId
+          bodyId: runtimeCollider.bodyPlan.bodyId,
+          assemblySpaceId: runtimeCollider.bodyPlan.assemblySpaceId || AssemblySpaces.ROOT_ASSEMBLY_SPACE_ID
         });
       }
 
@@ -512,7 +574,7 @@
       }
 
       const runtime = {
-        format: 'VAW_RUNTIME_ASSEMBLY_V2',
+        format: 'VAW_RUNTIME_ASSEMBLY_V3',
         plan,
         physics,
         world,
@@ -524,8 +586,10 @@
         constraintIdsByBodyId,
         constraintIdsByEndpointBlockId,
         constraintFailureLog,
+        bodyIdsByAssemblySpaceId,
         rootBody: null,
         getBodyIds,
+        hasBody,
         getBodyPlan,
         getBodyTransform,
         getBodyLinearVelocity,
@@ -542,6 +606,9 @@
         addBodyTorque,
         ownsBody,
         getBodyIdForBlock,
+        getAssemblySpaceIdForBody,
+        getAssemblySpaceIdForBlock,
+        getBodyIdsForAssemblySpace,
         getPartDescriptor,
         getColliderOwnership,
         getColliderOwnershipByBlockId,
@@ -566,6 +633,7 @@
           if (!body) throw new Error(`Physics backend returned no body for ${bodyPlan.bodyId}.`);
           const runtimeBody = { bodyId: bodyPlan.bodyId, plan: bodyPlan, body, massProperties: bodyPlan.massProperties };
           bodyById.set(bodyPlan.bodyId, runtimeBody);
+          bodyIdByHandle.set(body, bodyPlan.bodyId);
 
           for (const colliderPlan of bodyPlan.colliders) {
             const shape = physics.addBoxCollider(body, {
