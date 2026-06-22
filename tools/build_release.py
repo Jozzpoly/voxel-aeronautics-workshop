@@ -220,11 +220,12 @@ def write_zip(root: Path, destination: Path, single_file: Path | None = None) ->
     destination.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(destination, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for path in sorted(root.rglob('*')):
-            if not path.is_file() or any(part in IGNORED_ARCHIVE_PARTS for part in path.parts):
+            relative = path.relative_to(root)
+            if not path.is_file() or any(part in IGNORED_ARCHIVE_PARTS for part in relative.parts):
                 continue
             if path.resolve() == destination.resolve():
                 continue
-            archive.write(path, Path(ARCHIVE_ROOT) / path.relative_to(root))
+            archive.write(path, Path(ARCHIVE_ROOT) / relative)
         if single_file is not None:
             release_path = (Path(ARCHIVE_ROOT) / 'release' / single_file.name).as_posix()
             archive.writestr(_deterministic_info(release_path), single_file.read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)

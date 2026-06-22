@@ -46,6 +46,7 @@ def main() -> None:
     run('node', 'tests/test_flight_mechanical_visuals.js')
     run('node', 'tests/test_craft_history.js')
     run('node', 'tests/test_build_targeting.js')
+    run('node', 'tests/test_orientation_service.js')
     run('node', 'tests/test_game_services.js')
     run('node', 'tests/test_input_focus_policy.js')
     run('node', '--check', 'tests/run_browser_recovery.mjs')

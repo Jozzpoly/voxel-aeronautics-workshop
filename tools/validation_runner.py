@@ -482,9 +482,12 @@ def run_stage(
                 **_process_group_options(),
             )
             try:
-                return_code = process.wait(timeout=stage.timeout_seconds)
+                process.communicate(timeout=stage.timeout_seconds)
+                return_code = process.returncode
             except subprocess.TimeoutExpired:
                 terminate_process_family(process)
+                with contextlib.suppress(subprocess.TimeoutExpired, OSError):
+                    process.communicate(timeout=0.25)
                 duration = time.monotonic() - started
                 _durable_log_line(log, f"\nVALIDATION_TIMEOUT after {duration:.3f}s\n")
                 return STATUS_TIMEOUT, None, duration

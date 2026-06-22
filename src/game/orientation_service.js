@@ -42,6 +42,16 @@
         return new THREE.Vector3(0, 0, 1);
       }
       function controlSignLabel(sign) { return sign === 1 ? 'POSITIVE' : (sign === -1 ? 'NEGATIVE' : 'AUTO'); }
+      function semanticOrientationReadout(type, index, controlAxis = 'pitch', controlSign = 0) {
+        if (!partUsesOrientation(type)) return Object.freeze({ axisLabel: 'Axis', axis: 'N/A', upLabel: 'Up', up: 'N/A', hint: 'No orientation used' });
+        const basis = getModuleBasis(index); const axis = axisLabelForVector(basis.chord); const up = axisLabelForVector(basis.normal);
+        if (type === 'Core') return Object.freeze({ axisLabel: 'Forward', axis: `Forward ${axis}`, upLabel: 'Up', up: `Up ${up}`, hint: `Control frame • Forward ${axis} • Up ${up}` });
+        if (type === 'Thruster') return Object.freeze({ axisLabel: 'Thrust', axis: `Thrust ${axis}`, upLabel: 'Up', up: 'N/A', hint: `Engine pushes along ${axis}` });
+        if (type === 'Wing') return Object.freeze({ axisLabel: 'Chord', axis: `Chord ${axis}`, upLabel: 'Lift normal', up: `Lift ${up}`, hint: `Wing chord ${axis} • lift normal ${up}` });
+        if (type === 'ControlSurface') return Object.freeze({ axisLabel: 'Chord', axis: `Chord ${axis}`, upLabel: 'Lift normal', up: `Lift ${up}`, hint: `${controlAxis.toUpperCase()} • ${controlSignLabel(controlSign)} • chord ${axis}` });
+        if (type === 'VectorThruster') return Object.freeze({ axisLabel: 'Thrust', axis: `Thrust ${axis}`, upLabel: 'Gimbal normal', up: `Gimbal ${up}`, hint: `Vector thrust ${axis} • gimbal normal ${up}` });
+        return Object.freeze({ axisLabel: 'Axis', axis, upLabel: 'Up', up, hint: `${axis} / up ${up}` });
+      }
       function normalizeSavedOrientation(rawOrientation, version, type = 'Wing') {
         return Orientation.normalizeSavedOrientation(rawOrientation, version, type);
       }
@@ -63,7 +73,7 @@
         normalizeOrientationId, partUsesOrientation, partUsesRoll,
         getModuleBasis, getOrientationVector, getOrientationUpVector, getOrientationLabel,
         axisColor, normalizeControlAxis, normalizeControlSign, controlAxisVector,
-        controlSignLabel, normalizeSavedOrientation, mirrorOrientation
+        controlSignLabel, semanticOrientationReadout, normalizeSavedOrientation, mirrorOrientation
       });
     }
 

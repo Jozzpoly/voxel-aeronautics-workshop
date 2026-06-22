@@ -64,12 +64,12 @@
     <div class="mb-3">
       <div class="flex items-center justify-between mb-2">
         <span class="text-[11px] uppercase tracking-[0.18em] text-gray-500">Module orientation</span>
-        <span class="text-[11px] text-gray-400">Axis + profile roll</span>
+        <span id="ui-orientation-hint" class="text-[11px] text-gray-400">Axis + profile roll</span>
       </div>
       <div id="direction-container" class="grid grid-cols-3 gap-2"></div>
       <div class="grid grid-cols-3 gap-2 mt-2">
         <button id="btn-roll-orientation-left" class="mini-btn">ROLL −90°</button>
-        <div class="chip justify-between"><span>Up</span><span id="ui-roll-orientation" class="font-mono text-white">+Y</span></div>
+        <div class="chip justify-between"><span id="ui-roll-label">Up</span><span id="ui-roll-orientation" class="font-mono text-white">+Y</span></div>
         <button id="btn-roll-orientation-right" class="mini-btn">ROLL +90°</button>
         <div id="control-config-panel" class="control-config mt-2" hidden>
         <div class="text-[10px] uppercase tracking-[0.16em] text-cyan-300 mb-2">Control surface mixer</div>
@@ -131,7 +131,7 @@
     <div class="flex flex-col gap-2 mb-4" id="tool-container"></div>
 
     <div class="grid grid-cols-2 gap-2 text-xs text-gray-300">
-      <div class="chip"><span>Axis</span><span id="ui-orientation" class="font-mono text-white">+X</span></div>
+      <div class="chip"><span id="ui-orientation-label">Axis</span><span id="ui-orientation" class="font-mono text-white">+X</span></div>
       <div class="chip"><span>Profile up</span><span class="font-mono text-white">see above</span></div>
       <div class="chip"><span>Symmetry</span><span id="ui-symmetry" class="font-mono text-white">NONE</span></div>
       <div class="chip"><span>Adjacency</span><span id="ui-adj" class="font-mono text-white">OK</span></div>
@@ -183,7 +183,7 @@
     <div class="workspace-panel-scroll" data-panel-scroll="telemetry" tabindex="0" role="region" aria-label="Telemetry content">
     <h2 class="text-lg font-bold border-b border-gray-700 pb-2 mb-3 text-white">Telemetry</h2>
     <div class="flex justify-between mb-2"><span class="text-gray-400">Status:</span><span id="ui-status" class="font-bold text-yellow-500">DRYDOCK</span></div>
-    <div class="flex justify-between mb-2"><span class="text-gray-400">Mass:</span><span id="ui-mass" class="font-mono text-white">0.0 kg</span></div>
+    <div class="flex justify-between mb-2"><span class="text-gray-400">Active mass:</span><span id="ui-mass" class="font-mono text-white">0.0 kg</span></div>
     <div class="flex justify-between mb-2"><span class="text-gray-400">Blocks:</span><span id="ui-blocks" class="font-mono text-white">0</span></div>
     <div class="flex justify-between mb-2"><span class="text-gray-400">Fuel:</span><span id="ui-fuel" class="font-mono text-white">0 / 0</span></div>
     <div class="flex justify-between mb-2"><span class="text-gray-400">Damage:</span><span id="ui-damage-status" class="font-mono text-white">No active damage</span></div>
@@ -524,7 +524,7 @@
         'src/foundation/bootstrap.js',
         'src/game.js'
       ];
-      const sourceVersion = 'workbench-ui-v9-m2a-targeting';
+      const sourceVersion = 'workbench-ui-v9-m2b-feedback';
       let cursor = 0;
       const loadNext = () => {
         if (cursor >= sources.length) return;

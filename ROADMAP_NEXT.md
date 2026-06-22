@@ -18,7 +18,7 @@
 
 ## Next: Placement and Orientation Clarity
 
-M2A is implemented locally: build targeting is isolated enough for tested normal math and voxel face normals now convert through active Assembly Space before computing placement cells. Next: M2B deterministic placement failure reasons, then clearer ghost/basis feedback and orientation presets for core/thrusters/wings/control surfaces after semantic audit.
+M2A, M2B and the first M2C clarity pass are implemented locally: build targeting uses tested normal math, placement failure reasons are deterministic in ghost/status feedback, active Assembly Space mismatch is visible, and orientation readouts are semantic for core/thrusters/wings/control surfaces/vector thrusters. Next: manual playtest and small wording/preset polish only if still needed.
 
 ## After that: Gate D - Device & Port Schema
 

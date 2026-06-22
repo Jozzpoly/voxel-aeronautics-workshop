@@ -26,9 +26,10 @@ def embedded_source(single_text: str, relative: Path) -> str:
 def expected_archive_names(root: Path, prefix: str, single_name: str) -> set[str]:
     names = set()
     for path in sorted(root.rglob('*')):
-        if not path.is_file() or any(part in module.IGNORED_ARCHIVE_PARTS for part in path.parts):
+        relative = path.relative_to(root)
+        if not path.is_file() or any(part in module.IGNORED_ARCHIVE_PARTS for part in relative.parts):
             continue
-        names.add(prefix + path.relative_to(root).as_posix())
+        names.add(prefix + relative.as_posix())
     names.add(prefix + 'release/' + single_name)
     names.add(prefix + 'release/SHA256.txt')
     return names

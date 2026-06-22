@@ -76,10 +76,36 @@ assert.strictEqual(fail.ok, false);
 assert.strictEqual(fail.reason, 'wrong-assembly-space');
 assert.deepStrictEqual(fail.details, { clicked: 'space:a', active: 'space:b' });
 
+
+const placementReasons = {
+  'no-hit': 'NO: NO HIT',
+  'no-face': 'NO: NO FACE',
+  'invalid-normal': 'NO: BAD FACE',
+  'wrong-assembly-space': 'NO: ACTIVE SPACE',
+  occupied: 'NO: OCCUPIED',
+  'block-limit': 'NO: LIMIT',
+  'invalid-block': 'NO: INVALID BLOCK',
+  'orphan-block-assembly-space': 'NO: ORPHAN SPACE',
+  'empty-plan': 'NO: EMPTY PLAN',
+  'symmetry-collision': 'NO: SYMMETRY HIT'
+};
+for (const [reason, ui] of Object.entries(placementReasons)) {
+  const feedback = BuildTargeting.placementFeedback(BuildTargeting.targetFail(reason));
+  assert.strictEqual(feedback.reason, reason);
+  assert.strictEqual(feedback.ui, ui);
+}
+assert.strictEqual(BuildTargeting.placementFeedback(BuildTargeting.targetFail('wrong-assembly-space')).status, 'ACTIVE SPACE MISMATCH');
+assert.strictEqual(BuildTargeting.placementFeedback(BuildTargeting.validationFeedback({ ok: false, reason: 'occupied' })).ui, 'NO: OCCUPIED');
+assert.strictEqual(BuildTargeting.placementFeedback(BuildTargeting.validationFeedback({ ok: true }), 4).ui, 'OK x4');
+
 const gameSource = fs.readFileSync(path.join(__dirname, '..', 'src/game.js'), 'utf8');
 assert(gameSource.includes('removeBlock(target.root.userData.blockKey)'), 'right-click remove must keep using target.root identity');
 assert(gameSource.includes('handleMechanicalEndpointSelection(target)'), 'hinge endpoint selection must keep receiving the raycast target');
 assert(gameSource.includes('root: voxelRootMesh'), 'voxel target must preserve old-compatible root field');
 assert(gameSource.includes('block: clickedBlock'), 'voxel target must preserve old-compatible block field');
+assert(!gameSource.includes("textContent = 'NO'"), 'updateGhost must not show naked NO for placement failures');
+assert(gameSource.includes('BT.placementFeedback(placement, plan.length).ui'), 'updateGhost must use deterministic placement feedback text');
+assert(gameSource.includes('const validation = canPlacePlan(plan);'), 'addBlock must use structured placement validation');
+assert(gameSource.includes('showStatus(BT.placementFeedback(validation).status'), 'addBlock must show a deterministic placement failure status');
 
 console.log({ buildTargeting: 'ok', activeSpaceNormal: 'ok', placementBugProof: 'ok', targetCallers: 'ok' });

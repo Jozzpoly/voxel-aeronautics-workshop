@@ -51,7 +51,7 @@
     const AEROSTATIC_POLICY = Aerostatics.normalizePolicy(AEROSTATICS);
     const {
       AXES, ORIENTATION_BASES, DEFAULT_ORIENTATION,
-      LEGACY_ORIENTATION_MAP, axisLabelForVector, findOrientationId
+      findOrientationId
     } = Orientation;
     const STATE = State.createInitialState();
     const CRAFT = STATE.craft;
@@ -429,15 +429,19 @@
           ? 'font-bold text-amber-300'
           : (STATE.mode === 'BUILD' ? 'font-bold text-yellow-500' : 'font-bold text-emerald-400'));
       const orientationRelevant = partUsesOrientation(STATE.selectedBlock);
-      document.getElementById('ui-orientation').textContent = orientationRelevant ? axisLabelForVector(getOrientationVector(STATE.orientation)) : 'N/A';
+      const orientationUi = orientationService.semanticOrientationReadout(STATE.selectedBlock, STATE.orientation, STATE.controlAxis, STATE.controlSign);
+      document.getElementById('ui-orientation').textContent = orientationUi.axis;
+      const axisName = document.getElementById('ui-orientation-label'); if (axisName) axisName.textContent = orientationUi.axisLabel;
+      const hint = document.getElementById('ui-orientation-hint'); if (hint) hint.textContent = orientationUi.hint;
       const rollRelevant = partUsesRoll(STATE.selectedBlock);
       const rollReadout = document.getElementById('ui-roll-orientation');
-      if (rollReadout) rollReadout.textContent = rollRelevant ? axisLabelForVector(getOrientationUpVector(STATE.orientation)) : 'N/A';
+      if (rollReadout) rollReadout.textContent = rollRelevant ? orientationUi.up : 'N/A';
+      const rollName = document.getElementById('ui-roll-label'); if (rollName) rollName.textContent = orientationUi.upLabel;
       document.getElementById('ui-symmetry').textContent = STATE.symmetry;
       syncPowerControlReadouts();
 
-      const buildButton = /** @type {HTMLButtonElement} */ (document.getElementById('btn-build'));
-      const flightButton = /** @type {HTMLButtonElement} */ (document.getElementById('btn-flight'));
+      const buildButton = (document.getElementById('btn-build'));
+      const flightButton = (document.getElementById('btn-flight'));
       buildButton.disabled = STATE.mode === 'BUILD';
       flightButton.disabled = STATE.mode === 'FLIGHT';
       buildButton.textContent = STATE.mission.status === 'ACTIVE' && STATE.mission.contractId !== 'sandbox' ? 'Abort Contract' : 'Return to Drydock';
@@ -450,13 +454,13 @@
       const selectedForward = getOrientationVector(STATE.orientation);
       const directionButtons = document.querySelectorAll('.axis-btn');
       directionButtons.forEach(element => {
-        const btn = /** @type {HTMLButtonElement} */ (element);
+        const btn = (element);
         const axisIndex = Number(btn.dataset.axisIndex);
         btn.classList.toggle('active', orientationRelevant && selectedForward.dot(AXES[axisIndex]) > 0.999);
         btn.disabled = !orientationRelevant;
       });
-      const rollLeft = /** @type {HTMLButtonElement|null} */ (document.getElementById('btn-roll-orientation-left'));
-      const rollRight = /** @type {HTMLButtonElement|null} */ (document.getElementById('btn-roll-orientation-right'));
+      const rollLeft = (document.getElementById('btn-roll-orientation-left'));
+      const rollRight = (document.getElementById('btn-roll-orientation-right'));
       if (rollLeft) rollLeft.disabled = !rollRelevant;
       if (rollRight) rollRight.disabled = !rollRelevant;
       updateFlightFeedback();
@@ -486,7 +490,6 @@
     const getModuleBasis = (index = STATE.orientation) => orientationService.getModuleBasis(index);
     const getOrientationVector = (index = STATE.orientation) => orientationService.getOrientationVector(index);
     const getOrientationUpVector = (index = STATE.orientation) => orientationService.getOrientationUpVector(index);
-    const getOrientationLabel = (index = STATE.orientation) => orientationService.getOrientationLabel(index);
     const axisColor = orientation => orientationService.axisColor(orientation);
     const mirrorOrientation = (orientation, mirrorX, mirrorZ, type = STATE.selectedBlock) => (
       orientationService.mirrorOrientation(orientation, mirrorX, mirrorZ, type)
@@ -607,9 +610,7 @@
       }));
     }
 
-    function canPlacePlan(plan) {
-      return CRAFT.validateAddMany(plan).ok;
-    }
+    function canPlacePlan(plan) { return BT.validationFeedback(CRAFT.validateAddMany(plan)); }
 
     function refreshRaycastList() {
       WORKSHOP.rootMeshes.length = 0;
@@ -898,7 +899,6 @@
     });
 
     function cleanupFlightState() {
-      // Independent debris is cleaned first; an error leaves the assembly and retry handles intact.
       flightIntegrity.disposeAllDebris();
       flightSession.stop();
       STATE.flight.functionalBlocks = [];
@@ -961,11 +961,11 @@
       x = snapInt(x); y = snapInt(y); z = snapInt(z);
       const safeOrientation = partUsesOrientation(type) ? normalizeOrientationId(orientation) : DEFAULT_ORIENTATION;
       const plan = buildPlacementPlan(x, y, z, type, safeOrientation, allowMirror);
-      const validation = CRAFT.validateAddMany(plan);
-      if (!validation.ok) return false;
+      const validation = canPlacePlan(plan);
+      if (!validation.ok) { showStatus(BT.placementFeedback(validation).status, 1300); return false; }
       const historyBefore = collectBlueprint();
       const placed = CRAFT.addMany(plan, 'place-blocks');
-      if (!placed.ok) return false;
+      if (!placed.ok) { showStatus(BT.placementFeedback(BT.validationFeedback(placed)).status, 1300); return false; }
 
       commitHistory(historyBefore);
       STATE.statusText = 'DRYDOCK';
@@ -1037,7 +1037,8 @@
 
       const clickedBlock = CRAFT.get(voxelRootMesh.userData.blockKey);
       const activeSpaceId = activeAssemblySpaceId();
-      if (!clickedBlock || clickedBlock.assemblySpaceId !== activeSpaceId) return hitFail('wrong-assembly-space');
+      if (!clickedBlock) return hitFail('invalid-block', { blockKey: voxelRootMesh.userData.blockKey });
+      if (clickedBlock.assemblySpaceId !== activeSpaceId) return hitFail('wrong-assembly-space', { activeSpaceId, hitAssemblySpaceId: clickedBlock.assemblySpaceId, blockId: clickedBlock.blockId });
       const hitObjectLocalNormal = hit.face.normal.clone();
       const sceneNormal = hitObjectLocalNormal.clone().transformDirection(hit.object.matrixWorld);
       const gridResult = BT.sceneNormalToActiveGridNormal(sceneNormal, activeSpaceId, (id, vector) => assemblySpaceController.rootVectorToSpace(id, vector));
@@ -1089,7 +1090,7 @@
         ghostArrow.visible = false;
         ghostNormalArrow.visible = false;
         hideSymmetryGhosts();
-        document.getElementById('ui-adj').textContent = '—';
+        document.getElementById('ui-adj').textContent = BT.placementFeedback(WORKSHOP.lastTargetResult).ui;
         return;
       }
 
@@ -1104,10 +1105,11 @@
         STATE.orientation,
         true
       );
-      const valid = canPlacePlan(plan);
+      const placement = canPlacePlan(plan);
+      const valid = placement.ok;
       ghost.material.opacity = valid ? 0.55 : 0.2;
       updateSymmetryGhosts(plan, valid);
-      document.getElementById('ui-adj').textContent = valid ? `OK ×${plan.length}` : 'NO';
+      document.getElementById('ui-adj').textContent = BT.placementFeedback(placement, plan.length).ui;
 
       const showArrow = partUsesOrientation(STATE.selectedBlock);
       ghostArrow.visible = showArrow;
@@ -1687,7 +1689,7 @@
     function performBuildAction(button) {
       if (STATE.mode !== 'BUILD') return;
       const target = raycastBuildTarget(STATE.input.pointerNDC);
-      if (!target) return;
+      if (!target) { showStatus(BT.placementFeedback(WORKSHOP.lastTargetResult).status, 1300); return; }
       if (button === 0 && WORKSHOP.mechanicalAuthoring.active) { handleMechanicalEndpointSelection(target); return; }
       if (button === 0) {
         addBlock(target.position.x, target.position.y, target.position.z, STATE.selectedBlock, STATE.orientation, true);
@@ -1888,21 +1890,21 @@
     }, { passive: false });
 
     document.getElementById('thruster-power').addEventListener('input', (e) => {
-      setThrusterPower(Number(/** @type {HTMLInputElement} */ (e.target).value) / 100, { syncInput: false });
+      setThrusterPower(Number((e.target).value) / 100, { syncInput: false });
     });
 
     document.getElementById('balloon-power').addEventListener('input', (e) => {
-      setBalloonPower(Number(/** @type {HTMLInputElement} */ (e.target).value) / 100, { syncInput: false });
+      setBalloonPower(Number((e.target).value) / 100, { syncInput: false });
     });
 
     document.getElementById('stability').addEventListener('input', (e) => {
-      STATE.stabilityAssist = Number(/** @type {HTMLInputElement} */ (e.target).value) / 100;
+      STATE.stabilityAssist = Number((e.target).value) / 100;
       if (STATE.mode === 'BUILD') updateTelemetry(); else updateFlightFeedback();
       autoSave(false);
     });
 
-    document.getElementById('camera-mode')?.addEventListener('change', (e) => setCameraMode(/** @type {HTMLSelectElement} */ (e.target).value));
-    document.getElementById('camera-follow-strength')?.addEventListener('input', (e) => setCameraFollowStrength(Number(/** @type {HTMLInputElement} */ (e.target).value) / 100));
+    document.getElementById('camera-mode')?.addEventListener('change', (e) => setCameraMode((e.target).value));
+    document.getElementById('camera-follow-strength')?.addEventListener('input', (e) => setCameraFollowStrength(Number((e.target).value) / 100));
     document.getElementById('btn-camera-reset')?.addEventListener('click', () => {
       resetCamera();
       saveUIPreferences();
@@ -1950,7 +1952,7 @@
     document.getElementById('btn-export')?.addEventListener('click', exportBlueprint);
     document.getElementById('btn-import')?.addEventListener('click', () => document.getElementById('blueprint-file')?.click());
     document.getElementById('blueprint-file')?.addEventListener('change', event => {
-      const input = /** @type {HTMLInputElement} */ (event.target);
+      const input = (event.target);
       importBlueprintFile(input.files?.[0]);
       input.value = '';
     });
@@ -1958,7 +1960,7 @@
     function setThrusterPower(value, options = {}) {
       STATE.thrusterPower = THREE.MathUtils.clamp(Number(value) || 0, 0, 1);
       if (options.syncInput !== false) {
-        /** @type {HTMLInputElement} */ (document.getElementById('thruster-power')).value = String(Math.round(STATE.thrusterPower * 100));
+        (document.getElementById('thruster-power')).value = String(Math.round(STATE.thrusterPower * 100));
       }
       syncPowerControlReadouts();
       if (STATE.mode === 'BUILD') updateTelemetry(); else updateFlightFeedback();
@@ -1972,7 +1974,7 @@
     function setBalloonPower(value, options = {}) {
       STATE.balloonPower = THREE.MathUtils.clamp(Number(value) || 0, 0, 1);
       if (options.syncInput !== false) {
-        /** @type {HTMLInputElement} */ (document.getElementById('balloon-power')).value = String(Math.round(STATE.balloonPower * 100));
+        (document.getElementById('balloon-power')).value = String(Math.round(STATE.balloonPower * 100));
       }
       syncPowerControlReadouts();
       if (STATE.mode === 'BUILD') updateTelemetry(); else updateFlightFeedback();
@@ -1991,6 +1993,7 @@
       return FlightControl.adjustmentForInput(event.code, STATE.input.profile);
     }
 
+    // Flight controls use the user profile.
     window.addEventListener('keydown', event => {
       if (commitBindingCapture(event)) return;
       const key = event.key.toLowerCase();
@@ -2010,8 +2013,6 @@
         }
         return;
       }
-      // Flight controls use the user profile. Modifier bindings such as Left Ctrl
-      // are supported, while Flight Focus provides browser-level capture for chords.
       if (STATE.mode === 'FLIGHT') {
         const action = controlActionForEvent(event);
         if (action) {
@@ -2387,7 +2388,6 @@
         loadsByBodyId.get(job.mod.bodyId).lift += liftMagnitude;
       }
 
-      // Mission tuning intentionally evaluates vertical damping on the explicitly selected primary body.
       const primaryVelocity = flightSession.getBodyLinearVelocity(primaryBodyId);
       const primaryTransform = flightSession.getBodyTransform(primaryBodyId);
       const aerostaticDamping = Aerostatics.verticalDampingForce({

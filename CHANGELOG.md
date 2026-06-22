@@ -4,6 +4,9 @@
 
 ### Added
 
+- Deterministic placement failure feedback for ghost adjacency and click-status toasts, including occupied cells, block limits and active Assembly Space mismatch.
+- Semantic orientation readouts for Core, Thruster, Wing, ControlSurface and VectorThruster modules.
+- `tests/test_orientation_service.js` coverage for block-specific orientation labels.
 - `game.build-targeting` module with unit-tested placement normal snapping, active assembly-space conversion and hardened stable target result shapes.
 - Launcher-level Flight Focus button that reuses the existing fullscreen/focus path.
 - Telemetry camera controls for `static`, `follow-position` and `follow-body` modes.
@@ -12,6 +15,8 @@
 
 ### Changed
 
+- Ghost placement feedback now reports `NO: <REASON>` instead of a bare `NO`.
+- Telemetry labels runtime mass as Active mass while flight still reports active/lost blocks.
 - Voxel placement targeting now transforms hit-object local normals into scene space, converts them into the active Assembly Space, snaps to grid space, and then computes the adjacent placement cell.
 - `tests/run_all.py` now includes `tests/test_build_targeting.js` so M2A targeting math stays in the core validation path.
 - UI preferences bumped to v9 and now persist camera mode/follow strength only as UI state, never Blueprint data.
@@ -22,7 +27,7 @@
 
 ### Deferred
 
-Deterministic placement failure UI, orientation panel redesign, microcraft balance, aero tuning and Gate D device/port schema remain separate milestones.
+Full orientation panel redesign, microcraft balance, aero tuning and Gate D device/port schema remain separate milestones.
 
 ## 0.8.2-foundation.workbench-foundation - 2026-06-21
 

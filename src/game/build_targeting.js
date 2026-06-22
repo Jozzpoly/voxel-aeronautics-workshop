@@ -3,6 +3,12 @@
 
   window.VAW.define('game.build-targeting', [], () => {
     const DEFAULT_SNAP_OPTIONS = Object.freeze({ minLengthSq: 1e-8, minDominance: 0.55 });
+    const FAILURE_LABELS = Object.freeze({
+      'no-hit': 'NO HIT', 'no-face': 'NO FACE', 'invalid-normal': 'BAD FACE',
+      'wrong-assembly-space': 'ACTIVE SPACE', occupied: 'OCCUPIED', 'block-limit': 'LIMIT',
+      'invalid-block': 'INVALID BLOCK', 'orphan-block-assembly-space': 'ORPHAN SPACE',
+      'empty-plan': 'EMPTY PLAN', 'symmetry-collision': 'SYMMETRY HIT'
+    });
 
     function targetOk(payload = {}) {
       return Object.freeze({ ...payload, ok: true });
@@ -10,6 +16,30 @@
 
     function targetFail(reason, details = {}) {
       return Object.freeze({ ok: false, reason: String(reason || 'target-failed'), details: Object.freeze({ ...details }) });
+    }
+
+    function normalizePlacementReason(reason) {
+      const key = String(reason || '').trim() || 'invalid-block';
+      if (FAILURE_LABELS[key]) return key;
+      if (key === 'target-failed') return 'no-hit';
+      if (key === 'missing-block') return 'invalid-block';
+      return key;
+    }
+
+    function placementReasonLabel(reason) {
+      const key = normalizePlacementReason(reason);
+      return FAILURE_LABELS[key] || key.replaceAll('-', ' ').toUpperCase();
+    }
+
+    function placementFeedback(result, okCount = 0) {
+      if (result?.ok) return Object.freeze({ ok: true, reason: '', label: 'OK', ui: `OK x${okCount}`, status: 'DRYDOCK' });
+      const reason = normalizePlacementReason(result?.reason);
+      const label = placementReasonLabel(reason);
+      return Object.freeze({ ok: false, reason, label, ui: `NO: ${label}`, status: reason === 'wrong-assembly-space' ? 'ACTIVE SPACE MISMATCH' : `PLACEMENT BLOCKED: ${label}` });
+    }
+
+    function validationFeedback(validation) {
+      return validation?.ok ? targetOk({ validation }) : targetFail(normalizePlacementReason(validation?.reason), { validation });
     }
 
     function vectorArray(vectorLike) {
@@ -66,11 +96,9 @@
     }
 
     return Object.freeze({
-      snapDominantAxis3,
-      placementCellFromNormal,
-      targetOk,
-      targetFail,
-      sceneNormalToActiveGridNormal
+      snapDominantAxis3, placementCellFromNormal, targetOk, targetFail,
+      sceneNormalToActiveGridNormal, normalizePlacementReason, placementReasonLabel,
+      placementFeedback, validationFeedback
     });
   });
 })();
