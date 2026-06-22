@@ -81,7 +81,7 @@ assert.strictEqual(Capabilities.headlessHarness, 'deterministic-free-flight-v1')
 assert.strictEqual(Capabilities.missionEvaluation, 'phase-1d2b-multi-pad-ground-state');
 assert.strictEqual(Capabilities.aerostatics, 'altitude-lift-damped-settling-v2');
 assert.strictEqual(Capabilities.platform, 'desktop-keyboard-mouse-v1');
-assert.strictEqual(Capabilities.workspaceState, 'version-3-z-order');
+assert.strictEqual(Capabilities.workspaceState, 'version-4-dockable-workbench');
 assert.strictEqual(typeof Physics.createWorld, 'function');
 assert.strictEqual(typeof PhysicsPort.normalizeBodyDescriptor, 'function');
 assert.strictEqual(Orientation.ORIENTATION_BASES.length, 24);
@@ -113,7 +113,38 @@ const movedWorkspace = UIWorkspace.updatePanel(firstState.uiWorkspace, 'controls
 assert.strictEqual(movedWorkspace.panels.controls.open, true);
 assert.strictEqual(movedWorkspace.panels.controls.width, 420);
 assert.strictEqual(firstState.uiWorkspace.panels.controls.open, false, 'Workspace updates must be immutable.');
-assert.strictEqual(UIWorkspace.WORKSPACE_VERSION, 3);
+assert.strictEqual(UIWorkspace.WORKSPACE_VERSION, 4);
+assert.strictEqual(firstState.uiWorkspace.layouts.build.panels.parts.open, true);
+assert.strictEqual(firstState.uiWorkspace.layouts.flight.panels.parts.open, false);
+assert.strictEqual(firstState.uiWorkspace.layouts.build.panels.mission.open, false);
+assert.strictEqual(firstState.uiWorkspace.layouts.flight.panels.mission.open, true);
+assert.strictEqual(UIWorkspace.DEFAULT_PANELS.parts.placement, 'dock-bottom');
+assert.strictEqual(UIWorkspace.DEFAULT_PANELS.parts.dockSpan, 'full');
+assert.strictEqual(UIWorkspace.panelsForLayout(firstState.uiWorkspace, 'flight').mission.placement, 'dock-right');
+assert(UIWorkspace.panelsForLayout(firstState.uiWorkspace, 'flight').mission.y < UIWorkspace.panelsForLayout(firstState.uiWorkspace, 'flight').telemetry.y, 'Mission panel must stack above telemetry in the default flight right dock.');
+const flightTelemetryClosed = UIWorkspace.updatePanel(firstState.uiWorkspace, 'telemetry', { open: false }, { layoutId: 'flight' });
+assert.strictEqual(UIWorkspace.panelsForLayout(flightTelemetryClosed, 'flight').telemetry.open, false, 'Flight layout updates must stay separate.');
+assert.strictEqual(UIWorkspace.panelsForLayout(flightTelemetryClosed, 'build').telemetry.open, true, 'Build layout must not inherit flight HUD edits.');
+const migratedTopHotbar = UIWorkspace.updatePanel(firstState.uiWorkspace, 'parts', { placement: 'dock-top' }, { layoutId: 'build' });
+assert.strictEqual(migratedTopHotbar.panels.parts.placement, 'dock-bottom', 'Retired top hotbar placement must migrate to the bottom dock.');
+const normalizedHotbarPlacement = UIWorkspace.updatePanel(firstState.uiWorkspace, 'parts', { placement: 'invalid' }, { layoutId: 'build' });
+assert.strictEqual(normalizedHotbarPlacement.panels.parts.placement, 'dock-bottom', 'Unknown docking placement must normalize to the preset.');
+const normalizedHotbarSpan = UIWorkspace.updatePanel(firstState.uiWorkspace, 'parts', { dockSpan: 'oversize' }, { layoutId: 'build' });
+assert.strictEqual(normalizedHotbarSpan.panels.parts.dockSpan, 'full', 'Unknown hotbar dock span must normalize to the preset.');
+const customizedLayouts = UIWorkspace.updatePanel(
+  UIWorkspace.updatePanel(firstState.uiWorkspace, 'telemetry', { open: false }, { layoutId: 'flight' }),
+  'parts',
+  { placement: 'floating', dockSpan: 'compact' },
+  { layoutId: 'build' }
+);
+const buildPresetOnly = UIWorkspace.applyPreset(customizedLayouts, 'beginner');
+assert.strictEqual(UIWorkspace.panelsForLayout(buildPresetOnly, 'build').parts.placement, 'dock-bottom', 'Build preset must reset the build hotbar.');
+assert.strictEqual(UIWorkspace.panelsForLayout(buildPresetOnly, 'build').parts.dockSpan, 'full', 'Build preset must restore full-width hotbar mode.');
+assert.strictEqual(UIWorkspace.panelsForLayout(buildPresetOnly, 'flight').telemetry.open, false, 'Build preset must preserve flight HUD edits.');
+const flightPresetOnly = UIWorkspace.applyPreset(customizedLayouts, 'flight');
+assert.strictEqual(UIWorkspace.panelsForLayout(flightPresetOnly, 'flight').telemetry.open, true, 'Flight preset must reset flight telemetry.');
+assert.strictEqual(UIWorkspace.panelsForLayout(flightPresetOnly, 'build').parts.placement, 'floating', 'Flight preset must preserve build layout edits.');
+assert.strictEqual(UIWorkspace.panelsForLayout(flightPresetOnly, 'build').parts.dockSpan, 'compact', 'Flight preset must preserve build hotbar span edits.');
 assert.strictEqual(typeof MissionEvaluator.evaluateLanding, 'function');
 assert.strictEqual(typeof MissionEvaluator.advanceHold, 'function');
 assert.strictEqual(typeof MissionEvaluator.evaluateLandingZones, 'function');
@@ -133,10 +164,20 @@ const migratedV2Workspace = UIWorkspace.normalize({
 assert.strictEqual(migratedV2Workspace.panels.controls.x, 111, 'Version 2 geometry must survive the z-order migration.');
 assert.strictEqual(migratedV2Workspace.panels.controls.height, 555);
 assert.deepStrictEqual([...migratedV2Workspace.zOrder].sort(), [...UIWorkspace.PANEL_IDS].sort(), 'Every panel must appear exactly once in z-order.');
+const migratedV3Workspace = UIWorkspace.normalize({
+  version: 3,
+  panels: { contracts: { open: true, x: 123, y: 124, width: 360, height: 420 } },
+  zOrder: ['contracts']
+});
+assert.strictEqual(migratedV3Workspace.layouts.build.panels.contracts.open, true, 'Version 3 panel visibility must migrate into the build layout.');
+assert.strictEqual(migratedV3Workspace.layouts.build.panels.contracts.x, 123, 'Version 3 floating geometry must survive the workbench migration.');
+assert.strictEqual(migratedV3Workspace.layouts.flight.panels.telemetry.open, true, 'Flight HUD layout must be created during legacy migration.');
+assert.strictEqual(migratedV3Workspace.layouts.flight.panels.mission.open, true, 'Dockable mission panel must be created during legacy migration.');
+assert.strictEqual(migratedV3Workspace.layouts.build.panels.mission.open, false, 'Mission panel must not auto-open in the build workbench.');
 const focusedWorkspace = UIWorkspace.focusPanel(migratedV2Workspace, 'controls');
 assert.strictEqual(focusedWorkspace.zOrder.at(-1), 'controls');
 assert.strictEqual(UIWorkspace.topPanel(focusedWorkspace), 'controls');
-assert.strictEqual(UIWorkspace.topPanel(focusedWorkspace, id => id !== 'controls'), 'telemetry');
+assert.strictEqual(UIWorkspace.topPanel(focusedWorkspace, id => id !== 'controls'), 'parts');
 const fittedWorkspaceRect = UIWorkspace.fitPanelRect(
   { open: true, minimized: false, x: 9999, y: 9999, width: 900, height: 1200 },
   { width: 800, height: 600 },
@@ -145,6 +186,18 @@ const fittedWorkspaceRect = UIWorkspace.fitPanelRect(
 assert(fittedWorkspaceRect.left >= 8 && fittedWorkspaceRect.top >= 72);
 assert(fittedWorkspaceRect.left + fittedWorkspaceRect.width <= 792, 'Panel must remain horizontally reachable.');
 assert(fittedWorkspaceRect.top + fittedWorkspaceRect.height <= 592, 'Panel must remain vertically reachable.');
+const fullHotbarRect = UIWorkspace.fitPanelRect(
+  { open: true, minimized: false, placement: 'dock-bottom', dockSpan: 'full', x: 200, y: 500, width: 640, height: 104 },
+  { width: 1280, height: 720 },
+  { panelId: 'parts', topInset: 72 }
+);
+assert.strictEqual(fullHotbarRect.width, 1264, 'Full-width bottom hotbar must claim the available lower workbench span.');
+const compactHotbarRect = UIWorkspace.fitPanelRect(
+  { open: true, minimized: false, placement: 'dock-bottom', dockSpan: 'compact', x: 200, y: 500, width: 640, height: 104 },
+  { width: 1280, height: 720 },
+  { panelId: 'parts', topInset: 72 }
+);
+assert.strictEqual(compactHotbarRect.width, 640, 'Compact bottom hotbar must keep its saved width.');
 
 const valid = Blueprint.normalize({
   version: 7,

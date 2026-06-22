@@ -13,7 +13,7 @@ Authority order: current user decision, latest verified remote SHA, source/tests
 - `FUTURE_READINESS_REVIEW.md`
 - `PROGRAMMABLE_MACHINE_RESEARCH.md`
 
-Current state: Gate C and its future-readiness hardening are complete locally. Gate D — Device & Port Schema — is next.
+Current state: Gate C is the stable gameplay base. The immediate milestone is Workbench Foundation: dockable UI layout, side dock stacking, build/flight workspace separation, a full-span bottom parts hotbar with a compact option, dockable flight mission information, documentation cleanup and a visual asset boundary. Gate D - Device & Port Schema - is temporarily behind this UI/documentation preparation.
 
 ## Active workflow contracts
 
@@ -30,20 +30,21 @@ direct Git > one final milestone ZIP > complete single file > patch
 
 ## Accepted ADRs
 
-ADRs 0033–0040 preserve Gate B. ADR 0041 defines Assembly Spaces, ownership, transforms, migration and explicit non-goals.
+ADRs 0033-0041 preserve Gate B/C architecture. ADR 0042 defines the Workbench UI layout foundation. ADR 0043 defines the visual asset boundary for future external models, textures and animations.
 
 ## Current supporting evidence
 
-- `CODE_REVIEW_REPORT.md`
-- `TEST_REPORT.md`
-- `VALIDATION_REPORT.md`
 - `FUTURE_READINESS_REVIEW.md`
 - `docs/history/phases/PHASE_1D4A_REPORT.md`
+- `docs/history/validation/TEST_REPORT.md`
+- `docs/history/validation/VALIDATION_REPORT.md`
+- `docs/history/reviews/CODE_REVIEW_REPORT.md`
+- `docs/history/reviews/FOUNDATION_CONVERGENCE_REVIEW.md`
 
 ## Recovery evidence
 
-Read the dated 2026-06-16 recovery documents before changing input focus, thruster routing, mechanical visuals, hinge cancellation or lifecycle cleanup.
+Recovery evidence is archived in `docs/recovery/`. Read it before changing input focus, thruster routing, mechanical visuals, hinge cancellation or lifecycle cleanup.
 
 ## Historical and superseded material
 
-Historical phase/review documents describe earlier checkpoints and do not override current source/tests. Cosmetic repository reorganization remains frozen.
+Historical phase/review/validation documents describe earlier checkpoints and do not override current source/tests. Cosmetic repository reorganization remains frozen unless a concrete blocker affects source-of-truth clarity, release construction or validation.

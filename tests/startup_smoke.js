@@ -2,24 +2,27 @@ const fs=require('fs'), vm=require('vm'), path=require('path');
 const html=fs.readFileSync(process.argv[2],'utf8');
 const sourceFiles=process.argv.slice(3);
 if(!sourceFiles.length) throw new Error('No application source files supplied to startup smoke test.');
-const ids=[...html.matchAll(/<([a-zA-Z0-9-]+)[^>]*\sid="([^"]+)"[^>]*>/g)].map(m=>[m[2],m[1].toLowerCase()]);
+const idMatches=[...html.matchAll(/<([a-zA-Z0-9-]+)([^>]*)\sid="([^"]+)"([^>]*)>/g)];
+const ids=idMatches.map(m=>[m[3],m[1].toLowerCase()]);
 class ClassList{constructor(el){this.el=el;this.s=new Set((el.className||'').split(/\s+/).filter(Boolean));}add(...x){x.forEach(v=>this.s.add(v));this.sync()}remove(...x){x.forEach(v=>this.s.delete(v));this.sync()}toggle(x,on){if(on===undefined){this.s.has(x)?this.s.delete(x):this.s.add(x)}else on?this.s.add(x):this.s.delete(x);this.sync();return this.s.has(x)}contains(x){return this.s.has(x)}sync(){this.el.className=[...this.s].join(' ')}}
 const all=[];
 class El{
  constructor(tag='div',id=''){this.tagName=tag.toUpperCase();this.id=id;this.children=[];this.parentElement=null;this.style={};this.dataset={};this.className='';this.classList=new ClassList(this);this.textContent='';this._innerHTML='';this.hidden=false;this.disabled=false;this.isContentEditable=false;this.value=tag==='input'?'70':'';this.files=[];this.type='';this.userData={};this.width=0;this.height=0;this.listeners=new Map();all.push(this)}
  appendChild(c){if(c){c.parentElement=this;this.children.push(c)}return c} removeChild(c){this.children=this.children.filter(x=>x!==c)} remove(){if(this.parentElement)this.parentElement.removeChild(this)}
+ cloneNode(deep=false){const c=new El(this.tagName.toLowerCase()); c.className=this.className; c.classList=new ClassList(c); c.dataset={...this.dataset}; c.textContent=this.textContent; c._innerHTML=this._innerHTML; c.hidden=this.hidden; c.disabled=this.disabled; c.type=this.type; c.value=this.value; if(deep)this.children.forEach(child=>c.appendChild(child.cloneNode(true))); return c}
  addEventListener(type,fn){if(!this.listeners.has(type))this.listeners.set(type,[]);this.listeners.get(type).push(fn)} removeEventListener(type,fn){if(this.listeners.has(type))this.listeners.set(type,this.listeners.get(type).filter(x=>x!==fn))} dispatchEvent(event={}){event.type=event.type||'event';event.target=event.target||this;event.currentTarget=this;event.preventDefault=event.preventDefault||(()=>{event.defaultPrevented=true});event.stopPropagation=event.stopPropagation||(()=>{});for(const fn of this.listeners.get(event.type)||[])fn(event);return !event.defaultPrevented} click(){if(!this.disabled)this.dispatchEvent({type:'click'})} closest(sel){if(sel.startsWith('#')){let e=this;while(e){if('#'+e.id===sel)return e;e=e.parentElement}}return null}
  querySelectorAll(sel){return query(sel,this)} querySelector(sel){return this.querySelectorAll(sel)[0]||null}
  set innerHTML(v){this._innerHTML=String(v)} get innerHTML(){return this._innerHTML}
  getBoundingClientRect(){return {left:0,top:0,width:1280,height:720,right:1280,bottom:720}}
  focus(){document.activeElement=this;this.dispatchEvent({type:'focus'})} blur(){if(document.activeElement===this)document.activeElement=body;this.dispatchEvent({type:'blur'})}
- setAttribute(k,v){this[k]=v} getAttribute(k){return Object.prototype.hasOwnProperty.call(this,k)?this[k]:null} getContext(){return {}}
+ setAttribute(k,v){this[k]=v;if(k.startsWith('data-'))this.dataset[k.slice(5).replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]=String(v)} getAttribute(k){return Object.prototype.hasOwnProperty.call(this,k)?this[k]:null} getContext(){return {}}
 }
 const elements=new Map();
 for(const [id,tag] of ids){const e=new El(tag,id);elements.set(id,e)}
+for(const m of idMatches){const e=elements.get(m[3]);const attrs=`${m[2]} ${m[4]}`;for(const d of attrs.matchAll(/\s(data-[a-zA-Z0-9-]+)(?:="([^"]*)")?/g)){e.setAttribute(d[1],d[2]??'')}}
 const body=new El('body','body'), head=new El('head','head');
 function descendants(root){const out=[];const walk=e=>{for(const c of e.children){out.push(c);walk(c)}};walk(root);return out}
-function query(sel,root=null){let pool=root?descendants(root):all;if(sel.startsWith('.'))return pool.filter(e=>e.classList.contains(sel.slice(1)) || e.className.split(/\s+/).includes(sel.slice(1)));if(sel.startsWith('#')){const e=elements.get(sel.slice(1));return e?[e]:[]}if(sel==='button')return pool.filter(e=>e.tagName==='BUTTON');return []}
+function query(sel,root=null){let pool=root?descendants(root):all;if(sel.startsWith('.'))return pool.filter(e=>e.classList.contains(sel.slice(1)) || e.className.split(/\s+/).includes(sel.slice(1)));if(sel.startsWith('#')){const e=elements.get(sel.slice(1));return e?[e]:[]}const data=sel.match(/^\[data-([a-zA-Z0-9-]+)\]$/);if(data){const key=data[1].replace(/-([a-z])/g,(_,c)=>c.toUpperCase());return pool.filter(e=>Object.prototype.hasOwnProperty.call(e.dataset,key))}if(sel==='button')return pool.filter(e=>e.tagName==='BUTTON');return []}
 const documentListeners=new Map();
 const document={
  body,head,hidden:false,fullscreenElement:null,activeElement:body,
@@ -40,6 +43,10 @@ try{
  const assert=(condition,message)=>{if(!condition)throw new Error(message)};
  assert(elements.get('ui-blocks').textContent==='0','Fresh v8 workspace must start empty.');
  assert(all.some(el=>el.dataset.tool==='Core'),'Command Core must be available in the tool palette.');
+ const hotbarCore=all.find(el=>el.dataset.tool==='Core' && el.classList.contains('hotbar-tool-btn'));
+ assert(hotbarCore,'Command Core must be available in the dockable parts hotbar.');
+ hotbarCore.click();
+ assert(all.filter(el=>el.dataset.tool==='Core').every(el=>el.classList.contains('active')),'Hotbar selection must stay in parity with the legacy tool buttons.');
  assert(elements.get('ui-binding-warning').textContent.includes('Flight Focus'),'Default Ctrl binding must explain the browser-safe focus mode.');
  const descendBindingButton=all.find(el=>el.dataset.bindingAction==='lift-' && el.dataset.bindingSlot==='0');
  assert(descendBindingButton,'Runtime must render a rebind button for descend.');
@@ -54,6 +61,20 @@ try{
  elements.get('balloon-power').value='37';
  elements.get('balloon-power').dispatchEvent({type:'input'});
  assert(elements.get('ui-balloon-power').textContent==='37%','Balloon slider must refresh its numeric readout immediately.');
+ assert(document.querySelectorAll('[data-flight-focus-toggle]').length>=2,'Both controls panel and launcher must expose Flight Focus toggles.');
+ const cameraMode=elements.get('camera-mode');
+ assert(cameraMode,'Telemetry must expose a camera mode selector.');
+ cameraMode.value='static';
+ cameraMode.dispatchEvent({type:'change'});
+ assert(elements.get('camera-follow-row').hidden===true,'Static camera mode must hide follow-strength controls.');
+ assert(elements.get('ui-camera-mode-help').textContent.includes('Static camera'),'Static camera mode must explain build-like behavior.');
+ cameraMode.value='follow-body';
+ cameraMode.dispatchEvent({type:'change'});
+ assert(elements.get('camera-follow-row').hidden===false,'Follow camera modes must expose follow-strength controls.');
+ elements.get('camera-follow-strength').value='22';
+ elements.get('camera-follow-strength').dispatchEvent({type:'input'});
+ assert(elements.get('ui-camera-follow-strength').textContent==='22%','Camera follow-strength slider must update its readout immediately.');
+ elements.get('btn-camera-reset').click();
  elements.get('btn-flight').click();
  assert(elements.get('ui-mode').textContent==='BUILD','An empty craft must remain in build mode after rejected launch.');
  assert(elements.get('ui-status').textContent==='INVALID CRAFT','Rejected empty launch must produce a clear invalid-craft status.');
@@ -165,5 +186,5 @@ try{
  dispatchWindowEvent('pagehide');
  elements.get('btn-clear').click();
  assert(elements.get('ui-blocks').textContent==='0','New blueprint must return to a truly empty workspace.');
- console.log('STARTUP_OK', {ids:ids.length,elements:all.length,modules:global.VAW.inspect().initialized.length,sources:sourceFiles.length,interaction:'ok',singleBodyLifecycle:'ok',articulatedUiLifecycle:'ok',multiSpaceUiLifecycle:'ok'});
+ console.log('STARTUP_OK', {ids:ids.length,elements:all.length,modules:global.VAW.inspect().initialized.length,sources:sourceFiles.length,interaction:'ok',cameraUi:'ok',singleBodyLifecycle:'ok',articulatedUiLifecycle:'ok',multiSpaceUiLifecycle:'ok'});
 }catch(e){console.error(e.stack||e);process.exit(1)}

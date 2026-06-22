@@ -9,8 +9,8 @@
       return Object.freeze(value);
     }
 
-    const APP_VERSION = '0.8.1-foundation.gate-c-hardening';
-    const RELEASE_ID = 'foundation-gate-c-future-hardening';
+    const APP_VERSION = '0.8.2-foundation.workbench-foundation';
+    const RELEASE_ID = 'foundation-workbench-foundation';
     const GRID = { halfExtent: 18, minY: 0, maxY: 20, maxBlocks: 2500 };
     const SAVE_VERSION = 12;
     const SAVE_KEY = 'voxel-aeronautics-blueprint-v12';
@@ -28,9 +28,9 @@
     ];
     const CAREER_SAVE_KEY = 'voxel-aeronautics-career-v1';
     const CAREER_SAVE_VERSION = 2;
-    const UI_SAVE_VERSION = 5;
-    const UI_SAVE_KEY = 'voxel-aeronautics-ui-v5';
-    const LEGACY_UI_SAVE_KEYS = ['voxel-aeronautics-ui-v4', 'voxel-aeronautics-ui-v3', 'voxel-aeronautics-ui-v2', 'voxel-aeronautics-ui-v1'];
+    const UI_SAVE_VERSION = 9;
+    const UI_SAVE_KEY = 'voxel-aeronautics-ui-v9';
+    const LEGACY_UI_SAVE_KEYS = ['voxel-aeronautics-ui-v8', 'voxel-aeronautics-ui-v7', 'voxel-aeronautics-ui-v6', 'voxel-aeronautics-ui-v5', 'voxel-aeronautics-ui-v4', 'voxel-aeronautics-ui-v3', 'voxel-aeronautics-ui-v2', 'voxel-aeronautics-ui-v1'];
     const NEIGHBOR_DIRECTIONS = [
       [1,0,0], [-1,0,0], [0,1,0], [0,-1,0], [0,0,1], [0,0,-1]
     ];

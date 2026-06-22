@@ -12,6 +12,8 @@ EXPECTED_MODULES = {
     'career_service.js': 'game.career-service',
     'workspace_controller.js': 'game.workspace-controller',
     'input_settings_controller.js': 'game.input-settings-controller',
+    'camera_controller.js': 'game.camera-controller',
+    'build_targeting.js': 'game.build-targeting',
     'orientation_service.js': 'game.orientation-service',
     'module_visual_factory.js': 'game.module-visual-factory',
     'assembly_space_controller.js': 'game.assembly-space-controller',

@@ -62,21 +62,27 @@
 
       function syncFlightFocusStatus(message = '') {
         const status = document.getElementById('ui-flight-focus-status');
-        const button = /** @type {HTMLButtonElement|null} */ (document.getElementById('btn-flight-focus'));
         const active = Boolean(document.fullscreenElement && keyboardLockActive);
+        const supported = flightFocusSupported();
         const usesCtrl = InputProfile.allBoundCodes(STATE.input.profile).some(code => code === 'ControlLeft' || code === 'ControlRight');
         if (status) {
           status.classList.toggle('active', active);
           status.textContent = message || (active
             ? 'Flight Focus active • game bindings override supported browser shortcuts'
-            : (flightFocusSupported()
+            : (supported
               ? (usesCtrl ? 'Browser mode • use Flight Focus before combining Ctrl with W/A/S/D' : 'Browser mode • current bindings do not require Ctrl capture')
               : (usesCtrl ? 'Flight Focus unavailable here • rebind Ctrl for conflict-free multi-axis flight' : 'Flight Focus unavailable here • current bindings remain usable')));
         }
-        if (button) {
-          button.disabled = !flightFocusSupported();
-          button.textContent = active ? 'EXIT FOCUS' : 'FLIGHT FOCUS';
-        }
+        document.querySelectorAll('[data-flight-focus-toggle]').forEach(rawButton => {
+          const button = /** @type {HTMLButtonElement} */ (rawButton);
+          const compact = button.dataset.flightFocusCompact === 'true';
+          button.disabled = !supported;
+          button.textContent = active ? (compact ? '⛶ EXIT' : 'EXIT FOCUS') : (compact ? '⛶ FOCUS' : 'FLIGHT FOCUS');
+          button.classList.toggle('active', active);
+          button.setAttribute('aria-pressed', String(active));
+          button.setAttribute('title', active ? 'Exit fullscreen flight focus' : 'Toggle fullscreen flight focus');
+          button.setAttribute('aria-label', active ? 'Exit fullscreen flight focus' : 'Toggle fullscreen flight focus');
+        });
       }
 
       async function refreshKeyboardLock() {
@@ -221,7 +227,7 @@
           refreshKeyboardLock();
           showStatus('CONTROL PROFILE RESET', 1100);
         });
-        document.getElementById('btn-flight-focus')?.addEventListener('click', toggleFlightFocus);
+        document.querySelectorAll('[data-flight-focus-toggle]').forEach(button => button.addEventListener('click', toggleFlightFocus));
         syncInputProfileUI();
       }
 

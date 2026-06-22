@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Voxel Aeronautics Workshop — Gate C Future Hardening</title>
+  <title>Voxel Aeronautics Workshop — Workbench Foundation</title>
   <script src="vendor/three-r128/three.min.js"></script>
   <script src="vendor/cannon-0.6.2/cannon.min.js"></script>
   <link rel="stylesheet" href="tailwind.generated.css" />
@@ -22,19 +22,37 @@
 
     <nav id="workspace-toolbar" class="workspace-toolbar" aria-label="Workspace panels">
       <button class="workspace-tab active" type="button" data-panel-toggle="build" aria-controls="build-panel" aria-expanded="true">BUILD</button>
+      <button class="workspace-tab active" type="button" data-panel-toggle="parts" aria-controls="parts-hotbar" aria-expanded="true">PARTS</button>
       <button class="workspace-tab" type="button" data-panel-toggle="contracts" aria-controls="contract-panel" aria-expanded="false">CONTRACTS</button>
       <button class="workspace-tab active" type="button" data-panel-toggle="telemetry" aria-controls="telemetry-panel" aria-expanded="true">TELEMETRY</button>
+      <button class="workspace-tab" type="button" data-panel-toggle="mission" aria-controls="mission-hud" aria-expanded="false">MISSION</button>
       <button class="workspace-tab" type="button" data-panel-toggle="controls" aria-controls="controls-panel" aria-expanded="false">CONTROLS</button>
-      <button id="btn-workspace-reset" class="workspace-tab workspace-tab-muted" type="button">RESET LAYOUT</button>
     </nav>
 
+    <div id="workspace-layout-actions" class="workspace-layout-actions" aria-label="Workspace layout actions">
+      <button class="workspace-tab workspace-tab-muted" type="button" data-workspace-preset="beginner">BUILD PRESET</button>
+      <button class="workspace-tab workspace-tab-muted" type="button" data-workspace-preset="flight">FLIGHT HUD</button>
+      <button id="btn-workspace-reset" class="workspace-tab workspace-tab-muted" type="button">RESET LAYOUT</button>
+    </div>
+
     <div id="hud-content">
-<div class="flex justify-between items-start gap-3 flex-wrap">
+<div class="workspace-panel-root flex justify-between items-start gap-3 flex-wrap">
+  <div class="workbench-dock-zones" aria-hidden="true">
+    <div class="workbench-dock-zone workbench-dock-zone-left"></div>
+    <div class="workbench-dock-zone workbench-dock-zone-right"></div>
+    <div class="workbench-dock-zone workbench-dock-zone-bottom"></div>
+  </div>
+  <div id="parts-hotbar" data-workspace-panel="parts" class="panel workspace-panel parts-hotbar-panel">
+    <div class="workspace-panel-handle parts-hotbar-handle"><span class="parts-hotbar-title">PARTS</span><span class="workspace-panel-actions parts-hotbar-actions"><button class="workspace-panel-span-button" type="button" data-panel-span-toggle="parts" aria-pressed="true" aria-label="Use compact parts hotbar width" title="Use compact parts hotbar width">FULL</button><button type="button" data-panel-minimize="parts" aria-label="Minimize parts hotbar">-</button><button type="button" data-panel-close="parts" aria-label="Close parts hotbar">x</button></span></div>
+    <div class="workspace-panel-scroll parts-hotbar-scroll" data-panel-scroll="parts" tabindex="0" role="region" aria-label="Build parts hotbar">
+      <div id="parts-hotbar-list" class="parts-hotbar-list" aria-label="Build parts"></div>
+    </div>
+  </div>
   <div id="build-panel" data-workspace-panel="build" class="panel workspace-panel w-[24rem] max-w-[92vw]">
     <div class="workspace-panel-handle"><span>BUILD WORKSPACE</span><span class="workspace-panel-actions"><button type="button" data-panel-minimize="build" aria-label="Minimize build panel">—</button><button type="button" data-panel-close="build" aria-label="Close build panel">×</button></span></div>
     <div class="workspace-panel-scroll" data-panel-scroll="build" tabindex="0" role="region" aria-label="Build workspace content">
     <div class="flex items-center justify-between mb-1 gap-2">
-      <div><h1 class="text-xl font-black text-white">Voxel Aeronautics Workshop</h1><div class="text-[10px] uppercase tracking-[0.18em] text-sky-300">Foundation Gate C • Future Hardening</div></div>
+      <div><h1 class="text-xl font-black text-white">Voxel Aeronautics Workshop</h1><div class="text-[10px] uppercase tracking-[0.18em] text-sky-300">Workbench Foundation • Gate C Base</div></div>
       <span id="ui-mode" class="chip text-amber-300">BUILD</span>
     </div>
     <p class="text-xs text-gray-400 mb-3">
@@ -171,6 +189,23 @@
     <div class="flex justify-between mb-2"><span class="text-gray-400">Damage:</span><span id="ui-damage-status" class="font-mono text-white">No active damage</span></div>
     <div class="flex justify-between mb-2"><span class="text-gray-400">Simulation:</span><span id="ui-simulation-health" class="font-mono text-emerald-300">Healthy</span></div>
     <div class="flex justify-between mb-2"><span class="text-gray-400">Vertical support:</span><span id="ui-vertical-support" class="font-mono text-white">—</span></div>
+
+    <div class="mt-4 pt-3 border-t border-gray-700 text-xs text-gray-300 space-y-2" id="camera-control-panel">
+      <div class="mini-status">
+        <span class="text-gray-500 uppercase tracking-[0.18em] text-[11px]">Camera</span>
+        <button id="btn-camera-reset" class="mini-btn camera-reset-btn" type="button">RESET</button>
+      </div>
+      <select id="camera-mode" class="mini-btn w-full" aria-label="Camera mode">
+        <option value="static">Static / build-like</option>
+        <option value="follow-position">Follow position</option>
+        <option value="follow-body">Follow body rotation</option>
+      </select>
+      <div id="camera-follow-row">
+        <div class="flex justify-between mb-1 text-[11px]"><span class="text-sky-200">Follow strength</span><span id="ui-camera-follow-strength" class="font-mono text-white">8%</span></div>
+        <input id="camera-follow-strength" class="slider power-slider" type="range" min="2" max="35" value="8" />
+      </div>
+      <p id="ui-camera-mode-help" class="text-[10px] text-gray-400">Middle drag or Alt+drag orbits. Shift+middle drag pans the target.</p>
+    </div>
 
     <div class="space-y-3 mt-3">
       <div>
@@ -317,7 +352,7 @@
           <strong>Flight bindings</strong>
           <p>Click a slot, then press a physical key. Backspace clears it; Escape cancels.</p>
         </div>
-        <button id="btn-flight-focus" class="mini-btn" type="button">FLIGHT FOCUS</button>
+        <button id="btn-flight-focus" class="mini-btn" type="button" data-flight-focus-toggle>FLIGHT FOCUS</button>
       </div>
       <div id="ui-flight-focus-status" class="binding-focus-status">Browser mode • Ctrl combinations may be reserved</div>
       <div id="ui-binding-warning" class="binding-warning" role="status"></div>
@@ -326,36 +361,40 @@
 
     </div>
   </div>
+
+  <div id="mission-hud" data-workspace-panel="mission" class="panel workspace-panel mission-hud mission-hud-panel" hidden>
+    <div class="workspace-panel-handle"><span>MISSION</span><span class="workspace-panel-actions"><button type="button" data-panel-minimize="mission" aria-label="Minimize mission panel">-</button><button type="button" data-panel-close="mission" aria-label="Close mission panel">x</button></span></div>
+    <div class="workspace-panel-scroll mission-hud-scroll" data-panel-scroll="mission" tabindex="0" role="region" aria-label="Mission flight information">
+      <div class="mission-hud-header">
+        <div>
+          <div id="mission-hud-title" class="mission-hud-title">Sandbox Test</div>
+          <div id="mission-hud-objective" class="mission-hud-objective">Free flight</div>
+        </div>
+        <div id="mission-hud-timer" class="mission-hud-timer">00:00</div>
+      </div>
+      <div class="mission-hud-grid">
+        <div><span>Progress</span><strong id="mission-hud-progress">—</strong></div>
+        <div><span>Integrity</span><strong id="mission-hud-integrity">100%</strong></div>
+        <div><span>Fuel</span><strong id="mission-hud-fuel">100%</strong></div>
+        <div><span>Impact</span><strong id="mission-hud-impact">0.0 m/s</strong></div>
+        <div><span>Parts lost</span><strong id="mission-hud-lost">0</strong></div>
+        <div><span>Fuel leak</span><strong id="mission-hud-leak">0.00/s</strong></div>
+        <div><span>Payload</span><strong id="mission-hud-payload">—</strong></div>
+      </div>
+      <div class="mission-progress-track"><span id="mission-progress-fill"></span></div>
+    </div>
+  </div>
 </div>
 
-      <div class="flex justify-center gap-3 flex-wrap mt-3">
+      <div id="mode-actions" class="mode-actions">
         <button id="btn-build" class="btn-action bg-yellow-600 shadow-[0_0_15px_rgba(202,138,4,0.45)]" disabled>Return to Drydock</button>
         <button id="btn-flight" class="btn-action bg-emerald-600 shadow-[0_0_15px_rgba(16,185,129,0.45)]">Launch Selected Contract</button>
+        <button id="btn-launcher-flight-focus" class="btn-action bg-sky-700 launcher-focus-btn" type="button" data-flight-focus-toggle data-flight-focus-compact="true" title="Toggle fullscreen flight focus" aria-label="Toggle fullscreen flight focus">⛶ FOCUS</button>
         <button id="btn-help" class="btn-action bg-slate-700">?</button>
       </div>
     </div>
 
 
-  </div>
-
-  <div id="mission-hud" class="mission-hud" hidden>
-    <div class="mission-hud-header">
-      <div>
-        <div id="mission-hud-title" class="mission-hud-title">Sandbox Test</div>
-        <div id="mission-hud-objective" class="mission-hud-objective">Free flight</div>
-      </div>
-      <div id="mission-hud-timer" class="mission-hud-timer">00:00</div>
-    </div>
-    <div class="mission-hud-grid">
-      <div><span>Progress</span><strong id="mission-hud-progress">—</strong></div>
-      <div><span>Integrity</span><strong id="mission-hud-integrity">100%</strong></div>
-      <div><span>Fuel</span><strong id="mission-hud-fuel">100%</strong></div>
-      <div><span>Impact</span><strong id="mission-hud-impact">0.0 m/s</strong></div>
-      <div><span>Parts lost</span><strong id="mission-hud-lost">0</strong></div>
-      <div><span>Fuel leak</span><strong id="mission-hud-leak">0.00/s</strong></div>
-      <div><span>Payload</span><strong id="mission-hud-payload">—</strong></div>
-    </div>
-    <div class="mission-progress-track"><span id="mission-progress-fill"></span></div>
   </div>
 
   <div id="debrief-modal" class="overlay-modal" hidden>
@@ -469,6 +508,8 @@
         'src/game/career_service.js',
         'src/game/workspace_controller.js',
         'src/game/input_settings_controller.js',
+        'src/game/camera_controller.js',
+        'src/game/build_targeting.js',
         'src/game/orientation_service.js',
         'src/game/module_visual_factory.js',
         'src/game/assembly_space_controller.js',
@@ -483,12 +524,13 @@
         'src/foundation/bootstrap.js',
         'src/game.js'
       ];
+      const sourceVersion = 'workbench-ui-v9-m2a-targeting';
       let cursor = 0;
       const loadNext = () => {
         if (cursor >= sources.length) return;
         const source = sources[cursor++];
         const script = document.createElement('script');
-        script.src = source;
+        script.src = `${source}?v=${sourceVersion}`;
         script.async = false;
         script.onload = loadNext;
         script.onerror = () => showFatal(`The script ${source} could not be loaded.`);

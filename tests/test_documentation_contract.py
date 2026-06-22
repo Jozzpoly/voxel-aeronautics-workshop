@@ -27,12 +27,33 @@ HISTORICAL_REVIEWS = {
     'docs/history/reviews/FOUNDATION_REVIEW.md',
     'docs/history/reviews/CRITICAL_REVIEW.md',
     'docs/history/reviews/GAME_MODULARIZATION_REVIEW.md',
+    'docs/history/reviews/CODE_REVIEW_REPORT.md',
+    'docs/history/reviews/HOTFIX_REPORT.md',
+    'docs/history/reviews/FOUNDATION_CONVERGENCE_REVIEW.md',
 }
 OLD_REVIEW_PATHS = {
     'FOUNDATION_REVIEW.md',
     'CRITICAL_REVIEW.md',
     'GAME_MODULARIZATION_REVIEW.md',
+    'CODE_REVIEW_REPORT.md',
+    'HOTFIX_REPORT.md',
+    'FOUNDATION_CONVERGENCE_REVIEW.md',
 }
+RECOVERY_EVIDENCE = {
+    'docs/recovery/README.md',
+    'docs/recovery/BROWSER_RECOVERY_SCENARIO_2026-06-16.md',
+    'docs/recovery/RECOVERY_AUDIT_2026-06-16.md',
+    'docs/recovery/RECOVERY_BASELINE_TESTS.md',
+    'docs/recovery/RECOVERY_DELIVERY_2026-06-16.md',
+    'docs/recovery/RECOVERY_VALIDATION_REPORT_2026-06-16.md',
+}
+VALIDATION_HISTORY = {
+    'docs/history/validation/README.md',
+    'docs/history/validation/TEST_REPORT.md',
+    'docs/history/validation/VALIDATION_REPORT.md',
+}
+OLD_RECOVERY_PATHS = {Path(path).name for path in RECOVERY_EVIDENCE if path.endswith('.md') and Path(path).name != 'README.md'}
+OLD_VALIDATION_PATHS = {'TEST_REPORT.md', 'VALIDATION_REPORT.md'}
 
 ACTIVE_DOCUMENTS = {
     'README.md',
@@ -52,9 +73,6 @@ ACTIVE_DOCUMENTS = {
 
 required = {
     *ACTIVE_DOCUMENTS,
-    'CODE_REVIEW_REPORT.md',
-    'TEST_REPORT.md',
-    'VALIDATION_REPORT.md',
     'examples/articulated_hinge_v11.json',
     'examples/assembly_spaces_v12.json',
     'docs/history/phases/README.md',
@@ -65,6 +83,8 @@ required = {
     'docs/repository/DOCUMENTATION_CONVERGENCE_STAGE2_REPORT.md',
     *PHASE_REPORTS,
     *HISTORICAL_REVIEWS,
+    *RECOVERY_EVIDENCE,
+    *VALIDATION_HISTORY,
     *{f'docs/adr/{number:04d}-{name}.md' for number, name in [
         (33, 'blueprint-v11-mechanical-link-schema'),
         (34, 'persistent-mechanical-and-rigid-island-identities'),
@@ -75,6 +95,8 @@ required = {
         (39, 'body-frame-rebase-with-active-constraints'),
         (40, 'minimal-workshop-hinge-authoring'),
         (41, 'assembly-spaces-and-spatial-ownership'),
+        (42, 'workbench-ui-layout'),
+        (43, 'visual-asset-boundary'),
     ]},
 }
 
@@ -86,6 +108,12 @@ assert not old_phase_paths, f'Phase reports must not remain in repository root: 
 
 old_review_paths = sorted(path for path in OLD_REVIEW_PATHS if (ROOT / path).exists())
 assert not old_review_paths, f'Superseded reviews must not remain in repository root: {old_review_paths}'
+
+old_recovery_paths = sorted(path for path in OLD_RECOVERY_PATHS if (ROOT / path).exists())
+assert not old_recovery_paths, f'Recovery evidence must not remain in repository root: {old_recovery_paths}'
+
+old_validation_paths = sorted(path for path in OLD_VALIDATION_PATHS if (ROOT / path).exists())
+assert not old_validation_paths, f'Validation snapshots must not remain in repository root: {old_validation_paths}'
 
 texts = {
     path: (ROOT / path).read_text(encoding='utf-8')
@@ -138,7 +166,7 @@ for phrase in ('Blueprint v12', 'CompiledCraft V5', 'RuntimeAssemblyPlan V3', 'a
 for phrase in ('Gate C', 'Gate D', 'Gate E', 'dynamic rigid-body split'):
     assert phrase in roadmap or phrase in memory
 
-for number in range(33, 42):
+for number in range(33, 44):
     path = next(path for path in required if path.startswith(f'docs/adr/{number:04d}-'))
     assert 'Status: Accepted' in texts[path]
 
@@ -148,6 +176,18 @@ for name in PHASE_REPORT_NAMES:
 for path in HISTORICAL_REVIEWS:
     name = Path(path).name
     assert f'`{name}`' in review_index, f'Historical review index misses {name}'
+
+validation_index = texts['docs/history/validation/README.md']
+for path in VALIDATION_HISTORY:
+    name = Path(path).name
+    if name != 'README.md':
+        assert f'`{name}`' in validation_index, f'Validation archive index misses {name}'
+
+recovery_index = texts['docs/recovery/README.md']
+for path in RECOVERY_EVIDENCE:
+    name = Path(path).name
+    if name != 'README.md':
+        assert f'`{name}`' in recovery_index, f'Recovery archive index misses {name}'
 
 for heading in (
     'Active product source of truth',
@@ -166,8 +206,8 @@ assert 'three genuinely different safe mechanisms' in agent
 assert 'bezpośredni Git > jeden końcowy ZIP milestone' in delivery
 assert 'git push origin' in delivery and ('force-push' in delivery or '--force' in delivery)
 assert 'git push origin' in push and 'Never force-push' in push
-assert 'Gate C' in handoff and 'Gate D' in handoff
-assert 'fa125064426c8a77586864035dc8dbad4af6b44b' in handoff
+assert 'Gate C' in handoff and 'Gate D' in handoff and 'Workbench Foundation' in handoff
+assert 'ddce6b4' in handoff
 
 STALE_ACTIVE_PHRASES = (
     'NOT-PUBLISHED',
@@ -195,8 +235,8 @@ print({
     'phaseReportsArchived': len(PHASE_REPORTS),
     'historicalReviewsArchived': len(HISTORICAL_REVIEWS),
     'staleActiveStatus': 0,
-    'currentGate': 'Gate C hardening',
-    'nextGate': 'Gate D',
+    'currentGate': 'Gate C stable base',
+    'nextGate': 'Workbench Foundation',
     'documentationIndex': 'ok',
     'workflowV3': 'ok',
 })

@@ -8,12 +8,12 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE_ID = 'foundation-gate-c-future-hardening'
-APP_VERSION = '0.8.1-foundation.gate-c-hardening'
-SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Gate_C_Future_Hardening.html'
-ZIP_NAME = 'Voxel_Aeronautics_Workshop_Gate_C_Future_Hardening.zip'
+RELEASE_ID = 'foundation-workbench-foundation'
+APP_VERSION = '0.8.2-foundation.workbench-foundation'
+SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Workbench_Foundation.html'
+ZIP_NAME = 'Voxel_Aeronautics_Workshop_Workbench_Foundation.zip'
 MANIFEST_NAME = 'SOURCE_MANIFEST.json'
-ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_GATE_C_FUTURE_HARDENING_READY_TO_PUSH'
+ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_WORKBENCH_FOUNDATION_READY_TO_PUSH'
 IGNORED_ARCHIVE_PARTS = {'dist', 'release', '.agent-validation', '__pycache__', '.pytest_cache', '.git', 'node_modules'}
 APP_SOURCES = (
     Path('src/foundation/kernel.js'),
@@ -49,6 +49,8 @@ APP_SOURCES = (
     Path('src/game/career_service.js'),
     Path('src/game/workspace_controller.js'),
     Path('src/game/input_settings_controller.js'),
+    Path('src/game/camera_controller.js'),
+    Path('src/game/build_targeting.js'),
     Path('src/game/orientation_service.js'),
     Path('src/game/module_visual_factory.js'),
     Path('src/game/assembly_space_controller.js'),

@@ -268,19 +268,157 @@ def _process_group_options() -> dict[str, Any]:
     return {"start_new_session": True}
 
 
-def terminate_process_family(process: subprocess.Popen[str], grace_seconds: float = 2.0) -> None:
-    if process.poll() is not None:
-        return
+def _windows_descendant_pids(root_pid: int) -> list[int]:
+    if os.name != "nt":
+        return []
+    import ctypes
+    from ctypes import wintypes
+
+    class PROCESSENTRY32W(ctypes.Structure):
+        _fields_ = [
+            ("dwSize", wintypes.DWORD),
+            ("cntUsage", wintypes.DWORD),
+            ("th32ProcessID", wintypes.DWORD),
+            ("th32DefaultHeapID", ctypes.c_void_p),
+            ("th32ModuleID", wintypes.DWORD),
+            ("cntThreads", wintypes.DWORD),
+            ("th32ParentProcessID", wintypes.DWORD),
+            ("pcPriClassBase", wintypes.LONG),
+            ("dwFlags", wintypes.DWORD),
+            ("szExeFile", wintypes.WCHAR * 260),
+        ]
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+    kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    kernel32.Process32FirstW.argtypes = [wintypes.HANDLE, ctypes.POINTER(PROCESSENTRY32W)]
+    kernel32.Process32FirstW.restype = wintypes.BOOL
+    kernel32.Process32NextW.argtypes = [wintypes.HANDLE, ctypes.POINTER(PROCESSENTRY32W)]
+    kernel32.Process32NextW.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+
+    snapshot = kernel32.CreateToolhelp32Snapshot(0x00000002, 0)
+    if snapshot == ctypes.c_void_p(-1).value:
+        return []
+    children_by_parent: dict[int, list[int]] = {}
     try:
-        if os.name == "nt":
+        entry = PROCESSENTRY32W()
+        entry.dwSize = ctypes.sizeof(entry)
+        if not kernel32.Process32FirstW(snapshot, ctypes.byref(entry)):
+            return []
+        while True:
+            pid = int(entry.th32ProcessID)
+            parent_pid = int(entry.th32ParentProcessID)
+            children_by_parent.setdefault(parent_pid, []).append(pid)
+            if not kernel32.Process32NextW(snapshot, ctypes.byref(entry)):
+                break
+    finally:
+        kernel32.CloseHandle(snapshot)
+
+    ordered: list[int] = []
+    seen = {root_pid, os.getpid()}
+    stack = [root_pid]
+    while stack:
+        parent = stack.pop()
+        for child in children_by_parent.get(parent, []):
+            if child in seen:
+                continue
+            seen.add(child)
+            ordered.append(child)
+            stack.append(child)
+    return ordered
+
+
+def _windows_terminate_pids(pids: Iterable[int]) -> None:
+    if os.name != "nt":
+        return
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.TerminateProcess.argtypes = [wintypes.HANDLE, wintypes.UINT]
+    kernel32.TerminateProcess.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+
+    seen: set[int] = set()
+    for pid in pids:
+        pid = int(pid)
+        if pid <= 0 or pid == os.getpid() or pid in seen:
+            continue
+        seen.add(pid)
+        handle = kernel32.OpenProcess(0x0001, False, pid)
+        if not handle:
+            continue
+        try:
+            kernel32.TerminateProcess(handle, 1)
+        finally:
+            kernel32.CloseHandle(handle)
+
+
+def _windows_process_is_active(pid: int) -> bool:
+    if os.name != "nt":
+        return False
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+    kernel32.GetExitCodeProcess.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+
+    handle = kernel32.OpenProcess(0x1000, False, int(pid))
+    if not handle:
+        return False
+    try:
+        exit_code = wintypes.DWORD()
+        if not kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+            return False
+        return exit_code.value == 259
+    finally:
+        kernel32.CloseHandle(handle)
+
+
+def _windows_wait_for_pids(pids: Iterable[int], timeout_seconds: float) -> None:
+    if os.name != "nt":
+        return
+    candidates = {int(pid) for pid in pids if int(pid) > 0 and int(pid) != os.getpid()}
+    deadline = time.monotonic() + timeout_seconds
+    while candidates and time.monotonic() < deadline:
+        candidates = {pid for pid in candidates if _windows_process_is_active(pid)}
+        if candidates:
+            time.sleep(0.05)
+
+
+def terminate_process_family(process: subprocess.Popen[str], grace_seconds: float = 2.0) -> None:
+    if os.name == "nt":
+        descendant_pids = _windows_descendant_pids(process.pid)
+        if process.poll() is None:
             subprocess.run(
                 ["taskkill", "/PID", str(process.pid), "/T", "/F"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 check=False,
             )
-        else:
-            os.killpg(process.pid, signal.SIGTERM)
+        _windows_terminate_pids([*reversed(descendant_pids), process.pid])
+        try:
+            process.wait(timeout=grace_seconds)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            with contextlib.suppress(subprocess.TimeoutExpired):
+                process.wait(timeout=grace_seconds)
+        _windows_wait_for_pids(descendant_pids, grace_seconds)
+        return
+    if process.poll() is not None:
+        return
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
     except ProcessLookupError:
         return
     try:
@@ -289,10 +427,7 @@ def terminate_process_family(process: subprocess.Popen[str], grace_seconds: floa
     except subprocess.TimeoutExpired:
         pass
     try:
-        if os.name == "nt":
-            process.kill()
-        else:
-            os.killpg(process.pid, signal.SIGKILL)
+        os.killpg(process.pid, signal.SIGKILL)
     except ProcessLookupError:
         return
     try:

@@ -6,6 +6,8 @@
     const CareerService = window.VAW.require('game.career-service');
     const WorkspaceController = window.VAW.require('game.workspace-controller');
     const InputSettingsController = window.VAW.require('game.input-settings-controller');
+    const CameraController = window.VAW.require('game.camera-controller');
+    const BT = window.VAW.require('game.build-targeting');
     const OrientationService = window.VAW.require('game.orientation-service');
     const ModuleVisualFactory = window.VAW.require('game.module-visual-factory');
     const AssemblySpaceController = window.VAW.require('game.assembly-space-controller');
@@ -100,6 +102,9 @@
       updateInputAxis, commitBindingCapture, handleFullscreenChange, bindInputProfileControls,
       isEditableInteractionActive, releaseEditableInteraction
     } = inputSettingsController;
+
+    const cameraController = CameraController.create({ state: STATE, camera, THREE, document, saveUIPreferences, showStatus, primaryFlightBodyId, primaryFlightTransform });
+    const { normalizeCameraState, clampCameraPitch, applyCameraOrbit, syncCameraControls, setCameraMode, setCameraFollowStrength, resetCamera, panCameraTargetByPixels, fitCameraToFlightTarget } = cameraController;
 
     function recomputePilotAxes() {
       const intent = FlightControl.pilotFromActions(STATE.input.controlActions, STATE.input.profile);
@@ -354,6 +359,7 @@
       const timing = fixedStepScheduler.snapshot();
       setText('ui-simulation-health', timing.droppedSeconds > 0 ? `${timing.droppedSeconds.toFixed(2)} s dropped • ${timing.overloadFrames} overloads` : 'Healthy');
       if (bodyId && STATE.mode === 'FLIGHT') {
+        syncTelemetryMassAndBlockReadouts();
         setText('ui-fuel', `${Math.max(0, Math.round(STATE.flight.fuel))} / ${Math.max(0, Math.round(STATE.flight.fuelMax))}`);
       }
       setText('ui-pitch-value', `${Math.round(pitch * 100)}%`);
@@ -441,7 +447,6 @@
       }
       document.getElementById('btn-symmetry').textContent = `SYMMETRY: ${STATE.symmetry}`;
 
-
       const selectedForward = getOrientationVector(STATE.orientation);
       const directionButtons = document.querySelectorAll('.axis-btn');
       directionButtons.forEach(element => {
@@ -462,7 +467,6 @@
       syncContractPanelVisibility();
       updateFlightFeedback();
     }
-
 
     function addRootMesh(mesh) {
       if (!WORKSHOP.rootMeshes.includes(mesh)) WORKSHOP.rootMeshes.push(mesh);
@@ -607,7 +611,6 @@
       return CRAFT.validateAddMany(plan).ok;
     }
 
-
     function refreshRaycastList() {
       WORKSHOP.rootMeshes.length = 0;
       for (const mesh of WORKSHOP.meshesByKey.values()) addRootMesh(mesh);
@@ -743,6 +746,21 @@
 
     CRAFT.subscribe(handleCraftModelChange);
 
+    function syncTelemetryMassAndBlockReadouts(analysis = STATE.flight.analysis) {
+      const massEl = document.getElementById('ui-mass');
+      const blocksEl = document.getElementById('ui-blocks');
+      if (STATE.mode === 'FLIGHT') {
+        const runtimeMass = Number.isFinite(STATE.flight.runtimeMass) && STATE.flight.runtimeMass > 0 ? STATE.flight.runtimeMass : (analysis?.mass || 0);
+        const activeBlocks = Math.max(0, Math.round(STATE.flight.blockCount || 0));
+        const lostParts = Math.max(0, Math.round(STATE.flight.lostParts || 0));
+        if (massEl) massEl.textContent = `${runtimeMass.toFixed(1)} kg`;
+        if (blocksEl) blocksEl.textContent = lostParts > 0 ? `${activeBlocks} active • ${lostParts} lost` : `${activeBlocks} active`;
+        return;
+      }
+      if (massEl) massEl.textContent = `${(analysis?.mass || 0).toFixed(1)} kg`;
+      if (blocksEl) blocksEl.textContent = String(CRAFT.size);
+    }
+
     function updateTelemetry() {
       syncControlFrameReadout();
       const analysis = computeCraftAnalysis();
@@ -756,8 +774,7 @@
         comSphere.visible = false;
       }
 
-      document.getElementById('ui-mass').textContent = `${analysis.mass.toFixed(1)} kg`;
-      document.getElementById('ui-blocks').textContent = String(CRAFT.size);
+      syncTelemetryMassAndBlockReadouts(analysis);
 
       if (STATE.mode === 'BUILD') {
         document.getElementById('ui-fuel').textContent = `${Math.round(analysis.fuelCapacity)} reserve`;
@@ -779,9 +796,7 @@
     function setSelectedTool(tool) {
       if (STATE.mode !== 'BUILD' || !BLOCKS[tool]) return;
       STATE.selectedBlock = tool;
-      document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
-      const active = Array.from(document.querySelectorAll('.tool-btn')).find(element => /** @type {HTMLElement} */ (element).dataset.tool === tool);
-      if (active) active.classList.add('active');
+      document.querySelectorAll('.tool-btn').forEach(element => element.classList.toggle('active', element.dataset.tool === tool));
       updateControlConfigurationUI();
       updateTelemetry();
       updateGhost();
@@ -930,8 +945,6 @@
       return true;
     }
 
-
-
     function resetToEmptyCraft(persist = true) {
       cleanupFlightState();
       STATE.mode = 'BUILD';
@@ -942,8 +955,6 @@
       updateGhost();
       if (persist) autoSave(false);
     }
-
-
 
     function addBlock(x, y, z, type, orientation = STATE.orientation, allowMirror = true) {
       if (STATE.mode !== 'BUILD') return false;
@@ -1002,32 +1013,41 @@
     }
 
     const raycaster = new THREE.Raycaster();
+    function hitOk(target) { WORKSHOP.lastTargetResult = BT.targetOk({ target }); return target; }
+    function hitFail(reason, details) { WORKSHOP.lastTargetResult = BT.targetFail(reason, details); return null; }
     function raycastBuildTarget(ndc) {
       raycaster.setFromCamera(ndc, camera);
       const hits = raycaster.intersectObjects([basePlane, ...WORKSHOP.rootMeshes], true);
-      if (!hits.length) return null;
+      if (!hits.length) return hitFail('no-hit');
 
       const hit = hits[0];
       if (hit.object === basePlane || hit.object.userData.isBuildSurface) {
         const local = assemblySpaceController.rootPointToActive([hit.point.x, hit.point.y, hit.point.z]);
-        return {
+        const target = {
           kind: 'surface',
           position: new THREE.Vector3(snapInt(local[0]), snapInt(local[1]), snapInt(local[2])),
           root: null,
           normal: new THREE.Vector3(0, 1, 0)
         };
+        return hitOk(target);
       }
 
-      const root = getRootVoxelFromHit(hit.object);
-      if (!root || !hit.face) return null;
+      const voxelRootMesh = getRootVoxelFromHit(hit.object);
+      if (!voxelRootMesh || !hit.face) return hitFail('no-face');
 
-      const block = CRAFT.get(root.userData.blockKey);
-      if (!block || block.assemblySpaceId !== activeAssemblySpaceId()) return null;
-      const normal = hit.face.normal.clone().round();
-      const position = new THREE.Vector3(block.x, block.y, block.z).add(normal);
-      position.set(snapInt(position.x), snapInt(position.y), snapInt(position.z));
+      const clickedBlock = CRAFT.get(voxelRootMesh.userData.blockKey);
+      const activeSpaceId = activeAssemblySpaceId();
+      if (!clickedBlock || clickedBlock.assemblySpaceId !== activeSpaceId) return hitFail('wrong-assembly-space');
+      const hitObjectLocalNormal = hit.face.normal.clone();
+      const sceneNormal = hitObjectLocalNormal.clone().transformDirection(hit.object.matrixWorld);
+      const gridResult = BT.sceneNormalToActiveGridNormal(sceneNormal, activeSpaceId, (id, vector) => assemblySpaceController.rootVectorToSpace(id, vector));
+      if (!gridResult.ok) { WORKSHOP.lastTargetResult = gridResult; return null; }
+      const gridNormal = gridResult.gridNormal;
+      const placementCell = BT.placementCellFromNormal(clickedBlock, gridNormal);
+      const position = new THREE.Vector3(snapInt(placementCell.x), snapInt(placementCell.y), snapInt(placementCell.z));
       if (position.y < GRID.minY) position.y = GRID.minY;
-      return { kind: 'voxel', position, root, normal, block };
+      const normal = new THREE.Vector3(gridNormal[0], gridNormal[1], gridNormal[2]);
+      return hitOk({ kind: 'voxel', position, root: voxelRootMesh, normal, block: clickedBlock });
     }
 
     function hideSymmetryGhosts() {
@@ -1200,7 +1220,6 @@
       STATE.flight.thrusterTorqueMax.copy(max);
     }
 
-
     function detachRuntimeParts(entries, cascade = true) {
       return flightIntegrity.detachParts(entries, cascade);
     }
@@ -1300,7 +1319,6 @@
       if (failures.length) detachRuntimeParts(failures, true);
       recomputeFlightIntegrity();
     }
-
 
     function processPendingImpacts() {
       if (!primaryFlightBodyId() || !STATE.flight.pendingImpacts.length) return;
@@ -1510,7 +1528,6 @@
         STATE.flight.payload = { bodyId: payloadBodyId, mass: payloadMass, bodyLocalPosition: payloadOffset, colliderId: payloadColliderPlan.colliderId, visual: crate, coupler, health: payloadMaxHealth, maxHealth: payloadMaxHealth, attached: true };
       }
 
-
       STATE.flight.functionalBlocks = functionalBlocks;
       STATE.flight.runtimeParts = runtimeParts;
       STATE.flight.runtimePartById = new Map(runtimeParts.map(part => [part.blockId, part]));
@@ -1552,6 +1569,7 @@
 
         const primaryTransform = flightSession.getBodyTransform(started.primaryBodyId);
         STATE.camera.target.set(primaryTransform.position.x, primaryTransform.position.y, primaryTransform.position.z);
+        STATE.camera.targetOffset.set(0, 0, 0);
         camera.position.set(primaryTransform.position.x + 13, primaryTransform.position.y + 7, primaryTransform.position.z + 13);
         return true;
       } catch (error) {
@@ -1586,13 +1604,14 @@
         STATE.statusText = 'DRYDOCK';
         testRangeGroup.visible = false;
         missionMarkerGroup.visible = false;
-        document.getElementById('mission-hud').hidden = true;
         STATE.mission.status = 'IDLE';
         STATE.mission.active = false;
         STATE.mission.contractId = null;
         STATE.mission.previousPosition = null;
         STATE.mission.landingAssessment = null;
         STATE.mission.helpPaused = false;
+        STATE.camera.target.copy(STATE.camera.defaultTarget);
+        STATE.camera.targetOffset.set(0, 0, 0);
       } else {
         const compiled = CraftCompiler.compile(CRAFT);
         if (compiled.blockCount > PHYSICS.maxFlightParts) {
@@ -1610,6 +1629,7 @@
               updateHistoryButtons();
           return;
         }
+        setWorkspacePanelOpen('contracts', false, true);
         setMechanicalAuthoring(false, false); STATE.mode = 'FLIGHT';
         ghost.visible = false;
         ghostArrow.visible = false;
@@ -1641,30 +1661,10 @@
       autoSave(false);
     }
 
-
-
     function syncFlightVisuals() {
       if (!flightSession.isActive()) return;
       flightSession.syncVisuals();
       flightMechanicalVisuals.sync();
-    }
-
-
-    function applyCameraOrbit() {
-      const pitch = Math.max(0.08, Math.min(Math.PI / 2 - 0.08, STATE.camera.pitch));
-      const r = STATE.camera.distance;
-      const x = STATE.camera.target.x + r * Math.cos(pitch) * Math.cos(STATE.camera.yaw);
-      const z = STATE.camera.target.z + r * Math.cos(pitch) * Math.sin(STATE.camera.yaw);
-      const y = STATE.camera.target.y + r * Math.sin(pitch);
-      camera.position.set(x, y, z);
-      camera.lookAt(STATE.camera.target);
-    }
-
-    function signedFaceForDelta(dx, dy, dz) {
-      if (dx === 1) return 'PX'; if (dx === -1) return 'NX';
-      if (dy === 1) return 'PY'; if (dy === -1) return 'NY';
-      if (dz === 1) return 'PZ'; if (dz === -1) return 'NZ';
-      return null;
     }
 
     function setMechanicalAuthoring(active, refreshGhost = true) {
@@ -1694,19 +1694,6 @@
       } else if (button === 2 && target.kind === 'voxel') {
         removeBlock(target.root.userData.blockKey);
       }
-    }
-
-
-    function resetCamera() {
-      STATE.camera.target.copy(STATE.camera.defaultTarget);
-      STATE.camera.yaw = STATE.camera.defaultYaw;
-      STATE.camera.pitch = STATE.camera.defaultPitch;
-      STATE.camera.distance = STATE.camera.defaultDistance;
-      if (STATE.mode === 'FLIGHT' && primaryFlightBodyId()) {
-        const transform = primaryFlightTransform();
-        STATE.camera.target.set(transform.position.x, transform.position.y, transform.position.z);
-      }
-      applyCameraOrbit();
     }
 
     function toggleSymmetry() {
@@ -1800,7 +1787,7 @@
     document.getElementById('btn-roll-orientation-left')?.addEventListener('click', () => applyBuildRotation(-1));
     document.getElementById('btn-roll-orientation-right')?.addEventListener('click', () => applyBuildRotation(1));
 
-    const toolContainer = document.getElementById('tool-container');
+    const toolContainer = document.getElementById('tool-container'), hotbarList = document.getElementById('parts-hotbar-list');
     Object.keys(BLOCKS).forEach(name => {
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -1813,12 +1800,13 @@
         <div class="w-6 h-6 rounded border border-white/30 shrink-0" style="background:${colorHex}"></div>
         <div class="min-w-0 flex-1">
           <div class="font-bold text-white leading-tight">${displayName}</div>
-          <div class="text-[10px] text-gray-400">${BLOCKS[name].desc}</div>
+          <div class="tool-description text-[10px] text-gray-400">${BLOCKS[name].desc}</div>
         </div>
-        <div class="text-[10px] font-mono text-slate-500">${shortcutIndex <= 9 ? shortcutIndex : ''}</div>
+        <div class="tool-shortcut text-[10px] font-mono text-slate-500">${shortcutIndex <= 9 ? shortcutIndex : ''}</div>
       `;
       btn.addEventListener('click', () => setSelectedTool(name));
       toolContainer.appendChild(btn);
+      if (hotbarList) { const hotbarBtn = btn.cloneNode(true); hotbarBtn.classList.add('hotbar-tool-btn'); hotbarBtn.addEventListener('click', () => setSelectedTool(name)); hotbarList.appendChild(hotbarBtn); }
     });
 
     renderer.domElement.addEventListener('pointerenter', () => {
@@ -1841,7 +1829,9 @@
       STATE.input.dragStartX = event.clientX;
       STATE.input.dragStartY = event.clientY;
 
-      if (event.altKey || event.button === 1) {
+      if (event.button === 1 && event.shiftKey) {
+        STATE.input.panDrag = true;
+      } else if (event.altKey || event.button === 1) {
         STATE.input.orbitDrag = true;
       }
       try { renderer.domElement.setPointerCapture(event.pointerId); } catch (_) {}
@@ -1851,14 +1841,18 @@
     renderer.domElement.addEventListener('pointermove', (event) => {
       if (event.pointerType === 'touch' || isOverUI(event.target)) return;
       rayToNDC(event.clientX, event.clientY);
-      if (STATE.input.orbitDrag) {
+      if (STATE.input.orbitDrag || STATE.input.panDrag) {
         const dx = event.clientX - STATE.input.dragStartX;
         const dy = event.clientY - STATE.input.dragStartY;
         STATE.input.dragStartX = event.clientX;
         STATE.input.dragStartY = event.clientY;
         if (Math.abs(dx) + Math.abs(dy) > 0) {
-          STATE.camera.yaw -= dx * 0.008;
-          STATE.camera.pitch -= dy * 0.008;
+          if (STATE.input.panDrag) {
+            panCameraTargetByPixels(dx, dy);
+          } else {
+            STATE.camera.yaw -= dx * 0.008;
+            STATE.camera.pitch = clampCameraPitch(STATE.camera.pitch - dy * 0.008);
+          }
           STATE.input.downMoved = true;
         }
       }
@@ -1868,9 +1862,10 @@
     renderer.domElement.addEventListener('pointerup', (event) => {
       if (event.pointerType === 'touch' || isOverUI(event.target)) return;
       rayToNDC(event.clientX, event.clientY);
-      const orbitWasActive = STATE.input.orbitDrag;
+      const cameraDragWasActive = STATE.input.orbitDrag || STATE.input.panDrag;
       STATE.input.orbitDrag = false;
-      if (!orbitWasActive && STATE.mode === 'BUILD' && !STATE.input.downMoved) {
+      STATE.input.panDrag = false;
+      if (!cameraDragWasActive && STATE.mode === 'BUILD' && !STATE.input.downMoved) {
         if (event.button === 0 || event.button === 2) performBuildAction(event.button);
       }
       STATE.input.downButton = -1;
@@ -1879,6 +1874,7 @@
 
     renderer.domElement.addEventListener('pointercancel', () => {
       STATE.input.orbitDrag = false;
+      STATE.input.panDrag = false;
       STATE.input.downButton = -1;
     });
 
@@ -1903,6 +1899,14 @@
       STATE.stabilityAssist = Number(/** @type {HTMLInputElement} */ (e.target).value) / 100;
       if (STATE.mode === 'BUILD') updateTelemetry(); else updateFlightFeedback();
       autoSave(false);
+    });
+
+    document.getElementById('camera-mode')?.addEventListener('change', (e) => setCameraMode(/** @type {HTMLSelectElement} */ (e.target).value));
+    document.getElementById('camera-follow-strength')?.addEventListener('input', (e) => setCameraFollowStrength(Number(/** @type {HTMLInputElement} */ (e.target).value) / 100));
+    document.getElementById('btn-camera-reset')?.addEventListener('click', () => {
+      resetCamera();
+      saveUIPreferences();
+      showStatus('CAMERA RESET', 900);
     });
 
     bindWorkspacePanels();
@@ -1951,8 +1955,6 @@
       input.value = '';
     });
 
-
-
     function setThrusterPower(value, options = {}) {
       STATE.thrusterPower = THREE.MathUtils.clamp(Number(value) || 0, 0, 1);
       if (options.syncInput !== false) {
@@ -1966,7 +1968,6 @@
     function adjustThrusterPower(delta) {
       setThrusterPower(STATE.thrusterPower + delta);
     }
-
 
     function setBalloonPower(value, options = {}) {
       STATE.balloonPower = THREE.MathUtils.clamp(Number(value) || 0, 0, 1);
@@ -1982,7 +1983,6 @@
       setBalloonPower(STATE.balloonPower + delta);
     }
 
-
     function controlActionForEvent(event) {
       return FlightControl.actionForInput(event.code, STATE.input.profile);
     }
@@ -1990,7 +1990,6 @@
     function controlAdjustmentForEvent(event) {
       return FlightControl.adjustmentForInput(event.code, STATE.input.profile);
     }
-
 
     window.addEventListener('keydown', event => {
       if (commitBindingCapture(event)) return;
@@ -2426,15 +2425,6 @@
       STATE.flight.lastLoads = { lift: totalLift, drag: totalDrag, thrust: totalThrust, impact };
     }
 
-    function fitCameraToFlightTarget() {
-      if (STATE.mode === 'FLIGHT' && primaryFlightBodyId()) {
-        const transform = primaryFlightTransform();
-        STATE.camera.target.lerp(new THREE.Vector3(transform.position.x, transform.position.y, transform.position.z), 0.08);
-      } else {
-        STATE.camera.target.lerp(STATE.camera.defaultTarget, 0.04);
-      }
-    }
-
     const fixedStepScheduler = FixedStepScheduler.create({ fixedDt: PHYSICS.fixedDt, maxSubSteps: PHYSICS.maxSubSteps, maxFrameDelta: 0.08 });
     let hudAccumulator = 0;
     function animate() {
@@ -2483,6 +2473,7 @@
       refreshRaycastList();
       updateTelemetry();
       syncInputProfileUI();
+      syncCameraControls();
       applyWorkspaceLayout();
       updateHUD();
       syncHudVisibility();

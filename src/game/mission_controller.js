@@ -382,7 +382,7 @@
         if (!hud) return;
         const contract = getContractById(STATE.mission.contractId || STATE.career.selectedContractId);
         const visible = STATE.mode === 'FLIGHT' && flightSession.isActive();
-        hud.hidden = !visible;
+        hud.dataset.missionActive = String(visible);
         if (!visible) return;
         refreshMissionMarkerStates();
         document.getElementById('mission-hud-title').textContent = contract.title;

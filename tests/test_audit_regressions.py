@@ -199,34 +199,60 @@ for element_id in ('workspace-toolbar', 'contract-panel'):
 for removed_id in ('btn-ui-contracts', 'mobile-topbar', 'mobile-controls', 'btn-touch-place'):
     assert f'id="{removed_id}"' not in HTML
 assert 'id="desktop-required"' in HTML
-assert 'Foundation Gate C • Future Hardening' in HTML
+assert 'Workbench Foundation • Gate C Base' in HTML
 assert 'Foundation Phase 1D.2B • Mission + Balloon Control Fix' not in HTML
 assert re.search(r'id="contract-panel"[^>]*\shidden', HTML)
 assert 'btn-contract-panel-open' not in HTML and 'btn-contract-panel-close' not in HTML
 assert 'contract-panel-trigger' not in CSS and 'panel-close-btn' not in CSS
 assert 'function syncContractPanelVisibility()' in GAME
-assert "panelId === 'build' || panelId === 'contracts'" in GAME
+assert "panelId === 'build' || panelId === 'contracts' || panelId === 'parts'" in GAME
 assert "if (key === 'c')" in GAME
-assert "UI_SAVE_VERSION = 5" in ALL_JS
-assert "UI_SAVE_KEY = 'voxel-aeronautics-ui-v5'" in ALL_JS
-for legacy_key in ('voxel-aeronautics-ui-v4', 'voxel-aeronautics-ui-v3', 'voxel-aeronautics-ui-v2', 'voxel-aeronautics-ui-v1'):
+assert "UI_SAVE_VERSION = 9" in ALL_JS
+assert "UI_SAVE_KEY = 'voxel-aeronautics-ui-v9'" in ALL_JS
+for legacy_key in ('voxel-aeronautics-ui-v8', 'voxel-aeronautics-ui-v7', 'voxel-aeronautics-ui-v6', 'voxel-aeronautics-ui-v5', 'voxel-aeronautics-ui-v4', 'voxel-aeronautics-ui-v3', 'voxel-aeronautics-ui-v2', 'voxel-aeronautics-ui-v1'):
     assert legacy_key in ALL_JS
 assert 'foundation.ui-workspace' in ALL_JS
 assert 'data-workspace-panel="controls"' in HTML
+assert 'data-workspace-panel="parts"' in HTML
+assert 'data-workspace-panel="mission"' in HTML
 assert 'data-panel-toggle="build"' in HTML and 'aria-controls="build-panel"' in HTML
+assert 'data-panel-toggle="parts"' in HTML and 'aria-controls="parts-hotbar"' in HTML
+assert 'data-panel-toggle="mission"' in HTML and 'aria-controls="mission-hud"' in HTML
+assert 'data-panel-span-toggle="parts"' in HTML
+assert 'id="workspace-layout-actions"' in HTML
+assert 'data-flight-focus-toggle' in HTML and 'id="btn-launcher-flight-focus"' in HTML
+assert 'id="camera-mode"' in HTML and 'follow-body' in HTML and 'Shift+middle drag' in HTML
+assert 'STATE.flight.runtimeMass' in GAME and 'syncTelemetryMassAndBlockReadouts' in GAME
+assert 'game.camera-controller' in ALL_JS and 'panCameraTargetByPixels' in ALL_JS
 assert 'workspace-tab-unavailable' in CSS
 print({'workspace_panel_close_reopen': 'ok', 'contract_access_unified': 'ok', 'workspace_preference_migration': 'ok', 'desktop_scope': 'ok'})
 
 # Workspace panels require a dedicated scroll body, viewport-safe geometry, focus order and durable resize persistence.
-for panel_id in ('build', 'contracts', 'telemetry', 'controls'):
+for panel_id in ('build', 'parts', 'contracts', 'telemetry', 'controls', 'mission'):
     assert f'data-panel-scroll="{panel_id}"' in HTML
-assert HTML.count('class="workspace-panel-scroll"') == 4
+assert HTML.count('class="workspace-panel-scroll') == 6
 for token in ('overflow-y: auto', 'touch-action: pan-y', 'overscroll-behavior: contain', 'scrollbar-gutter: stable'):
     assert token in CSS
 assert 'UIWorkspace.fitPanelRect(panel' in GAME
 assert 'workspaceTopInset()' in GAME
-assert 'viewportHeight - visibleHeight - gap' in ALL_JS
-assert 'WORKSPACE_VERSION = 3' in ALL_JS
+assert 'viewportHeight - visibleHeight - bottomInset' in ALL_JS
+assert 'WORKSPACE_VERSION = 4' in ALL_JS
+assert "'dock-top'" not in ALL_JS.replace("value === 'dock-top'", '')
+for token in ('workspace-panel-dock-left', 'workspace-panel-dock-bottom', 'workbench-dock-preview-left', 'data-workspace-preset="flight"', 'workbench-bottom-dock-active', 'workbench-bottom-dock-full', 'workspace-layout-actions'):
+    assert token in CSS or token in HTML or token in GAME
+assert "dockSpan: 'full'" in ALL_JS
+assert "panelId === 'mission'" in GAME and "STATE.mode === 'FLIGHT'" in GAME
+assert "setWorkspacePanelOpen('contracts', false, true)" in GAME
+assert 'togglePanelDockSpan' in GAME
+assert '--workbench-edge-top' in CSS and '--workbench-edge-top' in GAME
+assert '--workbench-bottom-reserve' in CSS and '--workbench-bottom-reserve' in GAME
+assert 'function handlePanelWheel(event)' in GAME
+assert 'region.scrollLeft += delta' in GAME
+assert 'isHorizontalDockPlacement(placement)' in GAME
+assert "region.addEventListener('wheel', handlePanelWheel, { passive: false })" in GAME
+assert 'parts-hotbar-panel.workspace-panel-dock-bottom .parts-hotbar-scroll' in CSS
+assert 'scrollbar-width: none' in CSS and '-ms-overflow-style: none' in CSS
+assert "button.setAttribute('aria-expanded', String(!minimized))" in GAME
 assert 'function focusWorkspacePanel(panelId' in GAME
 assert 'UIWorkspace.topPanel(' in GAME
 assert 'workspace-panel-front' in CSS

@@ -67,18 +67,22 @@
           },
           camera: {
             target: new THREE.Vector3(0, 0.5, 0),
+            targetOffset: new THREE.Vector3(0, 0, 0),
             yaw: Math.PI * 0.25,
             pitch: Math.PI * 0.33,
             distance: 18,
             defaultTarget: new THREE.Vector3(0, 0.5, 0),
             defaultYaw: Math.PI * 0.25,
             defaultPitch: Math.PI * 0.33,
-            defaultDistance: 18
+            defaultDistance: 18,
+            mode: 'follow-position',
+            followStrength: 0.08
           },
           input: {
             pointerInside: false,
             pointerNDC: new THREE.Vector2(),
             orbitDrag: false,
+            panDrag: false,
             dragStartX: 0,
             dragStartY: 0,
             downButton: -1,

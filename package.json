@@ -1,8 +1,8 @@
 {
   "name": "voxel-aeronautics-workshop",
-  "version": "0.8.1-foundation.gate-c-hardening",
+  "version": "0.8.2-foundation.workbench-foundation",
   "private": true,
-  "description": "Desktop voxel engineering sandbox with Blueprint v12 Assembly Spaces, deterministic multi-body compilation, hardened save/history/runtime diagnostics, and articulated flight.",
+  "description": "Desktop voxel engineering sandbox with Blueprint v12 Assembly Spaces, dockable Workbench UI foundations, deterministic multi-body compilation, and articulated flight.",
   "scripts": {
     "test": "python tests/run_all.py",
     "build": "python tools/build_release.py",

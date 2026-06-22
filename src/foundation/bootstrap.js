@@ -35,7 +35,7 @@
       missionEvaluation: 'phase-1d2b-multi-pad-ground-state',
       aerostatics: 'altitude-lift-damped-settling-v2',
       platform: 'desktop-keyboard-mouse-v1',
-      workspaceState: 'version-3-z-order',
+      workspaceState: 'version-4-dockable-workbench',
       gameShell: 'mechanical-platform-convergence-v1'
     });
     return Object.freeze({ Physics, Capabilities });

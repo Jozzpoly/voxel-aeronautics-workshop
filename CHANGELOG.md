@@ -1,5 +1,46 @@
 # Changelog
 
+## Unreleased - Authoring UX Recovery Milestone 1
+
+### Added
+
+- `game.build-targeting` module with unit-tested placement normal snapping, active assembly-space conversion and hardened stable target result shapes.
+- Launcher-level Flight Focus button that reuses the existing fullscreen/focus path.
+- Telemetry camera controls for `static`, `follow-position` and `follow-body` modes.
+- Shift + middle mouse drag camera panning in build and flight.
+- `game.camera-controller` service module to keep camera UX out of the monolithic entrypoint.
+
+### Changed
+
+- Voxel placement targeting now transforms hit-object local normals into scene space, converts them into the active Assembly Space, snaps to grid space, and then computes the adjacent placement cell.
+- `tests/run_all.py` now includes `tests/test_build_targeting.js` so M2A targeting math stays in the core validation path.
+- UI preferences bumped to v9 and now persist camera mode/follow strength only as UI state, never Blueprint data.
+- Flight telemetry mass/block readouts now use runtime state in FLIGHT and blueprint analysis in BUILD.
+- Camera pitch clamp now allows viewing craft from below.
+- Bottom launcher z-order is lower than visible workspace panels, preventing panel button click stealing.
+- Startup smoke coverage now checks camera UI and both Flight Focus toggle entry points.
+
+### Deferred
+
+Deterministic placement failure UI, orientation panel redesign, microcraft balance, aero tuning and Gate D device/port schema remain separate milestones.
+
+## 0.8.2-foundation.workbench-foundation - 2026-06-21
+
+### Added
+
+- Workbench UI layout v4 with docked/floating placements and separate build/flight layouts.
+- Dockable parts hotbar backed by the existing gameplay block catalog.
+- ADR 0042 for Workbench UI layout and ADR 0043 for the visual asset boundary.
+
+### Changed
+
+- Documentation authority now treats Gate C as the stable base and Workbench Foundation as the immediate milestone.
+- Old root-level recovery, validation and support snapshots are archived under `docs/recovery/` and `docs/history/`.
+
+### Deferred
+
+Blockbench importer, VisualAssetRegistry implementation, Gate D Device/Port Schema and broader visual redesign remain later milestones.
+
 ## 0.8.1-foundation.gate-c-hardening — 2026-06-18
 
 ### Added
