@@ -78,6 +78,7 @@ Classify failures:
 
 - `SOURCE_MANIFEST.json` is generated provenance. Do not hand-edit hashes.
 - `.agent-validation/` contains validation artifacts and may be regenerated.
+- Use `node tools/run_with_python_env.js python tools/prune_agent_validation.py --keep 5` to inspect old `.agent-validation/` artifacts. It is dry-run by default; add `--apply` only after explicit owner approval for deletion.
 - `assets/visual_packs/local_working_visuals/**` may contain user art. Do not delete, normalize, regenerate or clean it without explicit owner request.
 - `release/**` is tracked historical release output. Do not delete or migrate it without owner approval.
 

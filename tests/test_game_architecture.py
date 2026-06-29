@@ -42,6 +42,18 @@ VISUAL_COMPOSITION_DEPENDENCIES = {
     'game.visual-runtime-adapter',
     'game.module-visual-factory',
 }
+ALLOWED_WINDOW_VAW_GLOBALS = {
+    'window.VAW_VISUAL_ASSET_DIAGNOSTICS',
+    'window.VAW_VISUAL_ASSET_DEBUG',
+}
+
+
+def assert_no_new_window_vaw_globals(source: str, label: str) -> None:
+    for match in re.finditer(r'\bwindow\??\.VAW_[A-Z0-9_]+\b', source):
+        global_name = match.group(0).replace('window?.', 'window.')
+        assert global_name in ALLOWED_WINDOW_VAW_GLOBALS, (
+            f'{label} introduces ad-hoc window.VAW_* global: {global_name}'
+        )
 
 for filename, module_name in EXPECTED_MODULES.items():
     source = paths[filename].read_text(encoding='utf-8')
@@ -50,8 +62,14 @@ for filename, module_name in EXPECTED_MODULES.items():
     assert source.count('window.VAW.define(') == 1, f'{filename} must define exactly one module'
     assert 'window.VAW_RUNTIME' not in source, f'{filename} bypasses explicit module injection'
     assert 'src/game.js' not in source, f'{filename} depends on the monolithic entrypoint'
+    assert_no_new_window_vaw_globals(source, filename)
 
 ordered = [path.relative_to(ROOT).as_posix() for path in SOURCE_PATHS]
+for path in SOURCE_PATHS:
+    assert_no_new_window_vaw_globals(
+        path.read_text(encoding='utf-8'),
+        path.relative_to(ROOT).as_posix(),
+    )
 bootstrap_index = ordered.index('src/foundation/bootstrap.js')
 entry_index = ordered.index('src/game.js')
 for filename in EXPECTED_MODULES:
@@ -60,6 +78,7 @@ assert entry_index == len(ordered) - 1, 'game.js must remain the final compositi
 
 main = GAME_MAIN.read_text(encoding='utf-8')
 assert 'window.VAW_RUNTIME' not in main, 'composition root must use explicit kernel modules, not a private aggregate global'
+assert_no_new_window_vaw_globals(main, 'game.js')
 assert "window.VAW.require('runtime.active-context')" in main
 assert len(main.splitlines()) <= 2400, f'game.js regrew to {len(main.splitlines())} lines'
 assert len(main.encode('utf-8')) <= 116_000, f'game.js regrew to {len(main.encode("utf-8"))} bytes'

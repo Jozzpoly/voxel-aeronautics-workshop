@@ -76,7 +76,7 @@ assert.strictEqual(Catalog.getContractById('missing'), null);
 assert(Catalog.knownContractIds().has('heavy_lift'));
 assert.strictEqual(Capabilities.physicsBackend, 'cannon');
 assert.strictEqual(Capabilities.physicsBoundary, 'phase-1d4a-neutral-mechanical-assembly-api');
-assert.strictEqual(Capabilities.runtimeAssembly, 'runtime-assembly-plan-v2');
+assert.strictEqual(Capabilities.runtimeAssembly, 'VAW_RUNTIME_ASSEMBLY_PLAN_V3');
 assert.strictEqual(Capabilities.headlessHarness, 'deterministic-free-flight-v1');
 assert.strictEqual(Capabilities.missionEvaluation, 'phase-1d2b-multi-pad-ground-state');
 assert.strictEqual(Capabilities.aerostatics, 'altitude-lift-damped-settling-v2');

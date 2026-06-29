@@ -37,13 +37,16 @@ Default branch rule: `current_work` is the checkpoint branch for multi-session w
 - `docs/blockbench_import_studio.md`
 - `docs/visual_asset_pack_v1.md`
 
+`docs/visual_asset_pack_v1.md` is the canonical Visual Asset Pack V1 contract.
+`tools/blockbench_import_studio/docs/**` is Studio-local development or
+historical material unless an active doc explicitly links to a file there.
+
 ## Accepted ADRs
 
-ADRs 0033-0041 preserve Gate B/C architecture. ADR 0042 defines the Workbench UI layout foundation. ADR 0043 defines the visual asset boundary for external models, textures and animations.
+ADRs 0033-0041 preserve Gate B/C architecture. ADR 0042 defines the Workbench UI layout foundation. ADR 0043 defines the visual asset boundary for external models, textures and animations. ADR 0044 defines the checkpoint branch and CI trigger policy.
 
 ## Current supporting evidence
 
-- `FOUNDATION_READINESS_REVIEW.md`
 - `FUTURE_READINESS_REVIEW.md`
 - `docs/repository/RELEASE_ARTIFACT_POLICY_RECOMMENDATION.md`
 - `docs/history/phases/PHASE_1D4A_REPORT.md`

@@ -30,6 +30,7 @@ HISTORICAL_REVIEWS = {
     'docs/history/reviews/CODE_REVIEW_REPORT.md',
     'docs/history/reviews/HOTFIX_REPORT.md',
     'docs/history/reviews/FOUNDATION_CONVERGENCE_REVIEW.md',
+    'docs/history/reviews/FOUNDATION_READINESS_REVIEW_2026-06-18.md',
 }
 OLD_REVIEW_PATHS = {
     'FOUNDATION_REVIEW.md',
@@ -63,7 +64,6 @@ ACTIVE_DOCUMENTS = {
     'PROJECT_VISION.md',
     'ARCHITECTURE.md',
     'ROADMAP_NEXT.md',
-    'FOUNDATION_READINESS_REVIEW.md',
     'PROGRAMMABLE_MACHINE_RESEARCH.md',
     'FUTURE_READINESS_REVIEW.md',
     'AGENT_WORKFLOW.md',
@@ -71,9 +71,16 @@ ACTIVE_DOCUMENTS = {
     'PUSH_INSTRUCTIONS.md',
     'docs/WORKFLOW_REPAIR_HANDOFF.md',
 }
+ACTIVE_CONTRACT_DOCS = {
+    'docs/blockbench_import_studio.md',
+    'docs/visual_asset_pack_v1.md',
+}
+STUDIO_CONTRACT_POINTER = 'tools/blockbench_import_studio/docs/VISUAL_ASSET_PACK_V1.md'
 
 required = {
     *ACTIVE_DOCUMENTS,
+    *ACTIVE_CONTRACT_DOCS,
+    STUDIO_CONTRACT_POINTER,
     'examples/articulated_hinge_v11.json',
     'examples/assembly_spaces_v12.json',
     'docs/history/phases/README.md',
@@ -99,6 +106,7 @@ required = {
         (41, 'assembly-spaces-and-spatial-ownership'),
         (42, 'workbench-ui-layout'),
         (43, 'visual-asset-boundary'),
+        (44, 'workflow-checkpoint-branch-and-ci-policy'),
     ]},
 }
 
@@ -128,19 +136,19 @@ for path in (
     'ARCHITECTURE.md',
     'ROADMAP_NEXT.md',
     'README.md',
-    'FOUNDATION_READINESS_REVIEW.md',
     'FUTURE_READINESS_REVIEW.md',
 ):
     assert 'Gate C' in texts[path], f'{path} does not identify the current gate.'
 assert 'Phase 1D.4A' in texts['docs/history/phases/PHASE_1D4A_REPORT.md']
 
 vision = texts['PROJECT_VISION.md']
-review = texts['FOUNDATION_READINESS_REVIEW.md']
+future = texts['FUTURE_READINESS_REVIEW.md']
 research = texts['PROGRAMMABLE_MACHINE_RESEARCH.md']
 architecture = texts['ARCHITECTURE.md']
 roadmap = texts['ROADMAP_NEXT.md']
 memory = texts['AI_PROJECT_MEMORY.md']
 docs_index = texts['docs/README.md']
+studio_contract_pointer = texts[STUDIO_CONTRACT_POINTER]
 agent_entry = texts['README_FOR_AGENTS.md']
 agent = texts['AGENT_WORKFLOW.md']
 delivery = texts['DELIVERY_WORKFLOW.md']
@@ -158,9 +166,9 @@ for phrase in (
     assert phrase in vision, f'Project vision is missing pillar: {phrase}'
 
 for phrase in ('Gate C', 'Gate D', 'Device & Port Schema'):
-    assert phrase in review or phrase in roadmap, f'Foundation documents miss gate: {phrase}'
+    assert phrase in future or phrase in roadmap, f'Foundation documents miss gate: {phrase}'
 
-for phrase in ('{blockId, portId}', 'ControlRuntime', 'Kable, bus i wireless', 'sublevel'):
+for phrase in ('{blockId, portId}', 'ControlRuntime', 'Cables, bus and wireless', 'sublevel'):
     assert phrase in research, f'Programming research is missing concept: {phrase}'
 
 for phrase in ('Blueprint v12', 'CompiledCraft V5', 'RuntimeAssemblyPlan V3', 'assemblySpaceId', 'bodyId'):
@@ -169,7 +177,7 @@ for phrase in ('Blueprint v12', 'CompiledCraft V5', 'RuntimeAssemblyPlan V3', 'a
 for phrase in ('Gate C', 'Gate D', 'Gate E', 'dynamic rigid-body split'):
     assert phrase in roadmap or phrase in memory
 
-for number in range(33, 44):
+for number in range(33, 45):
     path = next(path for path in required if path.startswith(f'docs/adr/{number:04d}-'))
     assert 'Status: Accepted' in texts[path]
 
@@ -206,6 +214,12 @@ for heading in (
 assert 'README_FOR_AGENTS.md' in texts['README.md']
 assert 'docs/README.md' in texts['README.md']
 assert 'direct Git > one final milestone ZIP > complete single file > patch' in docs_index
+assert 'docs/visual_asset_pack_v1.md' in docs_index
+assert 'tools/blockbench_import_studio/docs/**' in docs_index
+assert '../../../docs/visual_asset_pack_v1.md' in studio_contract_pointer
+assert 'Non-canonical' in studio_contract_pointer
+assert 'Minimal manifest' not in studio_contract_pointer
+assert '"format": "VAW_VISUAL_ASSET_PACK_V1"' not in studio_contract_pointer
 assert 'current_work' in agent_entry and 'current_work' in agent
 assert 'main' in agent_entry and 'main' in agent
 assert 'Mode R' in agent and 'Mode Z' in agent and 'Mode P' in agent

@@ -7,7 +7,7 @@ Phase 1D.4A deliberately implements mechanics, not a signal or programming syste
 - Structural graph: rigid voxel support edges.
 - Mechanical graph: constraints between rigid bodies.
 - Future signal graph: device endpoints such as `{blockId, portId}`.
-- Future transport: Kable, bus i wireless policies.
+- Future transport: Cables, bus and wireless policies.
 - Future ControlRuntime: deterministic fixed-tick execution issuing commands through neutral IDs.
 
 A hinge is not a signal port. Immutable limits/friction/collision configuration belongs to the machine plan; motor speed, servo angle and current mode are runtime commands. InputProfile remains a user preference and manual piloting remains first-class.
