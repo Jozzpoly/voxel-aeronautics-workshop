@@ -9,6 +9,7 @@
     const CameraController = window.VAW.require('game.camera-controller');
     const BT = window.VAW.require('game.build-targeting');
     const OrientationService = window.VAW.require('game.orientation-service');
+    const PowerControlReadouts = window.VAW.require('game.power-control-readouts');
     const VisualAssetComposition = window.VAW.require('game.visual-asset-composition');
     const AssemblySpaceController = window.VAW.require('game.assembly-space-controller');
     const EngineeringAnalysis = window.VAW.require('game.engineering-analysis');
@@ -57,6 +58,7 @@
     const CRAFT = STATE.craft;
     const WORKSHOP = STATE.workshop;
     let assemblySpaceController = null;
+    let powerControlReadouts = null;
 
     const container = document.getElementById('canvas-container');
     const environment = SceneEnvironment.create({
@@ -139,16 +141,6 @@
       updateFlightFeedback();
     }
 
-    function staticPassiveThrusterLift(parts, power) {
-      let lift = 0;
-      for (const part of parts || []) {
-        if (!part || !part.attached || (part.type !== 'Thruster' && part.type !== 'VectorThruster')) continue;
-        const axisY = Number(part.localAxis?.y ?? part.basis?.chord?.y ?? 0);
-        lift += Math.max(0, axisY) * (part.force || part.def?.force || 0) * THREE.MathUtils.clamp(power, 0, 1) * runtimePartHealthFraction(part);
-      }
-      return lift;
-    }
-
     function primaryFlightBodyId() {
       return flightSession.isActive() ? flightSession.primaryBodyId() : null;
     }
@@ -168,149 +160,8 @@
       return transform ? Math.max(0, transform.position.y - TEST_RANGE.groundY) : 0;
     }
 
-    function verticalSupportSample() {
-      const flight = STATE.mode === 'FLIGHT' && primaryFlightBodyId();
-      const altitude = flight ? currentAerostaticAltitude() : 0;
-      let weight = 0;
-      let maxSeaLevelLift = 0;
-      let maxPassiveLift = 0;
-      if (flight) {
-        weight = Math.max(0, STATE.flight.runtimeMass) * AEROSTATIC_POLICY.gravity;
-        for (const part of STATE.flight.functionalBlocks) {
-          if (!part.attached) continue;
-          const health = runtimePartHealthFraction(part);
-          if (part.type === 'Balloon') maxSeaLevelLift += part.force * health;
-          if (part.type === 'Thruster' || part.type === 'VectorThruster') {
-            const axisY = Number(part.localAxis?.y ?? part.basis?.chord?.y ?? 0);
-            maxPassiveLift += Math.max(0, axisY) * (part.force || part.def?.force || 0) * health;
-          }
-        }
-      } else {
-        const analysis = STATE.flight.analysis || computeCraftAnalysis();
-        weight = Math.max(0, analysis.mass) * AEROSTATIC_POLICY.gravity;
-        for (const part of analysis.snapshot.parts) {
-          if (part.type === 'Balloon') maxSeaLevelLift += part.def.force || 0;
-          if (part.type === 'Thruster' || part.type === 'VectorThruster') {
-            maxPassiveLift += Math.max(0, Number(part.basis?.chord?.y) || 0) * (part.def.force || 0);
-          }
-        }
-      }
-      return { altitude, weight, maxSeaLevelLift, maxPassiveLift };
-    }
-
-    function balloonLiftGuidance(sample = verticalSupportSample()) {
-      const passiveLift = sample.maxPassiveLift * STATE.thrusterPower;
-      const requiredPower = Aerostatics.requiredPowerForHover({
-        weight: sample.weight,
-        passiveLift,
-        maxSeaLevelLift: sample.maxSeaLevelLift,
-        altitude: sample.altitude
-      }, AEROSTATIC_POLICY);
-      const equilibriumAltitude = Aerostatics.equilibriumAltitude({
-        weight: sample.weight,
-        passiveLift,
-        maxSeaLevelLift: sample.maxSeaLevelLift,
-        power: STATE.balloonPower
-      }, AEROSTATIC_POLICY);
-      return { ...sample, passiveLift, requiredPower, equilibriumAltitude };
-    }
-
-    function passiveThrustGuidance(sample = verticalSupportSample()) {
-      const balloonLift = Aerostatics.availableLift(
-        sample.maxSeaLevelLift,
-        STATE.balloonPower,
-        sample.altitude,
-        AEROSTATIC_POLICY
-      );
-      const requiredPower = Aerostatics.requiredSupplementalPowerForHover({
-        weight: sample.weight,
-        baselineLift: balloonLift,
-        maxSupplementalLift: sample.maxPassiveLift
-      });
-      return { ...sample, balloonLift, requiredPower };
-    }
-
-    function primaryBindingLabel(action) {
-      const profile = InputProfile.normalize(STATE.input.profile);
-      return InputProfile.formatCode(profile.bindings[action]?.[0] || '');
-    }
-
-    function powerBindingHint(decreaseAction, increaseAction) {
-      return `${primaryBindingLabel(decreaseAction)} / ${primaryBindingLabel(increaseAction)}`;
-    }
-
-    function syncGuidedPowerControl({ markerId, zoneId, guidanceId, requiredPower, unavailableText, neutralText, selectedText, bindingHint }) {
-      const marker = document.getElementById(markerId);
-      const climbZone = document.getElementById(zoneId);
-      const guidance = document.getElementById(guidanceId);
-      if (!marker || !climbZone || !guidance) return;
-      const finiteRequired = Number.isFinite(requiredPower);
-      const reachable = finiteRequired && requiredPower <= 1;
-      const markerPercent = finiteRequired ? THREE.MathUtils.clamp(requiredPower * 100, 0, 100) : 100;
-      marker.style.left = `${markerPercent}%`;
-      marker.classList.toggle('unreachable', !reachable);
-      climbZone.style.left = `${markerPercent}%`;
-      climbZone.style.width = `${Math.max(0, 100 - markerPercent)}%`;
-      climbZone.classList.toggle('unreachable', !reachable);
-      const thresholdText = !finiteRequired
-        ? unavailableText
-        : (requiredPower > 1 ? `${Math.round(requiredPower * 100)}% required • unavailable` : neutralText);
-      guidance.innerHTML = `<span>${thresholdText}</span><span>${bindingHint} • ${selectedText}</span>`;
-      marker.title = thresholdText;
-      climbZone.title = reachable ? 'Settings above this marker produce upward acceleration at the current altitude.' : thresholdText;
-    }
-
     function syncPowerControlReadouts() {
-      const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
-      setText('ui-thruster-power', `${Math.round(STATE.thrusterPower * 100)}%`);
-      setText('ui-balloon-power', `${Math.round(STATE.balloonPower * 100)}%`);
-      setText('ui-stability', `${Math.round(STATE.stabilityAssist * 100)}%`);
-
-      const sample = verticalSupportSample();
-      const selectedSupport = sample.maxPassiveLift * STATE.thrusterPower + Aerostatics.availableLift(sample.maxSeaLevelLift, STATE.balloonPower, sample.altitude, AEROSTATIC_POLICY);
-      const supportRatio = sample.weight > 1e-6 ? selectedSupport / sample.weight : 0;
-      setText('ui-vertical-support', sample.weight > 1e-6 ? `${supportRatio.toFixed(2)}× weight` : '—');
-      const hasCraft = sample.weight > 1e-6;
-      const hasPassiveLift = sample.maxPassiveLift > 1e-6;
-      const thrusterInfo = passiveThrustGuidance(sample);
-      const thrusterRequired = hasCraft && hasPassiveLift ? thrusterInfo.requiredPower : Number.POSITIVE_INFINITY;
-      const thrusterDelta = Number.isFinite(thrusterRequired) ? STATE.thrusterPower - thrusterRequired : -1;
-      const thrusterSelected = !hasCraft
-        ? 'waiting for craft'
-        : (!hasPassiveLift
-          ? 'no upward thrusters'
-          : (thrusterDelta > 0.015 ? 'selected: climb' : (thrusterDelta < -0.015 ? 'selected: descend' : 'selected: near hover')));
-      const thrusterNeutral = thrusterRequired <= 0
-        ? 'Balloons already cover hover • passive thrust optional'
-        : `Hover ≈ ${Math.round(thrusterRequired * 100)}% • climb above marker`;
-      syncGuidedPowerControl({
-        markerId: 'ui-thruster-hover-marker',
-        zoneId: 'ui-thruster-climb-zone',
-        guidanceId: 'ui-thruster-guidance',
-        requiredPower: thrusterRequired,
-        unavailableText: !hasCraft ? 'Build a craft to calculate hover' : 'No upward passive thrusters installed',
-        neutralText: thrusterNeutral,
-        selectedText: thrusterSelected,
-        bindingHint: powerBindingHint('thrusterPower-', 'thrusterPower+')
-      });
-
-      const hasBalloonLift = sample.maxSeaLevelLift > 1e-6;
-      const balloonInfo = balloonLiftGuidance(sample);
-      const balloonRequired = hasCraft && hasBalloonLift ? balloonInfo.requiredPower : Number.POSITIVE_INFINITY;
-      const balloonNeutral = `Hover ≈ ${Math.round(balloonRequired * 100)}% at launch level • lift falls with altitude`;
-      let balloonSelected = 'selected: below hover';
-      if (balloonInfo.equilibriumAltitude === Number.POSITIVE_INFINITY) balloonSelected = 'selected: continuous climb';
-      else if (Number.isFinite(balloonInfo.equilibriumAltitude)) balloonSelected = `equilibrium ≈ ${balloonInfo.equilibriumAltitude.toFixed(0)} m`;
-      syncGuidedPowerControl({
-        markerId: 'ui-balloon-hover-marker',
-        zoneId: 'ui-balloon-climb-zone',
-        guidanceId: 'ui-balloon-guidance',
-        requiredPower: balloonRequired,
-        unavailableText: !hasCraft ? 'Build a craft to calculate hover' : 'No balloons installed',
-        neutralText: balloonNeutral,
-        selectedText: balloonSelected,
-        bindingHint: powerBindingHint('balloonPower-', 'balloonPower+')
-      });
+      if (powerControlReadouts) powerControlReadouts.syncPowerControlReadouts();
     }
 
     function updateFlightFeedback() {
@@ -569,6 +420,11 @@
       buildLoadedSnapshot, computeControlMetrics, computeCraftAnalysis,
       setHorizontalBar, updateEngineeringAnalysisUI, updateAnalysisVisuals
     } = engineeringAnalysis;
+
+    powerControlReadouts = PowerControlReadouts.create({
+      state: STATE, document, THREE, InputProfile, Aerostatics, aerostaticPolicy: AEROSTATIC_POLICY,
+      getPrimaryFlightBodyId: primaryFlightBodyId, currentAerostaticAltitude, computeCraftAnalysis, runtimePartHealthFraction
+    });
 
     const {
       visualAssetLoader,
