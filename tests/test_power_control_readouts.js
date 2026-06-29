@@ -64,24 +64,46 @@ function createDocument() {
   };
 }
 
+function createState(overrides = {}) {
+  return {
+    mode: 'BUILD',
+    thrusterPower: 0.5,
+    balloonPower: 0.5,
+    stabilityAssist: 0.25,
+    input: { profile: InputProfile.createDefault() },
+    flight: {
+      analysis: null,
+      functionalBlocks: [],
+      runtimeMass: 0
+    },
+    ...overrides
+  };
+}
+
 const policy = Aerostatics.normalizePolicy({
   gravity: 10,
   minimumEfficiency: 0.1,
   scaleHeight: 100
 });
 
-const state = {
-  mode: 'BUILD',
-  thrusterPower: 0.5,
-  balloonPower: 0.5,
-  stabilityAssist: 0.25,
-  input: { profile: InputProfile.createDefault() },
-  flight: {
-    analysis: null,
-    functionalBlocks: [],
-    runtimeMass: 0
-  }
-};
+assert.throws(() => PowerControlReadouts.create(), /require state/);
+assert.throws(() => PowerControlReadouts.create({
+  state: createState(),
+  document: createDocument(),
+  THREE,
+  InputProfile: {},
+  Aerostatics,
+  computeCraftAnalysis: () => ({ mass: 0, snapshot: { parts: [] } })
+}), /InputProfile and Aerostatics/);
+assert.throws(() => PowerControlReadouts.create({
+  state: createState(),
+  document: createDocument(),
+  THREE,
+  InputProfile,
+  Aerostatics
+}), /computeCraftAnalysis/);
+
+const state = createState();
 const documentRef = createDocument();
 const readouts = PowerControlReadouts.create({
   state,
@@ -122,6 +144,74 @@ assert.deepStrictEqual(buildSample, {
   maxSeaLevelLift: 60,
   maxPassiveLift: 40
 });
+
+let computeCalls = 0;
+const cachedAnalysisState = createState({
+  flight: {
+    analysis: {
+      mass: 3,
+      snapshot: {
+        parts: [
+          { type: 'Balloon', def: { force: 12 }, basis: { chord: { y: 0 } } },
+          { type: 'Thruster', def: { force: 20 }, basis: { chord: { y: 1 } } }
+        ]
+      }
+    },
+    functionalBlocks: [],
+    runtimeMass: 0
+  }
+});
+const cachedAnalysis = PowerControlReadouts.create({
+  state: cachedAnalysisState,
+  document: createDocument(),
+  THREE,
+  InputProfile,
+  Aerostatics,
+  aerostaticPolicy: policy,
+  computeCraftAnalysis: () => {
+    computeCalls += 1;
+    return { mass: 99, snapshot: { parts: [] } };
+  }
+});
+assert.deepStrictEqual(cachedAnalysis.verticalSupportSample(), {
+  altitude: 0,
+  weight: 30,
+  maxSeaLevelLift: 12,
+  maxPassiveLift: 20
+});
+assert.strictEqual(computeCalls, 0, 'Cached build analysis must be used before recomputing.');
+
+const sparseReadouts = PowerControlReadouts.create({
+  state: createState(),
+  document: { getElementById: () => null },
+  THREE,
+  InputProfile,
+  Aerostatics,
+  aerostaticPolicy: policy,
+  computeCraftAnalysis: () => ({ mass: 0, snapshot: { parts: [] } })
+});
+assert.doesNotThrow(() => sparseReadouts.syncPowerControlReadouts(), 'Missing HUD nodes must not break readout sync.');
+
+const noCraftDocument = createDocument();
+const noCraftReadouts = PowerControlReadouts.create({
+  state: createState({
+    flight: {
+      analysis: { mass: 0, snapshot: { parts: [] } },
+      functionalBlocks: [],
+      runtimeMass: 0
+    }
+  }),
+  document: noCraftDocument,
+  THREE,
+  InputProfile,
+  Aerostatics,
+  aerostaticPolicy: policy,
+  computeCraftAnalysis: () => ({ mass: 99, snapshot: { parts: [] } })
+});
+noCraftReadouts.syncPowerControlReadouts();
+assert.strictEqual(noCraftDocument.getElementById('ui-vertical-support').textContent, '\u2014');
+assert(noCraftDocument.getElementById('ui-thruster-guidance').innerHTML.includes('Build a craft to calculate hover'));
+assert(noCraftDocument.getElementById('ui-balloon-guidance').innerHTML.includes('Build a craft to calculate hover'));
 
 state.mode = 'FLIGHT';
 state.flight.runtimeMass = 5;

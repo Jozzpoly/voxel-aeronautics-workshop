@@ -23,6 +23,12 @@ function report(status, data = {}, exitCode = 0) {
   process.exitCode = exitCode;
 }
 
+function excerpt(text, limit = 3000) {
+  const value = String(text || '').trim();
+  if (value.length <= limit) return value;
+  return value.slice(value.length - limit);
+}
+
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
@@ -50,6 +56,12 @@ function safePath(urlPath) {
 async function startStaticServer(port) {
   const server = createServer(async (request, response) => {
     try {
+      const requestedPath = (request.url || '/').split('?')[0];
+      if (requestedPath === '/favicon.ico') {
+        response.writeHead(204, { 'Cache-Control': 'no-store' });
+        response.end();
+        return;
+      }
       const filename = safePath(request.url);
       if (!filename) {
         response.writeHead(403);
@@ -229,17 +241,36 @@ async function clickElement(cdp, selector) {
     const x = rect.left + rect.width / 2;
     const y = rect.top + rect.height / 2;
     const hit = document.elementFromPoint(x, y);
-    return { x, y, hit: hit === element || element.contains(hit), hitId: hit?.id || '', hitTag: hit?.tagName || '' };
+    return {
+      x,
+      y,
+      hit: hit === element || element.contains(hit),
+      hitId: hit?.id || '',
+      hitTag: hit?.tagName || '',
+      hitClass: typeof hit?.className === 'string' ? hit.className : '',
+      targetId: element.id || '',
+      targetClass: typeof element.className === 'string' ? element.className : '',
+      targetRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height }
+    };
   })()`);
-  assert(point?.hit, `Physical click target ${selector} is obscured by ${point?.hitId || point?.hitTag || 'unknown'}.`);
+  assert(point?.hit, `Physical click target ${selector} is obscured by ${JSON.stringify(point)}.`);
   await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
   await cdp.call('Input.dispatchMouseEvent', { type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
   await cdp.call('Input.dispatchMouseEvent', { type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
 }
 
-async function runSmoke(cdp, baseUrl, browserMessages) {
+async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
+  setStage('app-bootstrap');
   await cdp.call('Page.navigate', { url: `${baseUrl}/index.html?m3_smoke=${Date.now()}` });
   await waitFor(cdp, `document.readyState === 'complete' && Boolean(window.VAW)`, 'application bootstrap');
+  const helpVisible = await evaluate(cdp, `(() => {
+    const modal = document.getElementById('help-modal');
+    return Boolean(modal && getComputedStyle(modal).display !== 'none');
+  })()`);
+  if (helpVisible) {
+    await clickElement(cdp, '#start-engineering');
+    await waitFor(cdp, `getComputedStyle(document.getElementById('help-modal')).display === 'none'`, 'help modal closed');
+  }
   await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '0'`, 'empty workshop');
 
   const panels = await evaluate(cdp, `(() => ({
@@ -251,11 +282,13 @@ async function runSmoke(cdp, baseUrl, browserMessages) {
   assert(panels.build && panels.telemetry && panels.parts, 'Core UI panels are missing.');
   assert(panels.flightFocusButtons >= 2, 'Flight Focus path must expose controls and launcher buttons.');
 
+  setStage('hit-test');
   await clickElement(cdp, '[data-panel-toggle="contracts"]');
   await waitFor(cdp, `document.getElementById('contract-panel') && !document.getElementById('contract-panel').hidden`, 'contract panel visible');
   await clickElement(cdp, '#btn-starter-craft');
   await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '17'`, 'starter craft visible');
   await clickElement(cdp, '#btn-launcher-flight-focus');
+  setStage('launch');
   await clickElement(cdp, '#btn-flight');
   await waitFor(cdp, `document.getElementById('ui-mode')?.textContent === 'FLIGHT'`, 'starter craft launch');
 
@@ -273,34 +306,82 @@ async function main() {
   const serverPort = await freePort();
   const debugPort = await freePort();
   const profile = path.join(os.tmpdir(), `vaw-m3-browser-smoke-${process.pid}`);
+  const browserLogPath = path.join(os.tmpdir(), `vaw-m3-browser-smoke-${process.pid}.log`);
+  let stage = 'browser-discovery';
+  let browserLog = '';
+  const diagnostics = {
+    browser: null,
+    browserCandidates: [],
+    browserLogPath,
+    browserLogExcerpt: '',
+    cdpTarget: null,
+    debugPort,
+    serverPort
+  };
   let server = null;
   let browser = null;
   let cdp = null;
 
+  function setStage(nextStage) {
+    stage = nextStage;
+  }
+
+  async function snapshotDiagnostics() {
+    diagnostics.browserLogExcerpt = excerpt(browserLog);
+    try {
+      await fs.writeFile(browserLogPath, browserLog || '(no browser output captured)\n', 'utf8');
+    } catch (_) {}
+    return diagnostics;
+  }
+
+  function captureBrowserOutput(label, stream) {
+    stream?.on?.('data', chunk => {
+      const line = `[${label}] ${chunk.toString('utf8')}`;
+      browserLog += line;
+      if (browserLog.length > 20000) browserLog = browserLog.slice(browserLog.length - 20000);
+    });
+  }
+
   try {
+    setStage('browser-discovery');
     const browserProbe = await browserCandidates();
+    diagnostics.browser = browserProbe.executable;
+    diagnostics.browserCandidates = browserProbe.candidates;
     if (!browserProbe.executable) {
       report('ENVIRONMENT', {
+        stage,
         reason: 'browser-not-found',
-        candidates: browserProbe.candidates
+        diagnostics: await snapshotDiagnostics()
       }, 2);
       return;
     }
 
+    setStage('server-start');
     server = await startStaticServer(serverPort);
     const baseUrl = `http://127.0.0.1:${serverPort}`;
     await waitForUrl(`${baseUrl}/index.html`);
 
+    setStage('cdp-connect');
     browser = spawn(browserProbe.executable, [
       '--headless=new',
+      '--no-sandbox',
       '--disable-gpu',
+      '--disable-dev-shm-usage',
+      '--disable-background-networking',
+      '--disable-component-update',
+      '--disable-sync',
+      '--metrics-recording-only',
+      '--mute-audio',
       '--no-first-run',
       '--no-default-browser-check',
       '--remote-allow-origins=*',
+      '--remote-debugging-address=127.0.0.1',
       `--remote-debugging-port=${debugPort}`,
       `--user-data-dir=${profile}`,
       'about:blank'
-    ], { cwd: ROOT, stdio: 'ignore', windowsHide: true });
+    ], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+    captureBrowserOutput('stdout', browser.stdout);
+    captureBrowserOutput('stderr', browser.stderr);
 
     let browserError = null;
     browser.on('error', error => {
@@ -311,13 +392,25 @@ async function main() {
     const targets = await (await fetch(`http://127.0.0.1:${debugPort}/json/list`)).json();
     const page = targets.find(target => target.type === 'page') || targets[0];
     if (!page?.webSocketDebuggerUrl) {
-      report('ENVIRONMENT', { reason: 'cdp-page-target-missing', browser: browserProbe.executable }, 2);
+      diagnostics.cdpTarget = page || null;
+      report('ENVIRONMENT', {
+        stage,
+        reason: 'cdp-page-target-missing',
+        diagnostics: await snapshotDiagnostics()
+      }, 2);
       return;
     }
+    diagnostics.cdpTarget = {
+      id: page.id || null,
+      title: page.title || null,
+      type: page.type || null,
+      url: page.url || null
+    };
 
     const browserMessages = [];
     cdp = new CdpClient(page.webSocketDebuggerUrl);
     await cdp.connect();
+    setStage('page-enable');
     await cdp.call('Page.enable');
     await cdp.call('Runtime.enable');
     await cdp.call('Log.enable');
@@ -329,17 +422,20 @@ async function main() {
     cdp.on('Runtime.exceptionThrown', params => browserMessages.push({ source: 'runtime', level: 'error', text: params.exceptionDetails?.text || 'uncaught exception' }));
     cdp.on('Log.entryAdded', params => browserMessages.push({ source: params.entry?.source || 'log', level: params.entry?.level || 'info', text: params.entry?.text || '' }));
 
-    const result = await runSmoke(cdp, baseUrl, browserMessages);
+    const result = await runSmoke(cdp, baseUrl, browserMessages, setStage);
     report('PASS', {
-      browser: browserProbe.executable,
+      stage: 'complete',
       baseUrl,
+      diagnostics: await snapshotDiagnostics(),
       result
     });
   } catch (error) {
     const text = String(error?.message || error);
-    const environmentPattern = /browser|chrom|edge|cdp|websocket|Page\.enable timed out|Runtime\.enable timed out|Log\.enable timed out|ECONNREFUSED|Timed out waiting for http:\/\/127\.0\.0\.1/i;
+    const environmentPattern = /browser-not-found|chromium|chrome\.exe|msedge|cdp|websocket|Page\.enable timed out|Runtime\.enable timed out|Log\.enable timed out|ECONNREFUSED|Timed out waiting for http:\/\/127\.0\.0\.1/i;
     report(environmentPattern.test(text) ? 'ENVIRONMENT' : 'PRODUCT', {
+      stage,
       reason: text,
+      diagnostics: await snapshotDiagnostics(),
       stack: error?.stack || null
     }, environmentPattern.test(text) ? 2 : 1);
   } finally {

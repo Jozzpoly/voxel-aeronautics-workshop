@@ -13,11 +13,14 @@ function load(context, relative) {
   );
 }
 
-function createHarness({ rejectBootstrap = false } = {}) {
+function createHarness({ rejectBootstrap = false, exposeBroadcastChannel = false } = {}) {
   const captures = {
     attachedRoot: null,
+    activeBroadcastChannels: 0,
     bootstrapCalls: 0,
     broadcastConstructed: 0,
+    broadcastClosed: 0,
+    consoleWarns: [],
     loader: null,
     loaderOptions: null,
     registry: null,
@@ -28,7 +31,7 @@ function createHarness({ rejectBootstrap = false } = {}) {
       error() {},
       info() {},
       log() {},
-      warn() {}
+      warn: (...args) => captures.consoleWarns.push(args)
     },
     process,
     setTimeout,
@@ -44,7 +47,24 @@ function createHarness({ rejectBootstrap = false } = {}) {
     createElement: () => ({}),
     getElementById: () => null
   };
-  context.BroadcastChannel = undefined;
+  context.BroadcastChannel = exposeBroadcastChannel
+    ? class {
+        constructor() {
+          captures.broadcastConstructed += 1;
+          captures.activeBroadcastChannels += 1;
+          this.closed = false;
+        }
+        addEventListener() {}
+        removeEventListener() {}
+        unref() {}
+        close() {
+          if (this.closed) return;
+          this.closed = true;
+          captures.broadcastClosed += 1;
+          captures.activeBroadcastChannels -= 1;
+        }
+      }
+    : undefined;
   vm.createContext(context);
 
   load(context, 'src/foundation/kernel.js');
@@ -119,7 +139,13 @@ async function flushPromises() {
 }
 
 async function exerciseComposition(options = {}) {
-  const { context, captures } = createHarness(options);
+  const {
+    loggerOverride,
+    omitDocumentWindow = false,
+    allowBroadcastChannel = false,
+    ...harnessOptions
+  } = options;
+  const { context, captures } = createHarness(harnessOptions);
   const warnings = [];
   const infos = [];
   const statuses = [];
@@ -129,6 +155,9 @@ async function exerciseComposition(options = {}) {
     warn: (...args) => warnings.push(args),
     info: (...args) => infos.push(args)
   };
+  const activeLogger = Object.prototype.hasOwnProperty.call(options, 'loggerOverride')
+    ? loggerOverride
+    : logger;
 
   const Composition = context.VAW.require('game.visual-asset-composition');
   const result = Composition.create({
@@ -137,9 +166,9 @@ async function exerciseComposition(options = {}) {
     cloneMaterial: () => cloneMaterial(context),
     disposeObjectTree,
     showStatus: text => statuses.push(text),
-    document: context.document,
-    window: context,
-    logger
+    document: omitDocumentWindow ? null : context.document,
+    window: omitDocumentWindow ? null : context,
+    logger: activeLogger
   });
   await flushPromises();
 
@@ -158,19 +187,34 @@ async function exerciseComposition(options = {}) {
   await result.visualAssetDevControls.reload();
   assert.strictEqual(captures.reloadCalls, 1, 'Dev controls must receive the composed visual asset loader.');
   assert(statuses.includes('RELOADING VISUAL ASSETS'));
-  assert.strictEqual(captures.broadcastConstructed, 0, 'Node smoke must not open a long-lived BroadcastChannel.');
+  if (!allowBroadcastChannel) {
+    assert.strictEqual(captures.broadcastConstructed, 0, 'Node smoke must not open a BroadcastChannel.');
+  }
 
   result.visualAssetDevControls.dispose();
-  return { warnings, infos };
+  assert.strictEqual(captures.activeBroadcastChannels, 0, 'Composition must not leave a long-lived BroadcastChannel after dispose.');
+  return { warnings, infos, statuses, captures };
 }
 
 (async () => {
   const ok = await exerciseComposition();
   assert.strictEqual(ok.warnings.length, 0, 'Successful bootstrap must not warn.');
+  assert.strictEqual(ok.captures.consoleWarns.length, 0, 'Successful bootstrap must not use fallback console.warn.');
 
   const failed = await exerciseComposition({ rejectBootstrap: true });
   assert.strictEqual(failed.warnings.length, 1, 'Rejected bootstrap must be reported through logger.warn.');
   assert(String(failed.warnings[0][0]).includes('bootstrap failed'));
+
+  const sparseLogger = await exerciseComposition({ rejectBootstrap: true, loggerOverride: { info() {} } });
+  assert.strictEqual(sparseLogger.warnings.length, 0, 'Sparse logger without warn must not receive warnings.');
+  assert.strictEqual(sparseLogger.captures.consoleWarns.length, 1, 'Sparse logger must fall back to console.warn.');
+  assert(String(sparseLogger.captures.consoleWarns[0][0]).includes('bootstrap failed'));
+
+  const noDom = await exerciseComposition({ omitDocumentWindow: true });
+  assert.strictEqual(noDom.captures.broadcastConstructed, 0, 'Composition without window must not allocate BroadcastChannel.');
+
+  const nodeLikeBroadcast = await exerciseComposition({ exposeBroadcastChannel: true, allowBroadcastChannel: true });
+  assert.strictEqual(nodeLikeBroadcast.captures.activeBroadcastChannels, 0, 'Node-like smoke must not leave an active BroadcastChannel.');
 
   console.log({ visualAssetComposition: 'ok' });
 })().catch(error => {

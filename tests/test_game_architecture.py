@@ -61,8 +61,8 @@ assert entry_index == len(ordered) - 1, 'game.js must remain the final compositi
 main = GAME_MAIN.read_text(encoding='utf-8')
 assert 'window.VAW_RUNTIME' not in main, 'composition root must use explicit kernel modules, not a private aggregate global'
 assert "window.VAW.require('runtime.active-context')" in main
-assert len(main.splitlines()) <= 2500, f'game.js regrew to {len(main.splitlines())} lines'
-assert len(main.encode('utf-8')) <= 120_000, f'game.js regrew to {len(main.encode("utf-8"))} bytes'
+assert len(main.splitlines()) <= 2400, f'game.js regrew to {len(main.splitlines())} lines'
+assert len(main.encode('utf-8')) <= 116_000, f'game.js regrew to {len(main.encode("utf-8"))} bytes'
 
 ownership = {
     'createModuleVisual': 'module_visual_factory.js',

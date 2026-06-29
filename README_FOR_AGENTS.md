@@ -64,6 +64,7 @@ npm run browser:smoke
 ```
 
 `npm run browser:smoke` is target-platform evidence, not a default core gate. If it reports `ENVIRONMENT`, document the missing browser/CDP/localhost capability instead of treating it as a product PASS.
+The browser smoke JSON contract is `status`, `stage`, `reason`, `diagnostics` and, on PASS only, `result`. `PRODUCT` blocks the checkpoint. `ENVIRONMENT` is acceptable only when the stage and diagnostics identify a missing or unusable browser/CDP/localhost capability.
 
 Classify failures:
 
