@@ -60,7 +60,10 @@ npm run studio:test
 npm run visual:test
 node tools/run_with_python_env.js python tools/validate_fast.py
 node tools/run_with_python_env.js python tools/validate_full.py
+npm run browser:smoke
 ```
+
+`npm run browser:smoke` is target-platform evidence, not a default core gate. If it reports `ENVIRONMENT`, document the missing browser/CDP/localhost capability instead of treating it as a product PASS.
 
 Classify failures:
 

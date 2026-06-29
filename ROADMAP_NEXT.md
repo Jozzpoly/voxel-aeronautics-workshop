@@ -28,7 +28,7 @@ M2A, M2B and the first M2C clarity pass are present on `current_work`: build tar
 
 - M1 - Validation, CI, agent workflow and documentation authority is present on `current_work`: bundled-Python validation trust, `current_work` checkpoint discipline, CI branch triggers and active-doc cleanup.
 - M2A-M2C - Source layout hardening is present on `current_work`: visual asset composition wiring moved behind `game.visual-asset-composition`, direct composition tests cover that seam, and power/HUD readouts moved behind `game.power-control-readouts`. `src/game.js` remains the final composition entrypoint and stays below the architecture guard without gameplay, physics, schema or visual-runtime semantic changes.
-- M3 - Reliable browser/UI smoke is the next hardening track. Add repeatable local-server and hit-testing smoke, reported separately from unit/runner/CI evidence; browser/runtime gaps are `ENVIRONMENT`, not PASS.
+- M3A - Reliable browser/UI smoke entrypoint is present as `npm run browser:smoke`: it starts a local static server, probes for a real Chromium/Chrome/Edge CDP target, checks starter-craft/UI/Flight Focus/contract-panel hit-testing, and reports browser/runtime gaps as `ENVIRONMENT`, not PASS. Next M3 work: decide where this target-platform evidence should run outside the default core gate.
 - M4 - Visual authoring reliability. Prove one simple replacement workflow across current Catalog block types while keeping Visual Asset Pack V1 renderer-only.
 - M5 - Content pipeline boundaries. Define maps, contracts, missions and content packs as separate schemas before adding broader content.
 - M6 - Gate D readiness. Start Device & Port Schema only after M1-M5 are stable, using `{blockId, portId}` and not persistent `bodyId`.
