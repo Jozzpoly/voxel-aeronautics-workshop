@@ -5,7 +5,7 @@ Current source of truth: **Workbench Foundation on stable Gate C**.
 - `APP_VERSION=0.8.2-foundation.workbench-foundation`
 - `RELEASE_ID=foundation-workbench-foundation`
 - Blueprint v12, CompiledCraft V5, RuntimeAssemblyPlan V3.
-- Clean main base for this milestone: `ddce6b4`.
+- Current checkpoint branch for foundation hardening: `current_work`.
 
 `CraftModel` is the sole workshop source of truth. `CraftCompiler` is the only verified path to compiled runtime data. Structural, mechanical and future signal graphs remain separate. AssemblyBuilder is the runtime allocation boundary; Physics Port is strict and backend-neutral.
 
@@ -29,10 +29,10 @@ The release is offline-capable: Three r128, Cannon 0.6.2 and generated CSS are v
 
 Do not reintroduce silent numeric fallback, CDN runtime dependencies, whole-craft scans in per-body hot paths, `window.VAW_RUNTIME`, empty future frameworks, persistent `bodyId` references or asset data inside craft saves.
 
-Current recovery delta: Authoring UX Milestone 1 is implemented in the local working package. It fixes flight runtime mass display after part loss, adds a launcher Flight Focus button using the existing focus path, lowers the bottom launcher below visible panels, adds UI-only camera modes (`static`, `follow-position`, `follow-body`), enables below-craft orbit and Shift+middle camera pan, and keeps `game.js` under the 2500-line architecture guard by extracting `game.camera-controller`.
+Current recovery delta: Authoring UX Milestone 1 is present on `current_work`. It fixes flight runtime mass display after part loss, adds a launcher Flight Focus button using the existing focus path, lowers the bottom launcher below visible panels, adds UI-only camera modes (`static`, `follow-position`, `follow-body`), enables below-craft orbit and Shift+middle camera pan, and keeps `game.js` under the 2500-line architecture guard by extracting `game.camera-controller`.
 
 Current M2A delta: Placement targeting now uses `game.build-targeting` for tested normal math. Voxel placement converts `hitObjectLocalNormal -> sceneNormal -> activeSpaceNormal -> gridNormal -> placementCell` before returning the old-compatible target object. Right-click removal and hinge endpoint selection still receive `target.root` and `target.block`; craft mutation and Blueprint schema were not changed. Final audit polish hardened `targetOk()` against accidental result-shape poisoning and added `tests/test_build_targeting.js` to `tests/run_all.py`; broader validation-runner synthetic timeout tests remain environment-sensitive.
 
 Current M2B/M2C delta: Placement validation now returns deterministic UI feedback instead of a bare boolean. Ghost adjacency and click-status messages distinguish no-hit, no-face, invalid-normal, wrong-assembly-space, occupied, block-limit, invalid-block, orphan-block-assembly-space, empty-plan and future symmetry-collision. Orientation readouts now use block-specific semantics for Core forward/up, Thruster thrust direction, Wing chord/lift normal, ControlSurface chord/lift normal plus mixer axis/sign, and VectorThruster thrust/gimbal normal. Telemetry now labels runtime mass as Active mass to avoid implying whole detached-craft mass.
 
-Next recommended milestone: prove the simple visual replacement workflow end to end for newly authored assets across all current Catalog block types, then only after that plan a user-facing visual pack manager. Do not start Gate D Device & Port Schema until Workbench placement/orientation clarity and visual asset boundaries are stable.
+Current recommended milestone: finish Foundation Hardening M1 so validation, CI, branch discipline and documentation authority are trustworthy. After that, prove the simple visual replacement workflow end to end for newly authored assets across all current Catalog block types, then only after that plan a user-facing visual pack manager. Do not start Gate D Device & Port Schema until Workbench placement/orientation clarity and visual asset boundaries are stable.

@@ -3,7 +3,8 @@ name: Recovery Validation
 on:
   push:
     branches:
-      - recovery/2026-06-16-regression-repair
+      - main
+      - current_work
   pull_request:
     branches:
       - main
@@ -19,7 +20,7 @@ jobs:
     env:
       RECOVERY_ARTIFACT_DIR: /tmp/vaw-recovery-artifacts
     steps:
-      - name: Checkout recovery branch
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Python

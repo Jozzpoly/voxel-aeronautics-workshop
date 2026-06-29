@@ -21,11 +21,12 @@ for (const relative of [
 }
 
 const rootPackage = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
-assert.strictEqual(rootPackage.scripts['studio:test'], 'npm --prefix tools/blockbench_import_studio test');
-assert.strictEqual(rootPackage.scripts['studio:serve'], 'python tools/serve.py --studio');
+assert.strictEqual(rootPackage.scripts['studio:test'], 'node tools/run_with_python_env.js npm --prefix tools/blockbench_import_studio test');
+assert.strictEqual(rootPackage.scripts['studio:serve'], 'node tools/run_with_python_env.js python tools/serve.py --studio');
 
 const studioPackage = JSON.parse(fs.readFileSync(path.join(STUDIO_ROOT, 'package.json'), 'utf8'));
 assert(studioPackage.scripts.test.includes('test:static'));
+assert(studioPackage.scripts['test:static'].includes('node ../run_with_python_env.js python tools/validate_recovery_package.py'));
 assert(studioPackage.scripts.serve.includes('../serve.py --studio'));
 const studioIndex = fs.readFileSync(path.join(STUDIO_ROOT, 'index.html'), 'utf8');
 const studioApp = fs.readFileSync(path.join(STUDIO_ROOT, 'app/main.js'), 'utf8');

@@ -11,7 +11,7 @@ M4G keeps visual iteration fast without creating a new pack for every polish pas
 ## Run
 
 ```bash
-python tools/serve.py
+npm run serve
 ```
 
 Open the printed local address. Runtime libraries and generated UI CSS are vendored; the normal and single-file builds do not require CDN scripts.
@@ -20,9 +20,9 @@ Open the printed local address. Runtime libraries and generated UI CSS are vendo
 
 ```bash
 npm run check:css
-python tests/run_all.py
-python tools/build_release.py
-python tools/verify_release.py
+npm run test
+npm run build
+npm run verify-release
 ```
 
 Studio can be tested and served from the same repository:
@@ -47,4 +47,4 @@ npm run studio:serve
 - Daily art iteration uses `tools/blockbench_import_studio/` -> `Install / Update Block Visual` -> automatic same-origin reload when possible, with in-game `RELOAD VISUALS` / `Shift+V` as fallback. This updates `local_working_visuals` in place instead of creating a new pack per edit.
 - Gate D - Device & Port Schema - is queued behind Workbench UI and documentation preparation.
 
-Read [`docs/README.md`](docs/README.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), [`docs/blockbench_import_studio.md`](docs/blockbench_import_studio.md), [`docs/visual_asset_pack_v1.md`](docs/visual_asset_pack_v1.md), [`docs/adr/0042-workbench-ui-layout.md`](docs/adr/0042-workbench-ui-layout.md) and [`docs/adr/0043-visual-asset-boundary.md`](docs/adr/0043-visual-asset-boundary.md) before foundation changes.
+Agents should start with [`README_FOR_AGENTS.md`](README_FOR_AGENTS.md), then read [`docs/README.md`](docs/README.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), [`docs/blockbench_import_studio.md`](docs/blockbench_import_studio.md), [`docs/visual_asset_pack_v1.md`](docs/visual_asset_pack_v1.md), [`docs/adr/0042-workbench-ui-layout.md`](docs/adr/0042-workbench-ui-layout.md) and [`docs/adr/0043-visual-asset-boundary.md`](docs/adr/0043-visual-asset-boundary.md) before foundation changes.

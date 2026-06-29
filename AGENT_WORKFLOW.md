@@ -29,6 +29,13 @@ Stop only when the base is ambiguous, unrelated changes cannot be isolated, the 
 
 Never write directly to `main` or a recovery branch without an explicit decision. Never extend or use `maintenance/workflow-bootstrap` as transport.
 
+Default branch policy:
+
+- `current_work` is the default checkpoint branch for active multi-session work.
+- `main` is the reviewed stable landing line.
+- named milestone branches are optional for isolated experiments or explicit owner direction.
+- historical recovery or maintenance branch names are not valid transport unless Git verifies they still exist.
+
 ## 3. Work modes
 
 ### Mode R — direct Git
@@ -99,6 +106,14 @@ T5 TARGET PLATFORM
 - A pre-existing independent failure is classified honestly instead of silently blocking unrelated work.
 
 Validation artifacts live only under `.agent-validation/` or the selected run directory. The runner records durable summaries, event logs and stage logs, detects tracked/untracked/ignored/mode/symlink side effects, and never repairs the worktree.
+
+Failure classes:
+
+- `PRODUCT`: real game, compiler, runtime, release or documentation-contract failure.
+- `HARNESS`: runner or test harness invokes a valid check incorrectly.
+- `ENVIRONMENT`: local machine, browser, GitHub access or global dependency gap.
+- `OWNER`: repository policy or product direction decision needed.
+- `SCOPE`: requested change belongs outside the active milestone.
 
 ## 6. Stop-loss and blockers
 

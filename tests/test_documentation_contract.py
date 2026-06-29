@@ -56,6 +56,7 @@ OLD_RECOVERY_PATHS = {Path(path).name for path in RECOVERY_EVIDENCE if path.ends
 OLD_VALIDATION_PATHS = {'TEST_REPORT.md', 'VALIDATION_REPORT.md'}
 
 ACTIVE_DOCUMENTS = {
+    'README_FOR_AGENTS.md',
     'README.md',
     'docs/README.md',
     'AI_PROJECT_MEMORY.md',
@@ -81,6 +82,7 @@ required = {
     'docs/repository/REPOSITORY_STRUCTURE_TARGET.md',
     'docs/repository/REPOSITORY_STRUCTURE_MIGRATION_REPORT.md',
     'docs/repository/DOCUMENTATION_CONVERGENCE_STAGE2_REPORT.md',
+    'docs/repository/RELEASE_ARTIFACT_POLICY_RECOMMENDATION.md',
     *PHASE_REPORTS,
     *HISTORICAL_REVIEWS,
     *RECOVERY_EVIDENCE,
@@ -139,6 +141,7 @@ architecture = texts['ARCHITECTURE.md']
 roadmap = texts['ROADMAP_NEXT.md']
 memory = texts['AI_PROJECT_MEMORY.md']
 docs_index = texts['docs/README.md']
+agent_entry = texts['README_FOR_AGENTS.md']
 agent = texts['AGENT_WORKFLOW.md']
 delivery = texts['DELIVERY_WORKFLOW.md']
 push = texts['PUSH_INSTRUCTIONS.md']
@@ -190,8 +193,9 @@ for path in RECOVERY_EVIDENCE:
         assert f'`{name}`' in recovery_index, f'Recovery archive index misses {name}'
 
 for heading in (
-    'Active product source of truth',
-    'Active workflow contracts',
+    'Active product authority',
+    'Active workflow authority',
+    'Active contract docs',
     'Accepted ADRs',
     'Current supporting evidence',
     'Recovery evidence',
@@ -199,10 +203,16 @@ for heading in (
 ):
     assert heading in docs_index, f'Documentation index misses category: {heading}'
 
+assert 'README_FOR_AGENTS.md' in texts['README.md']
 assert 'docs/README.md' in texts['README.md']
 assert 'direct Git > one final milestone ZIP > complete single file > patch' in docs_index
+assert 'current_work' in agent_entry and 'current_work' in agent
+assert 'main' in agent_entry and 'main' in agent
 assert 'Mode R' in agent and 'Mode Z' in agent and 'Mode P' in agent
 assert 'three genuinely different safe mechanisms' in agent
+for label in ('PRODUCT', 'HARNESS', 'ENVIRONMENT', 'OWNER', 'SCOPE'):
+    assert label in agent_entry, f'Agent entrypoint misses failure class: {label}'
+    assert label in agent, f'Agent workflow misses failure class: {label}'
 assert 'bezpośredni Git > jeden końcowy ZIP milestone' in delivery
 assert 'git push origin' in delivery and ('force-push' in delivery or '--force' in delivery)
 assert 'git push origin' in push and 'Never force-push' in push
@@ -217,6 +227,7 @@ STALE_ACTIVE_PHRASES = (
     'Preferowany wariant patchowy',
     'Patch jest domyślnym workflow',
 )
+STALE_ACTIVE_PHRASES = (*STALE_ACTIVE_PHRASES, 'implemented locally')
 for path in ACTIVE_DOCUMENTS:
     text = texts[path]
     for phrase in STALE_ACTIVE_PHRASES:
@@ -228,6 +239,18 @@ for publication_doc in ('AGENT_WORKFLOW.md', 'DELIVERY_WORKFLOW.md', 'PUSH_INSTR
         line.strip() != 'git add -A -- .'
         for line in text.splitlines()
     ), f'{publication_doc} must not recommend uncontrolled repository-wide staging'
+
+for workflow_path in (
+    '.github/workflows/recovery-validation.yml',
+    '.github/workflows/release-reproducibility.yml',
+):
+    workflow_text = (ROOT / workflow_path).read_text(encoding='utf-8')
+    for branch in ('recovery/2026-06-16-regression-repair', 'maintenance/workflow-repair-clean'):
+        assert branch not in workflow_text, f'{workflow_path} references stale branch {branch}'
+
+release_policy = texts['docs/repository/RELEASE_ARTIFACT_POLICY_RECOMMENDATION.md']
+assert 'No files under `release/**` are removed' in release_policy
+assert 'owner decision' in release_policy.lower()
 
 print({
     'requiredDocuments': len(required),

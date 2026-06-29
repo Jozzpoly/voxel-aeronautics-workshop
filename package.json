@@ -4,14 +4,14 @@
   "private": true,
   "description": "Desktop voxel engineering sandbox with Blueprint v12 Assembly Spaces, dockable Workbench UI foundations, deterministic multi-body compilation, and articulated flight.",
   "scripts": {
-    "test": "python tests/run_all.py",
-    "build": "python tools/build_release.py",
-    "serve": "python tools/serve.py",
-    "verify-release": "python tools/verify_release.py",
+    "test": "node tools/run_with_python_env.js python tests/run_all.py",
+    "build": "node tools/run_with_python_env.js python tools/build_release.py",
+    "serve": "node tools/run_with_python_env.js python tools/serve.py",
+    "verify-release": "node tools/run_with_python_env.js python tools/verify_release.py",
     "check:css": "node tools/generate_tailwind_css.js --check",
     "generate:css": "node tools/generate_tailwind_css.js",
-    "studio:test": "npm --prefix tools/blockbench_import_studio test",
-    "studio:serve": "python tools/serve.py --studio",
+    "studio:test": "node tools/run_with_python_env.js npm --prefix tools/blockbench_import_studio test",
+    "studio:serve": "node tools/run_with_python_env.js python tools/serve.py --studio",
     "visual:test": "node tools/run_visual_asset_checks.js"
   },
   "engines": {

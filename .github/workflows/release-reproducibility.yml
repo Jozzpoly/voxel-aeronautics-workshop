@@ -3,7 +3,10 @@ name: Release Reproducibility
 on:
   push:
     branches:
-      - maintenance/workflow-repair-clean
+      - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
