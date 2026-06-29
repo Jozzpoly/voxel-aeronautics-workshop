@@ -72,6 +72,7 @@ APP_SOURCES = (
     Path('src/game/visual_asset_dev_controls.js'),
     Path('src/game/visual_runtime_adapter.js'),
     Path('src/game/module_visual_factory.js'),
+    Path('src/game/visual_asset_composition.js'),
     Path('src/game/assembly_space_controller.js'),
     Path('src/game/engineering_analysis.js'),
     Path('src/game/blueprint_controller.js'),

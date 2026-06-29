@@ -20,6 +20,7 @@ EXPECTED_MODULES = {
     'visual_asset_dev_controls.js': 'game.visual-asset-dev-controls',
     'visual_runtime_adapter.js': 'game.visual-runtime-adapter',
     'module_visual_factory.js': 'game.module-visual-factory',
+    'visual_asset_composition.js': 'game.visual-asset-composition',
     'assembly_space_controller.js': 'game.assembly-space-controller',
     'engineering_analysis.js': 'game.engineering-analysis',
     'blueprint_controller.js': 'game.blueprint-controller',
@@ -33,11 +34,19 @@ EXPECTED_MODULES = {
 
 paths = {path.name: path for path in GAME_PATHS if path.parent == GAME_MODULE_DIR}
 assert set(paths) == set(EXPECTED_MODULES), (set(paths), set(EXPECTED_MODULES))
+VISUAL_COMPOSITION_DEPENDENCIES = {
+    'game.visual-asset-registry',
+    'game.visual-asset-loader',
+    'game.visual-asset-dev-controls',
+    'game.visual-runtime-adapter',
+    'game.module-visual-factory',
+}
 
 for filename, module_name in EXPECTED_MODULES.items():
     source = paths[filename].read_text(encoding='utf-8')
     pattern = rf"window\.VAW\.define\(\s*['\"]{re.escape(module_name)}['\"]"
     assert len(re.findall(pattern, source)) == 1, f'{filename} must define {module_name} exactly once'
+    assert source.count('window.VAW.define(') == 1, f'{filename} must define exactly one module'
     assert 'window.VAW_RUNTIME' not in source, f'{filename} bypasses explicit module injection'
     assert 'src/game.js' not in source, f'{filename} depends on the monolithic entrypoint'
 
@@ -68,7 +77,23 @@ for function_name, owner in ownership.items():
     assert owners == [owner], f'{function_name} ownership mismatch: {owners}'
 
 for module_name in EXPECTED_MODULES.values():
+    if module_name in VISUAL_COMPOSITION_DEPENDENCIES:
+        continue
     assert f"window.VAW.require('{module_name}')" in main, f'entrypoint does not compose {module_name}'
+
+visual_composition_source = paths['visual_asset_composition.js'].read_text(encoding='utf-8')
+for module_name in VISUAL_COMPOSITION_DEPENDENCIES:
+    assert f"'{module_name}'" in visual_composition_source, f'visual composition does not own {module_name}'
+for composition_call in (
+    'VisualAssetRegistry.create()',
+    'VisualAssetLoader.create',
+    'VisualRuntimeAdapter.create()',
+    'ModuleVisualFactory.create',
+    'VisualAssetDevControls.create',
+    'bootstrapInstalledPacks',
+):
+    assert composition_call in visual_composition_source, f'visual composition missing {composition_call}'
+    assert composition_call not in main, f'entrypoint still owns visual stack detail: {composition_call}'
 
 
 for leaked_private in ('autosaveTimer', 'workspaceSaveTimer', 'keyboardLockActive'):

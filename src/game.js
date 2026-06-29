@@ -9,10 +9,7 @@
     const CameraController = window.VAW.require('game.camera-controller');
     const BT = window.VAW.require('game.build-targeting');
     const OrientationService = window.VAW.require('game.orientation-service');
-    const VisualAssetRegistry = window.VAW.require('game.visual-asset-registry');
-    const VisualAssetLoader = window.VAW.require('game.visual-asset-loader');
-    const VisualRuntimeAdapter = window.VAW.require('game.visual-runtime-adapter');
-    const ModuleVisualFactory = window.VAW.require('game.module-visual-factory');
+    const VisualAssetComposition = window.VAW.require('game.visual-asset-composition');
     const AssemblySpaceController = window.VAW.require('game.assembly-space-controller');
     const EngineeringAnalysis = window.VAW.require('game.engineering-analysis');
     const BlueprintController = window.VAW.require('game.blueprint-controller');
@@ -573,13 +570,20 @@
       setHorizontalBar, updateEngineeringAnalysisUI, updateAnalysisVisuals
     } = engineeringAnalysis;
 
-    const visualAssetRegistry=VisualAssetRegistry.create();
-    const visualAssetLoader = VisualAssetLoader.create({THREE,visualAssetRegistry,disposeObjectTree,logger:console});
-    visualAssetLoader.bootstrapInstalledPacks().catch(console.warn);
-    const visualRuntimeAdapter=VisualRuntimeAdapter.create();
-    const moduleVisualFactory=ModuleVisualFactory.create({THREE,sharedGeometry,cloneMaterial,visualAssetRegistry});
-    const { createModuleVisual } = moduleVisualFactory;
-    window.VAW.require('game.visual-asset-dev-controls').create({visualAssetLoader,showStatus,document,window});
+    const {
+      visualAssetLoader,
+      visualRuntimeAdapter,
+      createModuleVisual
+    } = VisualAssetComposition.create({
+      THREE,
+      sharedGeometry,
+      cloneMaterial,
+      disposeObjectTree,
+      showStatus,
+      document,
+      window,
+      logger: console
+    });
 
     function symmetryOffsets(x, z) {
       const pairs = [];
