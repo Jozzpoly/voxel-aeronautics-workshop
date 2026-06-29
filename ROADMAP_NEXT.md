@@ -26,9 +26,9 @@ M2A, M2B and the first M2C clarity pass are present on `current_work`: build tar
 
 ## Foundation Hardening Ladder
 
-- M1 - Validation, CI, agent workflow and documentation authority. This is the active hardening track: bundled-Python validation trust, `current_work` checkpoint discipline, CI branch triggers and active-doc cleanup.
-- M2 - Source layout and `src/game.js` pressure relief. Extract low-risk responsibilities only after M1 is green, with no gameplay or schema changes.
-- M3 - Reliable browser/UI smoke. Add repeatable local-server and hit-testing smoke, reported separately from unit/runner/CI evidence.
+- M1 - Validation, CI, agent workflow and documentation authority is present on `current_work`: bundled-Python validation trust, `current_work` checkpoint discipline, CI branch triggers and active-doc cleanup.
+- M2A/M2B - Source layout hardening is present on `current_work`: visual asset composition wiring moved behind `game.visual-asset-composition`, guarded by architecture tests and direct composition tests. Next M2 work: extract power/HUD readouts from `src/game.js` without gameplay, physics, schema or visual-runtime semantic changes.
+- M3 - Reliable browser/UI smoke starts only after the next M2 source-layout checkpoint. Add repeatable local-server and hit-testing smoke, reported separately from unit/runner/CI evidence; browser/runtime gaps are `ENVIRONMENT`, not PASS.
 - M4 - Visual authoring reliability. Prove one simple replacement workflow across current Catalog block types while keeping Visual Asset Pack V1 renderer-only.
 - M5 - Content pipeline boundaries. Define maps, contracts, missions and content packs as separate schemas before adding broader content.
 - M6 - Gate D readiness. Start Device & Port Schema only after M1-M5 are stable, using `{blockId, portId}` and not persistent `bodyId`.

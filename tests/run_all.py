@@ -28,6 +28,7 @@ def main() -> None:
     run('node', 'tests/test_visual_asset_registry.js')
     run('node', 'tests/test_visual_asset_loader.js')
     run('node', 'tests/test_visual_asset_dev_controls.js')
+    run('node', 'tests/test_visual_asset_composition.js')
     run('node', 'tests/test_blockbench_import_studio_integration.js')
     run(sys.executable, 'tests/test_local_visual_pack_install.py')
     run('node', 'tests/test_mission_evaluator.js')
