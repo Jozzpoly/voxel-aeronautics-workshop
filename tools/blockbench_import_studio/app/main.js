@@ -7,6 +7,7 @@
   const ViewerApi = window.VAW_MINIMAL_GLTF_VIEWER;
   const Validator = window.VAW_VALIDATOR || null;
   const VisualAssetPack = window.VAW_VISUAL_ASSET_PACK_V1 || null;
+  const AuthoringState = window.VAW_STUDIO_AUTHORING_STATE || null;
   const PackageExporter = window.VAW_PACKAGE_EXPORTER || null;
   const ProjectFilesReport = window.VAW_PROJECT_FILES_REPORT || null;
   const LayoutManager = window.VAW_LAYOUT_MANAGER || null;
@@ -42,7 +43,7 @@
     'animation-select', 'play-animation', 'pause-animation', 'stop-animation', 'animation-loop', 'animation-speed', 'animation-time', 'animation-time-label', 'animation-list',
     'fit-view', 'reset-camera', 'toggle-grid', 'toggle-axes', 'toggle-bounds', 'pixel-textures', 'force-double-sided', 'checker-material',
     'viewer', 'event-log', 'texture-summary', 'texture-list', 'mesh-list', 'vaw-status', 'sidecar-status', 'sidecar-json', 'infer-sidecar',
-    'vaw-block-type', 'vaw-node-visual-root-picker', 'vaw-use-suggested-root', 'vaw-node-visual-root', 'vaw-node-flame', 'vaw-node-flame-glow', 'vaw-node-gimbal', 'vaw-node-control-flap',
+    'vaw-block-type', 'vaw-node-visual-root-picker', 'vaw-use-suggested-root', 'vaw-clear-rig-bindings', 'vaw-node-visual-root', 'vaw-node-flame', 'vaw-node-flame-glow', 'vaw-node-gimbal', 'vaw-node-control-flap',
     'vaw-transform-pos-x', 'vaw-transform-pos-y', 'vaw-transform-pos-z', 'vaw-transform-rot-x', 'vaw-transform-rot-y', 'vaw-transform-rot-z', 'vaw-transform-scale-x', 'vaw-transform-scale-y', 'vaw-transform-scale-z',
     'vaw-transform-center', 'vaw-transform-fit', 'vaw-transform-reset',
     'vaw-material-alpha', 'vaw-material-double-sided', 'vaw-material-pixelated', 'vaw-material-overrides', 'vaw-material-use-doctor', 'vaw-material-clear-overrides', 'vaw-material-reset-auto', 'vaw-material-override-list', 'vaw-material-doctor',
@@ -254,6 +255,13 @@
     addEvent('material policy: overrides cleared');
   }
 
+  function clearRigBindings() {
+    if (!AuthoringState) return;
+    syncNodeFields(AuthoringState.clearOptionalNodeFields(currentNodeFields()));
+    addEvent('rig bindings: optional nodes cleared');
+    updateAuthoringDraftFromForm();
+  }
+
   function resetMaterialPolicyToAuto() {
     if (el['vaw-material-alpha']) el['vaw-material-alpha'].value = 'auto';
     if (el['vaw-material-double-sided']) el['vaw-material-double-sided'].value = 'from-gltf';
@@ -366,18 +374,7 @@
     asset.bindings = asset.bindings || {};
     const blockTypes = selectedBlockTypes();
     if (blockTypes.length || !preserveEmpty) asset.bindings.blockTypes = blockTypes;
-    asset.bindings.nodes = asset.bindings.nodes || {};
-    const visualRoot = nodeField('vaw-node-visual-root');
-    if (visualRoot || !preserveEmpty) asset.bindings.nodes.visualRoot = visualRoot;
-    for (const [alias, id] of [
-      ['flame', 'vaw-node-flame'],
-      ['flameGlow', 'vaw-node-flame-glow'],
-      ['gimbalAssembly', 'vaw-node-gimbal'],
-      ['controlFlapPivot', 'vaw-node-control-flap']
-    ]) {
-      const value = nodeField(id);
-      if (value || !preserveEmpty) asset.bindings.nodes[alias] = value;
-    }
+    AuthoringState.applyNodeFields(asset, currentNodeFields(), { preserveEmpty });
     asset.materialPolicy = currentMaterialPolicyFields();
     return manifest;
   }
@@ -445,11 +442,7 @@
 
   function getAuthoringPrefsForBlock(blockType, { includeDefaults = false } = {}) {
     const prefs = loadAuthoringPrefs();
-    const normalizedBlockType = String(blockType || '').trim();
-    if (normalizedBlockType && prefs.byBlock && typeof prefs.byBlock === 'object' && prefs.byBlock[normalizedBlockType]) {
-      return prefs.byBlock[normalizedBlockType];
-    }
-    return includeDefaults ? prefs.defaults || null : null;
+    return AuthoringState.preferenceSnapshotForBlock(prefs, blockType, { includeDefaults });
   }
 
   function applyAuthoringPrefsForBlock(blockType, { includeDefaults = false } = {}) {
@@ -648,6 +641,7 @@
       if (suggested && el['vaw-node-visual-root']) el['vaw-node-visual-root'].value = suggested;
       updateAuthoringDraftFromForm();
     });
+    el['vaw-clear-rig-bindings']?.addEventListener('click', clearRigBindings);
     el['play-animation']?.addEventListener('click', playSelectedAnimation);
     el['pause-animation']?.addEventListener('click', toggleAnimationPause);
     el['stop-animation']?.addEventListener('click', stopAnimationPreview);

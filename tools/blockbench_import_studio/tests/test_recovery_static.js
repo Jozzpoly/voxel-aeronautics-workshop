@@ -11,6 +11,7 @@ const MaterialTools = require('../src/gltf_material_tools.js');
 const Controls = require('../src/viewport_controls.js');
 const Validator = require('../src/vaw_validator.js');
 const VisualAssetPack = require('../src/visual_asset_pack_v1.js');
+const AuthoringState = require('../src/authoring_state.js');
 const PackageExporter = require('../src/package_exporter.js');
 
 const root = path.resolve(__dirname, '..');
@@ -28,7 +29,7 @@ async function main() {
   for (const required of [
     'index.html', 'minimal_viewer.html', 'app/main.js', 'app/styles.css',
     'src/file_bundle_resolver.js', 'src/project_files_report.js', 'src/animation_report.js', 'src/layout_manager.js', 'src/minimal_gltf_viewer.js', 'src/viewport_controls.js', 'src/fit_camera.js',
-    'src/texture_report.js', 'src/gltf_material_tools.js', 'src/vaw_validator.js', 'src/visual_asset_pack_v1.js', 'src/package_exporter.js',
+    'src/texture_report.js', 'src/gltf_material_tools.js', 'src/vaw_validator.js', 'src/visual_asset_pack_v1.js', 'src/authoring_state.js', 'src/package_exporter.js',
     'vendor/three.min.js', 'vendor/GLTFLoader.js',
     'assets/uv_checker_cube_gltf/uv_checker_cube.gltf', 'assets/uv_checker_cube_gltf/uv_checker_cube.bin', 'assets/uv_checker_cube_gltf/textures/uv_checker.png',
     'docs/RECOVERY_AUDIT.md', 'docs/ROOT_CAUSE_ANALYSIS.md', 'docs/IMPLEMENTATION_REPORT.md', 'docs/USER_TESTING_GUIDE.md',
@@ -363,9 +364,12 @@ async function main() {
   for (const snippet of ['Format JSON', 'Apply manifest', 'parseSidecarFromEditor', 'validateManifest']) {
     assert.ok(index.includes(snippet) || app.includes(snippet) || readText('src/vaw_validator.js').includes(snippet), `missing sidecar hardening snippet: ${snippet}`);
   }
-  for (const snippet of ['vaw-block-type', 'choose explicitly', 'vaw-node-visual-root', 'vaw-node-flame-glow', 'selectedBlockTypes', 'inferVisualAssetManifest']) {
+  for (const snippet of ['vaw-block-type', 'choose explicitly', 'vaw-node-visual-root', 'vaw-node-flame-glow', 'vaw-clear-rig-bindings', 'selectedBlockTypes', 'inferVisualAssetManifest']) {
     assert.ok(index.includes(snippet) || app.includes(snippet), `missing explicit Visual Asset Pack authoring UI snippet: ${snippet}`);
   }
+  assert.ok(AuthoringState.OPTIONAL_NODE_ALIASES.includes('gimbalAssembly'), 'Authoring state helper must own optional rig aliases.');
+  assert.ok(app.includes('AuthoringState.applyNodeFields'), 'Studio must commit empty optional rig inputs as null bindings.');
+  assert.ok(app.includes('AuthoringState.preferenceSnapshotForBlock'), 'Studio must not restore rig defaults across block types.');
   assert.ok(app.includes('commitAuthoringFieldsToManifest'), 'Apply/Validate/Export must commit explicit authoring controls into the manifest.');
   assert.ok(app.includes('currentAuthoringPrefsSnapshot'), 'Studio must keep per-block authoring preferences for repeated in-game visual iteration.');
   assert.ok(app.includes('saveAuthoringPrefsForBlock'), 'Authoring prefs must be keyed by VAW block type.');
