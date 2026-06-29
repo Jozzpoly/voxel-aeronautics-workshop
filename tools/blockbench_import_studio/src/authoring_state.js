@@ -74,6 +74,19 @@
     return null;
   }
 
+  function preferenceDocumentForSave(prefs = {}, blockType = '', snapshot = {}) {
+    const sourcePrefs = prefs && typeof prefs === 'object' ? prefs : {};
+    const normalizedBlockType = String(blockType || '').trim();
+    const exactSnapshot = cloneJson(snapshot) || {};
+    const next = cloneJson(sourcePrefs) || {};
+    const existingByBlock = sourcePrefs.byBlock && typeof sourcePrefs.byBlock === 'object' ? sourcePrefs.byBlock : {};
+    next.lastBlockType = normalizedBlockType || String(sourcePrefs.lastBlockType || '').trim();
+    next.defaults = stripRigStateForDefault(exactSnapshot);
+    next.byBlock = cloneJson(existingByBlock) || {};
+    if (normalizedBlockType) next.byBlock[normalizedBlockType] = exactSnapshot;
+    return next;
+  }
+
   return Object.freeze({
     NODE_ALIASES,
     OPTIONAL_NODE_ALIASES,
@@ -81,6 +94,7 @@
     clearOptionalNodeFields,
     emptyNodeFields,
     normalizeNodeFields,
+    preferenceDocumentForSave,
     preferenceSnapshotForBlock,
     stripRigStateForDefault,
   });

@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 REQUIRED = [
     'index.html','minimal_viewer.html','app/main.js','app/styles.css',
     'src/file_bundle_resolver.js','src/project_files_report.js','src/animation_report.js','src/layout_manager.js','src/minimal_gltf_viewer.js','src/viewport_controls.js','src/fit_camera.js','src/texture_report.js','src/vaw_validator.js','src/visual_asset_pack_v1.js','src/authoring_state.js','src/package_exporter.js',
+    'tests/test_authoring_state.js','tests/test_authoring_state_flow.js',
     'vendor/three.min.js','vendor/GLTFLoader.js',
     'assets/uv_checker_cube_gltf/uv_checker_cube.gltf','assets/uv_checker_cube_gltf/uv_checker_cube.bin','assets/uv_checker_cube_gltf/textures/uv_checker.png',
     'assets/axis_scale_offset_gltf/axis_scale_offset.gltf','assets/axis_scale_offset_gltf/axis_scale_offset.bin','assets/axis_scale_offset_gltf/textures/uv_checker.png',

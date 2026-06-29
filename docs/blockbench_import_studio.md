@@ -41,9 +41,19 @@ The install endpoint writes only under `local_working_visuals`, overwrites only 
 
 Studio stores the last authoring settings per VAW block type in browser `localStorage`: target block, node aliases, renderer-only transform, material policy and fire/glow material split settings. This is an authoring convenience only. It must not be serialized into Blueprint, CraftModel, saves or gameplay data. If a newly imported model uses different node names, review `visualRoot` and aliases before install; the saved block profile is meant to speed iteration, not to become an asset authority.
 
+`Clear rig bindings` clears only optional node aliases: `flame`, `flameGlow`, `gimbalAssembly` and `controlFlapPivot`. It does not clear `visualRoot`, transform, material policy or block type. Studio may reuse transform and material defaults across block types, but global defaults must not carry optional rig aliases or fire/glow split state from one block type to another. Exact per-block profiles remain restorable for the same block type.
+
 If Studio reports `Install failed: Failed to fetch`, it usually means Studio is not connected to the integrated VAW dev endpoint. Click `Check install endpoint`. If it is unavailable, start `npm run studio:serve` from the repository root and reopen Studio from the printed `/tools/blockbench_import_studio/index.html` URL. Standalone Studio preview servers can load models, but they cannot write into the game unless the integrated VAW server is reachable.
 
 If solid parts look transparent or edges appear to show geometry behind them, check the material policy first. A global `blend` applies transparent sorting to the whole imported model. Prefer Material Doctor's `auto` policy with per-material overrides such as `NozzleMat=opaque` and `FlameMat=blend`. If several glTF materials share the same name, an override by name applies to every match; rename materials in Blockbench when you need separate policies.
+
+For a read-only pack sanity check, run:
+
+```bash
+node tools/run_with_python_env.js python tools/audit_visual_asset_pack.py assets/visual_packs/local_working_visuals --allow-diagnostics
+```
+
+The local working pack is user art. Audit diagnostics for `local_working_visuals` are evidence for manual review; they are not permission to normalize, delete or auto-fix the art.
 
 ## Export Pack Artifact
 

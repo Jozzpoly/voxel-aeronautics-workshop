@@ -421,17 +421,8 @@
   }
 
   function saveAuthoringPrefsForBlock(blockType, snapshot = currentAuthoringPrefsSnapshot()) {
-    const normalizedBlockType = String(blockType || '').trim();
     const prefs = loadAuthoringPrefs();
-    const next = {
-      ...prefs,
-      lastBlockType: normalizedBlockType || prefs.lastBlockType || '',
-      defaults: snapshot,
-      byBlock: {
-        ...(prefs.byBlock && typeof prefs.byBlock === 'object' ? prefs.byBlock : {})
-      }
-    };
-    if (normalizedBlockType) next.byBlock[normalizedBlockType] = snapshot;
+    const next = AuthoringState.preferenceDocumentForSave(prefs, blockType, snapshot);
     try { localStorage.setItem(AUTHORING_PREFS_KEY, JSON.stringify(next)); }
     catch (_) { /* Preferences are optional; Studio must work without localStorage. */ }
   }

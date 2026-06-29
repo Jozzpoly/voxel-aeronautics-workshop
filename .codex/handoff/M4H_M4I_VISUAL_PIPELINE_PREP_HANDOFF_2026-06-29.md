@@ -68,6 +68,42 @@ The per-block Studio preferences are authoring state only. They do not belong in
   - `gimbalA -> rotation.z`.
 - That is only safe for the procedural model's axis layout. It is not safe for arbitrary Blockbench pivot axes.
 
+## M4I-A Critical Audit Update
+
+Audit baseline before this polish checkpoint:
+
+- `HEAD == origin/current_work == 943bfde44c5e682f0095f674ff4454daa244613b`.
+- `origin/main == 873933f1ebd8e98d05ad644a9dda2de47d467b1f`.
+- The only dirty worktree state at audit start was protected user art:
+  - `assets/visual_packs/installed_visual_packs.json`;
+  - `assets/visual_packs/local_working_visuals/VAW_VISUAL_ASSET_PACK_V1.json`;
+  - `assets/visual_packs/local_working_visuals/models/blocks/balloon/`.
+
+M4I-A closes the remaining M4H workflow gap: global/default Studio authoring prefs are now sanitized at write time as well as read time. Defaults may preserve transform and material policy, but they must not store `visualRoot`, optional rig aliases or fire/glow split rig state. Exact per-block profiles remain restorable for the same block type.
+
+Current read-only local pack audit evidence:
+
+- all current local visual models exist;
+- Thruster and VectorThruster still contain `thuster` spelling diagnostics;
+- Balloon has unresolved inherited `thuster_fire` and `thuster_nozzle` bindings;
+- Balloon has warning diagnostics for `flame` and `gimbalAssembly`, which are unusual for `Balloon`;
+- these are protected art/workflow diagnostics, not permission to edit `local_working_visuals`.
+
+Targeted M4I-A validation evidence:
+
+- `node tools/blockbench_import_studio/tests/test_authoring_state.js` PASS;
+- `node tools/blockbench_import_studio/tests/test_authoring_state_flow.js` PASS;
+- `npm.cmd run studio:test` PASS, including recovery package guard;
+- `node tools/run_with_python_env.js python tests/test_visual_asset_pack_audit.py` PASS;
+- `npm.cmd run visual:test` PASS;
+- `node tools/run_with_python_env.js python tests/test_documentation_contract.py` PASS;
+- `node tools/run_with_python_env.js python tests/test_game_architecture.py` PASS;
+- `npm.cmd run browser:smoke` PASS in this checkout;
+- `npm.cmd run test` PASS;
+- `node tools/run_with_python_env.js python tools/validate_fast.py` PASS;
+- `node tools/run_with_python_env.js python tools/validate_full.py` PASS;
+- `git diff --check` PASS.
+
 ## Current Prep Artifacts
 
 Added for long-change workflow:
