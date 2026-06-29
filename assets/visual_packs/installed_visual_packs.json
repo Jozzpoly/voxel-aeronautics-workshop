@@ -1,0 +1,19 @@
+{
+  "format": "VAW_VISUAL_PACK_INDEX_V1",
+  "version": "0.1.0",
+  "packs": [
+    {
+      "source": "local:local_working_visuals",
+      "manifestUrl": "local_working_visuals/VAW_VISUAL_ASSET_PACK_V1.json",
+      "revision": 69
+    },
+    {
+      "source": "dev:real_blockbench_thruster_pack",
+      "manifestUrl": "real_blockbench_thruster_pack/VAW_VISUAL_ASSET_PACK_V1.json"
+    },
+    {
+      "source": "dev:test_anim_preview_visual_pack",
+      "manifestUrl": "test_anim_preview_visual_pack/VAW_VISUAL_ASSET_PACK_V1.json"
+    }
+  ]
+}

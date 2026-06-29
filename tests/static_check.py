@@ -47,9 +47,9 @@ if 'STATE.voxels' in game: errors.append('Legacy STATE.voxels coupling still exi
 if 'meshesByKey' not in game: errors.append('Workshop view map is missing')
 for expected in [
  'foundation.config', 'foundation.catalog', 'foundation.orientation',
- 'foundation.blueprint', 'foundation.craft-model', 'foundation.craft-history', 'foundation.control-frame', 'foundation.mass-properties', 'foundation.craft-compiler', 'foundation.runtime-assembly', 'foundation.input-profile', 'foundation.ui-workspace', 'foundation.mission-evaluator', 'foundation.aerostatics', 'foundation.flight-control', 'foundation.fixed-step-scheduler', 'foundation.state', 'runtime.physics-port', 'runtime.cannon-physics-backend', 'runtime.headless-physics-backend', 'runtime.assembly-builder',
+ 'foundation.visual-asset-manifest', 'foundation.blueprint', 'foundation.craft-model', 'foundation.craft-history', 'foundation.control-frame', 'foundation.mass-properties', 'foundation.craft-compiler', 'foundation.runtime-assembly', 'foundation.input-profile', 'foundation.ui-workspace', 'foundation.mission-evaluator', 'foundation.aerostatics', 'foundation.flight-control', 'foundation.fixed-step-scheduler', 'foundation.state', 'runtime.physics-port', 'runtime.cannon-physics-backend', 'runtime.headless-physics-backend', 'runtime.assembly-builder',
  'game.scene-environment', 'game.career-service', 'game.workspace-controller',
- 'game.input-settings-controller', 'game.orientation-service', 'game.module-visual-factory', 'game.assembly-space-controller',
+ 'game.input-settings-controller', 'game.orientation-service', 'game.visual-asset-registry', 'game.visual-asset-loader', 'game.visual-asset-dev-controls', 'game.visual-runtime-adapter', 'game.module-visual-factory', 'game.assembly-space-controller',
  'game.engineering-analysis', 'game.blueprint-controller', 'game.mission-controller',
  'game.flight-session', 'game.flight-integrity'
 ]:

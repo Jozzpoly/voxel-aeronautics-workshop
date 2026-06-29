@@ -9,7 +9,10 @@
     "serve": "python tools/serve.py",
     "verify-release": "python tools/verify_release.py",
     "check:css": "node tools/generate_tailwind_css.js --check",
-    "generate:css": "node tools/generate_tailwind_css.js"
+    "generate:css": "node tools/generate_tailwind_css.js",
+    "studio:test": "npm --prefix tools/blockbench_import_studio test",
+    "studio:serve": "python tools/serve.py --studio",
+    "visual:test": "node tools/run_visual_asset_checks.js"
   },
   "engines": {
     "node": ">=18",

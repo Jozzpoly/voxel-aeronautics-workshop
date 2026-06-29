@@ -1,0 +1,45 @@
+{
+  "format": "VAW_VISUAL_ASSET_PACK_V1",
+  "packId": "test_anim_preview_visual_pack",
+  "version": "0.1.0-preview",
+  "metadata": {
+    "status": "preview-test-asset",
+    "generatedBy": "VAW Blockbench Import Studio",
+    "authority": "visual-only",
+    "note": "Preview/test asset only. It validates the Visual Asset Pack V1 contract and embedded glTF handling; it is not a final gameplay asset."
+  },
+  "assets": [
+    {
+      "assetId": "test_anim_preview",
+      "kind": "blockVisual",
+      "model": {
+        "path": "models/test_anim.gltf",
+        "unitMeters": 1,
+        "forwardAxis": "+X",
+        "upAxis": "+Y"
+      },
+      "bindings": {
+        "blockTypes": [
+          "Thruster"
+        ],
+        "nodes": {
+          "visualRoot": "/Bone",
+          "flame": "/Bone/Bone/flame",
+          "flameGlow": "/Bone/Bone/flameGlow",
+          "gimbalAssembly": null,
+          "controlFlapPivot": null
+        },
+        "clips": {
+          "idle": null,
+          "thrust": "up_down",
+          "damage": null
+        }
+      },
+      "materialPolicy": {
+        "pixelated": true,
+        "alpha": "mask-or-blend",
+        "doubleSided": "from-gltf"
+      }
+    }
+  ]
+}

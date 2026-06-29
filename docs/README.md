@@ -13,7 +13,7 @@ Authority order: current user decision, latest verified remote SHA, source/tests
 - `FUTURE_READINESS_REVIEW.md`
 - `PROGRAMMABLE_MACHINE_RESEARCH.md`
 
-Current state: Gate C is the stable gameplay base. The immediate milestone is Workbench Foundation: dockable UI layout, side dock stacking, build/flight workspace separation, a full-span bottom parts hotbar with a compact option, dockable flight mission information, documentation cleanup and a visual asset boundary. Gate D - Device & Port Schema - is temporarily behind this UI/documentation preparation.
+Current state: Gate C is the stable gameplay base. The immediate milestone is Workbench Foundation plus M4G visual asset polish: dockable UI layout, side dock stacking, build/flight workspace separation, dockable flight mission information, visual asset boundaries, Studio-in-repo authoring, single working-pack visual iteration, renderer-only imported child safety, invisible-by-default hit proxy debug and material fidelity for mixed opaque/alpha assets. Gate D - Device & Port Schema - is temporarily behind this UI/documentation preparation.
 
 ## Active workflow contracts
 
@@ -21,6 +21,8 @@ Current state: Gate C is the stable gameplay base. The immediate milestone is Wo
 - `DELIVERY_WORKFLOW.md`
 - `PUSH_INSTRUCTIONS.md`
 - `docs/WORKFLOW_REPAIR_HANDOFF.md`
+- `docs/blockbench_import_studio.md`
+- `docs/visual_asset_pack_v1.md`
 
 Transport priority remains:
 
@@ -30,7 +32,7 @@ direct Git > one final milestone ZIP > complete single file > patch
 
 ## Accepted ADRs
 
-ADRs 0033-0041 preserve Gate B/C architecture. ADR 0042 defines the Workbench UI layout foundation. ADR 0043 defines the visual asset boundary for future external models, textures and animations.
+ADRs 0033-0041 preserve Gate B/C architecture. ADR 0042 defines the Workbench UI layout foundation. ADR 0043 defines the visual asset boundary for external models, textures and animations.
 
 ## Current supporting evidence
 

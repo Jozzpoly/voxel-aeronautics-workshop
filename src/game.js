@@ -9,6 +9,9 @@
     const CameraController = window.VAW.require('game.camera-controller');
     const BT = window.VAW.require('game.build-targeting');
     const OrientationService = window.VAW.require('game.orientation-service');
+    const VisualAssetRegistry = window.VAW.require('game.visual-asset-registry');
+    const VisualAssetLoader = window.VAW.require('game.visual-asset-loader');
+    const VisualRuntimeAdapter = window.VAW.require('game.visual-runtime-adapter');
     const ModuleVisualFactory = window.VAW.require('game.module-visual-factory');
     const AssemblySpaceController = window.VAW.require('game.assembly-space-controller');
     const EngineeringAnalysis = window.VAW.require('game.engineering-analysis');
@@ -570,8 +573,13 @@
       setHorizontalBar, updateEngineeringAnalysisUI, updateAnalysisVisuals
     } = engineeringAnalysis;
 
-    const moduleVisualFactory = ModuleVisualFactory.create({ THREE, sharedGeometry, cloneMaterial });
+    const visualAssetRegistry=VisualAssetRegistry.create();
+    const visualAssetLoader = VisualAssetLoader.create({THREE,visualAssetRegistry,disposeObjectTree,logger:console});
+    visualAssetLoader.bootstrapInstalledPacks().catch(console.warn);
+    const visualRuntimeAdapter=VisualRuntimeAdapter.create();
+    const moduleVisualFactory=ModuleVisualFactory.create({THREE,sharedGeometry,cloneMaterial,visualAssetRegistry});
     const { createModuleVisual } = moduleVisualFactory;
+    window.VAW.require('game.visual-asset-dev-controls').create({visualAssetLoader,showStatus,document,window});
 
     function symmetryOffsets(x, z) {
       const pairs = [];
@@ -624,6 +632,7 @@
       assemblySpaceController.attachBlockVisual(block, mesh);
       WORKSHOP.meshesByKey.set(block.key, mesh);
       addRootMesh(mesh);
+      visualAssetLoader.attachImportedVisual(mesh);
       return mesh;
     }
 
@@ -976,11 +985,17 @@
     }
 
     function flashInvalid(mesh) {
-      if (!mesh || !mesh.material || !mesh.material.emissive) return;
-      const original = mesh.material.emissive.getHex();
-      mesh.material.emissive.setHex(0xff0000);
+      let target = null;
+      mesh?.traverse?.(object => {
+        if (target) return;
+        const materials = Array.isArray(object.material) ? object.material : (object.material ? [object.material] : []);
+        target = materials.find(material => material?.emissive && typeof material.emissive.getHex === 'function') || null;
+      });
+      if (!target) return;
+      const original = target.emissive.getHex();
+      target.emissive.setHex(0xff0000);
       setTimeout(() => {
-        if (mesh.material && mesh.material.emissive) mesh.material.emissive.setHex(original);
+        if (target?.emissive) target.emissive.setHex(original);
       }, 160);
     }
 
@@ -1139,14 +1154,7 @@
 
     function updateRuntimePartVisual(part) {
       if (!part?.visual) return;
-      const health = runtimePartHealthFraction(part);
-      part.visual.traverse(object => {
-        const mats = Array.isArray(object.material) ? object.material : (object.material ? [object.material] : []);
-        for (const material of mats) {
-          if (!material || !material.emissive) continue;
-          if (health < 0.75) material.emissive.setRGB((1 - health) * 0.72, 0.02, 0.01);
-        }
-      });
+      visualRuntimeAdapter.setDamageTint(part.visual, runtimePartHealthFraction(part), { redScale: 0.72, green: 0.02, blue: 0.01 });
     }
 
     function markFlightMetricsDirty() {
@@ -1232,9 +1240,8 @@
 
     function updatePayloadVisual() {
       const payload = STATE.flight.payload;
-      if (!payload?.visual?.material?.emissive) return;
-      const health = payloadHealthFraction();
-      payload.visual.material.emissive.setRGB((1 - health) * 0.8, 0.03, 0.01);
+      if (!payload?.visual) return;
+      visualRuntimeAdapter.setDamageTint(payload.visual, payloadHealthFraction(), { redScale: 0.8, green: 0.03, blue: 0.01 });
     }
 
     function detachPayload(reason = 'payload mount failure') {
@@ -1463,6 +1470,7 @@
         const visual = createModuleVisual(part.type, part.orientation, false);
         visual.position.set(localOffset.x, localOffset.y, localOffset.z);
         partRoot.add(visual);
+        visualAssetLoader.attachImportedVisual(visual);
         const key = part.key;
         const sourceMesh = WORKSHOP.meshesByKey.get(key);
         if (sourceMesh) sourceMesh.visible = false;
@@ -1993,7 +2001,7 @@
       return FlightControl.adjustmentForInput(event.code, STATE.input.profile);
     }
 
-    // Flight controls use the user profile.
+    /*Flight controls use the user profile*/
     window.addEventListener('keydown', event => {
       if (commitBindingCapture(event)) return;
       const key = event.key.toLowerCase();
@@ -2130,19 +2138,8 @@
       for (const mod of STATE.flight.functionalBlocks) {
         if ((mod.type !== 'Thruster' && mod.type !== 'VectorThruster') || !mod.visual || !mod.attached) continue;
         const intensity = Math.max(0, mod.lastCommand || 0);
-        const gimbal = mod.visual.getObjectByName('gimbalAssembly');
-        if (gimbal) { gimbal.rotation.y = (mod.gimbalB || 0) * PHYSICS.gimbalAngle; gimbal.rotation.z = -(mod.gimbalA || 0) * PHYSICS.gimbalAngle; }
-        mod.visual.traverse(obj => {
-          if (!obj || (obj.name !== 'flame' && obj.name !== 'flameGlow')) return;
-          const isGlow = obj.name === 'flameGlow';
-          const baseScale = isGlow ? 1.15 : 0.95;
-          const scaleBoost = 0.55 + intensity * (isGlow ? 0.55 : 0.85);
-          obj.visible = STATE.mode === 'FLIGHT' && intensity > 0.01;
-          obj.scale.setScalar(baseScale * scaleBoost);
-          if (obj.material && 'opacity' in obj.material) {
-            obj.material.opacity = obj.visible ? (isGlow ? 0.16 + intensity * 0.28 : 0.55 + intensity * 0.35) : 0;
-          }
-        });
+        visualRuntimeAdapter.setGimbal(mod.visual, mod.gimbalA || 0, mod.gimbalB || 0, PHYSICS.gimbalAngle);
+        visualRuntimeAdapter.setThrusterIntensity(mod.visual, intensity, { active: STATE.mode === 'FLIGHT' });
       }
     }
 
@@ -2201,8 +2198,7 @@
       const commandRaw = mod.pilotControlled ? (Number(STATE.pilot[mod.controlAxis]) || 0) : 0;
       if (speed < 0.35) {
         mod.controlDeflection = commandRaw * runtimePartHealthFraction(mod);
-        const flap = mod.visual?.getObjectByName('controlFlapPivot');
-        if (flap) flap.rotation.z = -mod.controlDeflection * PHYSICS.controlSurfaceMaxDeflection;
+        visualRuntimeAdapter.setControlDeflection(mod.visual, mod.controlDeflection, PHYSICS.controlSurfaceMaxDeflection);
         return { lift: 0, drag: 0 };
       }
       const chordWorld = Physics.vec3(flightSession.vectorToWorldFrame(bodyId, mod.localAxis)).unit();
@@ -2231,8 +2227,7 @@
       const worldPoint = flightSession.pointToWorldFrame(bodyId, mod.bodyLocalPosition);
       flightSession.applyBodyForce(bodyId, liftDirection.scale(liftMagnitude), worldPoint);
       flightSession.applyBodyForce(bodyId, velocityDirection.scale(-dragMagnitude), worldPoint);
-      const flap = mod.visual?.getObjectByName('controlFlapPivot');
-      if (flap) flap.rotation.z = -command * PHYSICS.controlSurfaceMaxDeflection;
+      visualRuntimeAdapter.setControlDeflection(mod.visual, command, PHYSICS.controlSurfaceMaxDeflection);
       return { lift: Math.abs(liftMagnitude), drag: Math.abs(dragMagnitude) };
     }
 

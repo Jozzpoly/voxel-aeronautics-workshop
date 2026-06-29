@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "assetId": "test_model_alfa_anim_baa",
+  "kind": "moduleVisual",
+  "model": {
+    "path": "test_model_alfa_anim_BaA.gltf",
+    "format": "gltf",
+    "sha256": "bfe549c05e73f7bfc355124f78181546ebe45b618df1467b5a7ada18f98c0ab3",
+    "bytes": 7056
+  },
+  "moduleTypeBindings": [
+    "VectorThruster"
+  ],
+  "coordinateContract": {
+    "units": "meters",
+    "moduleCellSize": 1,
+    "forwardAxis": "+X",
+    "upAxis": "+Y",
+    "rootOrigin": "voxel-center"
+  },
+  "semantics": {
+    "visualRoot": {
+      "node": "blockbench_export",
+      "required": true
+    }
+  },
+  "sockets": [],
+  "clips": [
+    {
+      "clipId": "up_down",
+      "sourceClip": "up_down",
+      "mode": "preview-only",
+      "events": []
+    }
+  ],
+  "emitters": [],
+  "runtimePolicy": {
+    "fallback": "procedural",
+    "pixelArt": {
+      "magFilter": "nearest",
+      "minFilter": "nearest",
+      "generateMipmaps": false
+    }
+  },
+  "forbiddenGameplayAuthority": [
+    "mass",
+    "force",
+    "thrust",
+    "fuelRate",
+    "durability",
+    "structural",
+    "bodyId",
+    "assemblySpaceId",
+    "collisionGroup",
+    "damageRules",
+    "portId",
+    "deviceId",
+    "constraintId",
+    "mechanicalLinkId",
+    "controlRuntime"
+  ]
+}

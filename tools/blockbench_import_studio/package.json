@@ -1,0 +1,15 @@
+{
+  "name": "vaw-blockbench-import-studio-workbench-shell",
+  "version": "0.7.0-m4a-visual-asset-contract",
+  "private": true,
+  "description": "M4A Visual Asset Contract for VAW Blockbench Import Studio: hardens preview/export separation and adds VAW_VISUAL_ASSET_PACK_V1 manifest validation/export.",
+  "scripts": {
+    "test": "npm run test:static",
+    "test:static": "node --check app/main.js && node --check src/file_bundle_resolver.js && node --check src/project_files_report.js && node --check src/animation_report.js && node --check src/layout_manager.js && node --check src/texture_report.js && node --check src/gltf_material_tools.js && node --check src/viewport_controls.js && node --check src/fit_camera.js && node --check src/minimal_gltf_viewer.js && node --check src/vaw_validator.js && node --check src/visual_asset_pack_v1.js && node --check src/package_exporter.js && node tests/test_recovery_static.js && python tools/validate_recovery_package.py",
+    "serve": "python ../serve.py --studio"
+  },
+  "engines": {
+    "node": ">=18",
+    "python": ">=3.10"
+  }
+}

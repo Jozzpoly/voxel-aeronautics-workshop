@@ -5,9 +5,12 @@
 The browser entry point, generated single-file release and source ZIP use the exact vendored `three@0.128.0` UMD build at:
 
 - `vendor/three-r128/three.min.js`
+- `vendor/three-r128/GLTFLoader.js`
 - `vendor/three-r128/LICENSE`
 
 Three.js is distributed under the MIT License. The exact runtime SHA-256 is checked by automated dependency-contract tests. The application has no network-loaded production dependency.
+
+The repository also includes the Studio tool package under `tools/blockbench_import_studio/`. Its local preview pages vendor Three.js r128 and `GLTFLoader.js` for authoring/testing only; those files are recorded in release provenance but are not imported by the game runtime.
 
 ## Cannon.js 0.6.2 — vendored production and validation runtime
 

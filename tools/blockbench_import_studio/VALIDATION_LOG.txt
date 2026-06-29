@@ -1,0 +1,19 @@
+VAW Blockbench Import Studio — M4A Visual Asset Contract v0.7
+Final audit after user smoke report — 2026-06-23
+
+Commands run in sandbox:
+
+1. npm test
+   Result: PASS
+
+2. python tools/validate_recovery_package.py
+   Result: PASS
+
+3. ZIP integrity after packaging
+   Result: checked after archive creation
+
+Important notes:
+- The sandbox is Linux, so npm was used instead of Windows npm.cmd.
+- Full interactive WebGL/browser smoke could not be completed here because Chromium/Playwright local HTTP navigation is blocked by environment policy.
+- User-side smoke should run with: python tools/serve.py
+- Do not open index.html by double-click/file:// when testing built-in sample buttons; use the local server URL.

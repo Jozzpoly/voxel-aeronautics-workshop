@@ -36,8 +36,8 @@
   class Obj { constructor(){this.children=[];this.parent=null;this.position=new V3();this.quaternion=new Q();this.scale=new V3(1,1,1);this.rotation={x:0,y:0,z:0};this.userData={};this.visible=true;this.name='';} add(...xs){for(const x of xs){if(x){x.parent=this;this.children.push(x);}}} remove(x){this.children=this.children.filter(c=>c!==x);} traverse(fn){fn(this);for(const c of this.children)c.traverse?c.traverse(fn):fn(c);} }
   class Scene extends Obj {}
   class Group extends Obj {}
-  class Geometry { rotateX(){return this;} setAttribute(){return this;} setFromPoints(points){this.points=points;return this;} dispose(){} }
-  class Material { constructor(o={}){Object.assign(this,o);this.emissive=new Color(o.emissive||0);this.opacity=o.opacity??1;} clone(){const m=new this.constructor({...this});m.emissive=new Color(this.emissive.getHex());return m;} dispose(){} }
+  class Geometry { constructor(){this.disposed=false;} clone(){const g=new Geometry();g.sourceGeometry=this;return g;} rotateX(){return this;} setAttribute(){return this;} setFromPoints(points){this.points=points;return this;} dispose(){this.disposed=true;} }
+  class Material { constructor(o={}){Object.assign(this,o);this.emissive=new Color(o.emissive||0);this.opacity=o.opacity??1;this.disposed=false;} clone(){const m=new this.constructor({...this});m.emissive=new Color(this.emissive.getHex());m.sourceMaterial=this;return m;} dispose(){this.disposed=true;} }
   class Mesh extends Obj { constructor(g=new Geometry(),m=new Material()){super();this.geometry=g;this.material=m;} }
   class Line extends Mesh {}
   class Points extends Mesh {}

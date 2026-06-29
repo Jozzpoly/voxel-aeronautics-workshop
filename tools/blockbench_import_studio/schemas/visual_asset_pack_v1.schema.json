@@ -1,0 +1,278 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vaw.local/schemas/visual_asset_pack_v1.schema.json",
+  "title": "VAW Visual Asset Pack V1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "format",
+    "packId",
+    "version",
+    "assets"
+  ],
+  "properties": {
+    "format": {
+      "const": "VAW_VISUAL_ASSET_PACK_V1"
+    },
+    "packId": {
+      "$ref": "#/$defs/stableId"
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "metadata": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/notGameplayPropertyName"
+      },
+      "additionalProperties": true
+    },
+    "assets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/asset"
+      }
+    }
+  },
+  "$defs": {
+    "stableId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$"
+    },
+    "safePackPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!\\./)(?![A-Za-z][A-Za-z0-9+.-]*:)(?!.*\\\\)(?!.*//)(?!.*[?#])(?!.*(?:^|/)\\.(?:/|$))(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "axis": {
+      "enum": [
+        "+X",
+        "-X",
+        "+Y",
+        "-Y",
+        "+Z",
+        "-Z"
+      ]
+    },
+    "blockType": {
+      "enum": [
+        "Core",
+        "Hull",
+        "Frame",
+        "Thruster",
+        "VectorThruster",
+        "Balloon",
+        "Wing",
+        "ControlSurface",
+        "Gyro",
+        "Fuel"
+      ]
+    },
+    "nullableString": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "assetId",
+        "kind",
+        "model",
+        "bindings",
+        "materialPolicy"
+      ],
+      "properties": {
+        "assetId": {
+          "$ref": "#/$defs/stableId"
+        },
+        "kind": {
+          "const": "blockVisual"
+        },
+        "model": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "path",
+            "unitMeters",
+            "forwardAxis",
+            "upAxis"
+          ],
+          "properties": {
+            "path": {
+              "$ref": "#/$defs/safePackPath"
+            },
+            "unitMeters": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "forwardAxis": {
+              "$ref": "#/$defs/axis"
+            },
+            "upAxis": {
+              "$ref": "#/$defs/axis"
+            }
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/notGameplayPropertyName"
+          }
+        },
+        "bindings": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "blockTypes",
+            "nodes",
+            "clips"
+          ],
+          "properties": {
+            "blockTypes": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/blockType"
+              }
+            },
+            "nodes": {
+              "type": "object",
+              "required": [
+                "visualRoot"
+              ],
+              "properties": {
+                "visualRoot": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "flame": {
+                  "$ref": "#/$defs/nullableString"
+                },
+                "flameGlow": {
+                  "$ref": "#/$defs/nullableString"
+                },
+                "gimbalAssembly": {
+                  "$ref": "#/$defs/nullableString"
+                },
+                "controlFlapPivot": {
+                  "$ref": "#/$defs/nullableString"
+                }
+              },
+              "additionalProperties": false,
+              "propertyNames": {
+                "$ref": "#/$defs/notGameplayPropertyName"
+              }
+            },
+            "clips": {
+              "type": "object",
+              "properties": {
+                "idle": {
+                  "$ref": "#/$defs/nullableString"
+                },
+                "thrust": {
+                  "$ref": "#/$defs/nullableString"
+                },
+                "damage": {
+                  "$ref": "#/$defs/nullableString"
+                }
+              },
+              "additionalProperties": false,
+              "propertyNames": {
+                "$ref": "#/$defs/notGameplayPropertyName"
+              }
+            }
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/notGameplayPropertyName"
+          }
+        },
+        "materialPolicy": {
+          "type": "object",
+          "properties": {
+            "pixelated": {
+              "type": "boolean"
+            },
+            "alpha": {
+              "enum": [
+                "auto",
+                "opaque",
+                "mask",
+                "blend",
+                "mask-or-blend",
+                "from-gltf"
+              ]
+            },
+            "doubleSided": {
+              "enum": [
+                "from-gltf",
+                "force",
+                "never",
+                true,
+                false
+              ]
+            },
+            "materialOverrides": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "materialName"
+                ],
+                "properties": {
+                  "materialName": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "alpha": {
+                    "enum": [
+                      "auto",
+                      "opaque",
+                      "mask",
+                      "blend",
+                      "mask-or-blend",
+                      "from-gltf"
+                    ]
+                  },
+                  "doubleSided": {
+                    "enum": [
+                      "from-gltf",
+                      "force",
+                      "never",
+                      true,
+                      false
+                    ]
+                  }
+                },
+                "additionalProperties": true,
+                "propertyNames": {
+                  "$ref": "#/$defs/notGameplayPropertyName"
+                }
+              }
+            }
+          },
+          "additionalProperties": true,
+          "propertyNames": {
+            "$ref": "#/$defs/notGameplayPropertyName"
+          }
+        }
+      },
+      "propertyNames": {
+        "$ref": "#/$defs/notGameplayPropertyName"
+      }
+    },
+    "notGameplayPropertyName": {
+      "not": {
+        "pattern": "^(?:[mM][aA][sS][sS]|[fF][oO][rR][cC][eE]|[fF][uU][eE][lL][rR][aA][tT][eE]|[dD][uU][rR][aA][bB][iI][lL][iI][tT][yY]|[dD][rR][aA][gG][aA][rR][eE][aA]|[wW][iI][nN][gG][aA][rR][eE][aA]|[cC][oO][lL][lL][iI][dD][eE][rR]|[cC][oO][lL][lL][iI][sS][iI][oO][nN]|[cC][oO][nN][tT][rR][oO][lL][aA][xX][iI][sS]|[bB][lL][uU][eE][pP][rR][iI][nN][tT]|[cC][rR][aA][fF][tT][mM][oO][dD][eE][lL]|[mM][aA][sS][sS][kK][gG]|[pP][hH][yY][sS][iI][cC][sS]|[gG][aA][mM][eE][pP][lL][aA][yY])$"
+      }
+    }
+  },
+  "propertyNames": {
+    "$ref": "#/$defs/notGameplayPropertyName"
+  }
+}

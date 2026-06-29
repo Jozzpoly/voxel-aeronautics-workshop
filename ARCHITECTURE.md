@@ -34,7 +34,11 @@ A block's grid coordinates are local to its Assembly Space. Runtime world pose i
 
 `foundation.catalog` owns gameplay block data such as mass, force, fuel, durability, drag and descriptions. `game.module-visual-factory` and `game.scene-environment` provide procedural Three.js fallback visuals.
 
-Future model, texture and animation packs must resolve through a separate visual asset registry. Missing visual assets fall back to procedural visuals. Asset packs are not Blueprint payloads and are not loaded from localStorage.
+Model, texture and animation packs resolve through `game.visual-asset-registry` and `game.visual-asset-loader`. Missing, invalid or unloadable visual assets fall back to procedural visuals. Loader failures are non-fatal and rejected model loads are retryable. Asset packs are not Blueprint payloads and are not loaded from localStorage.
+
+Blockbench Import Studio lives under `tools/blockbench_import_studio/` as an authoring/export tool. The game runtime does not import Studio code. Studio output enters the renderer only through validated `VAW_VISUAL_ASSET_PACK_V1` manifests listed by `assets/visual_packs/installed_visual_packs.json`. M4F/M4G fast iteration uses the first indexed pack, `assets/visual_packs/local_working_visuals/`, updates one block visual in place through the local development server, and can request same-origin renderer reload after install.
+
+Imported glTF content is mounted under the stable VAW visual root from `game.module-visual-factory`. M4G keeps `vawHitProxy` raycastable but render-invisible by default, with a debug toggle for diagnostics. M4F/M4G mount the manifest `bindings.nodes.visualRoot` subtree when present, deep-clone renderer resources per imported instance, and apply `unitMeters`, axis metadata, optional transform and material policy only to the imported child. Material policy supports `auto` plus per-material alpha overrides for mixed opaque/flame assets. It must never replace `root.userData.isVoxelRoot`, `vawHitProxy`, hit-testing, damage/debris ownership, physics bodies or flight lifecycle.
 
 ## Runtime health
 

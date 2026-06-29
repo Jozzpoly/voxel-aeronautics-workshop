@@ -15,10 +15,25 @@ ZIP_NAME = 'Voxel_Aeronautics_Workshop_Workbench_Foundation.zip'
 MANIFEST_NAME = 'SOURCE_MANIFEST.json'
 ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_WORKBENCH_FOUNDATION_READY_TO_PUSH'
 IGNORED_ARCHIVE_PARTS = {'dist', 'release', '.agent-validation', '__pycache__', '.pytest_cache', '.git', 'node_modules'}
+
+
+def files_under(relative_root: Path) -> tuple[Path, ...]:
+    root = ROOT / relative_root
+    if not root.exists():
+        return tuple()
+    ignored = {'__pycache__', '.pytest_cache'}
+    return tuple(
+        path.relative_to(ROOT)
+        for path in sorted(root.rglob('*'))
+        if path.is_file() and not any(part in ignored for part in path.relative_to(root).parts)
+    )
+
+
 APP_SOURCES = (
     Path('src/foundation/kernel.js'),
     Path('src/foundation/config.js'),
     Path('src/foundation/catalog.js'),
+    Path('src/foundation/visual_asset_manifest.js'),
     Path('src/foundation/orientation.js'),
     Path('src/foundation/blueprint.js'),
     Path('src/foundation/diagnostics.js'),
@@ -52,6 +67,10 @@ APP_SOURCES = (
     Path('src/game/camera_controller.js'),
     Path('src/game/build_targeting.js'),
     Path('src/game/orientation_service.js'),
+    Path('src/game/visual_asset_registry.js'),
+    Path('src/game/visual_asset_loader.js'),
+    Path('src/game/visual_asset_dev_controls.js'),
+    Path('src/game/visual_runtime_adapter.js'),
     Path('src/game/module_visual_factory.js'),
     Path('src/game/assembly_space_controller.js'),
     Path('src/game/engineering_analysis.js'),
@@ -65,17 +84,25 @@ APP_SOURCES = (
     Path('src/foundation/bootstrap.js'),
     Path('src/game.js'),
 )
+VISUAL_PACK_SOURCES = files_under(Path('assets/visual_packs'))
 MANIFEST_INPUTS = (
     Path('index.html'),
     Path('tailwind.generated.css'),
     Path('styles.css'),
     Path('vendor/three-r128/three.min.js'),
+    Path('vendor/three-r128/GLTFLoader.js'),
     Path('vendor/cannon-0.6.2/cannon.min.js'),
+    *VISUAL_PACK_SOURCES,
     Path('tools/generate_tailwind_css.js'),
     Path('package.json'),
     Path('tools/build_release.py'),
     Path('tools/verify_release.py'),
     *APP_SOURCES,
+)
+STUDIO_TOOL_SOURCES = files_under(Path('tools/blockbench_import_studio'))
+MANIFEST_INPUTS = (
+    *MANIFEST_INPUTS,
+    *STUDIO_TOOL_SOURCES,
 )
 LOADER_BEGIN = '  <!-- BEGIN APP LOADER -->'
 LOADER_END = '  <!-- END APP LOADER -->'
@@ -102,6 +129,7 @@ def source_manifest(root: Path = ROOT) -> dict:
         'appVersion': APP_VERSION,
         'entrypoint': 'index.html',
         'embeddedApplicationSources': [path.as_posix() for path in APP_SOURCES],
+        'studioToolSources': [path.as_posix() for path in STUDIO_TOOL_SOURCES],
         'files': files,
     }
 
@@ -141,6 +169,7 @@ def build_single_html(root: Path = ROOT) -> str:
     custom_css = (root / 'styles.css').read_text(encoding='utf-8').rstrip()
     css = generated_css + '\n\n' + custom_css
     three = (root / 'vendor/three-r128/three.min.js').read_text(encoding='utf-8').rstrip()
+    gltf_loader = (root / 'vendor/three-r128/GLTFLoader.js').read_text(encoding='utf-8').rstrip()
     cannon = (root / 'vendor/cannon-0.6.2/cannon.min.js').read_text(encoding='utf-8').rstrip()
     manifest = manifest_text(root).encode('utf-8')
     provenance = (
@@ -168,6 +197,14 @@ def build_single_html(root: Path = ROOT) -> str:
     html = html.replace(
         three_script,
         f'<script>\n/* BEGIN EMBEDDED THREE R128 */\n{three}\n/* END EMBEDDED THREE R128 */\n  </script>',
+        1,
+    )
+    gltf_script = '<script src="vendor/three-r128/GLTFLoader.js"></script>'
+    if gltf_script not in html:
+        raise RuntimeError('Expected local GLTFLoader script was not found in index.html')
+    html = html.replace(
+        gltf_script,
+        f'<script>\n/* BEGIN EMBEDDED THREE GLTFLoader R128 */\n{gltf_loader}\n/* END EMBEDDED THREE GLTFLoader R128 */\n  </script>',
         1,
     )
     cannon_script = '<script src="vendor/cannon-0.6.2/cannon.min.js"></script>'

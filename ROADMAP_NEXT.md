@@ -14,7 +14,11 @@
 - Add side dock stacking and a dockable flight mission panel so mission/contract information remains supporting UI.
 - Refresh documentation authority and archive stale root-level reports.
 - Authoring UX Recovery Milestone 1 is implemented locally: runtime mass telemetry, launcher Flight Focus, panel-safe launcher z-order, camera modes, below-craft orbit and Shift+middle pan.
-- Define the visual asset boundary before Blockbench importer work.
+- Visual Asset Pack M4B is implemented locally: a validated glTF block visual can load as a renderer-only child of the stable VAW root/proxy, with procedural fallback preserved.
+- Visual Asset Pack M4C/M4D is implemented locally: Studio is integrated under `tools/blockbench_import_studio/`, packs are installed through `assets/visual_packs/installed_visual_packs.json`, and the loader supports replacement coverage for every current Catalog block type.
+- Visual Asset Pack M4E is implemented locally: imported glTF instances deep-clone renderer resources, failed model loads are retryable, `visualRoot` mounts a real subtree with full-scene fallback, a real Blockbench thruster fixture is installed for source-tree smoke, and Studio inference no longer silently defaults to `Thruster`.
+- Visual Asset Pack M4F is implemented locally: one `local_working_visuals` pack supports repeated in-place block visual updates from Studio, and the game can reload renderer-only visual assets without restart.
+- Visual Asset Pack M4G is implemented locally: imported hit proxies are render-invisible by default with a dev debug toggle, Studio can request same-origin game reload after install, and material policy supports `auto` plus per-material alpha overrides for mixed opaque/flame assets.
 
 ## Next: Placement and Orientation Clarity
 
@@ -27,7 +31,7 @@ Define stable endpoints as `{blockId, portId}` after the Workbench Foundation mi
 ## Later
 
 - Gate E - deterministic control kernel and runtime commands by neutral IDs.
-- VisualAssetRegistry, asset packs and Blockbench import workflow after the boundary is implemented deliberately.
+- User-facing visual pack manager, permanent multi-pack install UX, runtime animation semantics and polished multi-asset authoring workflow after the folder/index workflow and real-asset fidelity are proven.
 - Broader content/gameplay only after Gate D/E contracts.
 
 ## Deferred blockers

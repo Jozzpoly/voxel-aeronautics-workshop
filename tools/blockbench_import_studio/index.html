@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VAW Blockbench Import Studio — Workbench Shell</title>
+  <link rel="stylesheet" href="app/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>VAW Blockbench Import Studio <span>M4A Visual Asset Contract v0.7</span></h1>
+      <p>Studio jest import-labem do produkowania i walidowania renderer-facing Visual Asset Packów. Preview pozostaje liberalne; export do VAW blokuje kontrakt VAW_VISUAL_ASSET_PACK_V1.</p>
+    </div>
+    <div class="topbar-actions">
+      <button id="toggle-left-panel" title="Zwiń / pokaż import i Project Files">Left files/import</button>
+      <button id="toggle-right-panel" title="Zwiń / pokaż inspector">Right inspector</button>
+      <button id="toggle-bottom-panel" title="Zwiń / pokaż log viewera">Bottom log</button>
+      <button id="reset-layout" class="secondary" title="Reset layout do domyślnych rozmiarów">Reset layout</button>
+      <a class="small-link" href="minimal_viewer.html">Nagi minimal viewer</a>
+    </div>
+  </header>
+
+  <main class="layout workbench-layout" id="workbench-layout">
+    <section class="panel left-panel" id="left-panel">
+      <h2>Import <span class="badge ready">READY</span></h2>
+      <div id="dropzone" class="dropzone" tabindex="0">
+        <strong>Wrzuć eksport Blockbench</strong>
+        <span>.gltf + .bin + tekstury, najlepiej cały folder lub komplet plików naraz</span>
+      </div>
+      <div class="button-row wrap">
+        <label class="button primary">Wybierz pliki<input id="model-input" type="file" multiple hidden /></label>
+        <label class="button">Wybierz folder<input id="folder-input" type="file" multiple webkitdirectory hidden /></label>
+        <button id="load-uv-sample">UV checker glTF</button>
+        <button id="load-offset-sample">Offset/fit glTF</button>
+        <button id="load-regression-sample">Embedded alpha/anim</button>
+        <button id="load-visual-pack-sample">V1 preview pack</button>
+        <button id="reset" class="danger">Reset importu</button>
+      </div>
+
+      <h2>Viewer / import status <span class="badge ready">READY</span></h2>
+      <div id="viewer-status" class="status neutral">Gotowy do importu</div>
+      <div id="viewer-facts" class="facts"></div>
+
+      <h2>Project Files <span class="badge ready">READY</span></h2>
+      <p class="note compact-note">Pokazuje wszystkie załadowane pliki, także unused. Unused to neutralne ostrzeżenie, nie błąd importu.</p>
+      <div class="file-filter-row">
+        <input id="project-files-search" type="search" placeholder="Szukaj nazwy / ścieżki…" />
+        <select id="project-files-category-filter" title="Filtr kategorii plików">
+          <option value="all">all categories</option>
+          <option value="model">model</option>
+          <option value="buffer">buffer</option>
+          <option value="texture">texture</option>
+          <option value="sidecar">manifest/sidecar</option>
+          <option value="unknown">unknown</option>
+        </select>
+        <select id="project-files-status-filter" title="Filtr statusu plików">
+          <option value="all">all statuses</option>
+          <option value="main model">main model</option>
+          <option value="dependency used">dependency used</option>
+          <option value="unused">unused</option>
+          <option value="missing">missing</option>
+          <option value="ambiguous">ambiguous</option>
+          <option value="embedded">embedded</option>
+          <option value="external">external</option>
+        </select>
+        <button id="clear-file-filters" class="secondary">Clear</button>
+      </div>
+      <div id="project-files-summary" class="facts"></div>
+      <div id="project-files-list" class="scroll-list tall empty">Brak plików.</div>
+
+      <h2>glTF Dependencies <span class="badge ready">READY</span></h2>
+      <div id="dependency-list" class="scroll-list empty">Brak modelu.</div>
+
+      <h2>Animation preview <span class="badge ready">READY</span></h2>
+      <div class="button-row compact">
+        <select id="animation-select"></select>
+        <button id="play-animation">Play</button>
+        <button id="pause-animation">Pause</button>
+        <button id="stop-animation">Stop</button>
+      </div>
+      <div class="button-row compact animation-controls-row">
+        <label class="inline-control"><input id="animation-loop" type="checkbox" checked /> loop</label>
+        <label class="inline-control">speed <select id="animation-speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select></label>
+      </div>
+      <div class="animation-scrub-row">
+        <input id="animation-time" type="range" min="0" max="1" step="0.01" value="0" disabled />
+        <span id="animation-time-label">0.00s</span>
+      </div>
+      <div id="animation-list" class="scroll-list empty">Brak modelu.</div>
+    </section>
+
+    <div id="left-splitter" class="splitter vertical-splitter" role="separator" aria-label="Resize left panel"></div>
+
+    <section class="viewer-column" id="center-panel">
+      <div class="viewer-toolbar">
+        <button id="fit-view" title="F: zachowuje orientację kamery i kadruje aktualny model">F — Frame/Fit</button>
+        <button id="reset-camera" title="R: wraca do domyślnej orientacji i dystansu dla aktualnego modelu">R — Reset camera</button>
+        <span id="viewer-hint">MMB obrót · Shift+MMB pan · scroll zoom · LPM/PPM wolne</span>
+      </div>
+      <div class="viewer-options">
+        <label><input id="toggle-grid" type="checkbox" checked /> grid <span class="badge ready">READY</span></label>
+        <label><input id="toggle-axes" type="checkbox" checked /> osie <span class="badge ready">READY</span></label>
+        <label><input id="toggle-bounds" type="checkbox" /> box <span class="badge ready">READY</span></label>
+        <label><input id="pixel-textures" type="checkbox" checked /> pixel textures <span class="badge ready">READY</span></label>
+        <label><input id="force-double-sided" type="checkbox" checked /> diagnostic double-sided <span class="badge partial">PARTIAL</span></label>
+        <label><input id="checker-material" type="checkbox" /> checker override <span class="badge experimental">EXPERIMENTAL</span></label>
+      </div>
+      <div id="viewer" class="viewer" tabindex="0"></div>
+      <div id="bottom-splitter" class="splitter horizontal-splitter" role="separator" aria-label="Resize bottom log"></div>
+      <div class="event-panel" id="bottom-log">
+        <h2>Log viewera <span class="badge ready">READY</span></h2>
+        <pre id="event-log">brak eventów</pre>
+      </div>
+    </section>
+
+    <div id="right-splitter" class="splitter vertical-splitter" role="separator" aria-label="Resize right panel"></div>
+
+    <section class="panel right-panel" id="right-panel">
+      <details class="diagnostic-drawer">
+        <summary>Texture / mesh diagnostics</summary>
+      <h2>Texture diagnostic <span class="badge ready">READY</span></h2>
+      <div id="texture-summary" class="facts"></div>
+      <div id="texture-list" class="scroll-list empty">Brak modelu.</div>
+
+      <h2>Mesh / material diagnostic <span class="badge partial">PARTIAL</span></h2>
+      <div id="mesh-list" class="scroll-list empty">Brak modelu.</div>
+      </details>
+
+      <h2>Visual Asset Pack V1 — export gate <span class="badge ready">READY</span></h2>
+      <p class="note">To nie steruje widocznością modelu. Preview może działać bez bindings, ale export do VAW wymaga poprawnego manifestu V1.</p>
+      <div id="vaw-status" class="status neutral">Brak manifestu V1 — preview nadal dozwolone</div>
+      <div id="install-status" class="status neutral">Local install waits for a model, block type and visualRoot.</div>
+      <details class="manifest-status-drawer">
+        <summary>Manifest status</summary>
+        <div id="sidecar-status" class="facts"></div>
+      </details>
+      <div class="manifest-fields">
+        <label>block type
+          <select id="vaw-block-type">
+            <option value="">choose explicitly</option>
+            <option value="Core">Core</option>
+            <option value="Hull">Hull</option>
+            <option value="Frame">Frame</option>
+            <option value="Thruster">Thruster</option>
+            <option value="VectorThruster">VectorThruster</option>
+            <option value="Balloon">Balloon</option>
+            <option value="Wing">Wing</option>
+            <option value="ControlSurface">ControlSurface</option>
+            <option value="Gyro">Gyro</option>
+            <option value="Fuel">Fuel</option>
+          </select>
+        </label>
+        <label>visualRoot
+          <select id="vaw-node-visual-root-picker"></select>
+          <input id="vaw-node-visual-root" type="text" placeholder="/Root or node path" />
+        </label>
+        <button id="vaw-use-suggested-root" type="button">Use suggested root <span class="badge ready">READY</span></button>
+        <label>flame <input id="vaw-node-flame" type="text" placeholder="optional" /></label>
+        <label>flameGlow <input id="vaw-node-flame-glow" type="text" placeholder="optional" /></label>
+        <label>gimbalAssembly <input id="vaw-node-gimbal" type="text" placeholder="optional" /></label>
+        <label>controlFlapPivot <input id="vaw-node-control-flap" type="text" placeholder="optional" /></label>
+        <label>position X <input id="vaw-transform-pos-x" type="number" step="0.01" value="0" /></label>
+        <label>position Y <input id="vaw-transform-pos-y" type="number" step="0.01" value="0" /></label>
+        <label>position Z <input id="vaw-transform-pos-z" type="number" step="0.01" value="0" /></label>
+        <label>rotation X <input id="vaw-transform-rot-x" type="number" step="1" value="0" /></label>
+        <label>rotation Y <input id="vaw-transform-rot-y" type="number" step="1" value="0" /></label>
+        <label>rotation Z <input id="vaw-transform-rot-z" type="number" step="1" value="0" /></label>
+        <label>scale X <input id="vaw-transform-scale-x" type="number" step="0.01" value="1" /></label>
+        <label>scale Y <input id="vaw-transform-scale-y" type="number" step="0.01" value="1" /></label>
+        <label>scale Z <input id="vaw-transform-scale-z" type="number" step="0.01" value="1" /></label>
+        <div class="button-row wrap transform-actions">
+          <button type="button" data-vaw-rotate-axis="x" data-vaw-rotate-delta="-90">X -90</button>
+          <button type="button" data-vaw-rotate-axis="x" data-vaw-rotate-delta="90">X +90</button>
+          <button type="button" data-vaw-rotate-axis="y" data-vaw-rotate-delta="-90">Y -90</button>
+          <button type="button" data-vaw-rotate-axis="y" data-vaw-rotate-delta="90">Y +90</button>
+          <button type="button" data-vaw-rotate-axis="z" data-vaw-rotate-delta="-90">Z -90</button>
+          <button type="button" data-vaw-rotate-axis="z" data-vaw-rotate-delta="90">Z +90</button>
+          <button id="vaw-transform-center" type="button">Center</button>
+          <button id="vaw-transform-fit" type="button">Fit 1 block</button>
+          <button id="vaw-transform-reset" type="button">Reset transform</button>
+        </div>
+        <label>global alpha default
+          <select id="vaw-material-alpha">
+            <option value="auto">auto</option>
+            <option value="from-gltf">from-gltf</option>
+            <option value="blend">blend</option>
+            <option value="mask">mask</option>
+            <option value="opaque">opaque</option>
+          </select>
+        </label>
+        <label>double sided
+          <select id="vaw-material-double-sided">
+            <option value="from-gltf">from-gltf</option>
+            <option value="force">force</option>
+            <option value="never">never</option>
+          </select>
+        </label>
+        <label class="inline-check"><input id="vaw-material-pixelated" type="checkbox" checked /> pixelated</label>
+        <label class="wide-field material-overrides-raw">advanced material override state
+          <textarea id="vaw-material-overrides" spellcheck="false" placeholder="Body=opaque&#10;Nozzle=opaque&#10;Flame=blend"></textarea>
+        </label>
+        <div class="button-row wrap material-actions">
+          <button id="vaw-material-use-doctor" type="button">Use Material Doctor policy <span class="badge ready">READY</span></button>
+          <button id="vaw-material-clear-overrides" type="button">Clear overrides</button>
+          <button id="vaw-material-reset-auto" type="button">Reset to auto</button>
+        </div>
+        <div id="vaw-material-override-list" class="material-override-list scroll-list empty">Load a model to edit material overrides.</div>
+        <label class="inline-check wide-field"><input id="vaw-fire-split-enabled" type="checkbox" /> split fire/glow material on install</label>
+        <label class="wide-field">fire/glow node paths for blend material
+          <textarea id="vaw-fire-split-nodes" spellcheck="false" placeholder="/Root/flame&#10;/Root/flameGlow"></textarea>
+        </label>
+        <button id="vaw-fire-split-suggest" type="button">Suggest fire nodes</button>
+        <div id="vaw-material-doctor" class="facts"></div>
+        <label class="wide-field">install endpoint
+          <input id="vaw-install-endpoint" type="url" placeholder="auto: integrated VAW server" />
+        </label>
+        <button id="vaw-install-probe" type="button">Check install endpoint <span class="badge ready">READY</span></button>
+        <button id="install-block-visual" class="primary">Install / Update Block Visual <span class="badge ready">READY</span></button>
+      </div>
+      <details class="advanced-json">
+        <summary>Advanced manifest and export tools</summary>
+        <textarea id="sidecar-json" spellcheck="false" placeholder="Opcjonalny VAW_VISUAL_ASSET_PACK_V1 manifest JSON. Preview działa bez niego, ale export packa wymaga visualRoot, znanych blockTypes i istniejących bindings."></textarea>
+      <div class="button-row wrap advanced-actions">
+        <button id="infer-sidecar" title="Generuje minimalny manifest V1 preview/test asset na podstawie node'ów i clipów">Infer V1 manifest <span class="badge ready">READY</span></button>
+        <button id="format-sidecar">Format JSON <span class="badge ready">READY</span></button>
+        <button id="apply-sidecar">Apply manifest <span class="badge ready">READY</span></button>
+        <button id="validate-vaw">Validate V1 Contract <span class="badge ready">READY</span></button>
+        <button id="download-sidecar">Download V1 Manifest <span class="badge ready">READY</span></button>
+        <button id="download-debug-package" class="primary">Export Debug Package <span class="badge ready">READY</span></button>
+        <button id="download-package">Export Visual Asset Pack V1 <span class="badge ready">READY</span></button>
+      </div>
+      </details>
+      <div id="diagnostics" class="scroll-list empty">Brak diagnostyki.</div>
+    </section>
+  </main>
+
+  <script src="vendor/three.min.js"></script>
+  <script src="vendor/GLTFLoader.js"></script>
+  <script src="src/file_bundle_resolver.js"></script>
+  <script src="src/project_files_report.js"></script>
+  <script src="src/animation_report.js"></script>
+  <script src="src/layout_manager.js"></script>
+  <script src="src/viewport_controls.js"></script>
+  <script src="src/fit_camera.js"></script>
+  <script src="src/texture_report.js"></script>
+  <script src="src/gltf_material_tools.js"></script>
+  <script src="src/minimal_gltf_viewer.js"></script>
+  <script src="src/vaw_validator.js"></script>
+  <script src="src/visual_asset_pack_v1.js"></script>
+  <script src="src/package_exporter.js"></script>
+  <script src="app/main.js"></script>
+</body>
+</html>

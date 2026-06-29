@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Voxel Aeronautics Workshop — Workbench Foundation</title>
   <script src="vendor/three-r128/three.min.js"></script>
+  <script src="vendor/three-r128/GLTFLoader.js"></script>
   <script src="vendor/cannon-0.6.2/cannon.min.js"></script>
   <link rel="stylesheet" href="tailwind.generated.css" />
   <link rel="stylesheet" href="styles.css" />
@@ -33,6 +34,8 @@
       <button class="workspace-tab workspace-tab-muted" type="button" data-workspace-preset="beginner">BUILD PRESET</button>
       <button class="workspace-tab workspace-tab-muted" type="button" data-workspace-preset="flight">FLIGHT HUD</button>
       <button id="btn-workspace-reset" class="workspace-tab workspace-tab-muted" type="button">RESET LAYOUT</button>
+      <button id="btn-reload-visual-assets" class="workspace-tab workspace-tab-muted" type="button" title="Reload renderer-only visual assets without restarting">RELOAD VISUALS</button>
+      <button id="btn-visual-debug-toggle" class="workspace-tab workspace-tab-muted" type="button" title="Show renderer-only visual debug hit proxies" aria-pressed="false">VISUAL DEBUG OFF</button>
     </div>
 
     <div id="hud-content">
@@ -478,6 +481,7 @@
         'src/foundation/kernel.js',
         'src/foundation/config.js',
         'src/foundation/catalog.js',
+        'src/foundation/visual_asset_manifest.js',
         'src/foundation/orientation.js',
         'src/foundation/blueprint.js',
         'src/foundation/diagnostics.js',
@@ -511,6 +515,10 @@
         'src/game/camera_controller.js',
         'src/game/build_targeting.js',
         'src/game/orientation_service.js',
+          'src/game/visual_asset_registry.js',
+          'src/game/visual_asset_loader.js',
+          'src/game/visual_asset_dev_controls.js',
+          'src/game/visual_runtime_adapter.js',
         'src/game/module_visual_factory.js',
         'src/game/assembly_space_controller.js',
         'src/game/engineering_analysis.js',

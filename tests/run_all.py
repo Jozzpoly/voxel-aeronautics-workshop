@@ -8,6 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 os.environ['PYTHONDONTWRITEBYTECODE'] = '1'
+os.environ['PYTHON'] = sys.executable
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(ROOT / 'tools'))
 from build_release import APP_SOURCES  # noqa: E402
@@ -23,6 +24,12 @@ def main() -> None:
         run('node', '--check', str(relative))
     run(sys.executable, 'tests/static_check.py')
     run('node', 'tests/test_foundation.js')
+    run('node', 'tests/test_visual_asset_manifest.js')
+    run('node', 'tests/test_visual_asset_registry.js')
+    run('node', 'tests/test_visual_asset_loader.js')
+    run('node', 'tests/test_visual_asset_dev_controls.js')
+    run('node', 'tests/test_blockbench_import_studio_integration.js')
+    run(sys.executable, 'tests/test_local_visual_pack_install.py')
     run('node', 'tests/test_mission_evaluator.js')
     run('node', 'tests/test_aerostatics.js')
     run('node', 'tests/test_runtime_physics.js')

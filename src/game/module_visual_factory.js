@@ -2,24 +2,34 @@
   'use strict';
 
   window.VAW.define('game.module-visual-factory', ['game.orientation-service'], OrientationService => {
-    function create({ THREE = window.THREE, sharedGeometry, cloneMaterial } = {}) {
-      if (!THREE?.Mesh || !sharedGeometry || typeof cloneMaterial !== 'function') {
+    function create(options = {}) {
+      const { THREE = window.THREE, sharedGeometry, cloneMaterial, visualAssetRegistry = null } = options;
+      if (!THREE?.Mesh || !THREE?.Group || !sharedGeometry || typeof cloneMaterial !== 'function') {
         throw new TypeError('Module visual factory requires THREE, shared geometry, and cloneMaterial.');
       }
       const orientation = OrientationService.create({ THREE });
       const { normalizeOrientationId, partUsesOrientation, getModuleBasis } = orientation;
 
-      function makeNonRaycastableChildren(root) {
-        root.traverse(object => { if (object !== root) object.raycast = () => {}; });
+      function makeNonRaycastableChildren(root, raycastableProxy) {
+        root.traverse(object => {
+          if (object !== raycastableProxy) object.raycast = () => {};
+        });
       }
 
       function createModuleVisual(type, orientation, ghostMode = false) {
-        const root = new THREE.Mesh(sharedGeometry, cloneMaterial(type));
-        root.castShadow = true;
-        root.receiveShadow = true;
+        const visualAsset = visualAssetRegistry?.assetForBlockType?.(type) || null;
+        const root = new THREE.Group();
+        const proxy = new THREE.Mesh(sharedGeometry, cloneMaterial(type));
+        proxy.name = 'vawHitProxy';
+        proxy.castShadow = true;
+        proxy.receiveShadow = true;
+        proxy.userData.isVoxelHitProxy = true;
+        root.add(proxy);
         root.userData.isVoxelRoot = true;
         root.userData.type = type;
         root.userData.orientation = normalizeOrientationId(orientation);
+        root.userData.visualAssetId = visualAsset?.assetId || null;
+        root.userData.visualAssetStatus = visualAsset ? 'registered-fallback' : 'procedural-fallback';
         root.scale.set(0.96, 0.96, 0.96);
         if (partUsesOrientation(type)) {
           root.quaternion.copy(getModuleBasis(orientation).quaternion);
@@ -28,8 +38,8 @@
         }
 
         if (ghostMode) {
-          root.material.transparent = true;
-          root.material.opacity = 0.52;
+          proxy.material.transparent = true;
+          proxy.material.opacity = 0.52;
         }
 
         if (type === 'Core') {
@@ -222,7 +232,7 @@
           root.add(cap);
         }
 
-        makeNonRaycastableChildren(root);
+        makeNonRaycastableChildren(root, proxy);
         return root;
       }
 

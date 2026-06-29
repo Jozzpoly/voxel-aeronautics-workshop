@@ -1,0 +1,25 @@
+{
+  "viewerOk": true,
+  "packReady": true,
+  "vawReady": true,
+  "diagnostics": [
+    {
+      "domain": "visual-asset-pack-v1",
+      "severity": "warning",
+      "code": "gltf.duplicateNodeNames",
+      "message": "Duplicate node names detected: bone. Preview is allowed, but VAW export requires stable paths for duplicated bindings."
+    }
+  ],
+  "facts": {
+    "format": "VAW_VISUAL_ASSET_PACK_V1",
+    "packId": "test_anim_preview_visual_pack",
+    "version": "0.1.0-preview",
+    "assetCount": 1,
+    "nodePathCount": 6,
+    "clipCount": 1,
+    "visualRoot": "/Bone",
+    "blockTypes": [
+      "Thruster"
+    ]
+  }
+}

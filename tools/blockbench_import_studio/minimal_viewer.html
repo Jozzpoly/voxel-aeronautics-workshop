@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VAW Minimal glTF Viewer</title>
+  <link rel="stylesheet" href="app/styles.css" />
+</head>
+<body class="minimal-body">
+  <header class="topbar">
+    <div>
+      <h1>VAW Minimal glTF Viewer <span>no VAW semantics</span></h1>
+      <p>Nagi proof: tylko `.gltf + .bin + tekstury`, kamera, fit i render loop.</p>
+    </div>
+    <a class="small-link" href="index.html">Powrót do Import Studio</a>
+  </header>
+  <main class="minimal-layout">
+    <section class="panel">
+      <div id="dropzone" class="dropzone" tabindex="0"><strong>Wrzuć komplet plików</strong><span>.gltf + .bin + tekstury</span></div>
+      <div class="button-row wrap">
+        <label class="button primary">Wybierz pliki<input id="model-input" type="file" multiple hidden /></label>
+        <label class="button">Wybierz folder<input id="folder-input" type="file" multiple webkitdirectory hidden /></label>
+        <button id="load-uv-sample">UV checker sample</button>
+        <button id="fit-view">F — Fit</button>
+        <button id="reset-camera">R — Reset kamera</button>
+      </div>
+      <div id="viewer-status" class="status neutral">Gotowy.</div>
+      <div id="viewer-facts" class="facts"></div>
+      <div id="dependency-list" class="scroll-list empty">Brak modelu.</div>
+    </section>
+    <section class="viewer-column minimal-viewer-column">
+      <div class="viewer-toolbar"><span id="viewer-hint">MMB obrót · Shift+MMB pan · scroll zoom · LPM/PPM wolne</span></div>
+      <div id="viewer" class="viewer" tabindex="0"></div>
+      <div class="event-panel"><pre id="event-log">brak eventów</pre></div>
+    </section>
+  </main>
+  <script src="vendor/three.min.js"></script>
+  <script src="vendor/GLTFLoader.js"></script>
+  <script src="src/file_bundle_resolver.js"></script>
+  <script src="src/viewport_controls.js"></script>
+  <script src="src/fit_camera.js"></script>
+  <script src="src/texture_report.js"></script>
+  <script src="src/minimal_gltf_viewer.js"></script>
+  <script src="app/main.js"></script>
+</body>
+</html>

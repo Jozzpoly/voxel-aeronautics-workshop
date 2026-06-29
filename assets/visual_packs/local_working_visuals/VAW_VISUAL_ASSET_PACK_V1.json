@@ -1,0 +1,230 @@
+{
+  "format": "VAW_VISUAL_ASSET_PACK_V1",
+  "packId": "local_working_visuals",
+  "version": "0.1.0-local.69",
+  "metadata": {
+    "status": "local-working-pack",
+    "authority": "visual-only",
+    "revision": 69,
+    "note": "Developer working pack for fast renderer-only visual iteration. It is not gameplay authority.",
+    "lastUpdatedBlockType": "VectorThruster"
+  },
+  "assets": [
+    {
+      "assetId": "local_hull_visual",
+      "kind": "blockVisual",
+      "model": {
+        "path": "models/blocks/hull/model.gltf",
+        "unitMeters": 1.0,
+        "forwardAxis": "+X",
+        "upAxis": "+Y",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotationDegrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        }
+      },
+      "bindings": {
+        "blockTypes": [
+          "Hull"
+        ],
+        "nodes": {
+          "visualRoot": "/hull",
+          "flame": null,
+          "flameGlow": null,
+          "gimbalAssembly": null,
+          "controlFlapPivot": null
+        },
+        "clips": {
+          "idle": null,
+          "thrust": null,
+          "damage": null
+        }
+      },
+      "materialPolicy": {
+        "pixelated": true,
+        "alpha": "auto",
+        "doubleSided": "from-gltf"
+      }
+    },
+    {
+      "assetId": "local_fuel_visual",
+      "kind": "blockVisual",
+      "model": {
+        "path": "models/blocks/fuel/model.gltf",
+        "unitMeters": 1.0,
+        "forwardAxis": "+X",
+        "upAxis": "+Y",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotationDegrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        }
+      },
+      "bindings": {
+        "blockTypes": [
+          "Fuel"
+        ],
+        "nodes": {
+          "visualRoot": "/fuel",
+          "flame": null,
+          "flameGlow": null,
+          "gimbalAssembly": null,
+          "controlFlapPivot": null
+        },
+        "clips": {
+          "idle": null,
+          "thrust": null,
+          "damage": null
+        }
+      },
+      "materialPolicy": {
+        "pixelated": true,
+        "alpha": "auto",
+        "doubleSided": "from-gltf"
+      }
+    },
+    {
+      "assetId": "local_thruster_visual",
+      "kind": "blockVisual",
+      "model": {
+        "path": "models/blocks/thruster/model.gltf",
+        "unitMeters": 1.0,
+        "forwardAxis": "+X",
+        "upAxis": "+Y",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotationDegrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        }
+      },
+      "bindings": {
+        "blockTypes": [
+          "Thruster"
+        ],
+        "nodes": {
+          "visualRoot": "/thuster_base_bone",
+          "flame": "thuster_fire",
+          "flameGlow": null,
+          "gimbalAssembly": null,
+          "controlFlapPivot": null
+        },
+        "clips": {
+          "idle": null,
+          "thrust": null,
+          "damage": null
+        }
+      },
+      "materialPolicy": {
+        "pixelated": true,
+        "alpha": "auto",
+        "doubleSided": "from-gltf",
+        "materialOverrides": [
+          {
+            "materialName": "material_0",
+            "alpha": "mask"
+          },
+          {
+            "materialName": "material_0__fire_blend",
+            "alpha": "blend"
+          }
+        ]
+      }
+    },
+    {
+      "assetId": "local_vector_thruster_visual",
+      "kind": "blockVisual",
+      "model": {
+        "path": "models/blocks/vector_thruster/model.gltf",
+        "unitMeters": 1.0,
+        "forwardAxis": "+X",
+        "upAxis": "+Y",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotationDegrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        }
+      },
+      "bindings": {
+        "blockTypes": [
+          "VectorThruster"
+        ],
+        "nodes": {
+          "visualRoot": "/thuster_base_bone",
+          "flame": "thuster_fire",
+          "flameGlow": null,
+          "gimbalAssembly": "thuster_nozzle",
+          "controlFlapPivot": null
+        },
+        "clips": {
+          "idle": null,
+          "thrust": null,
+          "damage": null
+        }
+      },
+      "materialPolicy": {
+        "pixelated": true,
+        "alpha": "auto",
+        "doubleSided": "from-gltf",
+        "materialOverrides": [
+          {
+            "materialName": "material_0",
+            "alpha": "mask"
+          },
+          {
+            "materialName": "material_0__fire_blend",
+            "alpha": "blend"
+          }
+        ]
+      }
+    }
+  ]
+}
