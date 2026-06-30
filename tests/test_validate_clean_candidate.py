@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -16,6 +19,40 @@ def load_module():
     assert spec and spec.loader
     spec.loader.exec_module(module)
     return module
+
+
+def assert_protected_staged_refusal(module) -> None:
+    original_argv = sys.argv[:]
+    originals = {
+        'root_dirty_paths': module.root_dirty_paths,
+        'staged_paths': module.staged_paths,
+        'staged_patch_bytes': module.staged_patch_bytes,
+        'unique_candidate_dir': module.unique_candidate_dir,
+    }
+
+    def fail_if_called(*_args, **_kwargs):
+        raise AssertionError('protected staged refusal must happen before candidate cloning or patch reads')
+
+    try:
+        sys.argv = [str(SCRIPT)]
+        module.root_dirty_paths = lambda: (['assets/visual_packs/local_working_visuals/VAW_VISUAL_ASSET_PACK_V1.json'], [])
+        module.staged_paths = lambda: ['assets/visual_packs/local_working_visuals/VAW_VISUAL_ASSET_PACK_V1.json']
+        module.staged_patch_bytes = fail_if_called
+        module.unique_candidate_dir = fail_if_called
+
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            code = module.main()
+        assert code == 2
+        payload = json.loads(stderr.getvalue())
+        assert payload['status'] == 'REFUSED'
+        assert payload['reason'] == 'protected visual-pack paths are staged'
+        assert payload['stagedProtectedPaths'] == ['assets/visual_packs/local_working_visuals/VAW_VISUAL_ASSET_PACK_V1.json']
+        assert payload['protectedRootDirty'] == ['assets/visual_packs/local_working_visuals/VAW_VISUAL_ASSET_PACK_V1.json']
+    finally:
+        sys.argv = original_argv
+        for name, value in originals.items():
+            setattr(module, name, value)
 
 
 def main() -> None:
@@ -56,6 +93,7 @@ def main() -> None:
     assert '--head-only' in result.stdout
     assert '--allow-unstaged' in result.stdout
     assert '--allow-protected-staged' in result.stdout
+    assert_protected_staged_refusal(module)
 
     print('validate_clean_candidate contract ok')
 
