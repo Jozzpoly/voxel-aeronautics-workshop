@@ -37,9 +37,16 @@ def expected_archive_names(root: Path, prefix: str, single_name: str) -> set[str
 
 assert '.agent-validation' in module.IGNORED_ARCHIVE_PARTS
 
-module.ensure_source_manifest(ROOT)
 manifest_path = ROOT / module.MANIFEST_NAME
-manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+expected_manifest_text = module.manifest_text(ROOT)
+actual_manifest_text = manifest_path.read_text(encoding='utf-8')
+assert actual_manifest_text == expected_manifest_text, (
+    'SOURCE_MANIFEST.json is stale. Regenerate it from a clean candidate; '
+    'if protected local visual work is dirty, validate release evidence with '
+    'tools/validate_clean_candidate.py instead of root npm test. The release-build '
+    'test must not update tracked provenance as a side effect.'
+)
+manifest = json.loads(actual_manifest_text)
 assert manifest['releaseId'] == module.RELEASE_ID
 assert manifest['appVersion'] == module.APP_VERSION
 for relative in module.MANIFEST_INPUTS:

@@ -21,6 +21,10 @@ def main() -> None:
     assert 'local_working_visuals' in helper and 'installed_visual_packs.json' in helper
     assert 'clone' in helper and 'apply' in helper, 'helper must validate a separate staged/HEAD candidate'
 
+    release_test = (ROOT / 'tests' / 'test_release_build.py').read_text(encoding='utf-8')
+    assert 'ensure_source_manifest(ROOT)' not in release_test, 'release-build test must not mutate root provenance'
+    assert 'SOURCE_MANIFEST.json is stale' in release_test
+
     agent_entrypoint = (ROOT / 'README_FOR_AGENTS.md').read_text(encoding='utf-8')
     assert 'validate_clean_candidate.py' in agent_entrypoint
     assert 'SOURCE_MANIFEST.json' in agent_entrypoint
