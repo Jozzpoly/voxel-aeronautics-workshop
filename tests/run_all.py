@@ -68,6 +68,8 @@ def main() -> None:
     run(sys.executable, 'tests/test_release_identity.py')
     run(sys.executable, 'tests/test_documentation_contract.py')
     run(sys.executable, 'tests/test_validation_runner.py')
+    run(sys.executable, 'tests/test_validate_clean_candidate.py')
+    run(sys.executable, 'tests/test_source_provenance_contract.py')
     run(sys.executable, 'tests/test_apply_agent_delivery_contract.py')
     run(sys.executable, 'tests/test_release_build.py')
     run('node', 'tests/startup_smoke.js', 'index.html', *(str(path) for path in APP_SOURCES))

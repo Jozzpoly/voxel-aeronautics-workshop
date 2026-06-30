@@ -220,6 +220,8 @@
     Object.freeze({ input: 'gimbalB', node: 'gimbalAssembly', axis: 'y', direction: 1 }),
     Object.freeze({ input: 'roll', node: 'gimbalAssembly', axis: 'x', direction: 1 }),
   ]);
+  const VECTOR_RIG_INPUTS = Object.freeze(['gimbalA', 'gimbalB', 'roll']);
+  const VECTOR_RIG_AXES = Object.freeze(['x', 'y', 'z']);
 
   function vectorRigFieldPrefix(input) {
     if (input === 'gimbalA') return 'vaw-vector-rig-gimbal-a';
@@ -243,6 +245,93 @@
         return { input: defaultChannel.input, node: 'gimbalAssembly', axis, direction };
       }),
     };
+  }
+
+  function currentVectorRigPreviewDiagnostics() {
+    const diagnostics = [];
+    const blockTypes = selectedBlockTypes();
+    const profile = currentVectorRigProfile();
+    const isVectorThruster = blockTypes.includes('VectorThruster');
+    if (!isVectorThruster) {
+      if (profile) {
+        diagnostics.push({
+          domain: 'vector-rig-preview',
+          severity: 'warning',
+          code: 'vectorRig.blockTypeMismatch',
+          message: 'VectorThruster renderer rig profile is only exported for VectorThruster block type. Disable it or choose VectorThruster.',
+        });
+      }
+      return diagnostics;
+    }
+    if (!profile) {
+      diagnostics.push({
+        domain: 'vector-rig-preview',
+        severity: 'info',
+        code: 'vectorRig.fallback',
+        message: 'No renderer rig profile is enabled. Runtime preview will use the safe legacy visual fallback for older packs.',
+      });
+      return diagnostics;
+    }
+
+    const nodes = currentNodeFields();
+    if (!nodes.gimbalAssembly) {
+      diagnostics.push({
+        domain: 'vector-rig-preview',
+        severity: 'error',
+        code: 'vectorRig.gimbalAssemblyMissing',
+        message: 'VectorThruster rig profile needs the optional gimbalAssembly node binding before export.',
+      });
+    }
+
+    const channels = Array.isArray(profile.channels) ? profile.channels : [];
+    let validChannels = 0;
+    for (const input of VECTOR_RIG_INPUTS) {
+      const channel = channels.find(item => item?.input === input);
+      if (!channel) {
+        diagnostics.push({
+          domain: 'vector-rig-preview',
+          severity: 'error',
+          code: 'vectorRig.channelMissing',
+          message: `VectorThruster rig profile is missing ${input}.`,
+        });
+        continue;
+      }
+      if (channel.node !== 'gimbalAssembly') {
+        diagnostics.push({
+          domain: 'vector-rig-preview',
+          severity: 'error',
+          code: 'vectorRig.nodeInvalid',
+          message: `${input} must reference the renderer-only gimbalAssembly node alias.`,
+        });
+      }
+      if (!VECTOR_RIG_AXES.includes(String(channel.axis || '').toLowerCase())) {
+        diagnostics.push({
+          domain: 'vector-rig-preview',
+          severity: 'error',
+          code: 'vectorRig.axisInvalid',
+          message: `${input} uses an invalid preview axis. Choose x, y or z.`,
+        });
+      }
+      if (![1, -1].includes(Number(channel.direction))) {
+        diagnostics.push({
+          domain: 'vector-rig-preview',
+          severity: 'error',
+          code: 'vectorRig.directionInvalid',
+          message: `${input} uses an invalid preview direction. Use the invert checkbox instead of custom values.`,
+        });
+      }
+      validChannels += 1;
+    }
+
+    if (validChannels === VECTOR_RIG_INPUTS.length && !diagnostics.some(item => item.severity === 'error')) {
+      diagnostics.push({
+        domain: 'vector-rig-preview',
+        severity: 'info',
+        code: 'vectorRig.previewReady',
+        message: 'VectorThruster renderer-only profile covers gimbalA, gimbalB and roll preview inputs.',
+      });
+    }
+    return diagnostics;
   }
 
   function currentRigFields() {
@@ -1300,6 +1389,7 @@
     for (const item of state.lastValidation?.diagnostics || []) diagnostics.push(item);
     for (const item of state.textureReport?.diagnostics || []) diagnostics.push({ domain: 'texture-diagnostic', ...item });
     for (const item of state.animationReport?.warnings || []) diagnostics.push({ domain: 'animation-diagnostic', ...item });
+    for (const item of currentVectorRigPreviewDiagnostics()) diagnostics.push(item);
     return diagnostics;
   }
 

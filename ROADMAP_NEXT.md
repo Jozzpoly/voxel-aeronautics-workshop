@@ -22,8 +22,16 @@
 - Visual Asset Pack M4H/M4I-A is present on `current_work`: Studio rig-state storage no longer carries optional rig aliases or fire split state across block types, `Clear rig bindings` commits optional aliases as `null`, and visual-pack audit fixtures cover current Catalog block types.
 - Visual Asset Pack M4I-B is present on `current_work`: local visual-pack audit remains read-only by default and can produce dry-run cleanup suggestions for protected-art issues such as inherited Balloon rig aliases.
 - Visual Asset Pack M4J is present on `current_work`: VectorThruster can declare an optional renderer-only rig profile for `gimbalA`, `gimbalB` and roll preview axes; Studio, validators, audit tooling and runtime adapter understand the profile while keeping Blueprint/CraftModel/physics/control semantics untouched.
+- Visual authoring M4K is the active polish lane: clean-candidate validation protects `SOURCE_MANIFEST.json` from dirty local visual WIP, Balloon cleanup remains owner-approved only, and real VectorThruster asset proof stays renderer-only.
 
-## Next: Placement and Orientation Clarity
+## Next: Visual Authoring Provenance And Real-Asset Proof
+
+- Finish M4K-A by validating staged/HEAD candidates through `.agent-validation/**` when protected local visual art is dirty.
+- Run the read-only local visual-pack audit as evidence, not as permission to edit `local_working_visuals`.
+- If the owner approves it, perform the minimal Balloon manifest cleanup separately: clear inherited optional `flame` and `gimbalAssembly` bindings to `null` without touching model files, transforms, materials or installed-pack policy.
+- Prove the real local VectorThruster asset with the renderer-only `bindings.rig.vectorThruster` profile and Studio diagnostics; do not hardcode runtime Euler-axis patches or change force/control semantics.
+
+## Then: Placement and Orientation Clarity
 
 M2A, M2B and the first M2C clarity pass are present on `current_work`: build targeting uses tested normal math, placement failure reasons are deterministic in ghost/status feedback, active Assembly Space mismatch is visible, and orientation readouts are semantic for core/thrusters/wings/control surfaces/vector thrusters. Next: manual playtest and small wording/preset polish only if still needed.
 

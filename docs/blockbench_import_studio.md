@@ -65,6 +65,14 @@ node tools/run_with_python_env.js python tools/audit_visual_asset_pack.py assets
 
 The JSON report keeps the original `diagnostics` list and also includes `assetReports` entries with `assetId`, `blockTypes`, model status, per-asset diagnostics and dry-run `cleanupSuggestions`. The top-level `suggestedManifestCleanup` object is always advisory; it never writes files.
 
+When the local working pack is dirty, root release validation may see protected art and update `SOURCE_MANIFEST.json` for that local state. For a clean candidate, stage only the intended code/docs/tooling changes and run:
+
+```bash
+node tools/run_with_python_env.js python tools/validate_clean_candidate.py
+```
+
+The helper validates an isolated `.agent-validation/` checkout with the staged patch applied, reports protected local visual dirty paths, and leaves `local_working_visuals` untouched.
+
 ## Export Pack Artifact
 
 1. Design or load a visual model in Studio.
@@ -102,3 +110,5 @@ Use that sample only as a loader/fallback fixture. The acceptance target is diff
 `assets/visual_packs/real_blockbench_thruster_pack/` and `tools/blockbench_import_studio/assets/real_blockbench_*` are M4E regression fixtures copied from real Blockbench exports. They prove the folder/index and validator path, not final art direction.
 
 VectorThruster visual motion can now use the optional `bindings.rig.vectorThruster` profile. Older packs without that profile still use the legacy fallback mapping, so existing fixtures remain loadable. If a particular imported VectorThruster still looks wrong, fix the renderer profile and node binding, not Blueprint, CraftModel, force math or save data.
+
+Studio now reports renderer-profile diagnostics for `VectorThruster` authoring: disabled profile fallback, missing `gimbalAssembly`, missing `gimbalA`/`gimbalB`/roll channels and invalid axes are surfaced before export. These diagnostics are renderer-only proof points; they do not authorize runtime force/control or save-schema changes.

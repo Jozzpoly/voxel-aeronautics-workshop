@@ -63,6 +63,18 @@ node tools/run_with_python_env.js python tools/validate_full.py
 npm run browser:smoke
 ```
 
+When `assets/visual_packs/local_working_visuals/**` or `assets/visual_packs/installed_visual_packs.json` is dirty, root release validation can regenerate `SOURCE_MANIFEST.json` from protected local art. For release-grade evidence, stage only the intended candidate and validate an isolated clean checkout instead:
+
+```text
+node tools/run_with_python_env.js python tools/validate_clean_candidate.py
+```
+
+The helper clones HEAD into `.agent-validation/**`, applies the staged patch if present, and runs bundled `tools/validate_full.py` by default. It reports protected visual dirty paths but does not copy them into the candidate. Use an explicit command after `--` for narrower evidence, for example:
+
+```text
+node tools/run_with_python_env.js python tools/validate_clean_candidate.py -- node tools/run_with_python_env.js python tools/validate_fast.py
+```
+
 `npm run browser:smoke` is target-platform evidence, not a default core gate. If it reports `ENVIRONMENT`, document the missing browser/CDP/localhost capability instead of treating it as a product PASS.
 The browser smoke JSON contract is `status`, `stage`, `reason`, `diagnostics` and, on PASS only, `result`. `PRODUCT` blocks the checkpoint. `ENVIRONMENT` is acceptable only when the stage and diagnostics identify a missing or unusable browser/CDP/localhost capability.
 
@@ -85,6 +97,7 @@ Classify failures:
 ## Generated And Protected Paths
 
 - `SOURCE_MANIFEST.json` is generated provenance. Do not hand-edit hashes.
+- Treat `SOURCE_MANIFEST.json` as provenance for a clean candidate, not for protected local Balloon/visual WIP. If root validation changes it while protected visuals are dirty, regenerate/verify through `tools/validate_clean_candidate.py` before committing.
 - `.agent-validation/` contains validation artifacts and may be regenerated.
 - Use `node tools/run_with_python_env.js python tools/prune_agent_validation.py --keep 5` to inspect old `.agent-validation/` artifacts. It is dry-run by default; add `--apply` only after explicit owner approval for deletion.
 - `assets/visual_packs/local_working_visuals/**` may contain user art. Do not delete, normalize, regenerate or clean it without explicit owner request.

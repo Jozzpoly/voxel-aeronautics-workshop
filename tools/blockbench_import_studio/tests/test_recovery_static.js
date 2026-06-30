@@ -385,7 +385,18 @@ async function main() {
   for (const snippet of ['vaw-block-type', 'choose explicitly', 'vaw-node-visual-root', 'vaw-node-flame-glow', 'vaw-clear-rig-bindings', 'selectedBlockTypes', 'inferVisualAssetManifest']) {
     assert.ok(index.includes(snippet) || app.includes(snippet), `missing explicit Visual Asset Pack authoring UI snippet: ${snippet}`);
   }
-  for (const snippet of ['vaw-vector-rig-enabled', 'vaw-vector-rig-default', 'currentVectorRigProfile', 'rig: currentRigFields()']) {
+  for (const snippet of [
+    'vaw-vector-rig-enabled',
+    'vaw-vector-rig-default',
+    'currentVectorRigProfile',
+    'currentVectorRigPreviewDiagnostics',
+    'vectorRig.gimbalAssemblyMissing',
+    'vectorRig.channelMissing',
+    'vectorRig.axisInvalid',
+    'vectorRig.fallback',
+    'vectorRig.previewReady',
+    'rig: currentRigFields()'
+  ]) {
     assert.ok(index.includes(snippet) || app.includes(snippet), `missing VectorThruster rig authoring snippet: ${snippet}`);
   }
   assert.ok(AuthoringState.OPTIONAL_NODE_ALIASES.includes('gimbalAssembly'), 'Authoring state helper must own optional rig aliases.');
