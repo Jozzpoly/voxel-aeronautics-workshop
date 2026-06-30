@@ -75,6 +75,8 @@ The helper clones HEAD into `.agent-validation/**`, applies the staged patch if 
 node tools/run_with_python_env.js python tools/validate_clean_candidate.py -- node tools/run_with_python_env.js python tools/validate_fast.py
 ```
 
+The helper refuses staged protected visual-pack paths by default. Use `--allow-protected-staged` only for an explicit owner-approved art commit, never for routine code/docs/tooling validation.
+
 `npm run browser:smoke` is target-platform evidence, not a default core gate. If it reports `ENVIRONMENT`, document the missing browser/CDP/localhost capability instead of treating it as a product PASS.
 The browser smoke JSON contract is `status`, `stage`, `reason`, `diagnostics` and, on PASS only, `result`. `PRODUCT` blocks the checkpoint. `ENVIRONMENT` is acceptable only when the stage and diagnostics identify a missing or unusable browser/CDP/localhost capability.
 

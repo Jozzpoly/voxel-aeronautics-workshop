@@ -69,6 +69,10 @@ def staged_patch_bytes() -> bytes:
     return result.stdout or b''
 
 
+def staged_paths() -> list[str]:
+    return changed_paths('diff', '--cached', '--name-only')
+
+
 def unique_candidate_dir(label: str) -> Path:
     timestamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
     stem = ''.join(ch if ch.isalnum() or ch in ('-', '_') else '-' for ch in label).strip('-') or 'candidate'
@@ -101,6 +105,11 @@ def parse_args() -> argparse.Namespace:
         help='Allow non-protected unstaged/untracked paths; normally this is a candidate mismatch.',
     )
     parser.add_argument(
+        '--allow-protected-staged',
+        action='store_true',
+        help='Allow protected visual-pack paths in the staged patch. Use only for explicit owner-approved art commits.',
+    )
+    parser.add_argument(
         'command',
         nargs=argparse.REMAINDER,
         help='Optional validation command after --. Defaults to bundled validate_full.py.',
@@ -117,6 +126,17 @@ def main() -> int:
         command = list(DEFAULT_COMMAND)
 
     protected_dirty, other_dirty = root_dirty_paths()
+    staged_protected = [path for path in staged_paths() if is_protected_path(path)]
+    if staged_protected and not args.allow_protected_staged:
+        print(json.dumps({
+            'status': 'REFUSED',
+            'reason': 'protected visual-pack paths are staged',
+            'stagedProtectedPaths': staged_protected,
+            'protectedRootDirty': protected_dirty,
+            'hint': 'unstage protected art, or rerun with --allow-protected-staged only after explicit owner approval',
+        }, indent=2), file=sys.stderr)
+        return 2
+
     if other_dirty and not args.allow_unstaged:
         print(json.dumps({
             'status': 'REFUSED',
@@ -152,6 +172,7 @@ def main() -> int:
         'candidateDir': str(candidate_dir),
         'appliedStagedPatch': has_staged_patch,
         'protectedRootDirty': protected_dirty,
+        'stagedProtectedPaths': staged_protected,
         'command': command,
     }, indent=2), flush=True)
 
@@ -162,6 +183,7 @@ def main() -> int:
         'appliedStagedPatch': has_staged_patch,
         'patchFile': str(patch_path) if patch_path else None,
         'protectedRootDirty': protected_dirty,
+        'stagedProtectedPaths': staged_protected,
         'ignoredNonProtectedDirty': other_dirty if args.allow_unstaged else [],
         'command': command,
         'returnCode': result.returncode,

@@ -20,9 +20,11 @@ Treat these paths as user/art work. Do not stage, normalize, delete or regenerat
 ## What M4K Adds
 
 - `tools/validate_clean_candidate.py` validates a clean staged/HEAD candidate in `.agent-validation/**`.
-- The helper reports protected root dirty paths, applies staged diff when present, and runs bundled `tools/validate_full.py` by default.
+- The helper reports protected root dirty paths, refuses staged protected visual-pack paths by default, applies staged diff when present, and runs bundled `tools/validate_full.py` by default.
 - `.gitattributes` now pins `.gltf` to LF and `.glb` to binary to reduce provenance hash drift.
 - Studio now surfaces VectorThruster renderer-profile diagnostics for fallback, missing `gimbalAssembly`, missing `gimbalA`/`gimbalB`/roll channels and invalid axes.
+
+Follow-up audit note: the first M4K checkpoint exposed a `SOURCE_MANIFEST.json` mismatch in clean `--head-only` validation. The preparation hotfix corrected the manifest from clean-checkout evidence and added the staged protected-art refusal guard. Treat clean-candidate `--head-only` as the proof that the published checkpoint is release-grade.
 
 ## Why This Matters
 

@@ -37,6 +37,8 @@ def main() -> None:
         '.agent-validation',
         "'apply', '--whitespace=nowarn'",
         'protectedRootDirty',
+        'stagedProtectedPaths',
+        '--allow-protected-staged',
         '--allow-unstaged',
     ]:
         assert snippet in source, f'missing clean-candidate workflow guard: {snippet}'
@@ -53,6 +55,7 @@ def main() -> None:
     assert 'Validate a clean staged/HEAD candidate' in result.stdout
     assert '--head-only' in result.stdout
     assert '--allow-unstaged' in result.stdout
+    assert '--allow-protected-staged' in result.stdout
 
     print('validate_clean_candidate contract ok')
 
