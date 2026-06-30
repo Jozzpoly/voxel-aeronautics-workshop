@@ -144,7 +144,15 @@ textarea { width: 100%; min-height: 210px; resize: vertical; border: 1px solid #
 .manifest-fields label:has(#vaw-node-flame),
 .manifest-fields label:has(#vaw-node-flame-glow),
 .manifest-fields label:has(#vaw-node-gimbal),
-.manifest-fields label:has(#vaw-node-control-flap) { order: 25; }
+.manifest-fields label:has(#vaw-node-control-flap),
+.manifest-fields label:has(#vaw-vector-rig-enabled),
+.manifest-fields label:has(#vaw-vector-rig-gimbal-a-axis),
+.manifest-fields label:has(#vaw-vector-rig-gimbal-a-invert),
+.manifest-fields label:has(#vaw-vector-rig-gimbal-b-axis),
+.manifest-fields label:has(#vaw-vector-rig-gimbal-b-invert),
+.manifest-fields label:has(#vaw-vector-rig-roll-axis),
+.manifest-fields label:has(#vaw-vector-rig-roll-invert),
+.vector-rig-actions { order: 25; }
 .manifest-fields label:has(#vaw-transform-pos-x),
 .manifest-fields label:has(#vaw-transform-pos-y),
 .manifest-fields label:has(#vaw-transform-pos-z),

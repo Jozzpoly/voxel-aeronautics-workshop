@@ -15,6 +15,7 @@ function snapshot({ visualRoot, flame = null, gimbalAssembly = null, fireSplit =
     transform: { position: { x, y: 0, z: 0 } },
     materialPolicy: { alpha: 'auto', materialOverrides: [{ materialName: 'Body', alpha: 'opaque' }] },
     fireSplit: fireSplit || { enabled: false, nodes: [] },
+    rig: null,
   };
 }
 
@@ -91,14 +92,22 @@ function snapshot({ visualRoot, flame = null, gimbalAssembly = null, fireSplit =
     gimbalAssembly: '/vector_nozzle',
     x: 1,
   });
+  vector.rig = {
+    vectorThruster: {
+      channels: [{ input: 'gimbalA', node: 'gimbalAssembly', axis: 'z', direction: -1 }],
+    },
+  };
   prefs = AuthoringState.preferenceDocumentForSave(prefs, 'VectorThruster', vector);
   const restoredVector = AuthoringState.preferenceSnapshotForBlock(prefs, 'VectorThruster', { includeDefaults: true });
   assert.equal(restoredVector.nodes.flame, '/vector_fire');
   assert.equal(restoredVector.nodes.gimbalAssembly, '/vector_nozzle', 'Exact VectorThruster profile must not be erased by default sanitization.');
+  assert.deepEqual(restoredVector.rig, vector.rig, 'Exact per-block VectorThruster renderer rig profile must remain restorable.');
+  assert.equal(prefs.defaults.rig, undefined, 'Global defaults must not carry renderer rig profiles across block types.');
 
   const restoredBalloon = AuthoringState.preferenceSnapshotForBlock(prefs, 'Balloon', { includeDefaults: true });
   assert.equal(restoredBalloon.nodes.visualRoot, '/baloon');
   assert.equal(restoredBalloon.nodes.gimbalAssembly, null, 'VectorThruster rig must not leak into Balloon profile.');
+  assert.equal(restoredBalloon.rig, undefined, 'VectorThruster rig must not leak into Balloon profile.');
 }
 
 console.log({ authoringStateFlow: 'ok' });

@@ -56,6 +56,7 @@ def main() -> int:
     focused = [
         ['node', 'tests/test_visual_asset_manifest.js'],
         ['node', 'tests/test_visual_asset_registry.js'],
+        ['node', 'tests/test_visual_runtime_adapter.js'],
         ['node', 'tests/test_visual_asset_loader.js'],
         ['node', 'tests/test_visual_asset_dev_controls.js'],
         ['node', 'tests/test_visual_asset_composition.js'],

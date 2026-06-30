@@ -217,6 +217,20 @@ async function main() {
   assertDiag(validatePackPatch(pack => { pack.assets[0].fuelRate = 1; }), 'pack.forbiddenGameplayField');
   assertDiag(validatePackPatch(pack => { pack.assets[0].controlAxis = 'yaw'; }), 'pack.forbiddenGameplayField');
 
+  const vectorRigGltf = { nodes: [{ name: 'Root', children: [1] }, { name: 'gimbal' }], animations: [] };
+  const vectorRigPack = VisualAssetPack.inferManifest(vectorRigGltf, { basename: 'vector.gltf', normalizedPath: 'models/vector.gltf' }, { blockTypes: ['VectorThruster'] });
+  assert.ok(vectorRigPack.assets[0].bindings.rig.vectorThruster, 'VectorThruster inference should include a renderer-only rig profile when a gimbal node is found.');
+  const vectorRigResult = VisualAssetPack.validateManifest({ manifest: vectorRigPack, gltfJson: vectorRigGltf, dependencies: [], modelRecord: { normalizedPath: 'models/vector.gltf' } });
+  assert.equal(vectorRigResult.vawReady, true, 'Valid renderer-only VectorThruster rig profile should export.');
+  const invalidVectorRigPack = JSON.parse(JSON.stringify(vectorRigPack));
+  invalidVectorRigPack.assets[0].bindings.nodes.gimbalAssembly = null;
+  invalidVectorRigPack.assets[0].bindings.rig.vectorThruster.channels = [{ input: 'pitch', node: 'gimbalAssembly', axis: 'yaw', direction: 0 }];
+  const invalidVectorRigResult = VisualAssetPack.validateManifest({ manifest: invalidVectorRigPack, gltfJson: vectorRigGltf, dependencies: [], modelRecord: { normalizedPath: 'models/vector.gltf' } });
+  assertDiag(invalidVectorRigResult, 'binding.rigInputInvalid');
+  assertDiag(invalidVectorRigResult, 'binding.rigAxisInvalid');
+  assertDiag(invalidVectorRigResult, 'binding.rigDirectionInvalid');
+  assertDiag(invalidVectorRigResult, 'binding.rigNodeBindingMissing');
+
   const engineMirrorCases = [
     ['accepts VectorThruster', pack => { pack.assets[0].bindings.blockTypes = ['VectorThruster']; }, true],
     ['rejects Structure', pack => { pack.assets[0].bindings.blockTypes = ['Structure']; }, false],
@@ -332,6 +346,9 @@ async function main() {
   assert.equal(schema.$defs.asset.properties.bindings.required.includes('clips'), true);
   assert.equal(schema.$defs.asset.properties.bindings.properties.nodes.additionalProperties, false);
   assert.equal(schema.$defs.asset.properties.bindings.properties.clips.additionalProperties, false);
+  assert.deepEqual(schema.$defs.rigInput.enum, ['gimbalA', 'gimbalB', 'roll']);
+  assert.deepEqual(schema.$defs.rigAxis.enum, ['x', 'y', 'z']);
+  assert.equal(schema.$defs.asset.properties.bindings.properties.rig.additionalProperties, false);
   assert.ok(schema.$defs.safePackPath.pattern.includes('\\\\'), 'schema path pattern should reject backslashes');
   assert.ok(schema.$defs.notGameplayPropertyName, 'schema should include a forbidden gameplay property-name guard');
   const schemaText = JSON.stringify(schema);
@@ -367,6 +384,9 @@ async function main() {
   }
   for (const snippet of ['vaw-block-type', 'choose explicitly', 'vaw-node-visual-root', 'vaw-node-flame-glow', 'vaw-clear-rig-bindings', 'selectedBlockTypes', 'inferVisualAssetManifest']) {
     assert.ok(index.includes(snippet) || app.includes(snippet), `missing explicit Visual Asset Pack authoring UI snippet: ${snippet}`);
+  }
+  for (const snippet of ['vaw-vector-rig-enabled', 'vaw-vector-rig-default', 'currentVectorRigProfile', 'rig: currentRigFields()']) {
+    assert.ok(index.includes(snippet) || app.includes(snippet), `missing VectorThruster rig authoring snippet: ${snippet}`);
   }
   assert.ok(AuthoringState.OPTIONAL_NODE_ALIASES.includes('gimbalAssembly'), 'Authoring state helper must own optional rig aliases.');
   assert.ok(app.includes('AuthoringState.applyNodeFields'), 'Studio must commit empty optional rig inputs as null bindings.');

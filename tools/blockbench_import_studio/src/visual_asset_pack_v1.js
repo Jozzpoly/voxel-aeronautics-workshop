@@ -12,6 +12,9 @@
   ]);
   const ALLOWED_NODE_ALIASES = new Set(['visualRoot', 'flame', 'flameGlow', 'gimbalAssembly', 'controlFlapPivot']);
   const ALLOWED_CLIP_ALIASES = new Set(['idle', 'thrust', 'damage']);
+  const ALLOWED_RIG_PROFILES = new Set(['vectorThruster']);
+  const ALLOWED_RIG_INPUTS = new Set(['gimbalA', 'gimbalB', 'roll']);
+  const ALLOWED_RIG_AXES = new Set(['x', 'y', 'z']);
   const STABLE_ID_PATTERN = /^[a-z][a-z0-9_-]*$/;
   const ALLOWED_AXES = new Set(['+X', '-X', '+Y', '-Y', '+Z', '-Z']);
   const ALLOWED_ALPHA_POLICIES = new Set(['auto', 'opaque', 'mask', 'blend', 'mask-or-blend', 'from-gltf']);
@@ -261,6 +264,51 @@
     }
   }
 
+  function validateVectorThrusterRig(profile, diagnostics, assetPath, blockTypes, nodes) {
+    const rigPath = `${assetPath}.bindings.rig.vectorThruster`;
+    if (!isPlainObject(profile)) {
+      diagnostics.push(diagnostic('error', 'binding.rigProfileInvalid', `${rigPath} must be an object.`));
+      return;
+    }
+    if (!blockTypes.includes('VectorThruster')) {
+      diagnostics.push(diagnostic('warning', 'binding.rigProfileBlockTypeMismatch', `${rigPath} is renderer-only and should only be declared on VectorThruster assets.`));
+    }
+    if (!Array.isArray(profile.channels) || profile.channels.length === 0) {
+      diagnostics.push(diagnostic('error', 'binding.rigChannelsMissing', `${rigPath}.channels must list at least one renderer channel.`));
+      return;
+    }
+    profile.channels.forEach((channel, index) => {
+      const channelPath = `${rigPath}.channels[${index}]`;
+      if (!isPlainObject(channel)) {
+        diagnostics.push(diagnostic('error', 'binding.rigChannelInvalid', `${channelPath} must be an object.`));
+        return;
+      }
+      if (!ALLOWED_RIG_INPUTS.has(channel.input)) diagnostics.push(diagnostic('error', 'binding.rigInputInvalid', `${channelPath}.input must be one of ${[...ALLOWED_RIG_INPUTS].join(', ')}.`));
+      if (!ALLOWED_NODE_ALIASES.has(channel.node)) {
+        diagnostics.push(diagnostic('error', 'binding.rigNodeInvalid', `${channelPath}.node must reference a bindings.nodes alias.`));
+      } else if (!nodes?.[channel.node]) {
+        diagnostics.push(diagnostic('error', 'binding.rigNodeBindingMissing', `${channelPath}.node references '${channel.node}', but bindings.nodes.${channel.node} is empty.`));
+      }
+      if (!ALLOWED_RIG_AXES.has(channel.axis)) diagnostics.push(diagnostic('error', 'binding.rigAxisInvalid', `${channelPath}.axis must be one of ${[...ALLOWED_RIG_AXES].join(', ')}.`));
+      if (channel.direction !== undefined && channel.direction !== 1 && channel.direction !== -1) diagnostics.push(diagnostic('error', 'binding.rigDirectionInvalid', `${channelPath}.direction must be 1 or -1.`));
+    });
+  }
+
+  function validateRigBindings(rig, diagnostics, assetPath, blockTypes, nodes) {
+    if (rig === undefined) return;
+    if (!isPlainObject(rig)) {
+      diagnostics.push(diagnostic('error', 'binding.rigInvalid', `${assetPath}.bindings.rig must be an object when present.`));
+      return;
+    }
+    for (const [key, value] of Object.entries(rig)) {
+      if (!ALLOWED_RIG_PROFILES.has(key)) {
+        diagnostics.push(diagnostic('error', 'binding.unknownRigProfile', `${assetPath}.bindings.rig.${key} is not a V1 renderer rig profile.`));
+        continue;
+      }
+      if (key === 'vectorThruster') validateVectorThrusterRig(value, diagnostics, assetPath, blockTypes, nodes);
+    }
+  }
+
   function validateAsset(asset, index, context) {
     const diagnostics = [];
     const assetPath = `assets[${index}]`;
@@ -278,6 +326,7 @@
       diagnostics.push(diagnostic('error', 'asset.bindingsMissing', `${assetPath}.bindings is required.`));
     } else {
       const blockTypes = bindings.blockTypes;
+      const normalizedBlockTypes = Array.isArray(blockTypes) ? blockTypes.filter(blockType => ALLOWED_BLOCK_TYPES.has(blockType)) : [];
       if (!Array.isArray(blockTypes) || blockTypes.length === 0) diagnostics.push(diagnostic('error', 'binding.blockTypesMissing', `${assetPath}.bindings.blockTypes must list at least one VAW block type.`));
       else {
         for (const blockType of blockTypes) {
@@ -298,6 +347,7 @@
           if (!resolved.ok) diagnostics.push(diagnostic('error', resolved.code, `${assetPath}.bindings.nodes.${key}: ${resolved.reason}`));
         }
       }
+      validateRigBindings(bindings.rig, diagnostics, assetPath, normalizedBlockTypes, nodes || {});
 
       const clips = isPlainObject(bindings.clips) ? bindings.clips : null;
       if (!clips) diagnostics.push(diagnostic('error', 'binding.clipsMissing', `${assetPath}.bindings.clips is required and must be an object.`));
@@ -426,6 +476,11 @@
             thrust: chooseClip([/thrust/i, /loop/i, /anim/i]) || animationNames[0] || null,
             damage: chooseClip([/damage/i]),
           },
+          ...(blockTypes.includes('VectorThruster') && findNodeBinding(nodeLookup, /gimbal/i) ? {
+            rig: {
+              vectorThruster: defaultVectorThrusterRig(),
+            },
+          } : {}),
         },
         materialPolicy: {
           pixelated: true,
@@ -441,6 +496,16 @@
     return record ? record.path : null;
   }
 
+  function defaultVectorThrusterRig() {
+    return {
+      channels: [
+        { input: 'gimbalA', node: 'gimbalAssembly', axis: 'z', direction: -1 },
+        { input: 'gimbalB', node: 'gimbalAssembly', axis: 'y', direction: 1 },
+        { input: 'roll', node: 'gimbalAssembly', axis: 'x', direction: 1 },
+      ],
+    };
+  }
+
   function isManifestFilename(name = '') {
     return /(^|\/)(VAW_VISUAL_ASSET_PACK_V1|visual_asset_pack_v1|visual_asset_manifest)(\.manifest)?\.json$/i.test(String(name)) || /\.visual\.vaw\.json$/i.test(String(name));
   }
@@ -450,9 +515,13 @@
     ALLOWED_BLOCK_TYPES: Object.freeze([...ALLOWED_BLOCK_TYPES]),
     ALLOWED_NODE_ALIASES: Object.freeze([...ALLOWED_NODE_ALIASES]),
     ALLOWED_CLIP_ALIASES: Object.freeze([...ALLOWED_CLIP_ALIASES]),
+    ALLOWED_RIG_PROFILES: Object.freeze([...ALLOWED_RIG_PROFILES]),
+    ALLOWED_RIG_INPUTS: Object.freeze([...ALLOWED_RIG_INPUTS]),
+    ALLOWED_RIG_AXES: Object.freeze([...ALLOWED_RIG_AXES]),
     FORBIDDEN_GAMEPLAY_FIELDS: Object.freeze([...FORBIDDEN_GAMEPLAY_FIELDS]),
     validateManifest,
     inferManifest,
+    defaultVectorThrusterRig,
     collectNodeNames,
     collectAnimationNames,
     collectNodePathRecords,

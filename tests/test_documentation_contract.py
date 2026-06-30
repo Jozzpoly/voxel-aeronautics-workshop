@@ -107,6 +107,7 @@ required = {
         (42, 'workbench-ui-layout'),
         (43, 'visual-asset-boundary'),
         (44, 'workflow-checkpoint-branch-and-ci-policy'),
+        (45, 'renderer-only-vector-thruster-rig-profile'),
     ]},
 }
 
@@ -177,7 +178,7 @@ for phrase in ('Blueprint v12', 'CompiledCraft V5', 'RuntimeAssemblyPlan V3', 'a
 for phrase in ('Gate C', 'Gate D', 'Gate E', 'dynamic rigid-body split'):
     assert phrase in roadmap or phrase in memory
 
-for number in range(33, 45):
+for number in range(33, 46):
     path = next(path for path in required if path.startswith(f'docs/adr/{number:04d}-'))
     assert 'Status: Accepted' in texts[path]
 

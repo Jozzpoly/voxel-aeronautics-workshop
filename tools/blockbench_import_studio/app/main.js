@@ -48,6 +48,7 @@
     'vaw-transform-center', 'vaw-transform-fit', 'vaw-transform-reset',
     'vaw-material-alpha', 'vaw-material-double-sided', 'vaw-material-pixelated', 'vaw-material-overrides', 'vaw-material-use-doctor', 'vaw-material-clear-overrides', 'vaw-material-reset-auto', 'vaw-material-override-list', 'vaw-material-doctor',
     'vaw-fire-split-enabled', 'vaw-fire-split-nodes', 'vaw-fire-split-suggest',
+    'vaw-vector-rig-enabled', 'vaw-vector-rig-default', 'vaw-vector-rig-gimbal-a-axis', 'vaw-vector-rig-gimbal-a-invert', 'vaw-vector-rig-gimbal-b-axis', 'vaw-vector-rig-gimbal-b-invert', 'vaw-vector-rig-roll-axis', 'vaw-vector-rig-roll-invert',
     'vaw-install-endpoint', 'vaw-install-probe',
     'format-sidecar', 'apply-sidecar', 'validate-vaw', 'download-sidecar', 'download-debug-package', 'download-package', 'install-block-visual', 'install-status', 'diagnostics'
   ].map(id => [id, document.getElementById(id)]));
@@ -214,6 +215,74 @@
     setFireSplitNodePaths(Array.isArray(fireSplit?.nodes) ? fireSplit.nodes : []);
   }
 
+  const VECTOR_RIG_DEFAULT_CHANNELS = Object.freeze([
+    Object.freeze({ input: 'gimbalA', node: 'gimbalAssembly', axis: 'z', direction: -1 }),
+    Object.freeze({ input: 'gimbalB', node: 'gimbalAssembly', axis: 'y', direction: 1 }),
+    Object.freeze({ input: 'roll', node: 'gimbalAssembly', axis: 'x', direction: 1 }),
+  ]);
+
+  function vectorRigFieldPrefix(input) {
+    if (input === 'gimbalA') return 'vaw-vector-rig-gimbal-a';
+    if (input === 'gimbalB') return 'vaw-vector-rig-gimbal-b';
+    return 'vaw-vector-rig-roll';
+  }
+
+  function defaultVectorRigProfile() {
+    return VisualAssetPack?.defaultVectorThrusterRig ? VisualAssetPack.defaultVectorThrusterRig() : {
+      channels: VECTOR_RIG_DEFAULT_CHANNELS.map(channel => ({ ...channel })),
+    };
+  }
+
+  function currentVectorRigProfile() {
+    if (!el['vaw-vector-rig-enabled']?.checked) return null;
+    return {
+      channels: VECTOR_RIG_DEFAULT_CHANNELS.map(defaultChannel => {
+        const prefix = vectorRigFieldPrefix(defaultChannel.input);
+        const axis = String(el[`${prefix}-axis`]?.value || defaultChannel.axis).trim().toLowerCase();
+        const direction = el[`${prefix}-invert`]?.checked ? -1 : 1;
+        return { input: defaultChannel.input, node: 'gimbalAssembly', axis, direction };
+      }),
+    };
+  }
+
+  function currentRigFields() {
+    const profile = currentVectorRigProfile();
+    return profile ? { vectorThruster: profile } : {};
+  }
+
+  function syncVectorRigFields(rig = {}) {
+    const profile = rig?.vectorThruster || null;
+    if (el['vaw-vector-rig-enabled']) el['vaw-vector-rig-enabled'].checked = Boolean(profile);
+    const channels = Array.isArray(profile?.channels) ? profile.channels : defaultVectorRigProfile().channels;
+    for (const defaultChannel of VECTOR_RIG_DEFAULT_CHANNELS) {
+      const channel = channels.find(item => item?.input === defaultChannel.input) || defaultChannel;
+      const prefix = vectorRigFieldPrefix(defaultChannel.input);
+      if (el[`${prefix}-axis`]) el[`${prefix}-axis`].value = String(channel.axis || defaultChannel.axis).toLowerCase();
+      if (el[`${prefix}-invert`]) el[`${prefix}-invert`].checked = Number(channel.direction) === -1;
+    }
+  }
+
+  function applyRigFields(asset) {
+    asset.bindings = asset.bindings || {};
+    const existingRig = asset.bindings.rig && typeof asset.bindings.rig === 'object' && !Array.isArray(asset.bindings.rig)
+      ? asset.bindings.rig
+      : {};
+    const nextRig = { ...existingRig };
+    const blockTypes = selectedBlockTypes();
+    const profile = currentVectorRigProfile();
+    if (blockTypes.includes('VectorThruster') && profile) nextRig.vectorThruster = profile;
+    else delete nextRig.vectorThruster;
+    if (Object.keys(nextRig).length) asset.bindings.rig = nextRig;
+    else delete asset.bindings.rig;
+  }
+
+  function useDefaultVectorRigProfile() {
+    if (el['vaw-vector-rig-enabled']) el['vaw-vector-rig-enabled'].checked = true;
+    syncVectorRigFields({ vectorThruster: defaultVectorRigProfile() });
+    addEvent('vector rig: default renderer-only profile applied');
+    updateAuthoringDraftFromForm();
+  }
+
   function materialOverrideMap() {
     const map = new Map();
     for (const item of parseMaterialOverrideLines(el['vaw-material-overrides']?.value || '')) {
@@ -375,6 +444,7 @@
     const blockTypes = selectedBlockTypes();
     if (blockTypes.length || !preserveEmpty) asset.bindings.blockTypes = blockTypes;
     AuthoringState.applyNodeFields(asset, currentNodeFields(), { preserveEmpty });
+    applyRigFields(asset);
     asset.materialPolicy = currentMaterialPolicyFields();
     return manifest;
   }
@@ -389,6 +459,7 @@
     if (el['vaw-block-type']) el['vaw-block-type'].value = blockType;
     if (blockType) state.activePrefsBlockType = blockType;
     syncNodeFields(asset?.bindings?.nodes || {});
+    syncVectorRigFields(asset?.bindings?.rig || {});
     syncTransformFieldsFromManifest(manifest);
     syncMaterialPolicyFieldsFromManifest(manifest);
     refreshNodePathPicker();
@@ -409,6 +480,7 @@
       transform: currentTransformFields(),
       materialPolicy: currentMaterialPolicyFields(),
       fireSplit: currentFireSplitFields(),
+      rig: currentRigFields(),
     };
   }
 
@@ -417,6 +489,7 @@
     if (snapshot.transform) syncTransformFieldsFromManifest({ assets: [{ model: { transform: snapshot.transform } }] });
     if (snapshot.materialPolicy) syncMaterialPolicyFieldsFromManifest({ assets: [{ materialPolicy: snapshot.materialPolicy }] });
     if (snapshot.fireSplit) syncFireSplitFields(snapshot.fireSplit);
+    syncVectorRigFields(snapshot.rig || {});
     refreshNodePathPicker();
   }
 
@@ -607,7 +680,8 @@
       'vaw-node-visual-root', 'vaw-node-flame', 'vaw-node-flame-glow', 'vaw-node-gimbal', 'vaw-node-control-flap',
       'vaw-transform-pos-x', 'vaw-transform-pos-y', 'vaw-transform-pos-z', 'vaw-transform-rot-x', 'vaw-transform-rot-y', 'vaw-transform-rot-z',
       'vaw-transform-scale-x', 'vaw-transform-scale-y', 'vaw-transform-scale-z', 'vaw-material-alpha', 'vaw-material-double-sided', 'vaw-material-pixelated', 'vaw-material-overrides',
-      'vaw-fire-split-enabled', 'vaw-fire-split-nodes'
+      'vaw-fire-split-enabled', 'vaw-fire-split-nodes',
+      'vaw-vector-rig-enabled', 'vaw-vector-rig-gimbal-a-axis', 'vaw-vector-rig-gimbal-a-invert', 'vaw-vector-rig-gimbal-b-axis', 'vaw-vector-rig-gimbal-b-invert', 'vaw-vector-rig-roll-axis', 'vaw-vector-rig-roll-invert'
     ];
     for (const id of authoringInputIds) el[id]?.addEventListener('input', updateAuthoringDraftFromForm);
     el['vaw-block-type']?.addEventListener('change', handleBlockTypeChange);
@@ -623,6 +697,7 @@
     el['vaw-material-clear-overrides']?.addEventListener('click', clearMaterialOverrides);
     el['vaw-material-reset-auto']?.addEventListener('click', resetMaterialPolicyToAuto);
     el['vaw-fire-split-suggest']?.addEventListener('click', () => suggestFireSplitNodes({ enable: true }));
+    el['vaw-vector-rig-default']?.addEventListener('click', useDefaultVectorRigProfile);
     el['vaw-node-visual-root-picker']?.addEventListener('change', () => {
       if (el['vaw-node-visual-root']) el['vaw-node-visual-root'].value = el['vaw-node-visual-root-picker'].value || '';
       updateAuthoringDraftFromForm();

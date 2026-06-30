@@ -1351,7 +1351,7 @@
           mass: part.def.mass || 0, maxHealth: part.def.durability || 60, health: part.def.durability || 60,
           rigidNeighborBlockIds: [...part.rigidNeighborBlockIds],
           pilotControlled: bodyId === started.primaryBodyId || part.type === 'Thruster' || part.type === 'VectorThruster',
-          attached: true, lastCommand: 0, gimbalA: 0, gimbalB: 0, controlDeflection: 0
+          attached: true, lastCommand: 0, gimbalA: 0, gimbalB: 0, gimbalRoll: 0, controlDeflection: 0
         };
         runtimeParts.push(runtimePart);
         if (runtimePart.pilotControlled && (part.type === 'Thruster' || part.type === 'VectorThruster')) {
@@ -1998,7 +1998,7 @@
       for (const mod of STATE.flight.functionalBlocks) {
         if ((mod.type !== 'Thruster' && mod.type !== 'VectorThruster') || !mod.visual || !mod.attached) continue;
         const intensity = Math.max(0, mod.lastCommand || 0);
-        visualRuntimeAdapter.setGimbal(mod.visual, mod.gimbalA || 0, mod.gimbalB || 0, PHYSICS.gimbalAngle);
+        visualRuntimeAdapter.setGimbal(mod.visual, mod.gimbalA || 0, mod.gimbalB || 0, PHYSICS.gimbalAngle, { roll: mod.gimbalRoll || 0 });
         visualRuntimeAdapter.setThrusterIntensity(mod.visual, intensity, { active: STATE.mode === 'FLIGHT' });
       }
     }
@@ -2107,7 +2107,7 @@
       let b = torqueSpan.lengthSquared() > 0.0001 ? cannonDot(desired, torqueSpan) / (normalization * torqueSpan.length()) * desiredLength : 0;
       const magnitude = Math.hypot(a, b);
       if (magnitude > 1) { a /= magnitude; b /= magnitude; }
-      mod.gimbalA = a; mod.gimbalB = b;
+      mod.gimbalA = a; mod.gimbalB = b; mod.gimbalRoll = Number(pilot.roll) || 0;
       const forwardScale = Math.cos(PHYSICS.gimbalAngle * Math.min(1, Math.hypot(a,b)));
       return forward.scale(baseForce * forwardScale).vadd(mod.localNormal.scale(lateral*a)).vadd(mod.localSpan.scale(lateral*b));
     }

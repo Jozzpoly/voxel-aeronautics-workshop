@@ -83,6 +83,8 @@ const gameSource = fs.readFileSync(path.join(ROOT, 'src/game.js'), 'utf8');
 assert(gameSource.includes("pilotControlled: bodyId === started.primaryBodyId || part.type === 'Thruster' || part.type === 'VectorThruster'"), 'Runtime creation must command articulated thrusters.');
 assert(gameSource.includes('flightThrusterRouter.recordCommand'), 'Effective command must drive lastCommand/flame state.');
 assert(gameSource.includes('flightThrusterRouter.routeLocalForce'), 'Game loop must route force through explicit body ownership.');
+assert(gameSource.includes('gimbalRoll = Number(pilot.roll) || 0'), 'VectorThruster roll must remain renderer-only visual state.');
+assert(gameSource.includes('PHYSICS.gimbalAngle, { roll: mod.gimbalRoll || 0 }'), 'VectorThruster rig profiles must receive roll in the visual adapter path.');
 
 console.log(JSON.stringify({
   rootBodyRouting: 'ok',

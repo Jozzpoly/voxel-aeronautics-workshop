@@ -59,6 +59,7 @@
     const next = cloneJson(snapshot) || {};
     next.nodes = emptyNodeFields();
     next.fireSplit = { enabled: false, nodes: [] };
+    delete next.rig;
     return next;
   }
 

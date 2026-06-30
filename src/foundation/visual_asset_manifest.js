@@ -10,6 +10,9 @@
       'collider', 'collision', 'controlAxis', 'blueprint', 'craftModel'
     ]);
     const AXIS_LABELS = Object.freeze(['+X', '-X', '+Y', '-Y', '+Z', '-Z']);
+    const RIG_PROFILE_NAMES = Object.freeze(['vectorThruster']);
+    const RIG_CHANNEL_INPUTS = Object.freeze(['gimbalA', 'gimbalB', 'roll']);
+    const RIG_ROTATION_AXES = Object.freeze(['x', 'y', 'z']);
     const ALPHA_POLICIES = Object.freeze(['auto', 'opaque', 'mask', 'blend', 'mask-or-blend', 'from-gltf']);
     const DOUBLE_SIDED_POLICIES = Object.freeze(['from-gltf', 'force', 'never', true, false]);
 
@@ -95,6 +98,70 @@
           continue;
         }
         normalized[key] = value;
+      }
+      return Config.deepFreeze(normalized);
+    }
+
+    function validateVectorThrusterRig(profile, path, blockTypes, nodes, errors, warnings) {
+      if (!isPlainObject(profile)) {
+        errors.push(diagnostic('error', 'visualAsset.rigProfileInvalid', path, 'bindings.rig.vectorThruster must be an object.'));
+        return Config.deepFreeze({ channels: Object.freeze([]) });
+      }
+      if (!blockTypes.includes('VectorThruster')) {
+        warnings.push(diagnostic('warning', 'visualAsset.rigProfileBlockTypeMismatch', path, 'VectorThruster rig profile is renderer-only and should only be declared on VectorThruster assets.'));
+      }
+      if (!Array.isArray(profile.channels) || !profile.channels.length) {
+        errors.push(diagnostic('error', 'visualAsset.rigChannelsMissing', `${path}.channels`, 'bindings.rig.vectorThruster.channels must list at least one renderer channel.'));
+        return Config.deepFreeze({ channels: Object.freeze([]) });
+      }
+      const channels = [];
+      profile.channels.forEach((channel, index) => {
+        const channelPath = `${path}.channels[${index}]`;
+        if (!isPlainObject(channel)) {
+          errors.push(diagnostic('error', 'visualAsset.rigChannelInvalid', channelPath, 'Rig channel entries must be objects.'));
+          return;
+        }
+        const input = String(channel.input || '').trim();
+        const node = String(channel.node || '').trim();
+        const axis = String(channel.axis || '').trim().toLowerCase();
+        const direction = channel.direction === undefined ? 1 : Number(channel.direction);
+        if (!RIG_CHANNEL_INPUTS.includes(input)) {
+          errors.push(diagnostic('error', 'visualAsset.rigInputInvalid', `${channelPath}.input`, `Rig input must be one of ${RIG_CHANNEL_INPUTS.join(', ')}.`));
+        }
+        if (!NODE_ALIASES.includes(node)) {
+          errors.push(diagnostic('error', 'visualAsset.rigNodeInvalid', `${channelPath}.node`, `Rig node must reference one of the bindings.nodes aliases: ${NODE_ALIASES.join(', ')}.`));
+        } else if (!isNonEmptyString(nodes?.[node])) {
+          errors.push(diagnostic('error', 'visualAsset.rigNodeBindingMissing', `${channelPath}.node`, `Rig channel references "${node}", but bindings.nodes.${node} is empty.`));
+        }
+        if (!RIG_ROTATION_AXES.includes(axis)) {
+          errors.push(diagnostic('error', 'visualAsset.rigAxisInvalid', `${channelPath}.axis`, `Rig axis must be one of ${RIG_ROTATION_AXES.join(', ')}.`));
+        }
+        if (direction !== 1 && direction !== -1) {
+          errors.push(diagnostic('error', 'visualAsset.rigDirectionInvalid', `${channelPath}.direction`, 'Rig direction must be 1 or -1.'));
+        }
+        channels.push(Object.freeze({
+          input,
+          node,
+          axis,
+          direction: direction === -1 ? -1 : 1
+        }));
+      });
+      return Config.deepFreeze({ channels: Object.freeze(channels) });
+    }
+
+    function validateRigBindings(rig, path, blockTypes, nodes, errors, warnings) {
+      if (rig === undefined) return undefined;
+      if (!isPlainObject(rig)) {
+        errors.push(diagnostic('error', 'visualAsset.rigInvalid', path, 'bindings.rig must be an object when present.'));
+        return Config.deepFreeze({});
+      }
+      const normalized = {};
+      for (const key of Object.keys(rig)) {
+        if (!RIG_PROFILE_NAMES.includes(key)) {
+          errors.push(diagnostic('error', 'visualAsset.unknownRigProfile', `${path}.${key}`, `Unknown renderer rig profile "${key}".`));
+          continue;
+        }
+        if (key === 'vectorThruster') normalized.vectorThruster = validateVectorThrusterRig(rig[key], `${path}.vectorThruster`, blockTypes, nodes, errors, warnings);
       }
       return Config.deepFreeze(normalized);
     }
@@ -240,12 +307,14 @@
       let blockTypes = Object.freeze([]);
       let nodes = Object.freeze({});
       let clips = Object.freeze({});
+      let rig = undefined;
       if (!isPlainObject(bindings)) {
         errors.push(diagnostic('error', 'visualAsset.bindingsMissing', `${path}.bindings`, 'bindings must be an object.'));
       } else {
         blockTypes = validateBlockTypes(bindings.blockTypes, `${path}.bindings.blockTypes`, errors, warnings);
         nodes = validateNodeBindings(bindings.nodes, `${path}.bindings.nodes`, errors);
         clips = validateClipBindings(bindings.clips, `${path}.bindings.clips`, errors);
+        rig = validateRigBindings(bindings.rig, `${path}.bindings.rig`, blockTypes, nodes, errors, warnings);
       }
 
       const materialPolicy = validateMaterialPolicy(asset.materialPolicy, `${path}.materialPolicy`, errors);
@@ -260,7 +329,12 @@
           upAxis: model?.upAxis || '',
           ...(modelTransform ? { transform: modelTransform } : {})
         },
-        bindings: { blockTypes, nodes, clips },
+        bindings: {
+          blockTypes,
+          nodes,
+          clips,
+          ...(rig !== undefined ? { rig } : {})
+        },
         materialPolicy
       });
     }
@@ -311,6 +385,9 @@
       CLIP_ALIASES,
       FORBIDDEN_GAMEPLAY_FIELDS,
       AXIS_LABELS,
+      RIG_PROFILE_NAMES,
+      RIG_CHANNEL_INPUTS,
+      RIG_ROTATION_AXES,
       ALPHA_POLICIES,
       validateManifest
     });

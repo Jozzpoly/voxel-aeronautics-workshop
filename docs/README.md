@@ -43,7 +43,7 @@ historical material unless an active doc explicitly links to a file there.
 
 ## Accepted ADRs
 
-ADRs 0033-0041 preserve Gate B/C architecture. ADR 0042 defines the Workbench UI layout foundation. ADR 0043 defines the visual asset boundary for external models, textures and animations. ADR 0044 defines the checkpoint branch and CI trigger policy.
+ADRs 0033-0041 preserve Gate B/C architecture. ADR 0042 defines the Workbench UI layout foundation. ADR 0043 defines the visual asset boundary for external models, textures and animations. ADR 0044 defines the checkpoint branch and CI trigger policy. ADR 0045 defines the renderer-only VectorThruster rig profile.
 
 ## Current supporting evidence
 

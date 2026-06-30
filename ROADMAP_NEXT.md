@@ -21,6 +21,7 @@
 - Visual Asset Pack M4G is present on `current_work`: imported hit proxies are render-invisible by default with a dev debug toggle, Studio can request same-origin game reload after install, and material policy supports `auto` plus per-material alpha overrides for mixed opaque/flame assets.
 - Visual Asset Pack M4H/M4I-A is present on `current_work`: Studio rig-state storage no longer carries optional rig aliases or fire split state across block types, `Clear rig bindings` commits optional aliases as `null`, and visual-pack audit fixtures cover current Catalog block types.
 - Visual Asset Pack M4I-B is present on `current_work`: local visual-pack audit remains read-only by default and can produce dry-run cleanup suggestions for protected-art issues such as inherited Balloon rig aliases.
+- Visual Asset Pack M4J is present on `current_work`: VectorThruster can declare an optional renderer-only rig profile for `gimbalA`, `gimbalB` and roll preview axes; Studio, validators, audit tooling and runtime adapter understand the profile while keeping Blueprint/CraftModel/physics/control semantics untouched.
 
 ## Next: Placement and Orientation Clarity
 

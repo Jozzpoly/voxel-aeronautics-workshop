@@ -100,6 +100,43 @@ def main() -> None:
         assert report['ok'] is True
         assert report['assets'][0]['modelExists'] is True
 
+        write_json(model_path, gltf([
+            {'name': 'Root', 'children': [1]},
+            {'name': 'gimbal'},
+        ]))
+        vector_asset = asset('VectorThruster', {
+            'visualRoot': '/Root',
+            'flame': None,
+            'flameGlow': None,
+            'gimbalAssembly': '/Root/gimbal',
+            'controlFlapPivot': None,
+        })
+        vector_asset['bindings']['rig'] = {
+            'vectorThruster': {
+                'channels': [
+                    {'input': 'gimbalA', 'node': 'gimbalAssembly', 'axis': 'z', 'direction': -1},
+                    {'input': 'gimbalB', 'node': 'gimbalAssembly', 'axis': 'y', 'direction': 1},
+                ],
+            },
+        }
+        write_json(pack / 'VAW_VISUAL_ASSET_PACK_V1.json', pack_manifest([vector_asset]))
+        code, report = run_audit(pack)
+        assert code == 0, report
+        assert report['ok'] is True
+
+        vector_asset['bindings']['nodes']['gimbalAssembly'] = None
+        vector_asset['bindings']['rig']['vectorThruster']['channels'] = [
+            {'input': 'pitch', 'node': 'gimbalAssembly', 'axis': 'yaw', 'direction': 0},
+        ]
+        write_json(pack / 'VAW_VISUAL_ASSET_PACK_V1.json', pack_manifest([vector_asset]))
+        code, report = run_audit(pack, allow_diagnostics=True)
+        assert code == 0
+        report_codes = codes(report)
+        assert 'visualAssetAudit.rigInputInvalid' in report_codes
+        assert 'visualAssetAudit.rigAxisInvalid' in report_codes
+        assert 'visualAssetAudit.rigDirectionInvalid' in report_codes
+        assert 'visualAssetAudit.rigNodeBindingMissing' in report_codes
+
         write_json(pack / 'VAW_VISUAL_ASSET_PACK_V1.json', pack_manifest([asset('Balloon', {
             'visualRoot': '/Root',
             'flame': 'thuster_fire',

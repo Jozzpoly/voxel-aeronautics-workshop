@@ -76,6 +76,15 @@
         return maps;
       }
 
+      function rigBindings(root) {
+        const maps = [];
+        if (root?.userData?.visualAssetRigBindings) maps.push(root.userData.visualAssetRigBindings);
+        root?.traverse?.(object => {
+          if (object !== root && object?.userData?.visualAssetRigBindings) maps.push(object.userData.visualAssetRigBindings);
+        });
+        return maps;
+      }
+
       function findByAlias(root, alias, fallbackName = alias) {
         for (const bindings of nodeBindings(root)) {
           const binding = bindings?.[alias];
@@ -86,7 +95,55 @@
         return findByName(root, fallbackName);
       }
 
-      function setGimbal(root, gimbalA = 0, gimbalB = 0, maxAngle = 0) {
+      function vectorThrusterRigProfile(root) {
+        for (const bindings of rigBindings(root)) {
+          const profile = bindings?.vectorThruster;
+          if (profile && Array.isArray(profile.channels)) return profile;
+        }
+        return null;
+      }
+
+      function rigInputValue(input, gimbalA, gimbalB, roll) {
+        if (input === 'gimbalA') return Number(gimbalA) || 0;
+        if (input === 'gimbalB') return Number(gimbalB) || 0;
+        if (input === 'roll') return Number(roll) || 0;
+        return 0;
+      }
+
+      function baseRotation(object) {
+        object.userData = object.userData || {};
+        if (!object.userData.vawVisualRigBaseRotation) {
+          object.userData.vawVisualRigBaseRotation = Object.freeze({
+            x: Number(object.rotation?.x) || 0,
+            y: Number(object.rotation?.y) || 0,
+            z: Number(object.rotation?.z) || 0
+          });
+        }
+        return object.userData.vawVisualRigBaseRotation;
+      }
+
+      function applyRigChannel(root, channel, gimbalA, gimbalB, maxAngle, roll) {
+        const axis = String(channel?.axis || '').toLowerCase();
+        if (!['x', 'y', 'z'].includes(axis)) return false;
+        const nodeAlias = String(channel?.node || '').trim();
+        if (!nodeAlias) return false;
+        const target = findByAlias(root, nodeAlias, nodeAlias);
+        if (!target?.rotation) return false;
+        const direction = Number(channel.direction) === -1 ? -1 : 1;
+        const base = baseRotation(target);
+        target.rotation[axis] = base[axis] + rigInputValue(channel.input, gimbalA, gimbalB, roll) * (Number(maxAngle) || 0) * direction;
+        return true;
+      }
+
+      function setGimbal(root, gimbalA = 0, gimbalB = 0, maxAngle = 0, { roll = 0 } = {}) {
+        const profile = vectorThrusterRigProfile(root);
+        if (profile) {
+          let changed = 0;
+          for (const channel of profile.channels || []) {
+            if (applyRigChannel(root, channel, gimbalA, gimbalB, maxAngle, roll)) changed += 1;
+          }
+          return changed > 0;
+        }
         const gimbal = findByAlias(root, 'gimbalAssembly');
         if (!gimbal) return false;
         gimbal.rotation.y = (Number(gimbalB) || 0) * maxAngle;

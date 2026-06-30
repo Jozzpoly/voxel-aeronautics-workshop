@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This handoff prepares the repository for the next long Visual Asset / Studio work pass.
+This handoff prepares the repository for the next long Visual Asset / Studio work pass and records the M4J VectorThruster renderer-rig checkpoint.
 
-It intentionally does not implement the next VectorThruster rig feature. The goal is to make the current state easier to resume, validate and extend without rediscovering the whole pipeline.
+The goal is to make the current state easier to resume, validate and extend without rediscovering the whole pipeline.
 
 ## Non-Negotiable Boundary
 
@@ -19,6 +19,7 @@ Studio and Visual Asset Packs are renderer-facing only. They may provide:
 - node aliases;
 - material policy;
 - future renderer-only rig hints for visual motion.
+- optional VectorThruster renderer rig profiles for imported visual pivots.
 
 They must not provide:
 
@@ -126,8 +127,32 @@ For Balloon-style inherited rig aliases, the dry-run report can suggest setting 
 Next ordering:
 
 1. Owner-approved Balloon cleanup may apply the dry-run suggestions to protected local art.
-2. After Balloon is clean, M4J can add the renderer-only VectorThruster rig profile.
-3. Do not start M4J by swapping hardcoded Euler axes in runtime code.
+2. M4J can proceed independently because it does not edit protected Balloon art.
+3. Do not fix VectorThruster by swapping hardcoded Euler axes in runtime code.
+
+## M4J Renderer-Only VectorThruster Rig Profile Update
+
+M4J adds an optional `bindings.rig.vectorThruster` profile to Visual Asset Pack V1.
+
+The profile maps renderer inputs to imported node rotations:
+
+- `input`: `gimbalA`, `gimbalB` or `roll`;
+- `node`: a `bindings.nodes` alias, normally `gimbalAssembly`;
+- `axis`: `x`, `y` or `z`;
+- `direction`: `1` or `-1`.
+
+Runtime uses the profile only to rotate imported renderer nodes from a cached base pose. Missing metadata falls back to the legacy gimbal mapping. Invalid metadata is caught by manifest validation, Studio validation and read-only pack audit diagnostics.
+
+Studio now exposes explicit VectorThruster profile controls and keeps that profile in exact per-block authoring prefs only. Global/default prefs still strip rig state so it cannot leak into Balloon or other block types.
+
+This is infrastructure support, not an owner-art edit. The current protected `local_working_visuals` VectorThruster remains unmodified until the owner chooses to author/install a profile for that asset.
+
+This checkpoint does not edit:
+
+- `assets/visual_packs/local_working_visuals/**`;
+- `assets/visual_packs/installed_visual_packs.json`;
+- Blueprint/CraftModel/compiler output;
+- physics, force/control semantics, save schema or Gate D.
 
 ## Current Prep Artifacts
 
@@ -177,6 +202,15 @@ Focused visual pipeline:
 
 ```powershell
 npm run visual:test
+```
+
+M4J targeted checks:
+
+```powershell
+node tests/test_visual_runtime_adapter.js
+node tests/test_visual_asset_manifest.js
+node tools/blockbench_import_studio/tests/test_authoring_state_flow.js
+node tools/run_with_python_env.js python tests/test_visual_asset_pack_audit.py
 ```
 
 Windows shortcut:
@@ -229,33 +263,10 @@ After the change:
 4. Regenerate `SOURCE_MANIFEST.json` only through `tools/build_release.py`.
 5. Do not claim full WebGL smoke unless Browser/manual game flow was actually verified.
 
-## M4I Design Direction - Not Implemented Yet
-
-The next feature should be a renderer-only VectorThruster rig profile.
-
-Do not fix VectorThruster by swapping hardcoded Euler axes. That would only fit one imported model and will break another.
-
-Preferred direction:
-
-- extend the visual asset manifest with optional renderer-only rig metadata, likely under `bindings.rig.vectorThruster`;
-- keep `controlAxis` forbidden;
-- allow Studio to choose:
-  - nozzle/gimbal pivot path;
-  - pitch/yaw visual axis;
-  - optional inversion per axis;
-  - composition order;
-  - whether roll should affect the nozzle, be ignored visually, or use a separate visual-only roll pivot;
-- add Studio test sliders for pitch/yaw/roll preview;
-- store these rig settings in per-block Studio localStorage while authoring;
-- export them only as renderer-facing metadata;
-- have runtime resolve nodes by full path and apply quaternion axis-angle deltas from a cached base pose;
-- keep missing rig metadata as a graceful no-op/fallback to the existing procedural behavior;
-- add diagnostics when a bound pivot path is missing or an axis is invalid.
-
-Acceptance criteria for M4I:
+## Current M4J Validation Targets
 
 - existing Thruster workflow still works;
-- VectorThruster forward/back, left/right and Q/E visual motion are understandable and consistent with the chosen rig preview;
+- VectorThruster forward/back, left/right and Q/E visual motion can be made understandable by authoring a renderer-only profile for the specific imported rig;
 - no Blueprint/save schema changes;
 - no gameplay-force/control-axis data in Visual Asset Pack;
 - procedural fallback remains intact;

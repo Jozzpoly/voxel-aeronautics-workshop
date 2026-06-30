@@ -24,6 +24,7 @@ Each M4A asset must use:
 - `bindings.blockTypes`: known `foundation.catalog` block types
 - `bindings.nodes`: only `visualRoot`, `flame`, `flameGlow`, `gimbalAssembly`, `controlFlapPivot`
 - `bindings.clips`: only `idle`, `thrust`, `damage`
+- optional `bindings.rig.vectorThruster.channels`: renderer-only VectorThruster visual motion profile
 - `materialPolicy`: object reserved for visual policy
 
 ## Forbidden Fields
@@ -39,6 +40,26 @@ The validator also rejects model paths that leave the pack or require external l
 Invalid packs are blocked at registration time. The game must continue with procedural fallback visuals.
 
 M4A validates the manifest, registers visual metadata and keeps a stable VAW visual root. M4B loads one validated glTF block visual as a renderer-only child of that existing root. M4C extends this to an explicit installed-pack index at `assets/visual_packs/installed_visual_packs.json` and replacement coverage for all current Catalog block types. M4E hardens real-asset loading: imported instances clone renderer resources per block, rejected model loads can retry, `bindings.nodes.visualRoot` mounts the selected glTF subtree, and `unitMeters`/axis metadata affect only the imported child transform. M4F adds fast iteration through `local_working_visuals`, explicit reload, material policy and optional renderer-only transform. The imported model must never replace `root.userData.isVoxelRoot`, the `vawHitProxy`, hit-testing, damage/debris ownership or flight lifecycle.
+
+M4J adds an optional VectorThruster renderer rig profile. It maps existing runtime visual inputs to imported model node rotations without changing control semantics:
+
+```json
+{
+  "bindings": {
+    "rig": {
+      "vectorThruster": {
+        "channels": [
+          { "input": "gimbalA", "node": "gimbalAssembly", "axis": "z", "direction": -1 },
+          { "input": "gimbalB", "node": "gimbalAssembly", "axis": "y", "direction": 1 },
+          { "input": "roll", "node": "gimbalAssembly", "axis": "x", "direction": 1 }
+        ]
+      }
+    }
+  }
+}
+```
+
+`input` is `gimbalA`, `gimbalB` or `roll`; `node` references a `bindings.nodes` alias; `axis` is `x`, `y` or `z`; `direction` is `1` or `-1`. The runtime applies these rotations from the imported node's cached base pose. Missing metadata falls back to the legacy procedural gimbal path; invalid metadata is blocked by validators/audits or no-ops at runtime.
 
 The M4B development fixture is a source-tree artifact at `assets/visual_packs/test_anim_preview_visual_pack/`. It proves the loader boundary and alias-binding path for a `Thruster` visual only. The M4E real fixture is `assets/visual_packs/real_blockbench_thruster_pack/`; it is a source-tree smoke pack copied from real Blockbench exports and is still renderer-only. M4C/M4E pack installation is a simple folder/index workflow, not a user-facing mod manager.
 

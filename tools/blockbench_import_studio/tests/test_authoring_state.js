@@ -63,6 +63,7 @@ function assetWithRig() {
     transform: { position: { x: 0.25, y: 0, z: 0 } },
     materialPolicy: { alpha: 'auto', materialOverrides: [{ materialName: 'Nozzle', alpha: 'opaque' }] },
     fireSplit: { enabled: true, nodes: ['/thuster_fire'] },
+    rig: { vectorThruster: { channels: [{ input: 'gimbalA', node: 'gimbalAssembly', axis: 'z', direction: -1 }] } },
   };
   const prefs = {
     defaults: thrusterSnapshot,
@@ -90,6 +91,7 @@ function assetWithRig() {
     controlFlapPivot: null,
   }, 'A new block type must not inherit Thruster rig bindings from default prefs.');
   assert.deepEqual(balloon.fireSplit, { enabled: false, nodes: [] }, 'Fire split rig state must not cross block types through defaults.');
+  assert.equal(balloon.rig, undefined, 'Renderer rig profiles must not cross block types through defaults.');
   assert.deepEqual(balloon.transform, thrusterSnapshot.transform, 'Default transform may still be reused across block types.');
   assert.deepEqual(balloon.materialPolicy, thrusterSnapshot.materialPolicy, 'Default material policy may still be reused across block types.');
 

@@ -33,6 +33,7 @@ const studioApp = fs.readFileSync(path.join(STUDIO_ROOT, 'app/main.js'), 'utf8')
 assert(studioIndex.includes('vaw-block-type'), 'Studio must expose explicit block type selection for inferred V1 manifests.');
 assert(studioIndex.includes('vaw-node-visual-root'), 'Studio must expose visualRoot for explicit authoring review.');
 assert(studioIndex.includes('vaw-node-visual-root-picker'), 'Studio must expose a full-path visualRoot picker.');
+assert(studioIndex.includes('vaw-vector-rig-enabled'), 'Studio must expose VectorThruster renderer rig profile controls.');
 assert(studioIndex.includes('vaw-transform-pos-x'), 'Studio must expose renderer-only transform controls.');
 assert(studioIndex.includes('vaw-material-alpha'), 'Studio must expose material alpha policy controls.');
 assert(studioIndex.includes('value="auto"'), 'Studio must expose auto alpha policy as the safe default.');
@@ -59,6 +60,8 @@ assert(studioApp.includes('currentAuthoringPrefsSnapshot'), 'Studio must persist
 assert(studioApp.includes('saveAuthoringPrefsForBlock'), 'Studio must save authoring settings under the selected block type.');
 assert(studioApp.includes('handleBlockTypeChange'), 'Studio block type changes must restore per-block rig settings instead of behaving like ordinary text input.');
 assert(studioApp.includes('fireSplit: currentFireSplitFields()'), 'Studio per-block preferences must remember fire/glow split rig settings.');
+assert(studioApp.includes('rig: currentRigFields()'), 'Studio per-block preferences must remember renderer-only rig profiles.');
+assert(studioApp.includes('defaultVectorRigProfile'), 'Studio must expose a safe default VectorThruster rig profile.');
 assert(studioApp.includes('buildInstallGltfPatch'), 'Studio install workflow must patch renderer-facing glTF material splits before local install.');
 assert(studioApp.includes('splitNodeMaterialsForBlend'), 'Studio must split fire/glow primitives onto a blend material instead of using global blend.');
 

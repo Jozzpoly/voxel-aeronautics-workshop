@@ -161,6 +161,22 @@
         <label>flameGlow <input id="vaw-node-flame-glow" type="text" placeholder="optional" /></label>
         <label>gimbalAssembly <input id="vaw-node-gimbal" type="text" placeholder="optional" /></label>
         <label>controlFlapPivot <input id="vaw-node-control-flap" type="text" placeholder="optional" /></label>
+        <label class="inline-check wide-field"><input id="vaw-vector-rig-enabled" type="checkbox" /> VectorThruster renderer rig profile</label>
+        <div class="button-row wrap vector-rig-actions">
+          <button id="vaw-vector-rig-default" type="button">Use default VectorThruster profile</button>
+        </div>
+        <label>gimbalA axis
+          <select id="vaw-vector-rig-gimbal-a-axis"><option value="x">x</option><option value="y">y</option><option value="z" selected>z</option></select>
+        </label>
+        <label class="inline-check"><input id="vaw-vector-rig-gimbal-a-invert" type="checkbox" checked /> invert gimbalA</label>
+        <label>gimbalB axis
+          <select id="vaw-vector-rig-gimbal-b-axis"><option value="x">x</option><option value="y" selected>y</option><option value="z">z</option></select>
+        </label>
+        <label class="inline-check"><input id="vaw-vector-rig-gimbal-b-invert" type="checkbox" /> invert gimbalB</label>
+        <label>roll preview axis
+          <select id="vaw-vector-rig-roll-axis"><option value="x" selected>x</option><option value="y">y</option><option value="z">z</option></select>
+        </label>
+        <label class="inline-check"><input id="vaw-vector-rig-roll-invert" type="checkbox" /> invert roll preview</label>
         <label>position X <input id="vaw-transform-pos-x" type="number" step="0.01" value="0" /></label>
         <label>position Y <input id="vaw-transform-pos-y" type="number" step="0.01" value="0" /></label>
         <label>position Z <input id="vaw-transform-pos-z" type="number" step="0.01" value="0" /></label>

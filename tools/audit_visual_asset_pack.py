@@ -11,6 +11,9 @@ KNOWN_BLOCK_TYPES = {
     'Core', 'Hull', 'Frame', 'Thruster', 'VectorThruster', 'Balloon', 'Wing', 'ControlSurface', 'Gyro', 'Fuel'
 }
 NODE_ALIASES = ('visualRoot', 'flame', 'flameGlow', 'gimbalAssembly', 'controlFlapPivot')
+RIG_PROFILES = {'vectorThruster'}
+RIG_INPUTS = {'gimbalA', 'gimbalB', 'roll'}
+RIG_AXES = {'x', 'y', 'z'}
 RIG_ALIAS_TYPES = {
     'flame': {'Thruster', 'VectorThruster'},
     'flameGlow': {'Thruster', 'VectorThruster'},
@@ -219,6 +222,46 @@ def audit_pack(pack_root: Path, manifest_name: str = DEFAULT_MANIFEST, suggest_c
                 add_asset_diagnostic('warning', 'visualAssetAudit.unexpectedRigBindingForBlockType', f'{asset_path}.bindings.nodes.{alias}', f'{alias} is unusual for {", ".join(block_types) or "unbound asset"}.')
                 if suggest_cleanup:
                     add_cleanup(alias, value, None, f'{alias} is unusual for {", ".join(block_types) or "unbound asset"}.', 'set-null')
+
+        rig = asset.get('bindings', {}).get('rig') if isinstance(asset.get('bindings'), dict) else None
+        if rig is not None:
+            if not isinstance(rig, dict):
+                add_asset_diagnostic('error', 'visualAssetAudit.rigInvalid', f'{asset_path}.bindings.rig', 'Rig bindings must be an object when present.')
+            else:
+                for profile_name, profile in rig.items():
+                    profile_path = f'{asset_path}.bindings.rig.{profile_name}'
+                    if profile_name not in RIG_PROFILES:
+                        add_asset_diagnostic('error', 'visualAssetAudit.unknownRigProfile', profile_path, f'Unknown renderer rig profile: {profile_name}')
+                        continue
+                    if profile_name == 'vectorThruster':
+                        if 'VectorThruster' not in block_types:
+                            add_asset_diagnostic('warning', 'visualAssetAudit.rigProfileBlockTypeMismatch', profile_path, 'VectorThruster rig profile should only be declared on VectorThruster assets.')
+                        if not isinstance(profile, dict):
+                            add_asset_diagnostic('error', 'visualAssetAudit.rigProfileInvalid', profile_path, 'VectorThruster rig profile must be an object.')
+                            continue
+                        channels = profile.get('channels')
+                        if not isinstance(channels, list) or not channels:
+                            add_asset_diagnostic('error', 'visualAssetAudit.rigChannelsMissing', f'{profile_path}.channels', 'VectorThruster rig profile must declare at least one channel.')
+                            continue
+                        for channel_index, channel in enumerate(channels):
+                            channel_path = f'{profile_path}.channels[{channel_index}]'
+                            if not isinstance(channel, dict):
+                                add_asset_diagnostic('error', 'visualAssetAudit.rigChannelInvalid', channel_path, 'Rig channel must be an object.')
+                                continue
+                            input_name = channel.get('input')
+                            node_alias = channel.get('node')
+                            axis = channel.get('axis')
+                            direction = channel.get('direction', 1)
+                            if input_name not in RIG_INPUTS:
+                                add_asset_diagnostic('error', 'visualAssetAudit.rigInputInvalid', f'{channel_path}.input', f'Rig input must be one of {", ".join(sorted(RIG_INPUTS))}.')
+                            if node_alias not in NODE_ALIASES:
+                                add_asset_diagnostic('error', 'visualAssetAudit.rigNodeInvalid', f'{channel_path}.node', 'Rig node must reference a bindings.nodes alias.')
+                            elif not nodes.get(node_alias):
+                                add_asset_diagnostic('error', 'visualAssetAudit.rigNodeBindingMissing', f'{channel_path}.node', f'Rig channel references {node_alias}, but bindings.nodes.{node_alias} is empty.')
+                            if axis not in RIG_AXES:
+                                add_asset_diagnostic('error', 'visualAssetAudit.rigAxisInvalid', f'{channel_path}.axis', f'Rig axis must be one of {", ".join(sorted(RIG_AXES))}.')
+                            if direction not in (1, -1):
+                                add_asset_diagnostic('error', 'visualAssetAudit.rigDirectionInvalid', f'{channel_path}.direction', 'Rig direction must be 1 or -1.')
 
         asset_summary = {
             'assetId': asset.get('assetId'),
