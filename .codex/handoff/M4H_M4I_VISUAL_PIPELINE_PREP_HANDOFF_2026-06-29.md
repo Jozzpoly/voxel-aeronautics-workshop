@@ -104,6 +104,31 @@ Targeted M4I-A validation evidence:
 - `node tools/run_with_python_env.js python tools/validate_full.py` PASS;
 - `git diff --check` PASS.
 
+## M4I-B Dry-Run Repair Prep Update
+
+M4I-B adds read-only repair preparation without editing protected art.
+
+Use:
+
+```powershell
+node tools/run_with_python_env.js python tools/audit_visual_asset_pack.py assets/visual_packs/local_working_visuals --allow-diagnostics --suggest-cleanup
+```
+
+The audit report now includes:
+
+- top-level `diagnostics` for compatibility with earlier checks;
+- `assetReports[]` entries with `assetId`, `blockTypes`, model status, per-asset diagnostics and dry-run cleanup suggestions;
+- `suggestedManifestCleanup.mode == "dry-run"`;
+- `suggestedManifestCleanup.actions[]` with manifest paths, current values, suggested values and reasons.
+
+For Balloon-style inherited rig aliases, the dry-run report can suggest setting optional aliases such as `flame` or `gimbalAssembly` to `null`. It does not modify `local_working_visuals`, does not regenerate art, does not touch `visualRoot` and does not update `installed_visual_packs.json`.
+
+Next ordering:
+
+1. Owner-approved Balloon cleanup may apply the dry-run suggestions to protected local art.
+2. After Balloon is clean, M4J can add the renderer-only VectorThruster rig profile.
+3. Do not start M4J by swapping hardcoded Euler axes in runtime code.
+
 ## Current Prep Artifacts
 
 Added for long-change workflow:

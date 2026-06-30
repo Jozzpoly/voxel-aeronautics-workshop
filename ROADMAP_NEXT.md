@@ -19,6 +19,8 @@
 - Visual Asset Pack M4E is present on `current_work`: imported glTF instances deep-clone renderer resources, failed model loads are retryable, `visualRoot` mounts a real subtree with full-scene fallback, a real Blockbench thruster fixture is installed for source-tree smoke, and Studio inference no longer silently defaults to `Thruster`.
 - Visual Asset Pack M4F is present on `current_work`: one `local_working_visuals` pack supports repeated in-place block visual updates from Studio, and the game can reload renderer-only visual assets without restart.
 - Visual Asset Pack M4G is present on `current_work`: imported hit proxies are render-invisible by default with a dev debug toggle, Studio can request same-origin game reload after install, and material policy supports `auto` plus per-material alpha overrides for mixed opaque/flame assets.
+- Visual Asset Pack M4H/M4I-A is present on `current_work`: Studio rig-state storage no longer carries optional rig aliases or fire split state across block types, `Clear rig bindings` commits optional aliases as `null`, and visual-pack audit fixtures cover current Catalog block types.
+- Visual Asset Pack M4I-B is present on `current_work`: local visual-pack audit remains read-only by default and can produce dry-run cleanup suggestions for protected-art issues such as inherited Balloon rig aliases.
 
 ## Next: Placement and Orientation Clarity
 

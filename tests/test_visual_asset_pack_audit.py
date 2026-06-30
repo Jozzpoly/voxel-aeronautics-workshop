@@ -43,10 +43,12 @@ def pack_manifest(assets: list[dict]) -> dict:
     }
 
 
-def run_audit(pack_root: Path, *, allow_diagnostics: bool = False) -> tuple[int, dict]:
+def run_audit(pack_root: Path, *, allow_diagnostics: bool = False, suggest_cleanup: bool = False) -> tuple[int, dict]:
     command = [sys.executable, str(AUDIT), str(pack_root)]
     if allow_diagnostics:
         command.append('--allow-diagnostics')
+    if suggest_cleanup:
+        command.append('--suggest-cleanup')
     result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
     return result.returncode, json.loads(result.stdout)
 
@@ -83,6 +85,8 @@ def main() -> None:
         assert len(report['assets']) == len(KNOWN_BLOCK_TYPES)
         assert {item['blockTypes'][0] for item in report['assets']} == set(KNOWN_BLOCK_TYPES)
         assert all(item['modelExists'] for item in report['assets'])
+        assert len(report['assetReports']) == len(KNOWN_BLOCK_TYPES)
+        assert all(item['diagnostics'] == [] for item in report['assetReports'])
 
         write_json(pack / 'VAW_VISUAL_ASSET_PACK_V1.json', pack_manifest([asset('Thruster', {
             'visualRoot': '/Root',
@@ -103,12 +107,22 @@ def main() -> None:
             'gimbalAssembly': 'thuster_nozzle',
             'controlFlapPivot': None,
         })]))
-        code, report = run_audit(pack, allow_diagnostics=True)
+        code, report = run_audit(pack, allow_diagnostics=True, suggest_cleanup=True)
         assert code == 0
         report_codes = codes(report)
         assert 'visualAssetAudit.nodeBindingUnresolved' in report_codes
         assert 'visualAssetAudit.unexpectedRigBindingForBlockType' in report_codes
         assert 'visualAssetAudit.suspiciousBindingSpelling' in report_codes
+        assert report['suggestedManifestCleanup']['mode'] == 'dry-run'
+        set_null_paths = {
+            item['path'] for item in report['suggestedManifestCleanup']['actions']
+            if item['action'] == 'set-null' and item['suggestedValue'] is None
+        }
+        assert 'assets[0].bindings.nodes.flame' in set_null_paths
+        assert 'assets[0].bindings.nodes.gimbalAssembly' in set_null_paths
+        balloon_report = report['assetReports'][0]
+        assert balloon_report['assetId'] == 'balloon_visual'
+        assert len(balloon_report['cleanupSuggestions']) >= 2
 
         code, report = run_audit(pack)
         assert code == 1

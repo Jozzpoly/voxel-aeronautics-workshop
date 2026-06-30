@@ -55,6 +55,14 @@ node tools/run_with_python_env.js python tools/audit_visual_asset_pack.py assets
 
 The local working pack is user art. Audit diagnostics for `local_working_visuals` are evidence for manual review; they are not permission to normalize, delete or auto-fix the art.
 
+For an actionable dry-run cleanup report, add `--suggest-cleanup`:
+
+```bash
+node tools/run_with_python_env.js python tools/audit_visual_asset_pack.py assets/visual_packs/local_working_visuals --allow-diagnostics --suggest-cleanup
+```
+
+The JSON report keeps the original `diagnostics` list and also includes `assetReports` entries with `assetId`, `blockTypes`, model status, per-asset diagnostics and dry-run `cleanupSuggestions`. The top-level `suggestedManifestCleanup` object is always advisory; it never writes files.
+
 ## Export Pack Artifact
 
 1. Design or load a visual model in Studio.

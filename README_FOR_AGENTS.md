@@ -66,6 +66,14 @@ npm run browser:smoke
 `npm run browser:smoke` is target-platform evidence, not a default core gate. If it reports `ENVIRONMENT`, document the missing browser/CDP/localhost capability instead of treating it as a product PASS.
 The browser smoke JSON contract is `status`, `stage`, `reason`, `diagnostics` and, on PASS only, `result`. `PRODUCT` blocks the checkpoint. `ENVIRONMENT` is acceptable only when the stage and diagnostics identify a missing or unusable browser/CDP/localhost capability.
 
+For Visual Asset Pack / Studio work, add a read-only local pack audit:
+
+```text
+node tools/run_with_python_env.js python tools/audit_visual_asset_pack.py assets/visual_packs/local_working_visuals --allow-diagnostics --suggest-cleanup
+```
+
+Treat diagnostics under `assets/visual_packs/local_working_visuals/**` as `OWNER` evidence unless the owner explicitly approves editing that art. The `--suggest-cleanup` report is dry-run only.
+
 Classify failures:
 
 - `PRODUCT`: real product, compiler, runtime, release or contract failure.
