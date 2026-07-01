@@ -59,8 +59,9 @@
   ],
   "entrypoint": "index.html",
   "files": {
-    "assets/visual_packs/installed_visual_packs.json": "d1e1288a96c9791762964637782e6ac6faff65ed591fb9f8fa50878ee658b304",
-    "assets/visual_packs/local_working_visuals/VAW_VISUAL_ASSET_PACK_V1.json": "4d7be414e9a6688a85056c9e73e21bd5c299fecbb8f63a09488591626f78f64b",
+    "assets/visual_packs/installed_visual_packs.json": "b9b9b3cd0000a8a7fb64db73406ae41ccee48f43f9d13e25bafef0b9737436a9",
+    "assets/visual_packs/local_working_visuals/VAW_VISUAL_ASSET_PACK_V1.json": "125ee5236d633c6be80baec80a1bd0a8399c3a002f0fc23c1c86d6941faa7b92",
+    "assets/visual_packs/local_working_visuals/models/blocks/balloon/model.gltf": "45c52bbd4f336fbf1bbea6c837a3e53302845e4503d8c3f0ed90357de85cf00a",
     "assets/visual_packs/local_working_visuals/models/blocks/fuel/model.gltf": "78ab987f40447693a890cdf927932991d039e2e52c3080fce953535e86b5279d",
     "assets/visual_packs/local_working_visuals/models/blocks/hull/model.gltf": "5add425a54daf5ae89a20bd37f48d7e17174ab667243b4624129669d67fb80bf",
     "assets/visual_packs/local_working_visuals/models/blocks/thruster/model.gltf": "60b4f50ed5244a2e6add98325fdb918da4b91448dcae23eda0d5bc97a780de19",

@@ -1,13 +1,13 @@
 {
   "format": "VAW_VISUAL_ASSET_PACK_V1",
   "packId": "local_working_visuals",
-  "version": "0.1.0-local.69",
+  "version": "0.1.0-local.78",
   "metadata": {
     "status": "local-working-pack",
     "authority": "visual-only",
-    "revision": 69,
+    "revision": 78,
     "note": "Developer working pack for fast renderer-only visual iteration. It is not gameplay authority.",
-    "lastUpdatedBlockType": "VectorThruster"
+    "lastUpdatedBlockType": "Balloon"
   },
   "assets": [
     {
@@ -208,6 +208,30 @@
           "idle": null,
           "thrust": null,
           "damage": null
+        },
+        "rig": {
+          "vectorThruster": {
+            "channels": [
+              {
+                "input": "gimbalA",
+                "node": "gimbalAssembly",
+                "axis": "z",
+                "direction": -1
+              },
+              {
+                "input": "gimbalB",
+                "node": "gimbalAssembly",
+                "axis": "y",
+                "direction": 1
+              },
+              {
+                "input": "roll",
+                "node": "gimbalAssembly",
+                "axis": "x",
+                "direction": 1
+              }
+            ]
+          }
         }
       },
       "materialPolicy": {
@@ -224,6 +248,55 @@
             "alpha": "blend"
           }
         ]
+      }
+    },
+    {
+      "assetId": "local_balloon_visual",
+      "kind": "blockVisual",
+      "model": {
+        "path": "models/blocks/balloon/model.gltf",
+        "unitMeters": 1.0,
+        "forwardAxis": "+X",
+        "upAxis": "+Y",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotationDegrees": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        }
+      },
+      "bindings": {
+        "blockTypes": [
+          "Balloon"
+        ],
+        "nodes": {
+          "visualRoot": "/baloon",
+          "flame": null,
+          "flameGlow": null,
+          "gimbalAssembly": null,
+          "controlFlapPivot": null
+        },
+        "clips": {
+          "idle": null,
+          "thrust": null,
+          "damage": null
+        }
+      },
+      "materialPolicy": {
+        "pixelated": true,
+        "alpha": "auto",
+        "doubleSided": "from-gltf"
       }
     }
   ]

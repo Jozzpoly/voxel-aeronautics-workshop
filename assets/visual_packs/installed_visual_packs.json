@@ -5,7 +5,7 @@
     {
       "source": "local:local_working_visuals",
       "manifestUrl": "local_working_visuals/VAW_VISUAL_ASSET_PACK_V1.json",
-      "revision": 69
+      "revision": 78
     },
     {
       "source": "dev:real_blockbench_thruster_pack",
