@@ -31,6 +31,8 @@ def main() -> None:
     release_test = (ROOT / 'tests' / 'test_release_build.py').read_text(encoding='utf-8')
     assert 'ensure_source_manifest(ROOT)' not in release_test, 'release-build test must not mutate root provenance'
     assert 'SOURCE_MANIFEST.json is stale' in release_test
+    assert 'def expected_archive_names(' not in release_test
+    assert 'module.expected_archive_names(ROOT, single.name)' in release_test
 
     agent_entrypoint = (ROOT / 'README_FOR_AGENTS.md').read_text(encoding='utf-8')
     assert 'validate_clean_candidate.py' in agent_entrypoint

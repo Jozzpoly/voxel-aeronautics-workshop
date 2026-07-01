@@ -23,18 +23,6 @@ def embedded_source(single_text: str, relative: Path) -> str:
     return single_text[start:finish]
 
 
-def expected_archive_names(root: Path, prefix: str, single_name: str) -> set[str]:
-    names = set()
-    for path in sorted(root.rglob('*')):
-        relative = path.relative_to(root)
-        if not path.is_file() or any(part in module.IGNORED_ARCHIVE_PARTS for part in relative.parts):
-            continue
-        names.add(prefix + relative.as_posix())
-    names.add(prefix + 'release/' + single_name)
-    names.add(prefix + 'release/SHA256.txt')
-    return names
-
-
 assert '.agent-validation' in module.IGNORED_ARCHIVE_PARTS
 
 manifest_path = ROOT / module.MANIFEST_NAME
@@ -86,12 +74,13 @@ with tempfile.TemporaryDirectory() as temporary:
 
     prefix = module.ARCHIVE_ROOT + '/'
     with zipfile.ZipFile(archive) as zipped:
-        names = set(zipped.namelist())
-        expected_names = expected_archive_names(ROOT, prefix, single.name)
-        assert names == expected_names, {
-            'missing': sorted(expected_names - names),
-            'unexpected': sorted(names - expected_names),
+        inventory = tuple(zipped.namelist())
+        expected_inventory = module.expected_archive_names(ROOT, single.name)
+        assert inventory == expected_inventory, {
+            'missing': sorted(set(expected_inventory) - set(inventory)),
+            'unexpected': sorted(set(inventory) - set(expected_inventory)),
         }
+        names = set(inventory)
 
         required_docs = {
             prefix + 'docs/README.md',
