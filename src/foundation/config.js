@@ -36,25 +36,28 @@
     ];
     const COLLISION_GROUP = { craft: 1, world: 2, debris: 4 };
     const TEST_RANGE = {
-      startPad: { x: 0, y: 0, z: 0, radius: 9 },
-      finishPad: { x: 82, y: 0, z: 0, radius: 9 },
-      northPad: { x: 58, y: 0, z: -48, radius: 8 },
-      southPad: { x: 60, y: 0, z: 52, radius: 8 },
-      ridgePad: { x: 118, y: 0, z: -34, radius: 7.5 },
-      towerPad: { x: 42, y: 0, z: 84, radius: 7 },
-      eastDepot: { x: 142, y: 0, z: 34, radius: 10 },
-      frontierPad: { x: 166, y: 0, z: -72, radius: 10 },
+      startPad: { x: 0, y: 0, z: 0, radius: 10, label: 'Launch Yard' },
+      finishPad: { x: 92, y: 0, z: 0, radius: 9, label: 'Yard Receiver' },
+      weatherSpirePad: { x: 166, y: 0, z: -12, radius: 7, label: 'Weather Spire Service Pad' },
+      northPad: { x: 82, y: 0, z: -76, radius: 8, label: 'North Survey Pad' },
+      ridgePad: { x: 148, y: 0, z: -118, radius: 7.5, label: 'Ridge Shelf' },
+      southPad: { x: 78, y: 0, z: 86, radius: 8, label: 'South Basin' },
+      towerPad: { x: 124, y: 0, z: 148, radius: 7, label: 'Tower Service Pad' },
+      eastDepot: { x: 198, y: 0, z: 48, radius: 10, label: 'East Cargo Depot' },
+      skyhookPad: { x: 224, y: 0, z: 138, radius: 9, label: 'Skyhook Mast Pad' },
+      frontierPad: { x: 236, y: 0, z: -152, radius: 11, label: 'Frontier Relay Pad' },
       spawn: { x: 0, y: 3.5, z: 0 },
-      bounds: 190,
-      maxAltitude: 160,
+      bounds: 270,
+      maxAltitude: 210,
       groundY: -0.5,
       missionMap: {
-        label: 'Gate C proving range',
+        label: 'Gate C extended proving range',
         sectors: [
           { id: 'yard', title: 'Launch Yard', padIds: ['startPad', 'finishPad'] },
-          { id: 'north', title: 'North Survey Line', padIds: ['northPad', 'ridgePad'] },
-          { id: 'south', title: 'South Tower Line', padIds: ['southPad', 'towerPad'] },
-          { id: 'frontier', title: 'Frontier Freight Line', padIds: ['eastDepot', 'frontierPad'] }
+          { id: 'ridge', title: 'North Ridge Survey Line', padIds: ['northPad', 'ridgePad'] },
+          { id: 'mesa', title: 'South Mesa Tower Line', padIds: ['southPad', 'towerPad', 'skyhookPad'] },
+          { id: 'depot', title: 'East Depot Freight Line', padIds: ['weatherSpirePad', 'eastDepot'] },
+          { id: 'frontier', title: 'Frontier Relay Corridor', padIds: ['frontierPad'] }
         ]
       }
     };
