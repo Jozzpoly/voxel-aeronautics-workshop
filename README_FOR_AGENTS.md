@@ -90,6 +90,7 @@ Use bundled Python aware entrypoints where possible:
 npm run test
 npm run studio:test
 npm run visual:test
+npm run mission:validate
 npm run validate:fast
 npm run validate:full
 npm run browser:smoke
@@ -122,6 +123,16 @@ node tools/run_with_python_env.js python tools/audit_visual_asset_pack.py assets
 ```
 
 Treat diagnostics under `assets/visual_packs/local_working_visuals/**` as `OWNER` evidence unless the owner explicitly approves editing that art. The `--suggest-cleanup` report is dry-run only. The 2026-07-01 feature-expansion handoff records a narrow owner-approved Balloon binding cleanup; do not infer broader asset-edit permission from it.
+
+For mission-map, terrain or contract-route work, run the data geometry gate:
+
+```text
+npm run mission:validate
+```
+
+It validates `TEST_RANGE` pads, sectors, terrain materials, terrain patches,
+route strips, collidable obstacles, and pad/gate clearance. Do not replace it
+with token or regex-only checks.
 
 For VectorThruster visual direction work, use the 24-orientation probe:
 

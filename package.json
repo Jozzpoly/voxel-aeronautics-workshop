@@ -20,6 +20,7 @@
     "probe:vector-thruster": "node tools/probe_vector_thruster_direction.js --summary",
     "probe:vector-thruster:summary": "node tools/probe_vector_thruster_direction.js --summary --report-only",
     "probe:vector-thruster:report": "node tools/probe_vector_thruster_direction.js --report-only",
+    "mission:validate": "node tools/validate_mission_map.js",
     "browser:smoke": "node tests/run_browser_smoke.mjs"
   },
   "engines": {

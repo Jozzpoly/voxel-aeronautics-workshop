@@ -152,12 +152,22 @@
         document.getElementById('ui-contract-payload').textContent = `${contract.payloadMass || 0} kg`;
         const objectives = document.getElementById('ui-contract-objectives');
         objectives.innerHTML = contract.objectives.map(objective => `<div class="objective-line">${objective}</div>`).join('');
+        const routeNotes = document.getElementById('ui-contract-route-notes');
+        if (routeNotes) {
+          const notes = [
+            contract.routeLabel ? ['Route', contract.routeLabel] : null,
+            Array.isArray(contract.engineeringFocus) && contract.engineeringFocus.length ? ['Focus', contract.engineeringFocus.join(', ')] : null,
+            Array.isArray(contract.recommendedModules) && contract.recommendedModules.length ? ['Build', contract.recommendedModules.join(', ')] : null,
+            Array.isArray(contract.hazards) && contract.hazards.length ? ['Watch', contract.hazards.join(', ')] : null
+          ].filter(Boolean);
+          routeNotes.innerHTML = notes.map(([label, value]) => `<div class="contract-note"><span>${label}</span><strong>${value}</strong></div>`).join('');
+        }
         const readiness = contractReadiness(contract);
         const readinessEl = document.getElementById('ui-contract-readiness');
         readinessEl.className = `contract-readiness mt-3 ${readiness.level}`;
         readinessEl.textContent = readiness.text;
         const flightButton = document.getElementById('btn-flight');
-        if (flightButton && STATE.mode === 'BUILD') flightButton.textContent = contract.id === 'sandbox' ? 'Launch Sandbox Test' : `Launch ${contract.title.replace(/^\d+\s*•\s*/, '')}`;
+        if (flightButton && STATE.mode === 'BUILD') flightButton.textContent = contract.id === 'sandbox' ? 'Launch Sandbox Test' : `Launch ${contract.title.replace(/^\d+\s*[-•]\s*/, '')}`;
       }
 
       function selectContract(id) {
@@ -221,14 +231,14 @@
         const ids = Array.isArray(contract?.landingZones) && contract.landingZones.length
           ? contract.landingZones
           : (contract?.kind === 'hover-return' ? ['startPad'] : ['finishPad']);
-        return ids.map(id => ({ id, zone: TEST_RANGE[id] })).filter(entry => entry.zone);
+        return ids.map(id => ({ id, zone: TEST_RANGE.pads?.[id] || TEST_RANGE[id] })).filter(entry => entry.zone);
       }
 
       function prepareMissionMarkers(contract) {
         clearMissionMarkers();
         if (contract.gates) contract.gates.forEach((gate, index) => createGateMarker(gate, index));
         for (const entry of landingZonesForContract(contract)) {
-          createLandingMarker(entry.zone, entry.id === 'startPad' ? 'LAUNCH PAD' : 'REMOTE PAD');
+          createLandingMarker(entry.zone, (entry.zone.label || (entry.id === 'startPad' ? 'Launch Pad' : 'Remote Pad')).toUpperCase());
         }
         missionMarkerGroup.visible = STATE.mode === 'FLIGHT';
       }

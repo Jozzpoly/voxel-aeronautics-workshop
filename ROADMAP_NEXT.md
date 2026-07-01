@@ -28,6 +28,7 @@ Active detailed rebase: `docs/ROADMAP_REBASE_2026-07-01.md`.
 - Visual Asset Pack M4J is present on `current_work`: VectorThruster can declare an optional renderer-only rig profile for `gimbalA`, `gimbalB` and roll preview axes; Studio, validators, audit tooling and runtime adapter understand the profile while keeping Blueprint/CraftModel/physics/control semantics untouched.
 - Visual authoring M4K is the active polish lane: clean-candidate validation protects `SOURCE_MANIFEST.json` from dirty local visual WIP, Balloon cleanup remains owner-approved only, and real VectorThruster asset proof stays renderer-only.
 - Visual authoring M4L is in progress: the local VectorThruster profile and runtime default pass the 24-orientation visual-vs-force probe, a local imported-visual parity baseline covers Balloon/Hull/Fuel/Thruster/VectorThruster, and the game renderer now matches Studio's sRGB output policy. Remaining visual-truth work is a diagnostic render/capture for lighting, fog and shadow parity, not asset recolor.
+- Mission Map / Terrain Authoring expansion is present on `current_work`: the proving range is materially larger, fog is reduced for long-distance navigation, all mission pads and collidable landmarks are data-driven through `TEST_RANGE`, terrain appearance is controlled through procedural material/patch/strip data, and `npm run mission:validate` checks pad/gate clearance against collidable obstacles.
 - Roadmap Rebase 2026-07-01 is active: owner feedback about visual darkness, effects, block gaps, VectorThruster direction, primitive hinge behavior, servo/mechanism ambitions and future block binding/programming is captured as product planning input in `docs/ROADMAP_REBASE_2026-07-01.md`.
 
 ## Next: M4L - Visual Truth And VectorThruster Proof
@@ -81,6 +82,7 @@ Define stable endpoints as `{blockId, portId}` only after M4L/M5/M6 have removed
 ## Later
 
 - Content pipeline boundaries. Define maps, contracts, missions and content packs as separate schemas before adding broader content.
+- Mission map polish. Keep the `docs/mission_map_terrain_authoring.md` workflow data-driven, then add manual flight balance passes for par times, reward pacing and route readability.
 - Gate E - deterministic control kernel and runtime commands by neutral IDs, if not already covered by a later accepted M8/Gate E plan.
 - User-facing visual pack manager, permanent multi-pack install UX, runtime animation semantics and polished multi-asset authoring workflow after the folder/index workflow and real-asset fidelity are proven.
 - Broader content/gameplay only after Gate D/E contracts.

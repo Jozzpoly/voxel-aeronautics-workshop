@@ -298,7 +298,7 @@
       buildButton.textContent = STATE.mission.status === 'ACTIVE' && STATE.mission.contractId !== 'sandbox' ? 'Abort Contract' : 'Return to Drydock';
       if (STATE.mode === 'BUILD') {
         const contract = getSelectedContract();
-        flightButton.textContent = contract.id === 'sandbox' ? 'Launch Sandbox Test' : `Launch ${contract.title.replace(/^\d+\s*•\s*/, '')}`;
+        flightButton.textContent = contract.id === 'sandbox' ? 'Launch Sandbox Test' : `Launch ${contract.title.replace(/^\d+\s*[-•]\s*/, '')}`;
       }
       document.getElementById('btn-symmetry').textContent = `SYMMETRY: ${STATE.symmetry}`;
 

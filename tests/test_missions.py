@@ -10,6 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 from source_inventory import ALL_JS as GAME
 HTML = (ROOT / 'index.html').read_text(encoding='utf-8')
 ENTRY = (ROOT / 'src/game.js').read_text(encoding='utf-8')
+CATALOG = (ROOT / 'src/foundation/catalog.js').read_text(encoding='utf-8')
+CONTRACT_BLOCK = CATALOG[CATALOG.index('const CONTRACTS = ['):CATALOG.index('const MISSION_MAP = TEST_RANGE.missionMap')]
 
 EXPECTED_CONTRACTS = [
     ('sandbox', None),
@@ -17,10 +19,16 @@ EXPECTED_CONTRACTS = [
     ('gate_course', 'hover_license'),
     ('courier', 'gate_course'),
     ('heavy_lift', 'courier'),
+    ('ridge_slalom', 'heavy_lift'),
+    ('south_basin_survey', 'ridge_slalom'),
+    ('tower_inspection', 'south_basin_survey'),
+    ('skyhook_calibration', 'tower_inspection'),
+    ('east_depot_run', 'skyhook_calibration'),
+    ('frontier_gold_trial', 'east_depot_run'),
 ]
 
 # Contract ids and prerequisite chain must be present and unique.
-ids = re.findall(r"id:\s*'([a-z_]+)'\s*,\s*title:", GAME)
+ids = re.findall(r"id:\s*'([a-z_]+)'\s*,\s*title:", CONTRACT_BLOCK)
 assert len(ids) == len(set(ids)), f'duplicate contract ids: {ids}'
 for contract_id, prerequisite in EXPECTED_CONTRACTS:
     assert contract_id in ids, f'missing contract {contract_id}'
@@ -115,7 +123,9 @@ assert 'const loadedControls = computeControlMetrics(loadedSnapshot);' in GAME
 # Range decorations that look solid must have actual static collision bodies.
 assert 'const rangeStaticBodies = [];' in GAME
 assert 'userData: { rangeObstacle: true }' in GAME
-assert GAME.count('0x000000, true') >= 4, 'expected collidable range structures'
+assert 'obstacles: RANGE_OBSTACLES' in GAME, 'range obstacles should be declared as data in TEST_RANGE'
+assert 'terrain: {' in GAME and 'TERRAIN_MATERIALS' in GAME and 'TERRAIN_PATCHES' in GAME, 'terrain material/patch config should be data-driven'
+assert 'for (const obstacle of TEST_RANGE.obstacles || [])' in GAME, 'scene should render collidable range structures from TEST_RANGE.obstacles'
 assert "if (collision.kind === 'ground') STATE.mission.lastGroundContact = STATE.mission.elapsed;" in GAME
 
 # Mission DOM should update on the render path, not on every 120 Hz physics substep.
@@ -184,6 +194,8 @@ print(json.dumps({
 }, indent=2))
 
 assert "landingZones: ['startPad', 'finishPad']" in GAME, 'Hover License should accept either clearly marked test pad.'
+assert "landingZones: ['skyhookPad']" in GAME, 'Skyhook pad should have a playable mission purpose.'
+assert 'ui-contract-route-notes' in HTML, 'Contract panel should render route/build/hazard metadata.'
 assert "FlightControl.adjustmentForInput(event.code, STATE.input.profile)" in GAME, 'Balloon power hotkeys must come from the user input profile.'
 assert "'balloonPower-': Object.freeze(['Comma'])" in GAME
 assert "'balloonPower+': Object.freeze(['Period'])" in GAME

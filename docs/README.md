@@ -39,8 +39,12 @@ Default branch rule: `current_work` is the checkpoint branch for multi-session w
 
 - `docs/blockbench_import_studio.md`
 - `docs/visual_asset_pack_v1.md`
+- `docs/mission_map_terrain_authoring.md`
 
 `docs/visual_asset_pack_v1.md` is the canonical Visual Asset Pack V1 contract.
+`docs/mission_map_terrain_authoring.md` is the active contract for the
+Gate C mission-map, terrain material, patch/strip and obstacle authoring
+workflow.
 `tools/blockbench_import_studio/docs/**` is Studio-local development or
 historical material unless an active doc explicitly links to a file there.
 
