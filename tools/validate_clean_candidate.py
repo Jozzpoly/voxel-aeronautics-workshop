@@ -5,6 +5,7 @@ import argparse
 import json
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -76,13 +77,8 @@ def staged_paths() -> list[str]:
 def unique_candidate_dir(label: str) -> Path:
     timestamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
     stem = ''.join(ch if ch.isalnum() or ch in ('-', '_') else '-' for ch in label).strip('-') or 'candidate'
-    base = AGENT_VALIDATION_DIR / f'clean-candidate-{timestamp}-{stem}'
-    candidate = base
-    suffix = 1
-    while candidate.exists():
-        suffix += 1
-        candidate = Path(f'{base}-{suffix}')
-    return candidate
+    AGENT_VALIDATION_DIR.mkdir(parents=True, exist_ok=True)
+    return Path(tempfile.mkdtemp(prefix=f'clean-candidate-{timestamp}-{stem}-', dir=AGENT_VALIDATION_DIR))
 
 
 def parse_args() -> argparse.Namespace:
@@ -150,7 +146,6 @@ def main() -> int:
     patch = b'' if args.head_only else staged_patch_bytes()
     has_staged_patch = bool(patch.strip())
     candidate_dir = unique_candidate_dir(args.name)
-    AGENT_VALIDATION_DIR.mkdir(parents=True, exist_ok=True)
 
     clone_command = git_command(
         '-c', 'core.autocrlf=false',

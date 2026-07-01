@@ -7,6 +7,7 @@ import io
 import json
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -55,6 +56,23 @@ def assert_protected_staged_refusal(module) -> None:
             setattr(module, name, value)
 
 
+def assert_candidate_dirs_are_atomically_unique(module) -> None:
+    original_dir = module.AGENT_VALIDATION_DIR
+    with tempfile.TemporaryDirectory(prefix='vaw-clean-candidate-test-') as temporary:
+        try:
+            module.AGENT_VALIDATION_DIR = Path(temporary)
+            first = module.unique_candidate_dir('same-label')
+            second = module.unique_candidate_dir('same-label')
+            assert first != second
+            assert first.is_dir() and second.is_dir()
+            assert first.parent == module.AGENT_VALIDATION_DIR
+            assert second.parent == module.AGENT_VALIDATION_DIR
+            assert first.name.startswith('clean-candidate-')
+            assert second.name.startswith('clean-candidate-')
+        finally:
+            module.AGENT_VALIDATION_DIR = original_dir
+
+
 def main() -> None:
     module = load_module()
     source = SCRIPT.read_text(encoding='utf-8')
@@ -77,6 +95,7 @@ def main() -> None:
         'stagedProtectedPaths',
         '--allow-protected-staged',
         '--allow-unstaged',
+        'tempfile.mkdtemp',
     ]:
         assert snippet in source, f'missing clean-candidate workflow guard: {snippet}'
     assert 'local_working_visuals' in source
@@ -94,6 +113,7 @@ def main() -> None:
     assert '--allow-unstaged' in result.stdout
     assert '--allow-protected-staged' in result.stdout
     assert_protected_staged_refusal(module)
+    assert_candidate_dirs_are_atomically_unique(module)
 
     print('validate_clean_candidate contract ok')
 

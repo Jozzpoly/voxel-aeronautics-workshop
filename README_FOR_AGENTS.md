@@ -58,21 +58,21 @@ Use bundled Python aware entrypoints where possible:
 npm run test
 npm run studio:test
 npm run visual:test
-node tools/run_with_python_env.js python tools/validate_fast.py
-node tools/run_with_python_env.js python tools/validate_full.py
+npm run validate:fast
+npm run validate:full
 npm run browser:smoke
 ```
 
 When `assets/visual_packs/local_working_visuals/**` or `assets/visual_packs/installed_visual_packs.json` is dirty, root release validation can regenerate `SOURCE_MANIFEST.json` from protected local art. For release-grade evidence, stage only the intended candidate and validate an isolated clean checkout instead:
 
 ```text
-node tools/run_with_python_env.js python tools/validate_clean_candidate.py
+npm run validate:clean
 ```
 
 The helper clones HEAD into `.agent-validation/**`, applies the staged patch if present, and runs bundled `tools/validate_full.py` by default. It reports protected visual dirty paths but does not copy them into the candidate. Use an explicit command after `--` for narrower evidence, for example:
 
 ```text
-node tools/run_with_python_env.js python tools/validate_clean_candidate.py -- node tools/run_with_python_env.js python tools/validate_fast.py
+npm run validate:clean:fast
 ```
 
 The helper refuses staged protected visual-pack paths by default. Use `--allow-protected-staged` only for an explicit owner-approved art commit, never for routine code/docs/tooling validation.

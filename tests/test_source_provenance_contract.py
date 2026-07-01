@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,6 +33,15 @@ def main() -> None:
     assert 'local_working_visuals' in helper and 'installed_visual_packs.json' in helper
     assert 'clone' in helper and 'apply' in helper, 'helper must validate a separate staged/HEAD candidate'
 
+    scripts = json.loads((ROOT / 'package.json').read_text(encoding='utf-8'))['scripts']
+    assert scripts['validate:fast'] == 'node tools/run_with_python_env.js python tools/validate_fast.py'
+    assert scripts['validate:full'] == 'node tools/run_with_python_env.js python tools/validate_full.py'
+    assert scripts['validate:clean'] == 'node tools/run_with_python_env.js python tools/validate_clean_candidate.py'
+    assert scripts['validate:clean:fast'] == (
+        'node tools/run_with_python_env.js python tools/validate_clean_candidate.py -- '
+        'node tools/run_with_python_env.js python tools/validate_fast.py'
+    )
+
     release_test = (ROOT / 'tests' / 'test_release_build.py').read_text(encoding='utf-8')
     assert 'ensure_source_manifest(ROOT)' not in release_test, 'release-build test must not mutate root provenance'
     assert 'SOURCE_MANIFEST.json is stale' in release_test
@@ -40,6 +50,8 @@ def main() -> None:
 
     agent_entrypoint = (ROOT / 'README_FOR_AGENTS.md').read_text(encoding='utf-8')
     assert 'validate_clean_candidate.py' in agent_entrypoint
+    assert 'npm run validate:clean' in agent_entrypoint
+    assert 'npm run validate:clean:fast' in agent_entrypoint
     assert 'SOURCE_MANIFEST.json' in agent_entrypoint
     assert 'local_working_visuals' in agent_entrypoint
 
