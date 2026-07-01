@@ -175,6 +175,22 @@
         return mesh;
       }
 
+      function addRangeStrip(from, to, width, color, opacity = 0.38) {
+        const dx = to.x - from.x;
+        const dz = to.z - from.z;
+        const length = Math.hypot(dx, dz);
+        if (length <= 0.01) return null;
+        const mesh = new THREE.Mesh(
+          new THREE.BoxGeometry(length, 0.035, width),
+          new THREE.MeshStandardMaterial({ color, roughness: 1, metalness: 0, transparent: true, opacity })
+        );
+        mesh.position.set((from.x + to.x) * 0.5, -0.32, (from.z + to.z) * 0.5);
+        mesh.rotation.y = -Math.atan2(dz, dx);
+        mesh.receiveShadow = true;
+        testRangeGroup.add(mesh);
+        return mesh;
+      }
+
       function addRangePad(position, radius, color) {
         const pad = new THREE.Mesh(
           new THREE.CylinderGeometry(radius, radius, 0.18, 48),
@@ -193,8 +209,9 @@
       }
 
       function createTestRangeEnvironment() {
+        const rangeSize = TEST_RANGE.bounds * 2 + 40;
         const ground = new THREE.Mesh(
-          new THREE.PlaneGeometry(260, 190),
+          new THREE.PlaneGeometry(rangeSize, rangeSize),
           new THREE.MeshStandardMaterial({ color: 0x15283a, roughness: 1, metalness: 0 })
         );
         ground.rotation.x = -Math.PI / 2;
@@ -202,25 +219,62 @@
         ground.receiveShadow = true;
         testRangeGroup.add(ground);
 
+        const padColors = {
+          startPad: 0x155e75,
+          finishPad: 0x166534,
+          weatherSpirePad: 0x0e7490,
+          northPad: 0x1d4ed8,
+          ridgePad: 0x7c3aed,
+          southPad: 0x92400e,
+          towerPad: 0xb45309,
+          eastDepot: 0x15803d,
+          skyhookPad: 0xbe185d,
+          frontierPad: 0x7f1d1d
+        };
+        const listedPadIds = new Set();
+        for (const sector of TEST_RANGE.missionMap?.sectors || []) {
+          for (const padId of sector.padIds || []) listedPadIds.add(padId);
+        }
+        for (const padId of listedPadIds) {
+          const pad = TEST_RANGE[padId];
+          if (pad) addRangePad(pad, pad.radius, padColors[padId] || 0x166534);
+        }
+
+        addRangeStrip(TEST_RANGE.startPad, TEST_RANGE.finishPad, 12, 0x334155, 0.52);
+        addRangeStrip(TEST_RANGE.finishPad, TEST_RANGE.northPad, 7, 0x1e3a8a, 0.28);
+        addRangeStrip(TEST_RANGE.northPad, TEST_RANGE.ridgePad, 7, 0x4c1d95, 0.30);
+        addRangeStrip(TEST_RANGE.startPad, TEST_RANGE.southPad, 7, 0x78350f, 0.28);
+        addRangeStrip(TEST_RANGE.southPad, TEST_RANGE.towerPad, 8, 0x92400e, 0.30);
+        addRangeStrip(TEST_RANGE.towerPad, TEST_RANGE.skyhookPad, 8, 0x831843, 0.30);
+        addRangeStrip(TEST_RANGE.finishPad, TEST_RANGE.weatherSpirePad, 7, 0x0e7490, 0.26);
+        addRangeStrip(TEST_RANGE.weatherSpirePad, TEST_RANGE.eastDepot, 9, 0x14532d, 0.30);
+        addRangeStrip(TEST_RANGE.weatherSpirePad, TEST_RANGE.frontierPad, 7, 0x7f1d1d, 0.26);
+
         addRangeBox({ x: 112, y: 0.12, z: 12 }, { x: 36, y: -0.40, z: 0 }, 0x334155);
         addRangeBox({ x: 108, y: 0.03, z: 0.22 }, { x: 36, y: -0.31, z: 0 }, 0xe2e8f0, 0x334155);
-        for (let x = -12; x <= 86; x += 10) addRangeBox({ x: 4.5, y: 0.035, z: 0.16 }, { x, y: -0.30, z: 0 }, 0xf8fafc);
-        addRangePad(TEST_RANGE.startPad, TEST_RANGE.startPad.radius, 0x155e75);
-        addRangePad(TEST_RANGE.finishPad, TEST_RANGE.finishPad.radius, 0x166534);
+        for (let x = -12; x <= 92; x += 10) addRangeBox({ x: 4.5, y: 0.035, z: 0.16 }, { x, y: -0.30, z: 0 }, 0xf8fafc);
 
         addRangeBox({ x: 15, y: 6, z: 15 }, { x: -16, y: 2.5, z: -18 }, 0x26364c, 0x000000, true);
         addRangeBox({ x: 8, y: 4, z: 9 }, { x: -5, y: 1.5, z: -18 }, 0x374151, 0x000000, true);
         addRangeBox({ x: 20, y: 1, z: 6 }, { x: -12, y: 0, z: 17 }, 0x475569, 0x000000, true);
-        for (let index = 0; index < 14; index += 1) {
+        addRangeBox({ x: 7, y: 26, z: 7 }, { x: TEST_RANGE.weatherSpirePad.x, y: 12.5, z: TEST_RANGE.weatherSpirePad.z }, 0x0f172a, 0x000000, true);
+        addRangeBox({ x: 18, y: 8, z: 18 }, { x: TEST_RANGE.eastDepot.x - 14, y: 3.5, z: TEST_RANGE.eastDepot.z + 18 }, 0x1f2937, 0x000000, true);
+        addRangeBox({ x: 10, y: 34, z: 10 }, { x: TEST_RANGE.towerPad.x + 12, y: 16.5, z: TEST_RANGE.towerPad.z - 12 }, 0x431407, 0x000000, true);
+        addRangeBox({ x: 12, y: 18, z: 12 }, { x: TEST_RANGE.ridgePad.x - 18, y: 8.5, z: TEST_RANGE.ridgePad.z + 18 }, 0x312e81, 0x000000, true);
+        addRangeBox({ x: 9, y: 30, z: 9 }, { x: TEST_RANGE.frontierPad.x - 20, y: 14.5, z: TEST_RANGE.frontierPad.z + 20 }, 0x450a0a, 0x000000, true);
+
+        for (let index = 0; index < 18; index += 1) {
           const side = index % 2 === 0 ? 1 : -1;
-          const x = 12 + index * 8;
-          const z = side * (24 + (index % 3) * 7);
+          const x = 18 + index * 10;
+          const z = side * (34 + (index % 4) * 13);
           const height = 3 + (index % 5) * 1.7;
           addRangeBox({ x: 3 + (index % 2), y: height, z: 3 + ((index + 1) % 3) }, { x, y: height / 2 - 0.45, z }, 0x26384d, 0x000000, true);
         }
 
         const beaconMaterial = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.72 });
-        for (const pad of [TEST_RANGE.startPad, TEST_RANGE.finishPad]) {
+        for (const padId of listedPadIds) {
+          const pad = TEST_RANGE[padId];
+          if (!pad) continue;
           for (const side of [-1, 1]) {
             const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 7, 8), beaconMaterial.clone());
             beacon.position.set(pad.x + side * pad.radius * 0.75, 3, pad.z);
