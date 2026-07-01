@@ -1,7 +1,7 @@
 # VAW Documentation Index
 
 Status: Active documentation index
-Last verified: 2026-06-29
+Last verified: 2026-07-01
 Authority: Navigation and authority classification for current repository docs.
 
 Authority order: current user decision, latest verified remote SHA, source/tests from that SHA, active contracts, accepted ADRs, current evidence, recovery evidence, then history.
@@ -13,9 +13,12 @@ Authority order: current user decision, latest verified remote SHA, source/tests
 - `AI_PROJECT_MEMORY.md`
 - `ARCHITECTURE.md`
 - `ROADMAP_NEXT.md`
+- `docs/ROADMAP_REBASE_2026-07-01.md`
 - `PROGRAMMABLE_MACHINE_RESEARCH.md`
 
-Current state: Gate C is the stable gameplay base. The immediate foundation concern is workflow, CI, documentation authority and validation trust. Gate D - Device & Port Schema - remains queued behind Workbench/authoring clarity and foundation hardening.
+Current state: Gate C is the stable gameplay base. The immediate foundation concern is no longer only workflow/provenance; the 2026-07-01 roadmap rebase makes Visual Truth, VectorThruster direction proof, Voxel Fit, Mechanical V2 and Device Tuning the ordered planning path before broad Gate D/E work.
+
+`ROADMAP_NEXT.md` remains the short active route map. `docs/ROADMAP_REBASE_2026-07-01.md` is the detailed active rebase behind it. Future roadmap reviews must explicitly supersede that rebase instead of adding competing active plans.
 
 ## Active workflow authority
 
@@ -47,6 +50,8 @@ ADRs 0033-0041 preserve Gate B/C architecture. ADR 0042 defines the Workbench UI
 
 ## Current supporting evidence
 
+- `docs/FEATURE_EXPANSION_READINESS_AUDIT_2026-07-01.md`
+- `docs/M4L_VISUAL_TRUTH_BASELINE_2026-07-01.md`
 - `FUTURE_READINESS_REVIEW.md`
 - `docs/repository/RELEASE_ARTIFACT_POLICY_RECOMMENDATION.md`
 - `docs/history/phases/PHASE_1D4A_REPORT.md`

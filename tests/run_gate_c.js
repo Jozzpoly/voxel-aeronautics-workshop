@@ -9,6 +9,7 @@ const tests = [
   ['node', 'tests/test_assembly_space_controller.js'],
   ['node', 'tests/test_gate_c_runtime.js'],
   ['node', 'tests/test_gate_c_performance.js'],
+  ['node', 'tests/test_scene_environment.js'],
   [process.env.PYTHON || 'python', 'tests/test_runtime_dependency_contract.py']
 ];
 for (const command of tests) {

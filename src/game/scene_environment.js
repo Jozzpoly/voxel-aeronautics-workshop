@@ -7,6 +7,14 @@
       return value;
     }
 
+    function configureRendererColorOutput(renderer, THREE) {
+      if ('outputColorSpace' in renderer && THREE.SRGBColorSpace) {
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+      } else if ('outputEncoding' in renderer && THREE.sRGBEncoding) {
+        renderer.outputEncoding = THREE.sRGBEncoding;
+      }
+    }
+
     function create(options = {}) {
       const THREE = requireObject(options.THREE, 'THREE');
       const Physics = requireObject(options.Physics, 'Physics');
@@ -26,6 +34,7 @@
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       renderer.setSize(window.innerWidth, window.innerHeight);
+      configureRendererColorOutput(renderer, THREE);
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       container.appendChild(renderer.domElement);

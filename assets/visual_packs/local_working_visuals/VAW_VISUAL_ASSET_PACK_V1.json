@@ -1,11 +1,11 @@
 {
   "format": "VAW_VISUAL_ASSET_PACK_V1",
   "packId": "local_working_visuals",
-  "version": "0.1.0-local.78",
+  "version": "0.1.0-local.84",
   "metadata": {
     "status": "local-working-pack",
     "authority": "visual-only",
-    "revision": 78,
+    "revision": 84,
     "note": "Developer working pack for fast renderer-only visual iteration. It is not gameplay authority.",
     "lastUpdatedBlockType": "Balloon"
   },
@@ -216,13 +216,13 @@
                 "input": "gimbalA",
                 "node": "gimbalAssembly",
                 "axis": "z",
-                "direction": -1
+                "direction": 1
               },
               {
                 "input": "gimbalB",
                 "node": "gimbalAssembly",
                 "axis": "y",
-                "direction": 1
+                "direction": -1
               },
               {
                 "input": "roll",

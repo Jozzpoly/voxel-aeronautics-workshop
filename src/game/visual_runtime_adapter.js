@@ -146,8 +146,8 @@
         }
         const gimbal = findByAlias(root, 'gimbalAssembly');
         if (!gimbal) return false;
-        gimbal.rotation.y = (Number(gimbalB) || 0) * maxAngle;
-        gimbal.rotation.z = -(Number(gimbalA) || 0) * maxAngle;
+        gimbal.rotation.y = -(Number(gimbalB) || 0) * maxAngle;
+        gimbal.rotation.z = (Number(gimbalA) || 0) * maxAngle;
         return true;
       }
 

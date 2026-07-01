@@ -216,8 +216,8 @@
   }
 
   const VECTOR_RIG_DEFAULT_CHANNELS = Object.freeze([
-    Object.freeze({ input: 'gimbalA', node: 'gimbalAssembly', axis: 'z', direction: -1 }),
-    Object.freeze({ input: 'gimbalB', node: 'gimbalAssembly', axis: 'y', direction: 1 }),
+    Object.freeze({ input: 'gimbalA', node: 'gimbalAssembly', axis: 'z', direction: 1 }),
+    Object.freeze({ input: 'gimbalB', node: 'gimbalAssembly', axis: 'y', direction: -1 }),
     Object.freeze({ input: 'roll', node: 'gimbalAssembly', axis: 'x', direction: 1 }),
   ]);
   const VECTOR_RIG_INPUTS = Object.freeze(['gimbalA', 'gimbalB', 'roll']);

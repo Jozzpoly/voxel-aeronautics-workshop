@@ -1,6 +1,6 @@
 # M4K Workflow Provenance Handoff - 2026-06-30
 
-Status: active handoff for the next visual-authoring checkpoint.
+Status: superseded operational handoff. Keep as M4K provenance evidence, but use `FEATURE_EXPANSION_READINESS_HANDOFF_2026-07-01.md` for the next active work order.
 
 ## Baseline
 

@@ -33,8 +33,8 @@ function assertNear(value, expected, epsilon = 1e-6) {
   const gimbal = group('gimbalAssembly');
   root.add(gimbal);
   assert.strictEqual(adapter.setGimbal(root, 0.5, -0.25, Math.PI / 8), true);
-  assertNear(gimbal.rotation.y, -0.25 * Math.PI / 8);
-  assertNear(gimbal.rotation.z, -0.5 * Math.PI / 8);
+  assertNear(gimbal.rotation.y, 0.25 * Math.PI / 8);
+  assertNear(gimbal.rotation.z, 0.5 * Math.PI / 8);
 }
 
 {

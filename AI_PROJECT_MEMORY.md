@@ -2,6 +2,8 @@
 
 Current source of truth: **Workbench Foundation on stable Gate C**.
 
+Current detailed roadmap rebase: `docs/ROADMAP_REBASE_2026-07-01.md`. Current readiness evidence: `docs/FEATURE_EXPANSION_READINESS_AUDIT_2026-07-01.md`. `ROADMAP_NEXT.md` is the short active route map; the rebase is the detailed planning authority for M4L Visual Truth, M5 Voxel Fit, M6 Mechanical V2, M7 Device Tuning and M8 Signal/Control Runtime.
+
 - `APP_VERSION=0.8.2-foundation.workbench-foundation`
 - `RELEASE_ID=foundation-workbench-foundation`
 - Blueprint v12, CompiledCraft V5, RuntimeAssemblyPlan V3.
@@ -36,3 +38,5 @@ Current M2A delta: Placement targeting now uses `game.build-targeting` for teste
 Current M2B/M2C delta: Placement validation now returns deterministic UI feedback instead of a bare boolean. Ghost adjacency and click-status messages distinguish no-hit, no-face, invalid-normal, wrong-assembly-space, occupied, block-limit, invalid-block, orphan-block-assembly-space, empty-plan and future symmetry-collision. Orientation readouts now use block-specific semantics for Core forward/up, Thruster thrust direction, Wing chord/lift normal, ControlSurface chord/lift normal plus mixer axis/sign, and VectorThruster thrust/gimbal normal. Telemetry now labels runtime mass as Active mass to avoid implying whole detached-craft mass.
 
 Current foundation hardening delta: M1 is published on `current_work`; M2A moved visual asset composition wiring behind `game.visual-asset-composition`; M2B adds a direct composition test for bootstrap, dev-control loader wiring, procedural factory exposure and Node BroadcastChannel safety; M2C moves power/HUD readouts behind `game.power-control-readouts` while keeping `src/game.js` as final composition entrypoint. M3A/M3B adds `npm run browser:smoke` as separate target-platform evidence with stage-aware JSON diagnostics; missing browser/CDP/localhost support is `ENVIRONMENT`, real UI/runtime failures are `PRODUCT`, and local Chrome currently reaches a PASS path through help-modal start, contract hit-testing, starter craft load, Flight Focus and launch. M3C keeps Visual Asset Pack V1 canonical in `docs/visual_asset_pack_v1.md`, retires root readiness evidence to history, guards new ad-hoc `window.VAW_*` globals, records checkpoint/CI policy in ADR 0044 and adds dry-run-first `.agent-validation/` pruning.
+
+Current roadmap rebase delta: broad feature expansion is not ready to start as one large Gate D push. The next safe lane is M4L Visual Truth: clean owner-approved Balloon visual bindings, establish Studio/game material parity, and add a 24-orientation VectorThruster visual-nozzle-vs-force proof before fixing rig axes. After that, Voxel Fit should remove hidden block gaps deliberately, then Mechanical V2 should redesign hinge/joint frames before schema growth, and only then should device tuning, direct binding and later deterministic signal/control runtime expand.

@@ -499,8 +499,8 @@
   function defaultVectorThrusterRig() {
     return {
       channels: [
-        { input: 'gimbalA', node: 'gimbalAssembly', axis: 'z', direction: -1 },
-        { input: 'gimbalB', node: 'gimbalAssembly', axis: 'y', direction: 1 },
+        { input: 'gimbalA', node: 'gimbalAssembly', axis: 'z', direction: 1 },
+        { input: 'gimbalB', node: 'gimbalAssembly', axis: 'y', direction: -1 },
         { input: 'roll', node: 'gimbalAssembly', axis: 'x', direction: 1 },
       ],
     };
