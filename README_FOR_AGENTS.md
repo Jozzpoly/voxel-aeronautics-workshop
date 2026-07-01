@@ -75,6 +75,8 @@ The helper clones HEAD into `.agent-validation/**`, applies the staged patch if 
 npm run validate:clean:fast
 ```
 
+The npm shortcuts pass stable candidate labels (`validate-full` and `validate-fast`) so `.agent-validation/**` evidence is easy to scan after repeated runs.
+
 The helper refuses staged protected visual-pack paths by default. Use `--allow-protected-staged` only for an explicit owner-approved art commit, never for routine code/docs/tooling validation.
 Root `npm run test` includes release-build coverage and may fail with `SOURCE_MANIFEST.json is stale` while protected visual work is dirty. Treat that as an expected workflow guard, not as permission to commit local art hashes. Use clean-candidate validation for the release-grade gate.
 

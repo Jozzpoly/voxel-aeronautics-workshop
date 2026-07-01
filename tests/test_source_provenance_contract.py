@@ -36,9 +36,9 @@ def main() -> None:
     scripts = json.loads((ROOT / 'package.json').read_text(encoding='utf-8'))['scripts']
     assert scripts['validate:fast'] == 'node tools/run_with_python_env.js python tools/validate_fast.py'
     assert scripts['validate:full'] == 'node tools/run_with_python_env.js python tools/validate_full.py'
-    assert scripts['validate:clean'] == 'node tools/run_with_python_env.js python tools/validate_clean_candidate.py'
+    assert scripts['validate:clean'] == 'node tools/run_with_python_env.js python tools/validate_clean_candidate.py --name validate-full'
     assert scripts['validate:clean:fast'] == (
-        'node tools/run_with_python_env.js python tools/validate_clean_candidate.py -- '
+        'node tools/run_with_python_env.js python tools/validate_clean_candidate.py --name validate-fast -- '
         'node tools/run_with_python_env.js python tools/validate_fast.py'
     )
 
