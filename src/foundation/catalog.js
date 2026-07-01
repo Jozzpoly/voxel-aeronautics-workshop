@@ -18,177 +18,135 @@
     };
 
     const MISSION_MAP = {
-      title: 'Gate C Proving Range',
-      summary: 'A chained workshop test range with certification pads, survey lines, freight routes and a frontier relay corridor.',
+      title: 'Gate C Extended Proving Range',
+      summary: 'A larger, less crowded proving range built around a launch yard, a northern ridge shelf, a southern tower line, an eastern depot and a long frontier relay corridor.',
       sectors: [
-        { id: 'yard', title: 'Launch Yard', short: 'Certification, recovery and basic control', padIds: ['startPad', 'finishPad'] },
-        { id: 'north', title: 'North Survey Line', short: 'Crosswind-style gates and ridge recovery', padIds: ['northPad', 'ridgePad'] },
-        { id: 'south', title: 'South Tower Line', short: 'High-altitude handling around the tower pad', padIds: ['southPad', 'towerPad'] },
-        { id: 'frontier', title: 'Frontier Freight Line', short: 'Long payload runs to the outer depot', padIds: ['eastDepot', 'frontierPad'] }
+        { id: 'yard', title: 'Launch Yard', short: 'Basic certification, pad recovery and short control lanes', padIds: ['startPad', 'finishPad'] },
+        { id: 'ridge', title: 'North Ridge Survey Line', short: 'Off-axis navigation, drift control and ridge shelf recovery', padIds: ['northPad', 'ridgePad'] },
+        { id: 'mesa', title: 'South Mesa Tower Line', short: 'Altitude discipline around the tower and skyhook pads', padIds: ['southPad', 'towerPad', 'skyhookPad'] },
+        { id: 'depot', title: 'East Depot Freight Line', short: 'Fuel planning and payload routes through the weather spire', padIds: ['weatherSpirePad', 'eastDepot'] },
+        { id: 'frontier', title: 'Frontier Relay Corridor', short: 'The longest current route, ending at the outer relay pad', padIds: ['frontierPad'] }
       ]
     };
 
     const CONTRACTS = [
       {
         id: 'sandbox', title: 'Sandbox Test', short: 'Free engineering flight', sector: 'yard', difficulty: 0,
-        description: 'Use the complete test range without objectives, time limits, payload or rewards.',
+        description: 'Use the full extended proving range without objectives, time limits, payload or rewards. This is now the best place to scout pads, learn the larger map and test unusual airframes before taking a real contract.',
         reward: 0, payloadMass: 0, timeLimit: 0, kind: 'sandbox', prerequisite: null,
-        objectives: ['Experiment freely', 'Return to the workshop whenever ready']
+        routeLabel: 'Full range free-flight',
+        engineeringFocus: ['Explore the larger test range', 'Practice landing on distant pads', 'Tune stability assist and power settings'],
+        objectives: ['Experiment freely', 'Scout the distant pads and corridors', 'Return to the workshop whenever ready']
       },
       {
-        id: 'hover_license', title: '01 • Hover License', short: 'Altitude and safe recovery', sector: 'yard', difficulty: 1,
-        description: 'Prove that the craft can climb under its own power, hold altitude and recover safely on either marked test pad.',
-        reward: 220, payloadMass: 0, timeLimit: 90, parTime: 45, kind: 'hover-return', prerequisite: null,
+        id: 'hover_license', title: '01 • Hover License', short: 'Basic hover, drift control and pad recovery', sector: 'yard', difficulty: 1,
+        description: 'A short but strict certification flight. Climb out of the launch yard, keep the craft level instead of bouncing, then recover on either clearly marked yard pad. This contract is intentionally simple, but it teaches the landing rules that every later route depends on.',
+        reward: 260, payloadMass: 0, timeLimit: 95, parTime: 50, kind: 'hover-return', prerequisite: null,
         targetAltitude: 8, holdSeconds: 3, landingZones: ['startPad', 'finishPad'],
-        objectives: ['Reach 8 m altitude', 'Hold altitude for 3 seconds', 'Land on either marked test pad']
+        routeLabel: 'Launch Yard hover box → either yard pad',
+        engineeringFocus: ['Static lift margin', 'Low-speed stability', 'Gentle touchdown control'],
+        objectives: ['Reach 8 m altitude without tumbling', 'Hold a stable hover for 3 seconds', 'Land on either marked yard pad']
       },
       {
-        id: 'gate_course', title: '02 • Control Course', short: 'Three-dimensional handling', sector: 'yard', difficulty: 2,
-        description: 'Fly through the marked gates in order and settle on the remote landing pad. Stable control matters more than raw speed.',
-        reward: 420, payloadMass: 0, timeLimit: 130, parTime: 75, kind: 'gate-course', prerequisite: 'hover_license',
+        id: 'gate_course', title: '02 • Yard Control Course', short: 'A compact route with actual turns', sector: 'yard', difficulty: 2,
+        description: 'The old control course was too short and too similar to later missions. This version stays near the workshop but adds a deliberate S-curve, a mild altitude change and a final alignment with the receiver pad. It should reveal weak yaw control before the player reaches the larger map.',
+        reward: 520, payloadMass: 0, timeLimit: 150, parTime: 92, kind: 'gate-course', prerequisite: 'hover_license',
         landingZones: ['finishPad'],
+        routeLabel: 'Launch Yard → S-curve control gates → Yard Receiver',
+        engineeringFocus: ['Yaw authority', 'Forward thrust balance', 'Recovering from shallow turns'],
         gates: [
-          { x: 22, y: 8, z: 0, radius: 5 },
-          { x: 44, y: 12, z: 10, radius: 5 },
-          { x: 66, y: 8, z: 0, radius: 5 }
+          { x: 24, y: 8, z: 4, radius: 5.8 },
+          { x: 48, y: 12, z: -14, radius: 5.4 },
+          { x: 72, y: 10, z: 16, radius: 5.2 },
+          { x: 92, y: 7, z: 0, radius: 5.8 }
         ],
-        objectives: ['Pass all three gates in order', 'Land on the remote pad']
+        objectives: ['Pass all four yard gates in order', 'Avoid overcorrecting through the S-turn', 'Land on the receiver pad']
       },
       {
-        id: 'courier', title: '03 • Workshop Courier', short: 'Payload and fuel discipline', sector: 'yard', difficulty: 3,
-        description: 'Carry a 10 kg instrument crate through the route and deliver it with at least 25% fuel remaining.',
-        reward: 680, payloadMass: 10, timeLimit: 150, parTime: 95, minFuelFraction: 0.25, minPayloadIntegrity: 0.65, kind: 'courier', prerequisite: 'gate_course',
-        landingZones: ['finishPad'],
-        gates: [
-          { x: 28, y: 7, z: -8, radius: 5.5 },
-          { x: 58, y: 10, z: 8, radius: 5.5 }
-        ],
-        objectives: ['Carry the 10 kg payload', 'Pass both delivery gates', 'Land with at least 25% fuel and 65% cargo integrity']
-      },
-      {
-        id: 'heavy_lift', title: '04 • Heavy-Lift Trial', short: 'Lift a serious payload', sector: 'yard', difficulty: 4,
-        description: 'A reinforced 20 kg test payload is attached to the command core. Climb to 12 m, hold, then recover at the launch pad.',
-        reward: 900, payloadMass: 20, timeLimit: 120, parTime: 70, minPayloadIntegrity: 0.50, kind: 'hover-return', prerequisite: 'courier',
-        targetAltitude: 12, holdSeconds: 4, landingZones: ['startPad'],
-        objectives: ['Lift the 20 kg payload', 'Reach 12 m and hold for 4 seconds', 'Land with at least 50% cargo integrity']
-      },
-      {
-        id: 'precision_return', title: '05 • Precision Return', short: 'Tight launch-pad recovery', sector: 'yard', difficulty: 4,
-        description: 'Repeat the hover certification with a longer hold and a stricter single-pad recovery target at the launch yard.',
-        reward: 560, payloadMass: 0, timeLimit: 95, parTime: 55, kind: 'hover-return', prerequisite: 'heavy_lift',
-        targetAltitude: 10, holdSeconds: 5, landingZones: ['startPad'],
-        objectives: ['Reach 10 m altitude', 'Hold a stable hover for 5 seconds', 'Settle back on the launch pad']
-      },
-      {
-        id: 'north_survey', title: '06 • North Survey', short: 'First off-axis route', sector: 'north', difficulty: 5,
-        description: 'Leave the launch yard and fly a shallow northern survey line to the new north recovery pad.',
-        reward: 760, payloadMass: 0, timeLimit: 145, parTime: 90, kind: 'gate-course', prerequisite: 'precision_return',
+        id: 'courier', title: '03 • Ridge Mail Run', short: 'First meaningful cargo route', sector: 'ridge', difficulty: 3,
+        description: 'A light instrument case must be flown out of the yard and delivered to the north survey pad. The route is longer than the early course and moves off the main runway, so the craft needs enough forward authority, fuel discipline and cargo-safe landing behavior.',
+        reward: 880, payloadMass: 9, timeLimit: 180, parTime: 112, minFuelFraction: 0.22, minPayloadIntegrity: 0.75, kind: 'courier', prerequisite: 'gate_course',
         landingZones: ['northPad'],
+        routeLabel: 'Launch Yard → weather approach → North Survey Pad',
+        engineeringFocus: ['Light cargo handling', 'Fuel reserve planning', 'Stable off-axis approach'],
         gates: [
-          { x: 24, y: 8, z: -12, radius: 5.2 },
-          { x: 48, y: 12, z: -28, radius: 5.2 },
-          { x: 58, y: 10, z: -48, radius: 5.2 }
+          { x: 30, y: 8, z: -10, radius: 5.8 },
+          { x: 58, y: 12, z: -38, radius: 5.4 },
+          { x: 82, y: 10, z: -76, radius: 5.6 }
         ],
-        objectives: ['Pass the three north survey gates', 'Land on the north pad']
+        objectives: ['Carry the 9 kg instrument case', 'Pass the northbound delivery gates', 'Land with at least 22% fuel and 75% cargo integrity']
       },
       {
-        id: 'ridge_slalom', title: '07 • Ridge Slalom', short: 'Four-gate ridge handling', sector: 'north', difficulty: 6,
-        description: 'Thread the craft through a longer ridge course where turns and altitude discipline matter more than straight-line speed.',
-        reward: 980, payloadMass: 0, timeLimit: 170, parTime: 105, kind: 'gate-course', prerequisite: 'north_survey',
+        id: 'heavy_lift', title: '04 • Heavy-Lift Qualification', short: 'Lift margin under real load', sector: 'yard', difficulty: 4,
+        description: 'Before the range opens fully, the workshop checks whether the machine can lift a serious payload without relying on lucky bouncing. The craft must climb, hold a controlled hover with the cargo mounted below the core, then recover gently at the launch pad.',
+        reward: 1050, payloadMass: 22, timeLimit: 135, parTime: 82, minPayloadIntegrity: 0.58, kind: 'hover-return', prerequisite: 'courier',
+        targetAltitude: 14, holdSeconds: 4.5, landingZones: ['startPad'],
+        routeLabel: 'Launch Yard heavy hover → launch-pad recovery',
+        engineeringFocus: ['Payload lift margin', 'Vertical damping', 'Low-impact landing under load'],
+        objectives: ['Lift the 22 kg qualification payload', 'Reach 14 m and hold for 4.5 seconds', 'Recover on the launch pad with at least 58% cargo integrity']
+      },
+      {
+        id: 'ridge_slalom', title: '05 • Ridge Slalom Survey', short: 'Longer off-axis handling route', sector: 'ridge', difficulty: 5,
+        description: 'This is the first real map mission. The course climbs toward the northern shelf, threads around the ridge line, then asks for a small-pad recovery. It has fewer gates than the previous bloated ladder, but each gate is placed to test turn planning and altitude discipline.',
+        reward: 1320, payloadMass: 0, timeLimit: 215, parTime: 135, kind: 'gate-course', prerequisite: 'heavy_lift',
         landingZones: ['ridgePad'],
+        routeLabel: 'Launch Yard → North Ridge → Ridge Shelf',
+        engineeringFocus: ['Sustained turn control', 'Altitude management', 'Small-pad recovery'],
         gates: [
-          { x: 32, y: 10, z: -18, radius: 4.8 },
-          { x: 62, y: 15, z: -42, radius: 4.8 },
-          { x: 92, y: 12, z: -28, radius: 4.8 },
-          { x: 118, y: 10, z: -34, radius: 4.8 }
+          { x: 34, y: 10, z: -18, radius: 5.3 },
+          { x: 68, y: 16, z: -58, radius: 5.0 },
+          { x: 104, y: 18, z: -96, radius: 4.8 },
+          { x: 148, y: 12, z: -118, radius: 5.0 }
         ],
-        objectives: ['Pass all four ridge gates in order', 'Recover on the ridge pad']
+        objectives: ['Pass the ridge gates without diving below the shelf line', 'Keep enough control authority for the final turn', 'Land on the Ridge Shelf pad']
       },
       {
-        id: 'southern_tower', title: '08 • Southern Tower', short: 'High approach and recovery', sector: 'south', difficulty: 6,
-        description: 'Climb into the southern tower line, pass the elevated markers and land beside the tower pad.',
-        reward: 900, payloadMass: 0, timeLimit: 160, parTime: 100, kind: 'gate-course', prerequisite: 'ridge_slalom',
+        id: 'tower_inspection', title: '06 • South Tower Inspection', short: 'High approach through the mesa line', sector: 'mesa', difficulty: 6,
+        description: 'A taller, more scenic inspection line through the southern mesa. The gates climb gradually toward the tower pad and then flatten into a precise landing approach. This mission gives the expanded map a second personality: not just distance, but height and controlled descent.',
+        reward: 1500, payloadMass: 0, timeLimit: 230, parTime: 145, kind: 'gate-course', prerequisite: 'ridge_slalom',
         landingZones: ['towerPad'],
+        routeLabel: 'Launch Yard → South Basin → Tower Service Pad',
+        engineeringFocus: ['Climb rate', 'High-altitude control', 'Descent planning'],
         gates: [
-          { x: 20, y: 9, z: 20, radius: 5.0 },
-          { x: 34, y: 18, z: 46, radius: 5.0 },
-          { x: 42, y: 22, z: 84, radius: 5.2 }
+          { x: 28, y: 10, z: 24, radius: 5.6 },
+          { x: 62, y: 18, z: 66, radius: 5.2 },
+          { x: 94, y: 26, z: 112, radius: 5.0 },
+          { x: 124, y: 20, z: 148, radius: 5.4 }
         ],
-        objectives: ['Pass the elevated south gates', 'Land on the tower pad']
+        objectives: ['Climb through the south tower line', 'Avoid entering the final gate too fast', 'Land beside the tower service pad']
       },
       {
-        id: 'fragile_instruments', title: '09 • Fragile Instruments', short: 'Careful cargo delivery', sector: 'north', difficulty: 7,
-        description: 'Carry a delicate 8 kg instrument package to the north pad. The cargo must arrive in excellent condition.',
-        reward: 1050, payloadMass: 8, timeLimit: 145, parTime: 92, minFuelFraction: 0.20, minPayloadIntegrity: 0.82, kind: 'courier', prerequisite: 'southern_tower',
-        landingZones: ['northPad'],
-        gates: [
-          { x: 28, y: 9, z: -8, radius: 5.0 },
-          { x: 50, y: 11, z: -34, radius: 5.0 }
-        ],
-        objectives: ['Carry the fragile 8 kg package', 'Avoid hard impacts', 'Deliver with at least 82% cargo integrity']
-      },
-      {
-        id: 'endurance_loop', title: '10 • Endurance Loop', short: 'Long route, home recovery', sector: 'south', difficulty: 8,
-        description: 'Fly a wide loop through the range and return to the launch yard with enough fuel and structure to be certified.',
-        reward: 1180, payloadMass: 0, timeLimit: 230, parTime: 150, minFuelFraction: 0.18, kind: 'gate-course', prerequisite: 'fragile_instruments',
-        landingZones: ['startPad'],
-        gates: [
-          { x: 22, y: 9, z: 18, radius: 5.5 },
-          { x: 58, y: 15, z: 52, radius: 5.5 },
-          { x: 96, y: 14, z: 18, radius: 5.5 },
-          { x: 122, y: 10, z: -18, radius: 5.5 }
-        ],
-        objectives: ['Pass all four loop gates', 'Return and settle on the launch pad', 'Keep a useful fuel reserve']
-      },
-      {
-        id: 'east_depot_run', title: '11 • East Depot Run', short: 'Medium payload freight', sector: 'frontier', difficulty: 9,
-        description: 'Deliver a 15 kg depot package through the eastern corridor and land at the freight pad with fuel to spare.',
-        reward: 1350, payloadMass: 15, timeLimit: 190, parTime: 122, minFuelFraction: 0.28, minPayloadIntegrity: 0.72, kind: 'courier', prerequisite: 'endurance_loop',
+        id: 'east_depot_run', title: '07 • East Depot Freight', short: 'Medium cargo over a wider map', sector: 'depot', difficulty: 7,
+        description: 'The main freight contract of the current slice. A 16 kg depot package must pass the weather spire and reach the east cargo pad with a meaningful fuel reserve. This should force the player to build something more capable than a pure hover brick.',
+        reward: 1780, payloadMass: 16, timeLimit: 255, parTime: 168, minFuelFraction: 0.30, minPayloadIntegrity: 0.72, kind: 'courier', prerequisite: 'tower_inspection',
         landingZones: ['eastDepot'],
+        routeLabel: 'Launch Yard → Weather Spire → East Cargo Depot',
+        engineeringFocus: ['Forward efficiency', 'Cargo protection', 'Fuel reserve discipline'],
         gates: [
-          { x: 38, y: 8, z: 12, radius: 5.5 },
-          { x: 78, y: 11, z: 25, radius: 5.5 },
-          { x: 118, y: 9, z: 32, radius: 5.5 }
+          { x: 36, y: 9, z: 8, radius: 5.8 },
+          { x: 78, y: 13, z: 26, radius: 5.6 },
+          { x: 122, y: 16, z: 10, radius: 5.4 },
+          { x: 166, y: 14, z: -12, radius: 5.4 },
+          { x: 198, y: 10, z: 48, radius: 5.8 }
         ],
-        objectives: ['Carry the 15 kg depot package', 'Pass the eastern corridor gates', 'Land with at least 28% fuel and 72% cargo integrity']
+        objectives: ['Carry the 16 kg freight package', 'Pass the weather-spire delivery corridor', 'Land with at least 30% fuel and 72% cargo integrity']
       },
       {
-        id: 'frontier_relay', title: '12 • Frontier Relay', short: 'Outer-range navigation', sector: 'frontier', difficulty: 10,
-        description: 'Navigate the longest gate chain in the current range and prove the craft can reach the frontier pad safely.',
-        reward: 1550, payloadMass: 0, timeLimit: 220, parTime: 140, kind: 'gate-course', prerequisite: 'east_depot_run',
+        id: 'frontier_gold_trial', title: '08 • Frontier Gold Trial', short: 'Final mixed-route certification', sector: 'frontier', difficulty: 8,
+        description: 'The final contract is no longer just “more gates.” It combines everything: long-range planning, a high south-side climb, a route bend back through the depot corridor, then a lonely recovery at the frontier relay pad. It is fewer missions worth of content compressed into one proper capstone.',
+        reward: 2450, payloadMass: 14, timeLimit: 380, parTime: 250, minFuelFraction: 0.32, minPayloadIntegrity: 0.88, kind: 'courier', prerequisite: 'east_depot_run',
         landingZones: ['frontierPad'],
+        routeLabel: 'Launch Yard → South Mesa → Depot Corridor → Frontier Relay',
+        engineeringFocus: ['Whole-range navigation', 'Fuel-safe routing', 'High-integrity cargo delivery'],
         gates: [
-          { x: 44, y: 13, z: -16, radius: 5.4 },
-          { x: 86, y: 20, z: -44, radius: 5.4 },
-          { x: 126, y: 15, z: -62, radius: 5.4 },
-          { x: 166, y: 12, z: -72, radius: 5.6 }
+          { x: 32, y: 10, z: 10, radius: 5.8 },
+          { x: 72, y: 18, z: 86, radius: 5.4 },
+          { x: 118, y: 28, z: 142, radius: 5.2 },
+          { x: 164, y: 22, z: 70, radius: 5.2 },
+          { x: 206, y: 16, z: -28, radius: 5.4 },
+          { x: 236, y: 12, z: -152, radius: 6.0 }
         ],
-        objectives: ['Pass all four frontier relay gates', 'Land on the frontier pad']
-      },
-      {
-        id: 'heavy_frontier_lift', title: '13 • Heavy Frontier Lift', short: 'Heavy cargo over distance', sector: 'frontier', difficulty: 11,
-        description: 'Move a 24 kg reinforced cargo pod to the frontier pad. This demands lift margin, fuel planning and gentle touchdown.',
-        reward: 1900, payloadMass: 24, timeLimit: 240, parTime: 160, minFuelFraction: 0.22, minPayloadIntegrity: 0.55, kind: 'courier', prerequisite: 'frontier_relay',
-        landingZones: ['frontierPad'],
-        gates: [
-          { x: 34, y: 8, z: -10, radius: 6.0 },
-          { x: 92, y: 10, z: -38, radius: 6.0 },
-          { x: 146, y: 8, z: -66, radius: 6.0 }
-        ],
-        objectives: ['Carry the 24 kg cargo pod', 'Pass the heavy-lift corridor gates', 'Deliver with at least 55% cargo integrity']
-      },
-      {
-        id: 'gold_range_trial', title: '14 • Gold Range Trial', short: 'Full-range certification', sector: 'frontier', difficulty: 12,
-        description: 'A final full-range trial combining payload discipline, fuel reserve, precise gates and a return to the workshop remote pad.',
-        reward: 2400, payloadMass: 12, timeLimit: 210, parTime: 135, minFuelFraction: 0.35, minPayloadIntegrity: 0.90, kind: 'courier', prerequisite: 'heavy_frontier_lift',
-        landingZones: ['finishPad'],
-        gates: [
-          { x: 30, y: 10, z: 0, radius: 5.0 },
-          { x: 58, y: 16, z: -34, radius: 5.0 },
-          { x: 94, y: 16, z: 34, radius: 5.0 },
-          { x: 132, y: 12, z: 0, radius: 5.0 }
-        ],
-        objectives: ['Carry the 12 kg certification package', 'Pass all four gold trial gates', 'Land with 35% fuel and 90% cargo integrity']
+        objectives: ['Carry the 14 kg certification package across the full range', 'Pass all six capstone gates in order', 'Land with at least 32% fuel and 88% cargo integrity']
       }
     ];
 
@@ -201,22 +159,39 @@
       }
     }
     for (const contract of CONTRACTS) {
+      if (!contract.id || !contract.title || !contract.description) throw new Error('Every contract requires id, title and description.');
+      if (!Array.isArray(contract.objectives) || contract.objectives.length < 2) throw new Error(`Contract ${contract.id} needs at least two objectives.`);
       if (contract.prerequisite && !contractById.has(contract.prerequisite)) {
         throw new Error(`Contract ${contract.id} depends on missing contract ${contract.prerequisite}.`);
       }
       if (contract.sector && !knownSectorIds.has(contract.sector)) {
         throw new Error(`Contract ${contract.id} references missing mission map sector ${contract.sector}.`);
       }
+      if (contract.kind === 'hover-return') {
+        if (!Number.isFinite(contract.targetAltitude) || contract.targetAltitude <= 0) throw new Error(`Contract ${contract.id} needs a positive targetAltitude.`);
+        if (!Number.isFinite(contract.holdSeconds) || contract.holdSeconds <= 0) throw new Error(`Contract ${contract.id} needs a positive holdSeconds.`);
+      }
+      if ((contract.kind === 'gate-course' || contract.kind === 'courier') && (!Array.isArray(contract.gates) || contract.gates.length < 2)) {
+        throw new Error(`Contract ${contract.id} needs a meaningful gate route.`);
+      }
+      if (contract.minFuelFraction && (contract.minFuelFraction <= 0 || contract.minFuelFraction >= 1)) throw new Error(`Contract ${contract.id} has invalid minFuelFraction.`);
+      if (contract.minPayloadIntegrity && (contract.minPayloadIntegrity <= 0 || contract.minPayloadIntegrity > 1)) throw new Error(`Contract ${contract.id} has invalid minPayloadIntegrity.`);
       for (const zoneId of contract.landingZones || []) {
         if (!TEST_RANGE[zoneId]) throw new Error(`Contract ${contract.id} references missing landing zone ${zoneId}.`);
       }
+      let previousGateX = Number.NEGATIVE_INFINITY;
       for (const gate of contract.gates || []) {
         if (![gate.x, gate.y, gate.z, gate.radius].every(Number.isFinite)) {
           throw new Error(`Contract ${contract.id} has a non-finite gate definition.`);
         }
-        if (Math.abs(gate.x) > TEST_RANGE.bounds || Math.abs(gate.z) > TEST_RANGE.bounds || gate.y > TEST_RANGE.maxAltitude) {
+        if (gate.radius <= 0) throw new Error(`Contract ${contract.id} has a non-positive gate radius.`);
+        if (Math.abs(gate.x) > TEST_RANGE.bounds || Math.abs(gate.z) > TEST_RANGE.bounds || gate.y > TEST_RANGE.maxAltitude || gate.y < 0) {
           throw new Error(`Contract ${contract.id} has a gate outside the test range.`);
         }
+        if (!gate.normal && gate.x < previousGateX) {
+          throw new Error(`Contract ${contract.id} has a default +X gate sequence that moves backwards.`);
+        }
+        previousGateX = gate.x;
       }
     }
     if (!BLOCKS.Core) throw new Error('Block catalog requires a Core module.');
