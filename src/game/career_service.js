@@ -56,10 +56,10 @@
       }
       function careerRank() {
         const completedCount = CONTRACTS.filter(contract => contract.id !== 'sandbox' && state.career.completed[contract.id] === true).length;
-        if (completedCount >= 12) return 'Chief Test Engineer';
-        if (completedCount >= 9) return 'Range Commander';
-        if (completedCount >= 6) return 'Senior Aeronaut';
-        if (completedCount >= 3) return 'Flight Engineer';
+        if (completedCount >= 8) return 'Chief Test Engineer';
+        if (completedCount >= 6) return 'Range Commander';
+        if (completedCount >= 4) return 'Senior Aeronaut';
+        if (completedCount >= 2) return 'Flight Engineer';
         if (completedCount >= 1) return 'Licensed Apprentice';
         return 'Apprentice Engineer';
       }
