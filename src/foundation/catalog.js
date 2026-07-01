@@ -37,7 +37,7 @@
         routeLabel: 'Full range free-flight',
         engineeringFocus: ['Explore the larger test range', 'Practice landing on distant pads', 'Tune stability assist and power settings'],
         recommendedModules: ['Any experimental layout'], hazards: ['No score pressure', 'Good place to learn camera and landing feel'],
-        objectives: ['Experiment freely across the full range', 'Scout the distant pads and visual landmarks', 'Return to the workshop whenever ready']
+        objectives: ['Experiment freely across the full range', 'Scout the distant pads and visual landmarks', 'Try strange layouts here before risking cargo contracts', 'Return to the workshop whenever ready']
       },
       {
         id: 'hover_license', title: '01 • Hover License', short: 'Basic hover, drift control and pad recovery', sector: 'yard', difficulty: 1,
@@ -47,7 +47,7 @@
         routeLabel: 'Launch Yard hover box → either yard pad',
         engineeringFocus: ['Static lift margin', 'Low-speed stability', 'Gentle touchdown control'],
         recommendedModules: ['Thrusters or balloons for clean lift', 'Gyro for easy leveling', 'Fuel reserve for repeated landing attempts'], hazards: ['Hard touchdown loses stars', 'Overpowered craft can bounce above the hover band'],
-        objectives: ['Reach 8 m altitude without tumbling', 'Hold a stable hover for 3 seconds', 'Land gently on either marked yard pad']
+        objectives: ['Reach 8 m altitude without tumbling', 'Hold a stable hover for 3 seconds', 'Land gently on either marked yard pad', 'Build hint: clean lift + gyro beats raw thrust spam']
       },
       {
         id: 'gate_course', title: '02 • Yard Control Course', short: 'A compact route with actual turns', sector: 'yard', difficulty: 2,
@@ -63,7 +63,7 @@
           { x: 72, y: 10, z: 16, radius: 5.2 },
           { x: 92, y: 7, z: 0, radius: 5.8 }
         ],
-        objectives: ['Pass all four yard gates in order', 'Avoid overcorrecting through the S-turn', 'Land on the receiver pad with the craft under control']
+        objectives: ['Pass all four yard gates in order', 'Avoid overcorrecting through the S-turn', 'Land on the receiver pad with the craft under control', 'Build hint: add yaw authority before adding more speed']
       },
       {
         id: 'courier', title: '03 • Ridge Mail Run', short: 'First meaningful cargo route', sector: 'ridge', difficulty: 3,
@@ -78,7 +78,7 @@
           { x: 58, y: 12, z: -38, radius: 5.4 },
           { x: 82, y: 10, z: -76, radius: 5.6 }
         ],
-        objectives: ['Carry the 7 kg instrument case', 'Pass the northbound delivery gates', 'Land with at least 20% fuel and 76% cargo integrity']
+        objectives: ['Carry the 7 kg instrument case', 'Pass the northbound delivery gates', 'Land with at least 20% fuel and 76% cargo integrity', 'Build hint: protect the payload and bring enough fuel for a second landing attempt']
       },
       {
         id: 'heavy_lift', title: '04 • Heavy-Lift Qualification', short: 'Lift margin under real load', sector: 'yard', difficulty: 4,
@@ -88,7 +88,7 @@
         routeLabel: 'Launch Yard heavy hover → launch-pad recovery',
         engineeringFocus: ['Payload lift margin', 'Vertical damping', 'Low-impact landing under load'],
         recommendedModules: ['Balloons or additional upward thrusters', 'Gyro to stop payload swing', 'Frame reinforcement near the core'], hazards: ['Too little lift fails before it becomes interesting', 'Too much thrust makes the landing bouncy'],
-        objectives: ['Lift the 18 kg qualification payload', 'Reach 14 m and hold for 4.5 seconds', 'Recover on the launch pad with at least 60% cargo integrity']
+        objectives: ['Lift the 18 kg qualification payload', 'Reach 14 m and hold for 4.5 seconds', 'Recover on the launch pad with at least 60% cargo integrity', 'Build hint: controlled lift margin matters more than explosive thrust']
       },
       {
         id: 'ridge_slalom', title: '05 • Ridge Slalom Survey', short: 'Longer off-axis handling route', sector: 'ridge', difficulty: 5,
@@ -104,7 +104,7 @@
           { x: 104, y: 18, z: -96, radius: 4.8 },
           { x: 148, y: 12, z: -118, radius: 5.0 }
         ],
-        objectives: ['Pass the ridge gates without diving below the shelf line', 'Keep enough control authority for the final turn', 'Land on the Ridge Shelf pad']
+        objectives: ['Pass the ridge gates without diving below the shelf line', 'Keep enough control authority for the final turn', 'Land on the smaller Ridge Shelf pad', 'Build hint: efficient turns beat straight-line speed here']
       },
       {
         id: 'tower_inspection', title: '06 • South Tower Inspection', short: 'High approach through the mesa line', sector: 'mesa', difficulty: 6,
@@ -120,7 +120,7 @@
           { x: 94, y: 26, z: 112, radius: 5.0 },
           { x: 124, y: 20, z: 148, radius: 5.4 }
         ],
-        objectives: ['Climb through the south tower line', 'Avoid entering the final gate too fast', 'Land beside the tower service pad']
+        objectives: ['Climb through the south tower line', 'Avoid entering the final gate too fast', 'Land beside the tower service pad', 'Build hint: plan the descent before the last gate, not after it']
       },
       {
         id: 'east_depot_run', title: '07 • East Depot Freight', short: 'Medium cargo over a wider map', sector: 'depot', difficulty: 7,
@@ -137,7 +137,7 @@
           { x: 166, y: 17, z: -30, radius: 5.8 },
           { x: 198, y: 10, z: 48, radius: 5.8 }
         ],
-        objectives: ['Carry the 12 kg freight package', 'Pass beside the weather spire, not into it', 'Land with at least 28% fuel and 74% cargo integrity']
+        objectives: ['Carry the 12 kg freight package', 'Pass beside the weather spire, not into it', 'Land with at least 28% fuel and 74% cargo integrity', 'Build hint: a pure hover brick will waste fuel; try a cruiser or hybrid']
       },
       {
         id: 'frontier_gold_trial', title: '08 • Frontier Gold Trial', short: 'Final mixed-route certification', sector: 'frontier', difficulty: 8,
@@ -155,7 +155,7 @@
           { x: 206, y: 16, z: -28, radius: 5.4 },
           { x: 236, y: 12, z: -152, radius: 6.0 }
         ],
-        objectives: ['Carry the 10 kg certification package across the full range', 'Pass all six capstone gates in order', 'Land with at least 30% fuel and 86% cargo integrity']
+        objectives: ['Carry the 10 kg certification package across the full range', 'Pass all six capstone gates in order', 'Land with at least 30% fuel and 86% cargo integrity', 'Build hint: long range rewards wings, fuel and careful landing gear']
       }
     ];
 
