@@ -15,6 +15,27 @@ ZIP_NAME = 'Voxel_Aeronautics_Workshop_Workbench_Foundation.zip'
 MANIFEST_NAME = 'SOURCE_MANIFEST.json'
 ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_WORKBENCH_FOUNDATION_READY_TO_PUSH'
 IGNORED_ARCHIVE_PARTS = {'dist', 'release', '.agent-validation', '__pycache__', '.pytest_cache', '.git', 'node_modules'}
+ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
+CANONICAL_TEXT_SUFFIXES = {
+    '.css',
+    '.cjs',
+    '.gltf',
+    '.html',
+    '.js',
+    '.json',
+    '.md',
+    '.mjs',
+    '.py',
+    '.sh',
+    '.svg',
+    '.toml',
+    '.txt',
+    '.xml',
+    '.yaml',
+    '.yml',
+}
+CANONICAL_TEXT_FILENAMES = {'.gitattributes'}
+EXECUTABLE_ARCHIVE_PATHS: tuple[Path, ...] = tuple()
 
 
 def files_under(relative_root: Path) -> tuple[Path, ...]:
@@ -122,10 +143,26 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def is_canonical_text_path(relative: Path) -> bool:
+    path = Path(relative)
+    return path.name in CANONICAL_TEXT_FILENAMES or path.suffix.lower() in CANONICAL_TEXT_SUFFIXES
+
+
+def canonicalize_text_bytes(data: bytes, relative: Path) -> bytes:
+    if not is_canonical_text_path(relative):
+        return data
+    return data.replace(b'\r\n', b'\n').replace(b'\r', b'\n')
+
+
+def canonical_source_bytes(root: Path, relative: Path) -> bytes:
+    data = (root / relative).read_bytes()
+    return canonicalize_text_bytes(data, relative)
+
+
 def source_manifest(root: Path = ROOT) -> dict:
     files = {}
     for relative in MANIFEST_INPUTS:
-        files[relative.as_posix()] = sha256(root / relative)
+        files[relative.as_posix()] = sha256_bytes(canonical_source_bytes(root, relative))
     return {
         'releaseId': RELEASE_ID,
         'appVersion': APP_VERSION,
@@ -247,30 +284,56 @@ def build_single_html(root: Path = ROOT) -> str:
     return replace_loader(html, inline)
 
 
-def _deterministic_info(name: str) -> zipfile.ZipInfo:
-    info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
-    info.compress_type = zipfile.ZIP_DEFLATED
-    info.external_attr = 0o100644 << 16
+def expected_archive_names(root: Path = ROOT, single_name: str | None = None, *, excluded_paths: tuple[Path, ...] = ()) -> tuple[str, ...]:
+    excluded = {path.resolve() for path in excluded_paths}
+    names: list[str] = []
+    for path in sorted(root.rglob('*')):
+        relative = path.relative_to(root)
+        if not path.is_file() or any(part in IGNORED_ARCHIVE_PARTS for part in relative.parts):
+            continue
+        if path.resolve() in excluded:
+            continue
+        names.append((Path(ARCHIVE_ROOT) / relative).as_posix())
+    if single_name is not None:
+        names.append((Path(ARCHIVE_ROOT) / 'release' / single_name).as_posix())
+        names.append((Path(ARCHIVE_ROOT) / 'release' / 'SHA256.txt').as_posix())
+    return tuple(names)
+
+
+def _deterministic_info(name: str, *, mode: int = 0o100644) -> zipfile.ZipInfo:
+    info = zipfile.ZipInfo(name, date_time=ZIP_TIMESTAMP)
+    info.compress_type = zipfile.ZIP_STORED
+    info.create_system = 3
+    info.external_attr = mode << 16
     return info
+
+
+def _archive_mode(relative: Path) -> int:
+    return 0o100755 if relative in EXECUTABLE_ARCHIVE_PATHS else 0o100644
+
+
+def _write_archive_bytes(archive: zipfile.ZipFile, name: str, data: bytes, *, mode: int = 0o100644) -> None:
+    archive.writestr(_deterministic_info(name, mode=mode), data, compress_type=zipfile.ZIP_STORED)
 
 
 def write_zip(root: Path, destination: Path, single_file: Path | None = None) -> None:
     ensure_source_manifest(root)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(destination, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+    with zipfile.ZipFile(destination, 'w', compression=zipfile.ZIP_STORED) as archive:
         for path in sorted(root.rglob('*')):
             relative = path.relative_to(root)
             if not path.is_file() or any(part in IGNORED_ARCHIVE_PARTS for part in relative.parts):
                 continue
             if path.resolve() == destination.resolve():
                 continue
-            archive.write(path, Path(ARCHIVE_ROOT) / relative)
+            archive_name = (Path(ARCHIVE_ROOT) / relative).as_posix()
+            _write_archive_bytes(archive, archive_name, canonical_source_bytes(root, relative), mode=_archive_mode(relative))
         if single_file is not None:
             release_path = (Path(ARCHIVE_ROOT) / 'release' / single_file.name).as_posix()
-            archive.writestr(_deterministic_info(release_path), single_file.read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+            _write_archive_bytes(archive, release_path, single_file.read_bytes())
             single_hash = f'{sha256(single_file)}  {single_file.name}\n'.encode('utf-8')
             hash_path = (Path(ARCHIVE_ROOT) / 'release' / 'SHA256.txt').as_posix()
-            archive.writestr(_deterministic_info(hash_path), single_hash, compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+            _write_archive_bytes(archive, hash_path, single_hash)
 
 
 def main() -> None:

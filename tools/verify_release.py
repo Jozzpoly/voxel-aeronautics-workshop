@@ -20,16 +20,16 @@ def embedded_source(single_text: str, relative: Path) -> str:
     return single_text[start:finish]
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description='Verify release identity, source parity and exact artifacts.')
-    parser.add_argument('--single', type=Path, help='explicit single-file artifact to verify')
-    parser.add_argument('--zip', dest='zip_path', type=Path, help='explicit ZIP artifact to verify')
-    parser.add_argument('--hashes', type=Path, help='explicit checksum file to verify')
-    args = parser.parse_args()
-    if (args.zip_path is None) != (args.hashes is None):
+def verify_artifacts(
+    root: Path,
+    single: Path,
+    zip_path: Path | None = None,
+    hashes_path: Path | None = None,
+) -> dict[str, str | int]:
+    if (zip_path is None) != (hashes_path is None):
         raise SystemExit('--zip and --hashes must be supplied together.')
 
-    manifest_path = ROOT / build_release.MANIFEST_NAME
+    manifest_path = root / build_release.MANIFEST_NAME
     if not manifest_path.exists():
         raise SystemExit(f'Missing {manifest_path.name}; run npm run build first.')
     manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
@@ -38,29 +38,21 @@ def main() -> None:
 
     for relative in build_release.MANIFEST_INPUTS:
         expected = manifest['files'].get(relative.as_posix())
-        actual = build_release.sha256(ROOT / relative)
+        actual = build_release.sha256_bytes(build_release.canonical_source_bytes(root, relative))
         if expected != actual:
             raise SystemExit(f'Source hash mismatch: {relative}')
 
-    expected_name = build_release.SINGLE_NAME
-    candidates = [args.single] if args.single is not None else [
-        ROOT / 'dist' / expected_name,
-        ROOT / 'release' / expected_name,
-    ]
-    single = next((candidate for candidate in candidates if candidate is not None and candidate.exists()), None)
-    if single is None:
-        raise SystemExit(f'No packaged {expected_name} found in dist/ or release/.')
+    if not single.exists():
+        raise SystemExit(f'Missing single-file artifact: {single}')
     text = single.read_text(encoding='utf-8')
     if f'RELEASE_ID: {build_release.RELEASE_ID}' not in text:
         raise SystemExit(f'Wrong release marker in {single.name}.')
     for relative in build_release.APP_SOURCES:
-        expected = (ROOT / relative).read_text(encoding='utf-8').rstrip()
+        expected = (root / relative).read_text(encoding='utf-8').rstrip()
         if embedded_source(text, relative) != expected:
             raise SystemExit(f'Embedded source mismatch: {relative}')
 
     artifact_set = 'single-only'
-    zip_path = args.zip_path
-    hashes_path = args.hashes
     if zip_path is not None and hashes_path is not None:
         if not zip_path.is_file():
             raise SystemExit(f'Missing ZIP artifact: {zip_path}')
@@ -89,7 +81,7 @@ def main() -> None:
                 raise SystemExit(f'Corrupt ZIP member: {corrupt}')
             for relative in build_release.MANIFEST_INPUTS:
                 archived = archive.read(prefix + relative.as_posix())
-                current = (ROOT / relative).read_bytes()
+                current = build_release.canonical_source_bytes(root, relative)
                 if archived != current:
                     raise SystemExit(f'ZIP source mismatch: {relative}')
             packaged_single = archive.read(prefix + 'release/' + single.name)
@@ -101,7 +93,7 @@ def main() -> None:
                 raise SystemExit('ZIP internal single-file checksum mismatch.')
         artifact_set = 'html+zip+sha256'
 
-    print({
+    return {
         'releaseId': build_release.RELEASE_ID,
         'manifestFiles': len(manifest['files']),
         'embeddedSources': len(build_release.APP_SOURCES),
@@ -111,7 +103,29 @@ def main() -> None:
         'zipIntegrity': 'ok' if zip_path is not None else 'not-requested',
         'externalChecksums': 'ok' if hashes_path is not None else 'not-requested',
         'zipSourceParity': 'ok' if zip_path is not None else 'not-requested',
-    })
+    }
+
+
+def resolve_single(explicit: Path | None) -> Path:
+    expected_name = build_release.SINGLE_NAME
+    candidates = [explicit] if explicit is not None else [
+        ROOT / 'dist' / expected_name,
+        ROOT / 'release' / expected_name,
+    ]
+    single = next((candidate for candidate in candidates if candidate is not None and candidate.exists()), None)
+    if single is None:
+        raise SystemExit(f'No packaged {expected_name} found in dist/ or release/.')
+    return single
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description='Verify release identity, source parity and exact artifacts.')
+    parser.add_argument('--single', type=Path, help='explicit single-file artifact to verify')
+    parser.add_argument('--zip', dest='zip_path', type=Path, help='explicit ZIP artifact to verify')
+    parser.add_argument('--hashes', type=Path, help='explicit checksum file to verify')
+    args = parser.parse_args()
+
+    print(verify_artifacts(ROOT, resolve_single(args.single), args.zip_path, args.hashes))
 
 
 if __name__ == '__main__':

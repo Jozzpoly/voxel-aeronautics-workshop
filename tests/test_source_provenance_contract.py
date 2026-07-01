@@ -15,6 +15,13 @@ def main() -> None:
     build_release = (ROOT / 'tools' / 'build_release.py').read_text(encoding='utf-8')
     assert "'.agent-validation'" in build_release, 'release archive must ignore clean-candidate validation worktrees'
     assert 'VISUAL_PACK_SOURCES = files_under(Path(\'assets/visual_packs\'))' in build_release
+    assert 'def canonical_source_bytes(' in build_release
+    assert 'def expected_archive_names(' in build_release
+    assert 'ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)' in build_release
+
+    verify_release = (ROOT / 'tools' / 'verify_release.py').read_text(encoding='utf-8')
+    assert 'def verify_artifacts(' in verify_release
+    assert 'canonical_source_bytes(root, relative)' in verify_release
 
     helper = (ROOT / 'tools' / 'validate_clean_candidate.py').read_text(encoding='utf-8')
     assert 'SOURCE_MANIFEST' not in helper, 'clean-candidate helper should not hand-edit generated provenance'

@@ -50,7 +50,8 @@ manifest = json.loads(actual_manifest_text)
 assert manifest['releaseId'] == module.RELEASE_ID
 assert manifest['appVersion'] == module.APP_VERSION
 for relative in module.MANIFEST_INPUTS:
-    assert manifest['files'][relative.as_posix()] == module.sha256(ROOT / relative)
+    actual_hash = module.sha256_bytes(module.canonical_source_bytes(ROOT, relative))
+    assert manifest['files'][relative.as_posix()] == actual_hash
 
 with tempfile.TemporaryDirectory() as temporary:
     temporary = Path(temporary)
@@ -158,7 +159,7 @@ with tempfile.TemporaryDirectory() as temporary:
 
         for relative in module.MANIFEST_INPUTS:
             archived = zipped.read(prefix + relative.as_posix())
-            assert archived == (ROOT / relative).read_bytes(), f'ZIP source mismatch: {relative}'
+            assert archived == module.canonical_source_bytes(ROOT, relative), f'ZIP source mismatch: {relative}'
 
         assert zipped.read(prefix + 'release/' + single.name) == single.read_bytes()
         packaged_hash = zipped.read(prefix + 'release/SHA256.txt').decode('utf-8')

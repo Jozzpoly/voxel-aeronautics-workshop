@@ -199,9 +199,9 @@
     "tools/blockbench_import_studio/tools/validate_recovery_package.py": "bed71cfcdbdcb14875d2cabd3e127efe91b7b85b0021f9e4c1f012ae62d1e7f4",
     "tools/blockbench_import_studio/vendor/GLTFLoader.js": "5c15967ba830918a9caea6338712c994c354bccd4edc4569bde411c3ec06a3e6",
     "tools/blockbench_import_studio/vendor/three.min.js": "9274bbcec8d96168626c732b5d31c775aa8cfb7eaa0599bec0c175908a2c1ce2",
-    "tools/build_release.py": "e64df0f421cb7c9b3f91ebd46484c085850f56ce66cb4f57c741883f22cc8f5f",
+    "tools/build_release.py": "e326420d59a0adc5e189148b20a51e0bd658cc2728e203bb0b96bae674456c11",
     "tools/generate_tailwind_css.js": "6603b3e542e41c1cb94bcd8026226a73fc103ee7093d6a8aa72f3cd75f21364b",
-    "tools/verify_release.py": "ca04b6adc7190519ba82f6b913b35660d96b9bad17c772e58ce9aa50fc7a2610",
+    "tools/verify_release.py": "5c545250c0ba758239feae3041f3e53789125b0d0002b05743492592bd3ce139",
     "vendor/cannon-0.6.2/cannon.min.js": "54e8b646e97daef2cff3c7af99fcd0fe768dc74e7d46498f68a869c7dc9dc906",
     "vendor/three-r128/GLTFLoader.js": "5c15967ba830918a9caea6338712c994c354bccd4edc4569bde411c3ec06a3e6",
     "vendor/three-r128/three.min.js": "9274bbcec8d96168626c732b5d31c775aa8cfb7eaa0599bec0c175908a2c1ce2"
