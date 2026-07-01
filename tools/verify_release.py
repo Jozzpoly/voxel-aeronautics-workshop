@@ -36,7 +36,7 @@ def verify_artifacts(
     if manifest.get('releaseId') != build_release.RELEASE_ID:
         raise SystemExit('Release ID mismatch.')
 
-    for relative in build_release.MANIFEST_INPUTS:
+    for relative in build_release.manifest_inputs(root):
         expected = manifest['files'].get(relative.as_posix())
         actual = build_release.sha256_bytes(build_release.canonical_source_bytes(root, relative))
         if expected != actual:
@@ -79,7 +79,7 @@ def verify_artifacts(
             corrupt = archive.testzip()
             if corrupt is not None:
                 raise SystemExit(f'Corrupt ZIP member: {corrupt}')
-            for relative in build_release.MANIFEST_INPUTS:
+            for relative in build_release.manifest_inputs(root):
                 archived = archive.read(prefix + relative.as_posix())
                 current = build_release.canonical_source_bytes(root, relative)
                 if archived != current:

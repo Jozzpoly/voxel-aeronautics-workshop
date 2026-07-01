@@ -123,6 +123,23 @@ assert build_release.canonicalize_text_bytes(
     Path('fixture.txt'),
 ) == b'alpha\nbeta\ngamma\n'
 
+with tempfile.TemporaryDirectory(prefix='vaw-manifest-root-scope-') as temporary_root_scope:
+    root_scope = Path(temporary_root_scope) / 'candidate'
+    shutil.copytree(
+        ROOT,
+        root_scope,
+        symlinks=True,
+        copy_function=shutil.copy2,
+        ignore=ignored_copy,
+    )
+    probe = Path('assets/visual_packs/root_scope_probe.json')
+    (root_scope / probe).write_text('{"probe": true}\n', encoding='utf-8', newline='\n')
+    scoped_inputs = build_release.manifest_inputs(root_scope)
+    assert probe in scoped_inputs, 'manifest inputs must be computed from the supplied root'
+    assert probe not in build_release.MANIFEST_INPUTS, 'default manifest inputs must not observe temp-root probes'
+    scoped_manifest = build_release.source_manifest(root_scope)
+    assert probe.as_posix() in scoped_manifest['files'], 'source manifest must include target-root visual sources'
+
 with tempfile.TemporaryDirectory(prefix='vaw-stage11-full-tree-') as temporary_text:
     temporary = Path(temporary_text)
     lf_root = temporary / 'lf-checkout'

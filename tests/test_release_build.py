@@ -37,7 +37,8 @@ assert actual_manifest_text == expected_manifest_text, (
 manifest = json.loads(actual_manifest_text)
 assert manifest['releaseId'] == module.RELEASE_ID
 assert manifest['appVersion'] == module.APP_VERSION
-for relative in module.MANIFEST_INPUTS:
+assert module.MANIFEST_INPUTS == module.manifest_inputs(ROOT)
+for relative in module.manifest_inputs(ROOT):
     actual_hash = module.sha256_bytes(module.canonical_source_bytes(ROOT, relative))
     assert manifest['files'][relative.as_posix()] == actual_hash
 
@@ -146,7 +147,7 @@ with tempfile.TemporaryDirectory() as temporary:
             f'{sorted(forbidden_root_docs & names)}'
         )
 
-        for relative in module.MANIFEST_INPUTS:
+        for relative in module.manifest_inputs(ROOT):
             archived = zipped.read(prefix + relative.as_posix())
             assert archived == module.canonical_source_bytes(ROOT, relative), f'ZIP source mismatch: {relative}'
 

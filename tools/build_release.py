@@ -38,15 +38,15 @@ CANONICAL_TEXT_FILENAMES = {'.gitattributes'}
 EXECUTABLE_ARCHIVE_PATHS: tuple[Path, ...] = tuple()
 
 
-def files_under(relative_root: Path) -> tuple[Path, ...]:
-    root = ROOT / relative_root
-    if not root.exists():
+def files_under(relative_root: Path, root: Path = ROOT) -> tuple[Path, ...]:
+    directory = root / relative_root
+    if not directory.exists():
         return tuple()
     ignored = {'__pycache__', '.pytest_cache'}
     return tuple(
-        path.relative_to(ROOT)
-        for path in sorted(root.rglob('*'))
-        if path.is_file() and not any(part in ignored for part in path.relative_to(root).parts)
+        path.relative_to(root)
+        for path in sorted(directory.rglob('*'))
+        if path.is_file() and not any(part in ignored for part in path.relative_to(directory).parts)
     )
 
 
@@ -107,26 +107,43 @@ APP_SOURCES = (
     Path('src/foundation/bootstrap.js'),
     Path('src/game.js'),
 )
-VISUAL_PACK_SOURCES = files_under(Path('assets/visual_packs'))
-MANIFEST_INPUTS = (
+MANIFEST_PREFIX_INPUTS = (
     Path('index.html'),
     Path('tailwind.generated.css'),
     Path('styles.css'),
     Path('vendor/three-r128/three.min.js'),
     Path('vendor/three-r128/GLTFLoader.js'),
     Path('vendor/cannon-0.6.2/cannon.min.js'),
-    *VISUAL_PACK_SOURCES,
+)
+MANIFEST_SUFFIX_INPUTS = (
     Path('tools/generate_tailwind_css.js'),
     Path('package.json'),
     Path('tools/build_release.py'),
     Path('tools/verify_release.py'),
     *APP_SOURCES,
 )
-STUDIO_TOOL_SOURCES = files_under(Path('tools/blockbench_import_studio'))
-MANIFEST_INPUTS = (
-    *MANIFEST_INPUTS,
-    *STUDIO_TOOL_SOURCES,
-)
+
+
+def visual_pack_sources(root: Path = ROOT) -> tuple[Path, ...]:
+    return files_under(Path('assets/visual_packs'), root)
+
+
+def studio_tool_sources(root: Path = ROOT) -> tuple[Path, ...]:
+    return files_under(Path('tools/blockbench_import_studio'), root)
+
+
+def manifest_inputs(root: Path = ROOT) -> tuple[Path, ...]:
+    return (
+        *MANIFEST_PREFIX_INPUTS,
+        *visual_pack_sources(root),
+        *MANIFEST_SUFFIX_INPUTS,
+        *studio_tool_sources(root),
+    )
+
+
+VISUAL_PACK_SOURCES = visual_pack_sources(ROOT)
+STUDIO_TOOL_SOURCES = studio_tool_sources(ROOT)
+MANIFEST_INPUTS = manifest_inputs(ROOT)
 LOADER_BEGIN = '  <!-- BEGIN APP LOADER -->'
 LOADER_END = '  <!-- END APP LOADER -->'
 
@@ -161,14 +178,15 @@ def canonical_source_bytes(root: Path, relative: Path) -> bytes:
 
 def source_manifest(root: Path = ROOT) -> dict:
     files = {}
-    for relative in MANIFEST_INPUTS:
+    inputs = manifest_inputs(root)
+    for relative in inputs:
         files[relative.as_posix()] = sha256_bytes(canonical_source_bytes(root, relative))
     return {
         'releaseId': RELEASE_ID,
         'appVersion': APP_VERSION,
         'entrypoint': 'index.html',
         'embeddedApplicationSources': [path.as_posix() for path in APP_SOURCES],
-        'studioToolSources': [path.as_posix() for path in STUDIO_TOOL_SOURCES],
+        'studioToolSources': [path.as_posix() for path in studio_tool_sources(root)],
         'files': files,
     }
 
