@@ -38,10 +38,25 @@
     const TEST_RANGE = {
       startPad: { x: 0, y: 0, z: 0, radius: 9 },
       finishPad: { x: 82, y: 0, z: 0, radius: 9 },
+      northPad: { x: 58, y: 0, z: -48, radius: 8 },
+      southPad: { x: 60, y: 0, z: 52, radius: 8 },
+      ridgePad: { x: 118, y: 0, z: -34, radius: 7.5 },
+      towerPad: { x: 42, y: 0, z: 84, radius: 7 },
+      eastDepot: { x: 142, y: 0, z: 34, radius: 10 },
+      frontierPad: { x: 166, y: 0, z: -72, radius: 10 },
       spawn: { x: 0, y: 3.5, z: 0 },
       bounds: 190,
       maxAltitude: 160,
-      groundY: -0.5
+      groundY: -0.5,
+      missionMap: {
+        label: 'Gate C proving range',
+        sectors: [
+          { id: 'yard', title: 'Launch Yard', padIds: ['startPad', 'finishPad'] },
+          { id: 'north', title: 'North Survey Line', padIds: ['northPad', 'ridgePad'] },
+          { id: 'south', title: 'South Tower Line', padIds: ['southPad', 'towerPad'] },
+          { id: 'frontier', title: 'Frontier Freight Line', padIds: ['eastDepot', 'frontierPad'] }
+        ]
+      }
     };
     const MISSION = {
       landing: {
