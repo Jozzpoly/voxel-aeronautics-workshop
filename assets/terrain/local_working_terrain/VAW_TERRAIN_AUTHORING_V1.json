@@ -1,0 +1,48 @@
+{
+  "format": "VAW_TERRAIN_AUTHORING_V1",
+  "presetId": "local_working_terrain",
+  "version": "0.1.0-local.0",
+  "metadata": {
+    "authority": "renderer-only-terrain",
+    "status": "local-working-preset",
+    "revision": 0,
+    "note": "Studio-editable terrain appearance preset. It must not carry gameplay, collision or mission authority."
+  },
+  "terrain": {
+    "fog": { "color": 725536, "density": 0.0038 },
+    "baseMaterial": "basin",
+    "materials": {
+      "basin": { "color": 1386554, "roughness": 1, "texture": { "kind": "checker", "colorA": 1386554, "colorB": 1782601, "repeat": 34 } },
+      "runway": { "color": 3359061, "roughness": 0.88, "texture": { "kind": "stripe", "colorA": 3359061, "colorB": 4674921, "repeat": 18 } },
+      "serviceConcrete": { "color": 4674921, "roughness": 0.9, "texture": { "kind": "checker", "colorA": 4149092, "colorB": 5662588, "repeat": 10 } },
+      "ridgeDust": { "color": 4996986, "roughness": 1, "texture": { "kind": "noise", "colorA": 3814760, "colorB": 6379418, "repeat": 20 } },
+      "mesaClay": { "color": 8145442, "roughness": 1, "texture": { "kind": "noise", "colorA": 7028508, "colorB": 10116398, "repeat": 18 } },
+      "depotGravel": { "color": 3099194, "roughness": 0.96, "texture": { "kind": "checker", "colorA": 2506548, "colorB": 4022091, "repeat": 22 } },
+      "frontierAsh": { "color": 4867108, "roughness": 1, "texture": { "kind": "noise", "colorA": 3414040, "colorB": 6894387, "repeat": 24 } },
+      "routePaint": { "color": 9684477, "roughness": 0.8, "opacity": 0.34, "texture": { "kind": "stripe", "colorA": 6333946, "colorB": 1972874, "repeat": 12 } }
+    },
+    "patches": [
+      { "id": "yard-apron", "material": "runway", "center": { "x": 50, "z": 0 }, "size": { "x": 148, "z": 38 }, "rotation": 0, "layer": 10 },
+      { "id": "launch-service-concrete", "material": "serviceConcrete", "center": { "x": -8, "z": 0 }, "size": { "x": 50, "z": 48 }, "rotation": 0, "layer": 10 },
+      { "id": "north-survey-dust", "material": "ridgeDust", "center": { "x": 92, "z": -108 }, "size": { "x": 66, "z": 50 }, "rotation": -0.18, "layer": 10 },
+      { "id": "ridge-shelf-dust", "material": "ridgeDust", "center": { "x": 172, "z": -162 }, "size": { "x": 68, "z": 52 }, "rotation": -0.28, "layer": 10 },
+      { "id": "south-basin-clay", "material": "mesaClay", "center": { "x": 86, "z": 120 }, "size": { "x": 68, "z": 54 }, "rotation": 0.14, "layer": 10 },
+      { "id": "tower-service-clay", "material": "mesaClay", "center": { "x": 144, "z": 188 }, "size": { "x": 64, "z": 54 }, "rotation": 0.26, "layer": 10 },
+      { "id": "skyhook-clay", "material": "mesaClay", "center": { "x": 250, "z": 178 }, "size": { "x": 72, "z": 58 }, "rotation": -0.12, "layer": 10 },
+      { "id": "weather-service-gravel", "material": "depotGravel", "center": { "x": 174, "z": -46 }, "size": { "x": 58, "z": 48 }, "rotation": 0.08, "layer": 10 },
+      { "id": "east-depot-gravel", "material": "depotGravel", "center": { "x": 252, "z": 70 }, "size": { "x": 92, "z": 64 }, "rotation": -0.18, "layer": 10 },
+      { "id": "frontier-ash", "material": "frontierAsh", "center": { "x": 312, "z": -218 }, "size": { "x": 86, "z": 70 }, "rotation": 0.18, "layer": 10 }
+    ],
+    "strips": [
+      { "id": "yard-runway", "fromPad": "startPad", "toPad": "finishPad", "width": 14, "material": "runway", "opacity": 0.58, "layer": 20 },
+      { "id": "north-approach", "fromPad": "finishPad", "toPad": "northPad", "width": 8, "material": "ridgeDust", "opacity": 0.42, "layer": 20 },
+      { "id": "ridge-link", "fromPad": "northPad", "toPad": "ridgePad", "width": 8, "material": "ridgeDust", "opacity": 0.45, "layer": 20 },
+      { "id": "south-basin-link", "fromPad": "startPad", "toPad": "southPad", "width": 8, "material": "mesaClay", "opacity": 0.38, "layer": 20 },
+      { "id": "tower-line", "fromPad": "southPad", "toPad": "towerPad", "width": 9, "material": "mesaClay", "opacity": 0.42, "layer": 20 },
+      { "id": "skyhook-line", "fromPad": "towerPad", "toPad": "skyhookPad", "width": 9, "material": "mesaClay", "opacity": 0.4, "layer": 20 },
+      { "id": "spire-service-road", "fromPad": "finishPad", "toPad": "weatherSpirePad", "width": 8, "material": "depotGravel", "opacity": 0.38, "layer": 20 },
+      { "id": "depot-road", "fromPad": "weatherSpirePad", "toPad": "eastDepot", "width": 10, "material": "depotGravel", "opacity": 0.46, "layer": 20 },
+      { "id": "frontier-track", "fromPad": "weatherSpirePad", "toPad": "frontierPad", "width": 8, "material": "frontierAsh", "opacity": 0.36, "layer": 20 }
+    ]
+  }
+}

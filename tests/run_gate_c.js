@@ -1,6 +1,10 @@
 const { spawnSync } = require('child_process');
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
+const BUNDLED_PYTHON = path.join(os.homedir(), '.cache', 'codex-runtimes', 'codex-primary-runtime', 'dependencies', 'python', 'python.exe');
+const PYTHON = process.env.PYTHON || (fs.existsSync(BUNDLED_PYTHON) ? BUNDLED_PYTHON : (process.platform === 'win32' ? 'python' : 'python3'));
 const tests = [
   ['node', 'tests/test_gate_c_assembly_spaces.js'],
   ['node', 'tests/test_future_hardening.js'],
@@ -11,7 +15,7 @@ const tests = [
   ['node', 'tests/test_gate_c_performance.js'],
   ['node', 'tools/validate_mission_map.js'],
   ['node', 'tests/test_scene_environment.js'],
-  [process.env.PYTHON || 'python', 'tests/test_runtime_dependency_contract.py']
+  [PYTHON, 'tests/test_runtime_dependency_contract.py']
 ];
 for (const command of tests) {
   console.log(`\n> ${command.join(' ')}`);

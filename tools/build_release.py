@@ -53,6 +53,7 @@ def files_under(relative_root: Path, root: Path = ROOT) -> tuple[Path, ...]:
 APP_SOURCES = (
     Path('src/foundation/kernel.js'),
     Path('src/foundation/config.js'),
+    Path('src/foundation/terrain_authoring.js'),
     Path('src/foundation/catalog.js'),
     Path('src/foundation/visual_asset_manifest.js'),
     Path('src/foundation/orientation.js'),
@@ -128,6 +129,10 @@ def visual_pack_sources(root: Path = ROOT) -> tuple[Path, ...]:
     return files_under(Path('assets/visual_packs'), root)
 
 
+def terrain_preset_sources(root: Path = ROOT) -> tuple[Path, ...]:
+    return files_under(Path('assets/terrain'), root)
+
+
 def studio_tool_sources(root: Path = ROOT) -> tuple[Path, ...]:
     return files_under(Path('tools/blockbench_import_studio'), root)
 
@@ -136,12 +141,14 @@ def manifest_inputs(root: Path = ROOT) -> tuple[Path, ...]:
     return (
         *MANIFEST_PREFIX_INPUTS,
         *visual_pack_sources(root),
+        *terrain_preset_sources(root),
         *MANIFEST_SUFFIX_INPUTS,
         *studio_tool_sources(root),
     )
 
 
 VISUAL_PACK_SOURCES = visual_pack_sources(ROOT)
+TERRAIN_PRESET_SOURCES = terrain_preset_sources(ROOT)
 STUDIO_TOOL_SOURCES = studio_tool_sources(ROOT)
 MANIFEST_INPUTS = manifest_inputs(ROOT)
 LOADER_BEGIN = '  <!-- BEGIN APP LOADER -->'

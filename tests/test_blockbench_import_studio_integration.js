@@ -11,6 +11,7 @@ for (const relative of [
   'index.html',
   'app/main.js',
   'src/visual_asset_pack_v1.js',
+  'src/terrain_authoring_v1.js',
   'src/gltf_material_tools.js',
   'src/package_exporter.js',
   'tests/test_recovery_static.js',
@@ -46,9 +47,19 @@ assert(studioIndex.includes('advanced-actions'), 'Studio export/debug actions sh
 assert(studioIndex.includes('vaw-install-endpoint'), 'Studio must expose the local install endpoint for diagnostics.');
 assert(studioIndex.includes('data-vaw-rotate-axis'), 'Studio must expose quick transform rotation controls.');
 assert(studioIndex.includes('install-block-visual'), 'Studio must expose local Install / Update workflow.');
+assert(studioIndex.includes('terrain-fog-density'), 'Studio must expose terrain fog editing.');
+assert(studioIndex.includes('terrain-material-select'), 'Studio must expose terrain material selection.');
+assert(studioIndex.includes('terrain-patch-select'), 'Studio must expose terrain patch editing.');
+assert(studioIndex.includes('terrain-strip-select'), 'Studio must expose terrain strip editing.');
+assert(studioIndex.includes('terrain-preview'), 'Studio terrain workflow must expose a map preview for patch/strip placement.');
+assert(studioIndex.includes('terrain-install'), 'Studio must expose local terrain preset save/install.');
 assert(/vaw-install-probe[\s\S]{0,260}install-block-visual/.test(studioIndex), 'Install / Update must stay near endpoint controls, not buried in export actions.');
 assert(studioApp.includes('selectedBlockTypes'), 'Studio inferred manifests must use explicit block type selection.');
 assert(studioApp.includes('/__vaw/install_visual_block'), 'Studio install workflow must target the local VAW dev endpoint.');
+assert(studioApp.includes('/__vaw/install_terrain_preset'), 'Studio terrain workflow must target the local terrain preset endpoint.');
+assert(studioApp.includes('installTerrainPreset'), 'Studio must save renderer-only terrain presets from the UI.');
+assert(studioApp.includes('renderTerrainPreview'), 'Studio must render a terrain map preview from the preset.');
+assert(studioApp.includes('VAW_TERRAIN_AUTHORING_V1'), 'Studio terrain UI must use the Terrain Authoring V1 contract helper.');
 assert(studioApp.includes('resolveInstallEndpoint'), 'Studio install workflow must probe the available VAW dev endpoint.');
 assert(studioApp.includes('INSTALL_ENDPOINT_CANDIDATE_PORTS'), 'Studio must try known local VAW dev server ports.');
 assert(studioApp.includes('local_working_visuals'), 'Studio install workflow must update the single local working pack.');

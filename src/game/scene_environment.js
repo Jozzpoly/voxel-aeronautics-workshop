@@ -154,6 +154,12 @@
 
       const rangeStaticBodies = [];
       const terrainMaterialCache = new Map();
+      const TERRAIN_RENDER_LAYERS = Object.freeze({
+        ground: { y: (Number(TEST_RANGE.groundY) || -0.5) + 0.010, renderOrder: 10, polygonOffsetFactor: 0, polygonOffsetUnits: 0 },
+        patch: { y: (Number(TEST_RANGE.groundY) || -0.5) + 0.024, renderOrder: 20, polygonOffsetFactor: -1, polygonOffsetUnits: -1 },
+        strip: { y: (Number(TEST_RANGE.groundY) || -0.5) + 0.040, renderOrder: 30, polygonOffsetFactor: -2, polygonOffsetUnits: -2 },
+        marking: { y: (Number(TEST_RANGE.groundY) || -0.5) + 0.056, renderOrder: 40, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }
+      });
 
       function hexStyle(value) {
         const number = Number.isFinite(value) ? value : 0xffffff;
@@ -211,7 +217,9 @@
         const fallbackId = terrainConfig.baseMaterial || Object.keys(materials)[0];
         const spec = materials[materialId] || materials[fallbackId] || {};
         const opacity = Number.isFinite(overrides.opacity) ? overrides.opacity : (Number.isFinite(spec.opacity) ? spec.opacity : 1);
-        const cacheKey = `${materialId || fallbackId || 'default'}:${opacity}`;
+        const renderLayer = overrides.renderLayer || 'ground';
+        const layerSpec = TERRAIN_RENDER_LAYERS[renderLayer] || TERRAIN_RENDER_LAYERS.ground;
+        const cacheKey = `${materialId || fallbackId || 'default'}:${opacity}:${renderLayer}`;
         if (terrainMaterialCache.has(cacheKey)) return terrainMaterialCache.get(cacheKey).clone();
         const map = createProceduralTexture(spec.texture);
         const material = new THREE.MeshStandardMaterial({
@@ -220,11 +228,39 @@
           metalness: Number.isFinite(spec.metalness) ? spec.metalness : 0,
           transparent: opacity < 1,
           opacity,
-          depthWrite: opacity >= 1,
+          depthWrite: opacity >= 1 && renderLayer === 'ground',
+          polygonOffset: renderLayer !== 'ground',
+          polygonOffsetFactor: layerSpec.polygonOffsetFactor,
+          polygonOffsetUnits: layerSpec.polygonOffsetUnits,
           map
         });
         terrainMaterialCache.set(cacheKey, material);
         return material.clone();
+      }
+
+      function layerOffset(renderLayer, layerValue = 0) {
+        const layer = TERRAIN_RENDER_LAYERS[renderLayer] || TERRAIN_RENDER_LAYERS.ground;
+        return {
+          y: layer.y + Math.max(0, Number(layerValue) || 0) * 0.0007,
+          renderOrder: layer.renderOrder + Math.max(0, Math.round(Number(layerValue) || 0))
+        };
+      }
+
+      function addTerrainSurface({ width, depth, center, rotation = 0, materialId, opacity, renderLayer, layerValue = 0 }) {
+        const layer = layerOffset(renderLayer, layerValue);
+        const mesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(width, depth),
+          terrainMaterial(materialId, { opacity, renderLayer })
+        );
+        mesh.rotation.x = -Math.PI / 2;
+        mesh.rotation.y = Number(rotation) || 0;
+        mesh.position.set(center.x, layer.y, center.z);
+        mesh.renderOrder = layer.renderOrder;
+        mesh.receiveShadow = true;
+        mesh.userData.terrainLayer = renderLayer;
+        mesh.userData.terrainLayerValue = Number(layerValue) || 0;
+        testRangeGroup.add(mesh);
+        return mesh;
       }
 
       function addRangeBox(size, position, color, emissive = 0x000000, collidable = false) {
@@ -254,15 +290,16 @@
 
       function addTerrainPatch(patch) {
         if (!patch?.center || !patch?.size) return null;
-        const mesh = new THREE.Mesh(
-          new THREE.BoxGeometry(patch.size.x, 0.045, patch.size.z),
-          terrainMaterial(patch.material, { opacity: patch.opacity })
-        );
-        mesh.position.set(patch.center.x, -0.505, patch.center.z);
-        mesh.rotation.y = Number(patch.rotation) || 0;
-        mesh.receiveShadow = true;
-        testRangeGroup.add(mesh);
-        return mesh;
+        return addTerrainSurface({
+          width: patch.size.x,
+          depth: patch.size.z,
+          center: patch.center,
+          rotation: patch.rotation,
+          materialId: patch.material,
+          opacity: patch.opacity,
+          renderLayer: 'patch',
+          layerValue: patch.layer
+        });
       }
 
       function addRangeStrip(from, to, width, materialId, opacity = 0.38) {
@@ -270,15 +307,16 @@
         const dz = to.z - from.z;
         const length = Math.hypot(dx, dz);
         if (length <= 0.01) return null;
-        const mesh = new THREE.Mesh(
-          new THREE.BoxGeometry(length, 0.05, width),
-          terrainMaterial(materialId, { opacity })
-        );
-        mesh.position.set((from.x + to.x) * 0.5, -0.485, (from.z + to.z) * 0.5);
-        mesh.rotation.y = -Math.atan2(dz, dx);
-        mesh.receiveShadow = true;
-        testRangeGroup.add(mesh);
-        return mesh;
+        return addTerrainSurface({
+          width: length,
+          depth: width,
+          center: { x: (from.x + to.x) * 0.5, z: (from.z + to.z) * 0.5 },
+          rotation: -Math.atan2(dz, dx),
+          materialId,
+          opacity,
+          renderLayer: 'strip',
+          layerValue: 20
+        });
       }
 
       function addRangePad(position, radius, color) {
@@ -300,14 +338,14 @@
 
       function createTestRangeEnvironment() {
         const rangeSize = TEST_RANGE.bounds * 2 + 80;
-        const ground = new THREE.Mesh(
-          new THREE.PlaneGeometry(rangeSize, rangeSize),
-          terrainMaterial(terrainConfig.baseMaterial)
-        );
-        ground.rotation.x = -Math.PI / 2;
-        ground.position.y = -0.49;
+        const ground = addTerrainSurface({
+          width: rangeSize,
+          depth: rangeSize,
+          center: { x: 0, z: 0 },
+          materialId: terrainConfig.baseMaterial,
+          renderLayer: 'ground'
+        });
         ground.receiveShadow = true;
-        testRangeGroup.add(ground);
 
         for (const patch of terrainConfig.patches || []) addTerrainPatch(patch);
         for (const strip of terrainConfig.strips || []) {
@@ -316,9 +354,11 @@
           if (from && to) addRangeStrip(from, to, strip.width || 7, strip.material, strip.opacity);
         }
 
-        addRangeBox({ x: 112, y: 0.12, z: 12 }, { x: 36, y: -0.40, z: 0 }, 0x334155);
-        addRangeBox({ x: 108, y: 0.03, z: 0.22 }, { x: 36, y: -0.31, z: 0 }, 0xe2e8f0, 0x334155);
-        for (let x = -12; x <= TEST_RANGE.finishPad.x + 4; x += 10) addRangeBox({ x: 4.5, y: 0.035, z: 0.16 }, { x, y: -0.30, z: 0 }, 0xf8fafc);
+        addTerrainSurface({ width: 112, depth: 12, center: { x: 36, z: 0 }, materialId: 'runway', opacity: 0.72, renderLayer: 'marking', layerValue: 1 });
+        addTerrainSurface({ width: 108, depth: 0.22, center: { x: 36, z: 0 }, materialId: 'routePaint', opacity: 0.84, renderLayer: 'marking', layerValue: 2 });
+        for (let x = -12; x <= TEST_RANGE.finishPad.x + 4; x += 10) {
+          addTerrainSurface({ width: 4.5, depth: 0.16, center: { x, z: 0 }, materialId: 'routePaint', opacity: 0.9, renderLayer: 'marking', layerValue: 3 });
+        }
 
         const padColors = {
           startPad: 0x155e75,

@@ -22,6 +22,7 @@
     const DebrisRuntime = window.VAW.require('game.debris-runtime');
 
     const Config = window.VAW.require('foundation.config');
+    const TerrainAuthoring = window.VAW.require('foundation.terrain-authoring');
     const Catalog = window.VAW.require('foundation.catalog');
     const Orientation = window.VAW.require('foundation.orientation');
     const Blueprint = window.VAW.require('foundation.blueprint');
@@ -48,6 +49,13 @@
       SYMMETRY_MODES, CONTROL_AXES, CONTROL_SIGNS
     } = Config;
     const { BLOCKS, CONTRACTS } = Catalog;
+    const RENDER_TEST_RANGE = TerrainAuthoring.mergeTestRangeTerrain(TEST_RANGE, window.__VAW_TERRAIN_PRESET__ || null);
+    if (typeof window.BroadcastChannel === 'function' && window.location?.reload) {
+      const terrainChannel = new window.BroadcastChannel('vaw-terrain-authoring');
+      terrainChannel.onmessage = event => {
+        if (event.data?.type === 'terrain-preset-updated') window.location.reload();
+      };
+    }
     const LANDING_POLICY = MissionEvaluator.normalizeLandingPolicy(MISSION.landing);
     const AEROSTATIC_POLICY = Aerostatics.normalizePolicy(AEROSTATICS);
     const {
@@ -62,7 +70,7 @@
 
     const container = document.getElementById('canvas-container');
     const environment = SceneEnvironment.create({
-      THREE, Physics, container, GRID, AEROSTATIC_POLICY, COLLISION_GROUP, TEST_RANGE, BLOCKS
+      THREE, Physics, container, GRID, AEROSTATIC_POLICY, COLLISION_GROUP, TEST_RANGE: RENDER_TEST_RANGE, BLOCKS
     });
     const {
       scene, camera, renderer, gridHelper, basePlane,

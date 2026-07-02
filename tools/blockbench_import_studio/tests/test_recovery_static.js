@@ -11,6 +11,7 @@ const MaterialTools = require('../src/gltf_material_tools.js');
 const Controls = require('../src/viewport_controls.js');
 const Validator = require('../src/vaw_validator.js');
 const VisualAssetPack = require('../src/visual_asset_pack_v1.js');
+const TerrainAuthoring = require('../src/terrain_authoring_v1.js');
 const AuthoringState = require('../src/authoring_state.js');
 const PackageExporter = require('../src/package_exporter.js');
 
@@ -29,7 +30,7 @@ async function main() {
   for (const required of [
     'index.html', 'minimal_viewer.html', 'app/main.js', 'app/styles.css',
     'src/file_bundle_resolver.js', 'src/project_files_report.js', 'src/animation_report.js', 'src/layout_manager.js', 'src/minimal_gltf_viewer.js', 'src/viewport_controls.js', 'src/fit_camera.js',
-    'src/texture_report.js', 'src/gltf_material_tools.js', 'src/vaw_validator.js', 'src/visual_asset_pack_v1.js', 'src/authoring_state.js', 'src/package_exporter.js',
+    'src/texture_report.js', 'src/gltf_material_tools.js', 'src/vaw_validator.js', 'src/visual_asset_pack_v1.js', 'src/terrain_authoring_v1.js', 'src/authoring_state.js', 'src/package_exporter.js',
     'tests/test_authoring_state.js', 'tests/test_authoring_state_flow.js',
     'vendor/three.min.js', 'vendor/GLTFLoader.js',
     'assets/uv_checker_cube_gltf/uv_checker_cube.gltf', 'assets/uv_checker_cube_gltf/uv_checker_cube.bin', 'assets/uv_checker_cube_gltf/textures/uv_checker.png',
@@ -143,6 +144,23 @@ async function main() {
   assert.equal(Controls.classifyPointerButton(1, true), 'pan');
   assert.equal(Controls.classifyPointerButton(0, false), 'ignore');
   assert.equal(Controls.classifyPointerButton(2, false), 'ignore');
+
+  const terrainPreset = TerrainAuthoring.normalizePreset({
+    terrain: {
+      fog: { color: '#0b1220', density: 0.0038 },
+      materials: {
+        basin: { color: '#15283a', texture: { kind: 'checker', colorA: '#15283a', colorB: '#1b3349', repeat: 16 } },
+        routePaint: { color: '#93c5fd', opacity: 0.4, texture: { kind: 'stripe', colorA: '#60a5fa', colorB: '#1e3a8a', repeat: 12 } }
+      },
+      baseMaterial: 'basin',
+      patches: [{ id: 'yard', material: 'basin', center: { x: 0, z: 0 }, size: { x: 20, z: 20 }, layer: 10 }],
+      strips: [{ id: 'road', fromPad: 'startPad', toPad: 'finishPad', width: 8, material: 'routePaint', opacity: 0.4, layer: 20 }]
+    }
+  });
+  assert.equal(terrainPreset.format, 'VAW_TERRAIN_AUTHORING_V1');
+  assert.deepEqual(TerrainAuthoring.diagnosticsForPreset(terrainPreset), []);
+  assert.equal(TerrainAuthoring.DEFAULT_PAD_PREVIEW_POSITIONS.startPad.x, 0);
+  assert.equal(TerrainAuthoring.DEFAULT_PAD_PREVIEW_POSITIONS.frontierPad.z, -218);
 
   const noSidecar = Validator.validateReadiness({ gltfJson: gltf, sidecar: null, dependencies: [] });
   assert.equal(noSidecar.viewerOk, true);
@@ -386,6 +404,9 @@ async function main() {
     assert.ok(index.includes(snippet) || app.includes(snippet), `missing explicit Visual Asset Pack authoring UI snippet: ${snippet}`);
   }
   for (const snippet of [
+    'terrain-preview',
+    'renderTerrainPreview',
+    'DEFAULT_PAD_PREVIEW_POSITIONS',
     'vaw-vector-rig-enabled',
     'vaw-vector-rig-default',
     'currentVectorRigProfile',

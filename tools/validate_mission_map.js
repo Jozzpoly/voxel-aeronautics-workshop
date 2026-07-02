@@ -9,12 +9,14 @@ global.window = global;
 for (const relative of [
   'src/foundation/kernel.js',
   'src/foundation/config.js',
+  'src/foundation/terrain_authoring.js',
   'src/foundation/catalog.js'
 ]) {
   vm.runInThisContext(fs.readFileSync(path.join(ROOT, relative), 'utf8'), { filename: relative });
 }
 
 const Config = VAW.require('foundation.config');
+const TerrainAuthoring = VAW.require('foundation.terrain-authoring');
 const Catalog = VAW.require('foundation.catalog');
 const { TEST_RANGE, MISSION } = Config;
 const { CONTRACTS } = Catalog;
@@ -64,6 +66,7 @@ for (const [materialId, material] of Object.entries(materials)) {
 }
 for (const patch of TEST_RANGE.terrain?.patches || []) {
   assert(materials[patch.material], `terrain patch ${patch.id} references missing material ${patch.material}`);
+  assert(Number.isFinite(Number(patch.layer ?? 10)), `terrain patch ${patch.id} layer must be finite`);
   finitePoint(patch.center, ['x', 'z'], `terrain patch ${patch.id}.center`);
   finitePoint(patch.size, ['x', 'z'], `terrain patch ${patch.id}.size`);
   assert(patch.size.x > 0 && patch.size.z > 0, `terrain patch ${patch.id} size must be positive`);
@@ -72,6 +75,20 @@ for (const strip of TEST_RANGE.terrain?.strips || []) {
   assert(materials[strip.material], `terrain strip ${strip.id} references missing material ${strip.material}`);
   assert(pads[strip.fromPad] && pads[strip.toPad], `terrain strip ${strip.id} references missing pads`);
   assert(Number(strip.width) > 0, `terrain strip ${strip.id} width must be positive`);
+  assert(Number.isFinite(Number(strip.layer ?? 20)), `terrain strip ${strip.id} layer must be finite`);
+}
+
+const localTerrainPresetPath = path.join(ROOT, TerrainAuthoring.LOCAL_PRESET_PATH);
+let localTerrainPresetStatus = 'missing';
+if (fs.existsSync(localTerrainPresetPath)) {
+  const document = JSON.parse(fs.readFileSync(localTerrainPresetPath, 'utf8'));
+  const { preset, diagnostics } = TerrainAuthoring.normalizePresetDocument(document, TEST_RANGE);
+  const errors = diagnostics.filter(item => item.severity === 'error');
+  assert.deepStrictEqual(errors, [], `local terrain preset has errors: ${JSON.stringify(errors)}`);
+  const merged = TerrainAuthoring.mergeTestRangeTerrain(TEST_RANGE, preset);
+  assert.notStrictEqual(merged, TEST_RANGE, 'valid local terrain preset should produce a render TEST_RANGE override');
+  assert.deepStrictEqual(TerrainAuthoring.validateTerrain(merged.terrain, TEST_RANGE), [], 'merged local terrain preset should validate');
+  localTerrainPresetStatus = `ok:${preset.metadata.revision ?? 'unknown'}`;
 }
 
 const sectors = TEST_RANGE.missionMap?.sectors || [];
@@ -139,6 +156,7 @@ console.log(JSON.stringify({
   sectors: sectors.map(sector => sector.id),
   terrainMaterials: Object.keys(materials).length,
   terrainPatches: TEST_RANGE.terrain?.patches?.length || 0,
+  localTerrainPreset: localTerrainPresetStatus,
   collidableObstacles: collidableObstacles.length,
   fogDensity: TEST_RANGE.terrain.fog.density,
   bounds: TEST_RANGE.bounds,

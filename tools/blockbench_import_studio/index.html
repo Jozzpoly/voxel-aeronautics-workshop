@@ -127,6 +127,79 @@
       <div id="mesh-list" class="scroll-list empty">Brak modelu.</div>
       </details>
 
+      <h2>Terrain Authoring V1 <span class="badge ready">READY</span></h2>
+      <p class="note">Renderer-only terrain preset. Nie zmienia kontraktow, kolizji, nagrod ani Blueprint/CraftModel.</p>
+      <div id="terrain-status" class="status neutral">Terrain preset waits for Studio dev server.</div>
+      <div id="terrain-preview" class="terrain-preview" aria-label="Terrain map preview"></div>
+      <div class="terrain-fields">
+        <label>fog color <input id="terrain-fog-color" type="color" value="#0b1220" /></label>
+        <label>fog density <input id="terrain-fog-density" type="number" min="0.0001" max="0.05" step="0.0001" value="0.0038" /></label>
+        <label>base material <select id="terrain-base-material"></select></label>
+      </div>
+      <details class="terrain-editor-drawer" open>
+        <summary>Materials</summary>
+        <div class="terrain-toolbar">
+          <select id="terrain-material-select"></select>
+          <button id="terrain-material-new" type="button">New material</button>
+          <button id="terrain-material-delete" type="button" class="danger">Delete</button>
+        </div>
+        <div class="terrain-fields">
+          <label>id <input id="terrain-material-id" type="text" /></label>
+          <label>kind <select id="terrain-material-kind"><option value="checker">checker</option><option value="stripe">stripe</option><option value="noise">noise</option></select></label>
+          <label>color A <input id="terrain-material-color-a" type="color" /></label>
+          <label>color B <input id="terrain-material-color-b" type="color" /></label>
+          <label>repeat <input id="terrain-material-repeat" type="number" min="1" max="128" step="1" /></label>
+          <label>roughness <input id="terrain-material-roughness" type="number" min="0" max="1" step="0.01" /></label>
+          <label>opacity <input id="terrain-material-opacity" type="number" min="0.05" max="1" step="0.01" /></label>
+        </div>
+      </details>
+      <details class="terrain-editor-drawer">
+        <summary>Patches</summary>
+        <div class="terrain-toolbar">
+          <select id="terrain-patch-select"></select>
+          <button id="terrain-patch-new" type="button">New patch</button>
+          <button id="terrain-patch-delete" type="button" class="danger">Delete</button>
+        </div>
+        <div class="terrain-fields">
+          <label>id <input id="terrain-patch-id" type="text" /></label>
+          <label>material <select id="terrain-patch-material"></select></label>
+          <label>x <input id="terrain-patch-x" type="number" step="1" /></label>
+          <label>z <input id="terrain-patch-z" type="number" step="1" /></label>
+          <label>size x <input id="terrain-patch-size-x" type="number" min="0.1" step="1" /></label>
+          <label>size z <input id="terrain-patch-size-z" type="number" min="0.1" step="1" /></label>
+          <label>rotation <input id="terrain-patch-rotation" type="number" step="0.01" /></label>
+          <label>opacity <input id="terrain-patch-opacity" type="number" min="0.05" max="1" step="0.01" /></label>
+          <label>layer <input id="terrain-patch-layer" type="number" min="0" step="1" /></label>
+        </div>
+      </details>
+      <details class="terrain-editor-drawer">
+        <summary>Strips / Roads</summary>
+        <div class="terrain-toolbar">
+          <select id="terrain-strip-select"></select>
+          <button id="terrain-strip-new" type="button">New strip</button>
+          <button id="terrain-strip-delete" type="button" class="danger">Delete</button>
+        </div>
+        <div class="terrain-fields">
+          <label>id <input id="terrain-strip-id" type="text" /></label>
+          <label>from <select id="terrain-strip-from-pad"></select></label>
+          <label>to <select id="terrain-strip-to-pad"></select></label>
+          <label>material <select id="terrain-strip-material"></select></label>
+          <label>width <input id="terrain-strip-width" type="number" min="0.1" step="0.5" /></label>
+          <label>opacity <input id="terrain-strip-opacity" type="number" min="0.05" max="1" step="0.01" /></label>
+          <label>layer <input id="terrain-strip-layer" type="number" min="0" step="1" /></label>
+        </div>
+      </details>
+      <details class="advanced-json terrain-json-drawer">
+        <summary>Terrain preset JSON</summary>
+        <textarea id="terrain-json" spellcheck="false"></textarea>
+        <div class="button-row wrap">
+          <button id="terrain-apply-json" type="button">Apply Terrain JSON</button>
+          <button id="terrain-reload" type="button">Reload Local Preset</button>
+          <button id="terrain-install" type="button" class="primary">Save / Install Terrain Preset</button>
+        </div>
+      </details>
+      <div id="terrain-diagnostics" class="facts"></div>
+
       <h2>Visual Asset Pack V1 — export gate <span class="badge ready">READY</span></h2>
       <p class="note">To nie steruje widocznością modelu. Preview może działać bez bindings, ale export do VAW wymaga poprawnego manifestu V1.</p>
       <div id="vaw-status" class="status neutral">Brak manifestu V1 — preview nadal dozwolone</div>
@@ -265,6 +338,7 @@
   <script src="src/minimal_gltf_viewer.js"></script>
   <script src="src/vaw_validator.js"></script>
   <script src="src/visual_asset_pack_v1.js"></script>
+  <script src="src/terrain_authoring_v1.js"></script>
   <script src="src/authoring_state.js"></script>
   <script src="src/package_exporter.js"></script>
   <script src="app/main.js"></script>

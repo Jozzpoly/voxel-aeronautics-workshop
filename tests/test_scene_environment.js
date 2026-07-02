@@ -41,8 +41,26 @@ function baseOptions(THREE) {
     AEROSTATIC_POLICY: { gravity: 9.81 },
     COLLISION_GROUP: { world: 1, craft: 2, debris: 4 },
     TEST_RANGE: {
-      startPad: { x: 0, z: 0, radius: 4 },
-      finishPad: { x: 40, z: 0, radius: 4 }
+      startPad: { x: 0, y: 0, z: 0, radius: 4 },
+      finishPad: { x: 40, y: 0, z: 0, radius: 4 },
+      pads: {
+        startPad: { x: 0, y: 0, z: 0, radius: 4 },
+        finishPad: { x: 40, y: 0, z: 0, radius: 4 }
+      },
+      padIds: ['startPad', 'finishPad'],
+      bounds: 80,
+      groundY: -0.5,
+      terrain: {
+        fog: { color: 0x0b1220, density: 0.0038 },
+        baseMaterial: 'basin',
+        materials: {
+          basin: { color: 0x15283a, roughness: 1, texture: { kind: 'checker', colorA: 0x15283a, colorB: 0x1b3349, repeat: 16 } },
+          routePaint: { color: 0x93c5fd, roughness: 1, opacity: 0.4, texture: { kind: 'stripe', colorA: 0x60a5fa, colorB: 0x1e3a8a, repeat: 12 } }
+        },
+        patches: [{ id: 'test-patch', material: 'basin', center: { x: 0, z: 0 }, size: { x: 20, z: 20 }, rotation: 0, layer: 10 }],
+        strips: [{ id: 'test-strip', fromPad: 'startPad', toPad: 'finishPad', width: 6, material: 'routePaint', opacity: 0.4, layer: 20 }]
+      },
+      obstacles: []
     },
     BLOCKS: {
       Core: { color: 0xffffff },
@@ -93,6 +111,20 @@ function cloneThreeWithRenderer(Renderer, extra = {}) {
   const environment = SceneEnvironment.create(baseOptions(three));
   assert.strictEqual(environment.renderer.outputColorSpace, 'srgb-color-space');
   assert.strictEqual(environment.renderer.outputEncoding, 'linear');
+}
+
+{
+  const environment = SceneEnvironment.create(baseOptions(THREE));
+  const terrainSurfaces = environment.testRangeGroup.children.filter(child => child.userData?.terrainLayer);
+  const ground = terrainSurfaces.find(child => child.userData.terrainLayer === 'ground');
+  const patch = terrainSurfaces.find(child => child.userData.terrainLayer === 'patch');
+  const strip = terrainSurfaces.find(child => child.userData.terrainLayer === 'strip');
+  assert(ground && patch && strip, 'scene should render ground, terrain patches and strips as layered terrain surfaces');
+  assert(patch.position.y > ground.position.y, 'patch surface must sit above base ground to avoid z-fighting');
+  assert(strip.position.y > patch.position.y, 'strip surface must sit above patches to avoid z-fighting');
+  assert(strip.renderOrder > patch.renderOrder && patch.renderOrder > ground.renderOrder, 'terrain renderOrder must follow ground < patch < strip');
+  assert.strictEqual(patch.material.polygonOffset, true);
+  assert.strictEqual(strip.material.depthWrite, false);
 }
 
 console.log({ sceneEnvironment: 'ok', colorOutput: 'srgb' });

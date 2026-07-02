@@ -11,6 +11,7 @@ vm.runInThisContext(fs.readFileSync(path.join(__dirname, 'browser_stub_libs.js')
 const sourceFiles = [
   'src/foundation/kernel.js',
   'src/foundation/config.js',
+  'src/foundation/terrain_authoring.js',
   'src/foundation/catalog.js',
   'src/foundation/orientation.js',
   'src/foundation/blueprint.js',
@@ -45,6 +46,7 @@ for (const relative of sourceFiles) {
 }
 
 const Config = VAW.require('foundation.config');
+const TerrainAuthoring = VAW.require('foundation.terrain-authoring');
 const Catalog = VAW.require('foundation.catalog');
 const Orientation = VAW.require('foundation.orientation');
 const Blueprint = VAW.require('foundation.blueprint');
@@ -72,6 +74,10 @@ assert.strictEqual(Config.TEST_RANGE.bounds, 360);
 assert(Object.isFrozen(Config.TEST_RANGE.pads));
 assert(Object.isFrozen(Config.TEST_RANGE.terrain.materials));
 assert(Config.TEST_RANGE.terrain.fog.density <= 0.006);
+const defaultTerrainPreset = TerrainAuthoring.createPresetFromTestRange(Config.TEST_RANGE);
+assert.strictEqual(defaultTerrainPreset.format, 'VAW_TERRAIN_AUTHORING_V1');
+assert.deepStrictEqual(TerrainAuthoring.validateTerrain(defaultTerrainPreset.terrain, Config.TEST_RANGE), []);
+assert.strictEqual(TerrainAuthoring.mergeTestRangeTerrain(Config.TEST_RANGE, defaultTerrainPreset).terrain.fog.density, Config.TEST_RANGE.terrain.fog.density);
 assert.strictEqual(typeof Config.PHYSICS.wingStallStart, 'number');
 assert(Object.isFrozen(Catalog.BLOCKS));
 assert(Object.isFrozen(Catalog.CONTRACTS));

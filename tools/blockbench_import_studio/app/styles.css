@@ -123,6 +123,19 @@ textarea { width: 100%; min-height: 210px; resize: vertical; border: 1px solid #
 .manifest-fields input, .manifest-fields select { width: 100%; min-width: 0; border: 1px solid #2e577b; background: #07111f; color: var(--text); border-radius: 9px; padding: 7px 8px; font: inherit; }
 .manifest-fields .wide-field, .manifest-fields .button-row, .manifest-fields .facts { grid-column: 1 / -1; }
 .manifest-fields textarea { min-height: 86px; }
+.terrain-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin: 8px 0; align-items: start; }
+.terrain-fields label { display: grid; gap: 4px; color: var(--muted); font-size: 12px; }
+.terrain-fields input, .terrain-fields select { width: 100%; min-width: 0; border: 1px solid #2e577b; background: #07111f; color: var(--text); border-radius: 9px; padding: 7px 8px; font: inherit; }
+.terrain-fields input[type="color"] { min-height: 34px; padding: 3px; }
+.terrain-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; margin: 8px 0; }
+.terrain-toolbar select { width: 100%; min-width: 0; border: 1px solid #2e577b; background: #07111f; color: var(--text); border-radius: 9px; padding: 7px 8px; font: inherit; }
+.terrain-editor-drawer { border: 1px solid rgba(58, 94, 127, .35); border-radius: 8px; padding: 8px; margin: 8px 0; background: rgba(4, 12, 24, .32); }
+.terrain-editor-drawer summary { cursor: pointer; color: var(--text); font-weight: 700; }
+.terrain-json-drawer textarea { min-height: 180px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+.terrain-preview { margin: 10px 0 8px; border: 1px solid rgba(58, 94, 127, .55); border-radius: 8px; background: #06101d; overflow: hidden; min-height: 178px; }
+.terrain-preview svg { display: block; width: 100%; height: auto; min-height: 178px; }
+.terrain-preview .preview-label { fill: #dbeafe; font: 10px ui-sans-serif, system-ui, sans-serif; paint-order: stroke; stroke: #06101d; stroke-width: 3px; stroke-linejoin: round; }
+.terrain-preview .preview-note { fill: #8fb3d9; font: 11px ui-sans-serif, system-ui, sans-serif; }
 .manifest-fields .material-overrides-raw { display: none; }
 .manifest-fields > * { order: 40; }
 .manifest-fields label:has(#vaw-block-type),

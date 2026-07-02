@@ -481,6 +481,7 @@
       const sources = [
         'src/foundation/kernel.js',
         'src/foundation/config.js',
+        'src/foundation/terrain_authoring.js',
         'src/foundation/catalog.js',
         'src/foundation/visual_asset_manifest.js',
         'src/foundation/orientation.js',
@@ -536,6 +537,17 @@
         'src/game.js'
       ];
       const sourceVersion = 'workbench-ui-v9-m2b-feedback';
+      const terrainPresetUrl = 'assets/terrain/local_working_terrain/VAW_TERRAIN_AUTHORING_V1.json';
+      const loadTerrainPreset = async () => {
+        if (!window.fetch) return;
+        try {
+          const response = await fetch(`${terrainPresetUrl}?v=${Date.now()}`, { cache: 'no-store' });
+          if (!response.ok) return;
+          window.__VAW_TERRAIN_PRESET__ = await response.json();
+        } catch (_) {
+          window.__VAW_TERRAIN_PRESET__ = null;
+        }
+      };
       let cursor = 0;
       const loadNext = () => {
         if (cursor >= sources.length) return;
@@ -545,7 +557,8 @@
         script.async = false;
         script.onload = loadNext;
         script.onerror = () => showFatal(`The script ${source} could not be loaded.`);
-        document.body.appendChild(script);
+        if (source === 'src/game.js') loadTerrainPreset().finally(() => document.body.appendChild(script));
+        else document.body.appendChild(script);
       };
       loadNext();
     })();

@@ -6,7 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED = [
     'index.html','minimal_viewer.html','app/main.js','app/styles.css',
-    'src/file_bundle_resolver.js','src/project_files_report.js','src/animation_report.js','src/layout_manager.js','src/minimal_gltf_viewer.js','src/viewport_controls.js','src/fit_camera.js','src/texture_report.js','src/vaw_validator.js','src/visual_asset_pack_v1.js','src/authoring_state.js','src/package_exporter.js',
+    'src/file_bundle_resolver.js','src/project_files_report.js','src/animation_report.js','src/layout_manager.js','src/minimal_gltf_viewer.js','src/viewport_controls.js','src/fit_camera.js','src/texture_report.js','src/vaw_validator.js','src/visual_asset_pack_v1.js','src/terrain_authoring_v1.js','src/authoring_state.js','src/package_exporter.js',
     'tests/test_authoring_state.js','tests/test_authoring_state_flow.js',
     'vendor/three.min.js','vendor/GLTFLoader.js',
     'assets/uv_checker_cube_gltf/uv_checker_cube.gltf','assets/uv_checker_cube_gltf/uv_checker_cube.bin','assets/uv_checker_cube_gltf/textures/uv_checker.png',
@@ -32,9 +32,12 @@ for forbidden in ['cancelAnimationFrame(state.animationFrame)', 'OrbitControls']
 uv = json.loads((ROOT / 'assets/uv_checker_cube_gltf/uv_checker_cube.gltf').read_text(encoding='utf-8'))
 if not uv.get('buffers') or not uv.get('images') or not uv.get('materials'):
     raise SystemExit('uv checker gltf is not an external .gltf + .bin + texture sample')
-for needle in ['Project Files', 'Reset layout', 'Export Debug Package', 'Export Visual Asset Pack V1', 'Animation preview', 'Format JSON', 'Apply manifest', 'VAW_VISUAL_ASSET_PACK_V1', 'vaw-block-type', 'vaw-node-visual-root', 'Clear rig bindings']:
+for needle in ['Project Files', 'Reset layout', 'Export Debug Package', 'Export Visual Asset Pack V1', 'Animation preview', 'Format JSON', 'Apply manifest', 'VAW_VISUAL_ASSET_PACK_V1', 'vaw-block-type', 'vaw-node-visual-root', 'Clear rig bindings', 'Terrain Authoring V1', 'terrain-preview', 'terrain-material-select', 'terrain-patch-select', 'terrain-strip-select', 'terrain-install']:
     if needle not in index:
         raise SystemExit(f'missing workbench UI requirement: {needle}')
+for needle in ['VAW_TERRAIN_AUTHORING_V1', 'installTerrainPreset', 'renderTerrainPreview', '/__vaw/install_terrain_preset']:
+    if needle not in main:
+        raise SystemExit(f'missing terrain authoring implementation: {needle}')
 for needle in ['buildDebugPackageEntries', 'buildVisualAssetPackEntries', 'downloadDebugPackageZip', 'ANIMATION_REPORT', 'WORKBENCH_SESSION_REPORT']:
     if needle not in main and needle not in (ROOT / 'src/package_exporter.js').read_text(encoding='utf-8'):
         raise SystemExit(f'missing debug export implementation: {needle}')

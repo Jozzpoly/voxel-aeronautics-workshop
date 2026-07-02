@@ -7,6 +7,7 @@
   const ViewerApi = window.VAW_MINIMAL_GLTF_VIEWER;
   const Validator = window.VAW_VALIDATOR || null;
   const VisualAssetPack = window.VAW_VISUAL_ASSET_PACK_V1 || null;
+  const TerrainAuthoring = window.VAW_TERRAIN_AUTHORING_V1 || null;
   const AuthoringState = window.VAW_STUDIO_AUTHORING_STATE || null;
   const PackageExporter = window.VAW_PACKAGE_EXPORTER || null;
   const ProjectFilesReport = window.VAW_PROJECT_FILES_REPORT || null;
@@ -34,6 +35,8 @@
   const AUTHORING_PREFS_KEY = 'vaw.blockbench_import_studio.authoring_prefs.v1';
   const INSTALL_ENDPOINT_PREFS_KEY = 'vaw.blockbench_import_studio.install_endpoint.v1';
   const INSTALL_ENDPOINT_PATH = '/__vaw/install_visual_block';
+  const TERRAIN_ENDPOINT_PATH = '/__vaw/install_terrain_preset';
+  const TERRAIN_PRESET_URL = '../../assets/terrain/local_working_terrain/VAW_TERRAIN_AUTHORING_V1.json';
   const INSTALL_ENDPOINT_CANDIDATE_PORTS = ['8765', '8095'];
 
   const el = Object.fromEntries([
@@ -50,6 +53,11 @@
     'vaw-fire-split-enabled', 'vaw-fire-split-nodes', 'vaw-fire-split-suggest',
     'vaw-vector-rig-enabled', 'vaw-vector-rig-default', 'vaw-vector-rig-gimbal-a-axis', 'vaw-vector-rig-gimbal-a-invert', 'vaw-vector-rig-gimbal-b-axis', 'vaw-vector-rig-gimbal-b-invert', 'vaw-vector-rig-roll-axis', 'vaw-vector-rig-roll-invert',
     'vaw-install-endpoint', 'vaw-install-probe',
+    'terrain-status', 'terrain-fog-color', 'terrain-fog-density', 'terrain-base-material',
+    'terrain-material-select', 'terrain-material-new', 'terrain-material-delete', 'terrain-material-id', 'terrain-material-kind', 'terrain-material-color-a', 'terrain-material-color-b', 'terrain-material-repeat', 'terrain-material-roughness', 'terrain-material-opacity',
+    'terrain-patch-select', 'terrain-patch-new', 'terrain-patch-delete', 'terrain-patch-id', 'terrain-patch-material', 'terrain-patch-x', 'terrain-patch-z', 'terrain-patch-size-x', 'terrain-patch-size-z', 'terrain-patch-rotation', 'terrain-patch-opacity', 'terrain-patch-layer',
+    'terrain-strip-select', 'terrain-strip-new', 'terrain-strip-delete', 'terrain-strip-id', 'terrain-strip-from-pad', 'terrain-strip-to-pad', 'terrain-strip-material', 'terrain-strip-width', 'terrain-strip-opacity', 'terrain-strip-layer',
+    'terrain-json', 'terrain-apply-json', 'terrain-reload', 'terrain-install', 'terrain-diagnostics', 'terrain-preview',
     'format-sidecar', 'apply-sidecar', 'validate-vaw', 'download-sidecar', 'download-debug-package', 'download-package', 'install-block-visual', 'install-status', 'diagnostics'
   ].map(id => [id, document.getElementById(id)]));
 
@@ -79,6 +87,10 @@
     lastValidation: null,
     activePrefsBlockType: '',
     authoringPrefsRestored: false,
+    terrainPreset: null,
+    terrainSelectedMaterialId: '',
+    terrainSelectedPatchId: '',
+    terrainSelectedStripId: '',
   };
 
   function init() {
@@ -90,6 +102,7 @@
     applyStoredAuthoringPrefs();
     applyStoredInstallEndpoint();
     renderAll();
+    loadTerrainPreset().catch(error => setTerrainStatus('warn', `Terrain preset unavailable: ${error.message || error}`));
     setViewerStatus('neutral', 'Gotowy do importu', 'Wrzuć komplet .gltf + .bin + tekstury.');
   }
 
@@ -739,6 +752,420 @@
     }
   }
 
+  function setTerrainStatus(kind, message) {
+    if (!el['terrain-status']) return;
+    el['terrain-status'].className = `status ${kind || 'neutral'}`;
+    el['terrain-status'].textContent = message;
+  }
+
+  function terrainMaterialIds() {
+    return Object.keys(state.terrainPreset?.terrain?.materials || {});
+  }
+
+  function terrainPatches() {
+    return state.terrainPreset?.terrain?.patches || [];
+  }
+
+  function terrainStrips() {
+    return state.terrainPreset?.terrain?.strips || [];
+  }
+
+  function setSelectOptions(select, values, selected, labeler = value => value) {
+    if (!select) return;
+    select.innerHTML = '';
+    for (const value of values) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = labeler(value);
+      select.appendChild(option);
+    }
+    if (values.includes(selected)) select.value = selected;
+    else if (values.length) select.value = values[0];
+  }
+
+  function terrainNumber(id, fallback = 0) {
+    const value = Number(el[id]?.value);
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  function terrainText(id, fallback = '') {
+    return String(el[id]?.value || fallback).trim();
+  }
+
+  function terrainSafeId(value, fallback) {
+    const text = String(value || '').trim().replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+    return /^[A-Za-z]/.test(text) ? text : fallback;
+  }
+
+  function terrainDiagnostics() {
+    return TerrainAuthoring?.diagnosticsForPreset
+      ? TerrainAuthoring.diagnosticsForPreset(state.terrainPreset)
+      : [];
+  }
+
+  function setTerrainPreset(document, statusMessage = 'Terrain preset loaded.') {
+    if (!TerrainAuthoring) return;
+    state.terrainPreset = TerrainAuthoring.normalizePreset(document || TerrainAuthoring.defaultPreset());
+    const materialIds = terrainMaterialIds();
+    state.terrainSelectedMaterialId = materialIds.includes(state.terrainSelectedMaterialId) ? state.terrainSelectedMaterialId : (materialIds[0] || '');
+    state.terrainSelectedPatchId = terrainPatches().some(patch => patch.id === state.terrainSelectedPatchId) ? state.terrainSelectedPatchId : (terrainPatches()[0]?.id || '');
+    state.terrainSelectedStripId = terrainStrips().some(strip => strip.id === state.terrainSelectedStripId) ? state.terrainSelectedStripId : (terrainStrips()[0]?.id || '');
+    renderTerrainEditor();
+    setTerrainStatus('ok', statusMessage);
+  }
+
+  async function fetchTerrainPresetDocument() {
+    const endpointResponse = await fetch(TERRAIN_ENDPOINT_PATH, { cache: 'no-store' }).catch(() => null);
+    if (endpointResponse?.ok) return endpointResponse.json();
+    const fileResponse = await fetch(`${TERRAIN_PRESET_URL}?v=${Date.now()}`, { cache: 'no-store' }).catch(() => null);
+    if (fileResponse?.ok) return fileResponse.json();
+    return TerrainAuthoring.defaultPreset();
+  }
+
+  async function loadTerrainPreset() {
+    if (!TerrainAuthoring || isMinimalPage) return;
+    setTerrainStatus('neutral', 'Loading terrain preset...');
+    const document = await fetchTerrainPresetDocument();
+    setTerrainPreset(document, 'Terrain preset loaded from local working preset.');
+    addEvent('terrain: preset loaded');
+  }
+
+  function renderTerrainDiagnostics() {
+    const target = el['terrain-diagnostics'];
+    if (!target || !TerrainAuthoring || !state.terrainPreset) return;
+    const diagnostics = terrainDiagnostics();
+    if (!diagnostics.length) {
+      target.innerHTML = '<span class="fact">terrain preset valid</span>';
+      return;
+    }
+    target.innerHTML = diagnostics.map(item => {
+      const css = item.severity === 'error' ? 'bad' : 'warn';
+      return `<span class="fact ${css}">${escapeHtml(item.code)}: ${escapeHtml(item.message)}</span>`;
+    }).join('');
+  }
+
+  function terrainMaterialPreviewColor(materialId) {
+    const material = state.terrainPreset?.terrain?.materials?.[materialId] || null;
+    const color = material?.color ?? material?.texture?.colorA ?? 0x334155;
+    return TerrainAuthoring.numberToHex(color);
+  }
+
+  function renderTerrainPreview() {
+    const target = el['terrain-preview'];
+    if (!target || !TerrainAuthoring || !state.terrainPreset) return;
+    const terrain = state.terrainPreset.terrain;
+    const padPositions = TerrainAuthoring.DEFAULT_PAD_PREVIEW_POSITIONS || {};
+    const points = [
+      ...Object.values(padPositions),
+      ...terrainPatches().map(patch => patch.center || {}),
+    ].filter(point => Number.isFinite(Number(point.x)) && Number.isFinite(Number(point.z)));
+    if (!points.length) {
+      target.innerHTML = '<svg viewBox="0 0 360 190" role="img"><text class="preview-note" x="16" y="28">Terrain preview unavailable.</text></svg>';
+      return;
+    }
+    const viewWidth = 360;
+    const viewHeight = 220;
+    const margin = 18;
+    let minX = Math.min(...points.map(point => Number(point.x)));
+    let maxX = Math.max(...points.map(point => Number(point.x)));
+    let minZ = Math.min(...points.map(point => Number(point.z)));
+    let maxZ = Math.max(...points.map(point => Number(point.z)));
+    const padding = 42;
+    minX -= padding;
+    maxX += padding;
+    minZ -= padding;
+    maxZ += padding;
+    const spanX = Math.max(1, maxX - minX);
+    const spanZ = Math.max(1, maxZ - minZ);
+    const scaleX = (viewWidth - margin * 2) / spanX;
+    const scaleZ = (viewHeight - margin * 2) / spanZ;
+    const pointToSvg = point => ({
+      x: margin + (Number(point.x) - minX) * scaleX,
+      y: margin + (Number(point.z) - minZ) * scaleZ
+    });
+    const stripRows = terrainStrips()
+      .slice()
+      .sort((left, right) => (left.layer || 0) - (right.layer || 0))
+      .map(strip => {
+        const from = padPositions[strip.fromPad];
+        const to = padPositions[strip.toPad];
+        if (!from || !to) return '';
+        const start = pointToSvg(from);
+        const end = pointToSvg(to);
+        const selected = strip.id === state.terrainSelectedStripId;
+        const width = Math.max(2, Number(strip.width || 1) * Math.min(scaleX, scaleZ));
+        const opacity = Math.max(0.08, Math.min(0.95, Number(strip.opacity || 0.4)));
+        return `<line x1="${start.x.toFixed(2)}" y1="${start.y.toFixed(2)}" x2="${end.x.toFixed(2)}" y2="${end.y.toFixed(2)}" stroke="${terrainMaterialPreviewColor(strip.material)}" stroke-width="${width.toFixed(2)}" stroke-linecap="round" opacity="${opacity.toFixed(2)}"${selected ? ' stroke-dasharray="7 4"' : ''}><title>${escapeHtml(strip.id)}</title></line>`;
+      })
+      .join('');
+    const patchRows = terrainPatches()
+      .slice()
+      .sort((left, right) => (left.layer || 0) - (right.layer || 0))
+      .map(patch => {
+        const center = pointToSvg(patch.center || { x: 0, z: 0 });
+        const width = Math.max(4, Number(patch.size?.x || 1) * scaleX);
+        const height = Math.max(4, Number(patch.size?.z || 1) * scaleZ);
+        const opacity = Math.max(0.12, Math.min(1, Number(patch.opacity ?? 0.74)));
+        const rotation = (Number(patch.rotation || 0) * 180 / Math.PI).toFixed(2);
+        const selected = patch.id === state.terrainSelectedPatchId;
+        return `<g transform="translate(${center.x.toFixed(2)} ${center.y.toFixed(2)}) rotate(${rotation})"><rect x="${(-width / 2).toFixed(2)}" y="${(-height / 2).toFixed(2)}" width="${width.toFixed(2)}" height="${height.toFixed(2)}" rx="2" fill="${terrainMaterialPreviewColor(patch.material)}" opacity="${opacity.toFixed(2)}" stroke="${selected ? '#fbbf24' : '#93c5fd'}" stroke-width="${selected ? '2.4' : '0.9'}"><title>${escapeHtml(patch.id)}</title></rect></g>`;
+      })
+      .join('');
+    const padRows = Object.entries(padPositions).map(([id, pad]) => {
+      const point = pointToSvg(pad);
+      const selected = terrainStrips().some(strip => strip.id === state.terrainSelectedStripId && (strip.fromPad === id || strip.toPad === id));
+      return `<g><circle cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="${selected ? '5.4' : '4.2'}" fill="${selected ? '#fbbf24' : '#dbeafe'}" stroke="#06101d" stroke-width="1.4"><title>${escapeHtml(pad.label || id)}</title></circle><text class="preview-label" x="${(point.x + 6).toFixed(2)}" y="${(point.y - 6).toFixed(2)}">${escapeHtml(id.replace(/Pad$/, ''))}</text></g>`;
+    }).join('');
+    target.innerHTML = [
+      `<svg viewBox="0 0 ${viewWidth} ${viewHeight}" role="img" aria-label="Terrain map preview">`,
+      `<rect x="0" y="0" width="${viewWidth}" height="${viewHeight}" fill="${terrainMaterialPreviewColor(terrain.baseMaterial)}" opacity="0.55" />`,
+      '<path d="M18 18H342V202H18Z" fill="none" stroke="#2e577b" stroke-width="1" opacity="0.72" />',
+      patchRows,
+      stripRows,
+      padRows,
+      `<text class="preview-note" x="16" y="${viewHeight - 10}">materials ${terrainMaterialIds().length} / patches ${terrainPatches().length} / strips ${terrainStrips().length}</text>`,
+      '</svg>'
+    ].join('');
+  }
+
+  function renderTerrainEditor() {
+    if (!TerrainAuthoring || !state.terrainPreset) return;
+    const terrain = state.terrainPreset.terrain;
+    const materialIds = terrainMaterialIds();
+    setSelectOptions(el['terrain-base-material'], materialIds, terrain.baseMaterial);
+    setSelectOptions(el['terrain-material-select'], materialIds, state.terrainSelectedMaterialId);
+    setSelectOptions(el['terrain-patch-material'], materialIds, terrainPatches().find(patch => patch.id === state.terrainSelectedPatchId)?.material);
+    setSelectOptions(el['terrain-strip-material'], materialIds, terrainStrips().find(strip => strip.id === state.terrainSelectedStripId)?.material);
+    setSelectOptions(el['terrain-patch-select'], terrainPatches().map(patch => patch.id), state.terrainSelectedPatchId);
+    setSelectOptions(el['terrain-strip-select'], terrainStrips().map(strip => strip.id), state.terrainSelectedStripId);
+    for (const id of ['terrain-strip-from-pad', 'terrain-strip-to-pad']) setSelectOptions(el[id], TerrainAuthoring.DEFAULT_PAD_IDS, el[id]?.value || TerrainAuthoring.DEFAULT_PAD_IDS[0]);
+    if (el['terrain-fog-color']) el['terrain-fog-color'].value = TerrainAuthoring.numberToHex(terrain.fog.color);
+    if (el['terrain-fog-density']) el['terrain-fog-density'].value = String(terrain.fog.density);
+    if (el['terrain-base-material']) el['terrain-base-material'].value = terrain.baseMaterial;
+
+    const material = terrain.materials[state.terrainSelectedMaterialId] || terrain.materials[materialIds[0]] || null;
+    if (material) {
+      if (el['terrain-material-id']) el['terrain-material-id'].value = state.terrainSelectedMaterialId;
+      if (el['terrain-material-kind']) el['terrain-material-kind'].value = material.texture.kind;
+      if (el['terrain-material-color-a']) el['terrain-material-color-a'].value = TerrainAuthoring.numberToHex(material.texture.colorA);
+      if (el['terrain-material-color-b']) el['terrain-material-color-b'].value = TerrainAuthoring.numberToHex(material.texture.colorB);
+      if (el['terrain-material-repeat']) el['terrain-material-repeat'].value = String(material.texture.repeat);
+      if (el['terrain-material-roughness']) el['terrain-material-roughness'].value = String(material.roughness);
+      if (el['terrain-material-opacity']) el['terrain-material-opacity'].value = String(material.opacity ?? 1);
+    }
+
+    const patch = terrainPatches().find(item => item.id === state.terrainSelectedPatchId);
+    if (patch) {
+      if (el['terrain-patch-id']) el['terrain-patch-id'].value = patch.id;
+      if (el['terrain-patch-material']) el['terrain-patch-material'].value = patch.material;
+      if (el['terrain-patch-x']) el['terrain-patch-x'].value = String(patch.center.x);
+      if (el['terrain-patch-z']) el['terrain-patch-z'].value = String(patch.center.z);
+      if (el['terrain-patch-size-x']) el['terrain-patch-size-x'].value = String(patch.size.x);
+      if (el['terrain-patch-size-z']) el['terrain-patch-size-z'].value = String(patch.size.z);
+      if (el['terrain-patch-rotation']) el['terrain-patch-rotation'].value = String(patch.rotation);
+      if (el['terrain-patch-opacity']) el['terrain-patch-opacity'].value = String(patch.opacity ?? 1);
+      if (el['terrain-patch-layer']) el['terrain-patch-layer'].value = String(patch.layer ?? 10);
+    }
+
+    const strip = terrainStrips().find(item => item.id === state.terrainSelectedStripId);
+    if (strip) {
+      if (el['terrain-strip-id']) el['terrain-strip-id'].value = strip.id;
+      if (el['terrain-strip-from-pad']) el['terrain-strip-from-pad'].value = strip.fromPad;
+      if (el['terrain-strip-to-pad']) el['terrain-strip-to-pad'].value = strip.toPad;
+      if (el['terrain-strip-material']) el['terrain-strip-material'].value = strip.material;
+      if (el['terrain-strip-width']) el['terrain-strip-width'].value = String(strip.width);
+      if (el['terrain-strip-opacity']) el['terrain-strip-opacity'].value = String(strip.opacity);
+      if (el['terrain-strip-layer']) el['terrain-strip-layer'].value = String(strip.layer ?? 20);
+    }
+
+    if (el['terrain-json']) el['terrain-json'].value = JSON.stringify(state.terrainPreset, null, 2) + '\n';
+    renderTerrainPreview();
+    renderTerrainDiagnostics();
+  }
+
+  function updateTerrainFogFromForm() {
+    if (!TerrainAuthoring || !state.terrainPreset) return;
+    state.terrainPreset.terrain.fog.color = TerrainAuthoring.hexToNumber(el['terrain-fog-color']?.value, state.terrainPreset.terrain.fog.color);
+    state.terrainPreset.terrain.fog.density = terrainNumber('terrain-fog-density', state.terrainPreset.terrain.fog.density);
+    state.terrainPreset.terrain.baseMaterial = terrainText('terrain-base-material', state.terrainPreset.terrain.baseMaterial);
+    state.terrainPreset = TerrainAuthoring.normalizePreset(state.terrainPreset);
+    renderTerrainEditor();
+  }
+
+  function updateTerrainMaterialFromForm() {
+    if (!TerrainAuthoring || !state.terrainPreset || !state.terrainSelectedMaterialId) return;
+    const previousId = state.terrainSelectedMaterialId;
+    const nextId = terrainSafeId(el['terrain-material-id']?.value, previousId);
+    const material = {
+      color: TerrainAuthoring.hexToNumber(el['terrain-material-color-a']?.value, 0x15283a),
+      roughness: terrainNumber('terrain-material-roughness', 1),
+      opacity: terrainNumber('terrain-material-opacity', 1),
+      texture: {
+        kind: terrainText('terrain-material-kind', 'checker'),
+        colorA: TerrainAuthoring.hexToNumber(el['terrain-material-color-a']?.value, 0x15283a),
+        colorB: TerrainAuthoring.hexToNumber(el['terrain-material-color-b']?.value, 0x1b3349),
+        repeat: terrainNumber('terrain-material-repeat', 16)
+      }
+    };
+    const materials = state.terrainPreset.terrain.materials;
+    delete materials[previousId];
+    materials[nextId] = material;
+    if (state.terrainPreset.terrain.baseMaterial === previousId) state.terrainPreset.terrain.baseMaterial = nextId;
+    for (const patch of terrainPatches()) if (patch.material === previousId) patch.material = nextId;
+    for (const strip of terrainStrips()) if (strip.material === previousId) strip.material = nextId;
+    state.terrainSelectedMaterialId = nextId;
+    state.terrainPreset = TerrainAuthoring.normalizePreset(state.terrainPreset);
+    renderTerrainEditor();
+  }
+
+  function updateTerrainPatchFromForm() {
+    if (!TerrainAuthoring || !state.terrainPreset || !state.terrainSelectedPatchId) return;
+    const patches = terrainPatches();
+    const index = patches.findIndex(patch => patch.id === state.terrainSelectedPatchId);
+    if (index < 0) return;
+    const id = terrainSafeId(el['terrain-patch-id']?.value, state.terrainSelectedPatchId);
+    patches[index] = {
+      id,
+      material: terrainText('terrain-patch-material', state.terrainPreset.terrain.baseMaterial),
+      center: { x: terrainNumber('terrain-patch-x', 0), z: terrainNumber('terrain-patch-z', 0) },
+      size: { x: terrainNumber('terrain-patch-size-x', 20), z: terrainNumber('terrain-patch-size-z', 20) },
+      rotation: terrainNumber('terrain-patch-rotation', 0),
+      opacity: terrainNumber('terrain-patch-opacity', 1),
+      layer: terrainNumber('terrain-patch-layer', 10)
+    };
+    state.terrainSelectedPatchId = id;
+    state.terrainPreset = TerrainAuthoring.normalizePreset(state.terrainPreset);
+    renderTerrainEditor();
+  }
+
+  function updateTerrainStripFromForm() {
+    if (!TerrainAuthoring || !state.terrainPreset || !state.terrainSelectedStripId) return;
+    const strips = terrainStrips();
+    const index = strips.findIndex(strip => strip.id === state.terrainSelectedStripId);
+    if (index < 0) return;
+    const id = terrainSafeId(el['terrain-strip-id']?.value, state.terrainSelectedStripId);
+    strips[index] = {
+      id,
+      fromPad: terrainText('terrain-strip-from-pad', TerrainAuthoring.DEFAULT_PAD_IDS[0]),
+      toPad: terrainText('terrain-strip-to-pad', TerrainAuthoring.DEFAULT_PAD_IDS[1]),
+      material: terrainText('terrain-strip-material', state.terrainPreset.terrain.baseMaterial),
+      width: terrainNumber('terrain-strip-width', 8),
+      opacity: terrainNumber('terrain-strip-opacity', 0.4),
+      layer: terrainNumber('terrain-strip-layer', 20)
+    };
+    state.terrainSelectedStripId = id;
+    state.terrainPreset = TerrainAuthoring.normalizePreset(state.terrainPreset);
+    renderTerrainEditor();
+  }
+
+  function addTerrainMaterial() {
+    if (!TerrainAuthoring || !state.terrainPreset) return;
+    let index = terrainMaterialIds().length + 1;
+    let id = `material${index}`;
+    while (state.terrainPreset.terrain.materials[id]) id = `material${index += 1}`;
+    state.terrainPreset.terrain.materials[id] = {
+      color: 0x6b7280,
+      roughness: 1,
+      opacity: 1,
+      texture: { kind: 'noise', colorA: 0x4b5563, colorB: 0x9ca3af, repeat: 18 }
+    };
+    state.terrainSelectedMaterialId = id;
+    renderTerrainEditor();
+  }
+
+  function deleteTerrainMaterial() {
+    if (!TerrainAuthoring || !state.terrainPreset || terrainMaterialIds().length <= 1) return;
+    const id = state.terrainSelectedMaterialId;
+    const replacement = terrainMaterialIds().find(item => item !== id);
+    delete state.terrainPreset.terrain.materials[id];
+    if (state.terrainPreset.terrain.baseMaterial === id) state.terrainPreset.terrain.baseMaterial = replacement;
+    for (const patch of terrainPatches()) if (patch.material === id) patch.material = replacement;
+    for (const strip of terrainStrips()) if (strip.material === id) strip.material = replacement;
+    state.terrainSelectedMaterialId = replacement;
+    state.terrainPreset = TerrainAuthoring.normalizePreset(state.terrainPreset);
+    renderTerrainEditor();
+  }
+
+  function addTerrainPatch() {
+    if (!TerrainAuthoring || !state.terrainPreset) return;
+    const id = `patch-${terrainPatches().length + 1}`;
+    state.terrainPreset.terrain.patches.push({ id, material: state.terrainPreset.terrain.baseMaterial, center: { x: 0, z: 0 }, size: { x: 40, z: 30 }, rotation: 0, opacity: 1, layer: 10 });
+    state.terrainSelectedPatchId = id;
+    renderTerrainEditor();
+  }
+
+  function deleteTerrainPatch() {
+    if (!TerrainAuthoring || !state.terrainPreset) return;
+    state.terrainPreset.terrain.patches = terrainPatches().filter(patch => patch.id !== state.terrainSelectedPatchId);
+    state.terrainSelectedPatchId = terrainPatches()[0]?.id || '';
+    renderTerrainEditor();
+  }
+
+  function addTerrainStrip() {
+    if (!TerrainAuthoring || !state.terrainPreset) return;
+    const id = `strip-${terrainStrips().length + 1}`;
+    state.terrainPreset.terrain.strips.push({ id, fromPad: 'startPad', toPad: 'finishPad', width: 8, material: state.terrainPreset.terrain.baseMaterial, opacity: 0.4, layer: 20 });
+    state.terrainSelectedStripId = id;
+    renderTerrainEditor();
+  }
+
+  function deleteTerrainStrip() {
+    if (!TerrainAuthoring || !state.terrainPreset) return;
+    state.terrainPreset.terrain.strips = terrainStrips().filter(strip => strip.id !== state.terrainSelectedStripId);
+    state.terrainSelectedStripId = terrainStrips()[0]?.id || '';
+    renderTerrainEditor();
+  }
+
+  function applyTerrainJsonEditor() {
+    if (!TerrainAuthoring || !el['terrain-json']) return;
+    try {
+      setTerrainPreset(JSON.parse(el['terrain-json'].value), 'Terrain preset applied from JSON editor.');
+      addEvent('terrain: JSON applied');
+    } catch (error) {
+      setTerrainStatus('warn', `Terrain JSON invalid: ${error.message || error}`);
+    }
+  }
+
+  async function installTerrainPreset() {
+    if (!TerrainAuthoring || !state.terrainPreset) return;
+    state.terrainPreset = TerrainAuthoring.normalizePreset(state.terrainPreset);
+    const diagnostics = terrainDiagnostics();
+    if (diagnostics.some(item => item.severity === 'error')) {
+      setTerrainStatus('warn', 'Terrain preset has blocking diagnostics.');
+      renderTerrainDiagnostics();
+      return;
+    }
+    setTerrainStatus('neutral', 'Saving terrain preset...');
+    try {
+      const response = await fetch(TERRAIN_ENDPOINT_PATH, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state.terrainPreset)
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.ok === false) throw new Error(result.error || `HTTP ${response.status}`);
+      setTerrainStatus('ok', `Terrain preset saved. Revision ${result.revision}.`);
+      addEvent(`terrain: saved revision ${result.revision}`);
+      try {
+        const channel = new BroadcastChannel('vaw-terrain-authoring');
+        channel.postMessage({ type: 'terrain-preset-updated', revision: result.revision });
+        channel.close();
+      } catch (_) {
+        // Broadcast is optional; game reload can still be manual.
+      }
+    } catch (error) {
+      setTerrainStatus('warn', `Terrain save failed: ${error.message || error}`);
+      addEvent(`terrain: save failed ${error.message || error}`);
+    }
+  }
+
+  function bindTerrainFieldEvents(ids, handler) {
+    for (const id of ids) {
+      el[id]?.addEventListener('input', handler);
+      el[id]?.addEventListener('change', handler);
+    }
+  }
+
   function wireEvents() {
     if (el.dropzone) {
       el.dropzone.addEventListener('dragover', event => { event.preventDefault(); el.dropzone.classList.add('drag'); });
@@ -765,6 +1192,22 @@
     el['checker-material']?.addEventListener('change', updateTextureOverride);
     for (const id of ['project-files-search', 'project-files-category-filter', 'project-files-status-filter']) el[id]?.addEventListener('input', updateProjectFileFilters);
     el['clear-file-filters']?.addEventListener('click', clearProjectFileFilters);
+    bindTerrainFieldEvents(['terrain-fog-color', 'terrain-fog-density', 'terrain-base-material'], updateTerrainFogFromForm);
+    el['terrain-material-select']?.addEventListener('change', () => { state.terrainSelectedMaterialId = el['terrain-material-select'].value; renderTerrainEditor(); });
+    bindTerrainFieldEvents(['terrain-material-id', 'terrain-material-kind', 'terrain-material-color-a', 'terrain-material-color-b', 'terrain-material-repeat', 'terrain-material-roughness', 'terrain-material-opacity'], updateTerrainMaterialFromForm);
+    el['terrain-material-new']?.addEventListener('click', addTerrainMaterial);
+    el['terrain-material-delete']?.addEventListener('click', deleteTerrainMaterial);
+    el['terrain-patch-select']?.addEventListener('change', () => { state.terrainSelectedPatchId = el['terrain-patch-select'].value; renderTerrainEditor(); });
+    bindTerrainFieldEvents(['terrain-patch-id', 'terrain-patch-material', 'terrain-patch-x', 'terrain-patch-z', 'terrain-patch-size-x', 'terrain-patch-size-z', 'terrain-patch-rotation', 'terrain-patch-opacity', 'terrain-patch-layer'], updateTerrainPatchFromForm);
+    el['terrain-patch-new']?.addEventListener('click', addTerrainPatch);
+    el['terrain-patch-delete']?.addEventListener('click', deleteTerrainPatch);
+    el['terrain-strip-select']?.addEventListener('change', () => { state.terrainSelectedStripId = el['terrain-strip-select'].value; renderTerrainEditor(); });
+    bindTerrainFieldEvents(['terrain-strip-id', 'terrain-strip-from-pad', 'terrain-strip-to-pad', 'terrain-strip-material', 'terrain-strip-width', 'terrain-strip-opacity', 'terrain-strip-layer'], updateTerrainStripFromForm);
+    el['terrain-strip-new']?.addEventListener('click', addTerrainStrip);
+    el['terrain-strip-delete']?.addEventListener('click', deleteTerrainStrip);
+    el['terrain-apply-json']?.addEventListener('click', applyTerrainJsonEditor);
+    el['terrain-reload']?.addEventListener('click', () => loadTerrainPreset().catch(error => setTerrainStatus('warn', `Terrain preset unavailable: ${error.message || error}`)));
+    el['terrain-install']?.addEventListener('click', installTerrainPreset);
     const authoringInputIds = [
       'vaw-node-visual-root', 'vaw-node-flame', 'vaw-node-flame-glow', 'vaw-node-gimbal', 'vaw-node-control-flap',
       'vaw-transform-pos-x', 'vaw-transform-pos-y', 'vaw-transform-pos-z', 'vaw-transform-rot-x', 'vaw-transform-rot-y', 'vaw-transform-rot-z',
@@ -1081,6 +1524,7 @@
     renderDiagnostics();
     renderVawStatus();
     renderSidecarStatus();
+    renderTerrainEditor();
     renderUiAvailability();
   }
 

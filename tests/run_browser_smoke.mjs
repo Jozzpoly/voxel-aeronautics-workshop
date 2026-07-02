@@ -263,6 +263,22 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   setStage('app-bootstrap');
   await cdp.call('Page.navigate', { url: `${baseUrl}/index.html?m3_smoke=${Date.now()}` });
   await waitFor(cdp, `document.readyState === 'complete' && Boolean(window.VAW)`, 'application bootstrap');
+  const terrainState = await evaluate(cdp, `(() => {
+    const preset = window.__VAW_TERRAIN_PRESET__ || null;
+    const TerrainAuthoring = window.VAW.require('foundation.terrain-authoring');
+    const Config = window.VAW.require('foundation.config');
+    const merged = TerrainAuthoring.mergeTestRangeTerrain(Config.TEST_RANGE, preset);
+    return {
+      presetFormat: preset?.format || null,
+      presetMaterials: Object.keys(preset?.terrain?.materials || {}).length,
+      mergedFogDensity: merged?.terrain?.fog?.density ?? null,
+      mergedPatches: merged?.terrain?.patches?.length ?? null,
+      mergedStrips: merged?.terrain?.strips?.length ?? null
+    };
+  })()`);
+  assert(terrainState.presetFormat === 'VAW_TERRAIN_AUTHORING_V1', `Local terrain preset did not load: ${JSON.stringify(terrainState)}`);
+  assert(terrainState.presetMaterials >= 1, `Local terrain preset has no materials: ${JSON.stringify(terrainState)}`);
+  assert(terrainState.mergedPatches >= 1 && terrainState.mergedStrips >= 1, `Local terrain preset did not merge into TEST_RANGE: ${JSON.stringify(terrainState)}`);
   const helpVisible = await evaluate(cdp, `(() => {
     const modal = document.getElementById('help-modal');
     return Boolean(modal && getComputedStyle(modal).display !== 'none');
@@ -297,6 +313,7 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   return {
     starterBlocks: 17,
     corePanels: panels,
+    terrain: terrainState,
     flightMode: true,
     consoleErrors: errors.length
   };

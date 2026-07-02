@@ -134,6 +134,11 @@ It validates `TEST_RANGE` pads, sectors, terrain materials, terrain patches,
 route strips, collidable obstacles, and pad/gate clearance. Do not replace it
 with token or regex-only checks.
 
+Terrain appearance iteration should go through Studio `Terrain Authoring V1` and
+`assets/terrain/local_working_terrain/VAW_TERRAIN_AUTHORING_V1.json`. Treat that
+preset as renderer-only local authoring data. Do not edit `src/foundation/config.js`
+just to recolor materials, move terrain patches, move route strips, or tune fog.
+
 For VectorThruster visual direction work, use the 24-orientation probe:
 
 ```text
