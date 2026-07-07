@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-07T03:17:13Z",
+  "updatedAt": "2026-07-07T03:18:53Z",
   "phases": [
     {
       "id": "REMEDIATION",
@@ -394,7 +394,7 @@
       "phase": "M4L",
       "priority": 35,
       "lane": "visual-renderer",
-      "status": "ready",
+      "status": "in_progress",
       "title": "Fix game environment policy (expected path)",
       "dependsOn": [
         "m4l-105"
@@ -405,7 +405,9 @@
         "npm run browser:smoke",
         "npm run validate:fast"
       ],
-      "notes": "Only if m4l-105 classifies environment-policy"
+      "notes": "Only if m4l-105 classifies environment-policy",
+      "assignedAt": "2026-07-07T03:17:51Z",
+      "assignedSlot": "visual-renderer-1"
     },
     {
       "id": "m4l-107",
@@ -436,14 +438,16 @@
       "phase": "REMEDIATION",
       "priority": 7,
       "lane": "dispatcher",
-      "status": "ready",
+      "status": "done",
       "title": "Sync STATE headSha and worktreeClass after bounded commits",
       "dependsOn": [],
       "acceptance": "STATE.headSha matches git HEAD; worktreeClass clean; DEC-STATE-SYNC approved",
       "validation": [
         "git rev-parse HEAD",
         "git status --short"
-      ]
+      ],
+      "completedAt": "2026-07-07T03:18:53Z",
+      "lastNote": "HEAD a3107be; worktreeClass synced; tasksCompleted=23; openDecisionBlocks DEC-REMEDIATION-COMPLETE; milestone M4L-env-fix"
     },
     {
       "id": "r4-001",

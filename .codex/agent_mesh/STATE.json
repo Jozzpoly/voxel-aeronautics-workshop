@@ -1,39 +1,36 @@
 {
   "version": 1,
   "meshPhase": "remediation",
-  "milestone": "M4L-capture-classify",
+  "milestone": "M4L-env-fix",
   "activeBranch": "local/agent-mesh-bootstrap",
   "transportBranch": "VAW_GRoK",
   "transportNote": "VAW_GRoK == current_work @ 80c0ae4 (owner 2026-07-07)",
-  "headSha": "fa202b8",
+  "headSha": "a9c6ec6",
   "remoteSha": "80c0ae4",
   "remoteUrl": "https://github.com/Jozzpoly/voxel-aeronautics-workshop.git",
   "worktreeClass": "clean",
-  "worktreeNote": "Bounded commits C1-C5 @ 0ed0e84; mesh QUEUE updates pending commit",
-  "openDecisionBlocks": [],
+  "worktreeNote": "r2-001 mesh sync @ a9c6ec6; visual-renderer-1 busy m4l-106a",
+  "openDecisionBlocks": [
+    "DEC-REMEDIATION-COMPLETE"
+  ],
   "lastCycle": {
-    "timestamp": "2026-07-07T03:07:41Z",
+    "timestamp": "2026-07-07T12:45:00Z",
     "dispatcher": "dispatcher-1",
     "assigned": {
-      "taskId": "r4-002",
-      "lane": "docs-convergence",
-      "slot": "docs-convergence-1"
+      "taskId": "r2-001",
+      "lane": "dispatcher",
+      "slot": "dispatcher-1"
     }
   },
   "openBlockers": [],
   "metrics": {
     "cyclesCompleted": 2,
-    "tasksCompleted": 16,
+    "tasksCompleted": 23,
     "tasksFailed": 0,
     "tasksBlocked": 3,
     "remediationTasksTotal": 18
   },
   "history": [
-    {
-      "at": "2026-07-07T02:27:00Z",
-      "event": "baseline",
-      "note": "static_check PASS; studio:test PASS; visual:test PASS; browser:smoke PASS; probe 192/192; audit ok:true; validate:fast FAIL gate-c (CSS stale)"
-    },
     {
       "at": "2026-07-07T02:30:00Z",
       "event": "mesh_created",
@@ -140,6 +137,12 @@
       "event": "task_pass",
       "taskId": "m4l-105",
       "note": null
+    },
+    {
+      "at": "2026-07-07T03:18:53Z",
+      "event": "task_pass",
+      "taskId": "r2-001",
+      "note": "HEAD a3107be; worktreeClass synced; tasksCompleted=23; openDecisionBlocks DEC-REMEDIATION-COMPLETE; milestone M4L-env-fix"
     }
   ]
 }
