@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "task": "environment-verification",
+  "verifiedAt": "2026-07-07T12:45:00Z",
+  "agent": "env-infra-1",
+  "headSha": "0ed0e84cc02d4830a1185d6d6b8ab62d2ac6b32a",
+  "headShort": "0ed0e84",
+  "baseSha": "872aeebf5d749e6bb6b698099de4a2c842a1458c",
+  "activeBranch": "local/agent-mesh-bootstrap",
+  "transportBranch": "origin/VAW_GRoK",
+  "transportSha": "80c0ae4aced1dd695af217cdeadea9025c6305c8",
+  "verdict": "PASS",
+  "verdictNote": "HEAD @ 0ed0e84; check:css green; worktree dirty only on agent-mesh control plane; local branch 6 commits ahead of transport (unpushed, owner-authorized)",
+  "checks": {
+    "gitStatus": {
+      "command": "git status --short --branch",
+      "exitCode": 0,
+      "branch": "local/agent-mesh-bootstrap",
+      "dirtyPaths": [
+        ".codex/agent_mesh/DECISIONS.json",
+        ".codex/agent_mesh/QUEUE.json",
+        ".codex/agent_mesh/REGISTRY.json",
+        ".codex/agent_mesh/STATE.json"
+      ],
+      "result": "pass",
+      "note": "Only .codex/agent_mesh/* modified; no product or foundation paths dirty"
+    },
+    "checkCss": {
+      "command": "npm run check:css",
+      "exitCode": 0,
+      "result": "pass",
+      "output": "tailwind.generated.css is current: 18230 candidates, 107d94a7882ea204c616f7f413825e1f9343ccbb592c3ee2ede8b82c32f1f872",
+      "regenerateRequired": false
+    },
+    "boundedCommits": {
+      "command": "git log --oneline 872aeeb..HEAD",
+      "exitCode": 0,
+      "count": 5,
+      "commits": [
+        {
+          "sha": "d3337b696e361c2726296c5c569a4f6e219ed304",
+          "short": "d3337b6",
+          "subject": "test(harness): add terminals exclusion and agent dispatch contract tests (r1-001, r1-003)"
+        },
+        {
+          "sha": "1e975665a7b4aff28b8ffb80bf4c6111d39e3da3",
+          "short": "1e97566",
+          "subject": "feat(mesh): decision plane, audit remediation state, and dispatcher gates (R0-R2)"
+        },
+        {
+          "sha": "5d1dc2b0124f88f5ba433c24bf7dfed038c070e7",
+          "short": "5d1dc2b",
+          "subject": "feat(m4l-101): shared visual renderer profile contract for game and studio parity"
+        },
+        {
+          "sha": "7b1b1ca49a9b768bd5798f0622a6e2dd6ec5a738",
+          "short": "7b1b1ca",
+          "subject": "feat(m4l-107): surface duplicate material diagnostics in Blockbench Studio pipeline"
+        },
+        {
+          "sha": "0ed0e84cc02d4830a1185d6d6b8ab62d2ac6b32a",
+          "short": "0ed0e84",
+          "subject": "chore(env): regenerate tailwind.generated.css after WIP edits (r0-002)"
+        }
+      ],
+      "result": "pass",
+      "note": "C1-C5 ladder present (5 commits since 872aeeb)"
+    },
+    "transportAlignment": {
+      "command": "git rev-parse HEAD origin/VAW_GRoK",
+      "exitCode": 0,
+      "headSha": "0ed0e84cc02d4830a1185d6d6b8ab62d2ac6b32a",
+      "transportSha": "80c0ae4aced1dd695af217cdeadea9025c6305c8",
+      "aligned": false,
+      "relationship": "ahead",
+      "commitsAhead": 6,
+      "mergeBase": "80c0ae4aced1dd695af217cdeadea9025c6305c8",
+      "result": "pass",
+      "note": "Transport branch is ancestor; bounded local commits not yet pushed (NO PUSH policy)"
+    },
+    "agentNext": {
+      "command": "npm run agent:next",
+      "exitCode": 0,
+      "ready": [],
+      "envInfraReady": [],
+      "result": "pass",
+      "note": "No env-infra tasks in ready queue; r0-002/m0-003 already done"
+    }
+  },
+  "cssAction": {
+    "stale": false,
+    "regenerated": false,
+    "committed": false
+  },
+  "relatedTasks": {
+    "r0-002": "done",
+    "m0-003": "done"
+  },
+  "nextEnvInfra": "idle — agent:next ready queue empty; await dispatcher assignment (r4-001 is qa-validation)"
+}
