@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-07T03:11:07Z",
+  "updatedAt": "2026-07-07T03:17:13Z",
   "phases": [
     {
       "id": "REMEDIATION",
@@ -352,7 +352,7 @@
       "phase": "M4L",
       "priority": 33,
       "lane": "tooling-tests",
-      "status": "ready",
+      "status": "done",
       "title": "Unified capture orchestrator + metrics",
       "dependsOn": [
         "m4l-102",
@@ -366,14 +366,16 @@
         "tools/visual_parity_render_capture.mjs",
         "tools/visual_parity_metrics.py",
         "package.json"
-      ]
+      ],
+      "completedAt": "2026-07-07T03:15:31Z",
+      "lastNote": "parity:capture orchestrates studio+game CDP capture for 5 blocks, runs visual_parity_metrics.py, emits visual_parity_render_report.json; studio:test PASS; visual:test PASS"
     },
     {
       "id": "m4l-105",
       "phase": "M4L",
       "priority": 34,
       "lane": "docs-convergence",
-      "status": "pending",
+      "status": "done",
       "title": "Classify root cause from rendered evidence",
       "dependsOn": [
         "m4l-104"
@@ -384,14 +386,15 @@
       ],
       "allowedPathsExtra": [
         "docs/M4L_VISUAL_TRUTH_BASELINE_2026-07-01.md"
-      ]
+      ],
+      "completedAt": "2026-07-07T03:17:13Z"
     },
     {
       "id": "m4l-106a",
       "phase": "M4L",
       "priority": 35,
       "lane": "visual-renderer",
-      "status": "pending",
+      "status": "ready",
       "title": "Fix game environment policy (expected path)",
       "dependsOn": [
         "m4l-105"

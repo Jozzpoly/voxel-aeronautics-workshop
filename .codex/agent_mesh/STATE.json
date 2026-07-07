@@ -1,11 +1,11 @@
 {
   "version": 1,
   "meshPhase": "remediation",
-  "milestone": "R3-M4L-parallel",
+  "milestone": "M4L-capture-classify",
   "activeBranch": "local/agent-mesh-bootstrap",
   "transportBranch": "VAW_GRoK",
   "transportNote": "VAW_GRoK == current_work @ 80c0ae4 (owner 2026-07-07)",
-  "headSha": "0ed0e84",
+  "headSha": "fa202b8",
   "remoteSha": "80c0ae4",
   "remoteUrl": "https://github.com/Jozzpoly/voxel-aeronautics-workshop.git",
   "worktreeClass": "clean",
@@ -23,7 +23,7 @@
   "openBlockers": [],
   "metrics": {
     "cyclesCompleted": 2,
-    "tasksCompleted": 14,
+    "tasksCompleted": 16,
     "tasksFailed": 0,
     "tasksBlocked": 3,
     "remediationTasksTotal": 18
@@ -128,6 +128,18 @@
       "event": "task_pass",
       "taskId": "m4l-102",
       "note": "m4l-102-diagnostic-render-mode-pass"
+    },
+    {
+      "at": "2026-07-07T03:15:31Z",
+      "event": "task_pass",
+      "taskId": "m4l-104",
+      "note": "parity:capture orchestrates studio+game CDP capture for 5 blocks, runs visual_parity_metrics.py, emits visual_parity_render_report.json; studio:test PASS; visual:test PASS"
+    },
+    {
+      "at": "2026-07-07T03:17:13Z",
+      "event": "task_pass",
+      "taskId": "m4l-105",
+      "note": null
     }
   ]
 }
