@@ -5,10 +5,11 @@
 | Task | `r4-001` — Refresh ENV_BASELINE post-remediation commits |
 | Lane | `qa-validation` / slot `qa-validation-1` |
 | Phase | REMEDIATION R4 |
-| Captured | 2026-07-07T03:08–03:10Z (fresh re-runs) |
+| Captured | 2026-07-07T03:08–03:22Z (r4-001 + wave-3 re-runs) |
 | Prior bundle | `evidence/ENV_BASELINE_2026-07-07.md` (`m0-006` @ `75a3762`) |
 | Repository | `voxel-aeronautics-workshop-current_work-GRok` |
-| HEAD | `0ed0e84cc02d4830a1185d6d6b8ab62d2ac6b32a` |
+| HEAD (wave-3) | `e37d630b6cd4fa2459ea92e67ea7a1192fee111d` |
+| HEAD (r4-001) | `0ed0e84cc02d4830a1185d6d6b8ab62d2ac6b32a` |
 | Transport branch | `VAW_GRoK` @ `80c0ae4` (per `DEC-TRANSPORT-BRANCH`) |
 
 ---
@@ -18,7 +19,7 @@
 | Component | Version | Platform |
 |-----------|---------|----------|
 | Node.js | v24.16.0 | Windows 10 (build 26200) |
-| Python | 3.14.5 | Windows |
+| Python | 3.12.13 (wave-3 runner) / 3.14.5 (r4-001) | Windows |
 | OS | Windows 10.0.26200.8655 | — |
 | Browser (smoke) | Google Chrome (`C:\Program Files\Google\Chrome\Application\chrome.exe`) | — |
 
@@ -228,3 +229,135 @@ Trigger: C3 (`m4l-101`) added `source: 'tools/blockbench_import_studio/src/minim
 | Acceptance | Ladder results @ HEAD `0ed0e84`, C1–C5 stack, classifications documented |
 | Product edits | none (evidence-only lane) |
 | File created | `evidence/ENV_BASELINE_2026-07-07-remediation.md` |
+
+---
+
+## 8. Wave-3 QA closeout — M4L capture gate @ HEAD `e37d630`
+
+| Field | Value |
+|-------|-------|
+| Task | wave-3 QA closeout (`m4l-106a` gate context) |
+| Lane | `qa-validation` / slot `qa-validation-1` |
+| Captured | 2026-07-07T03:18–03:22Z |
+| HEAD | `e37d630b6cd4fa2459ea92e67ea7a1192fee111d` |
+| Worktree @ capture end | dirty — `m4l-106a` WIP uncommitted in `src/game/*` (visual-renderer lane) |
+
+### Commit stack (C5 → wave-3 HEAD)
+
+```text
+$ git log --oneline 0ed0e84..HEAD
+e37d630 chore(mesh): r2-001 final STATE sync
+a3107be chore(mesh): wave-2 sync — HEAD fa202b8, m4l-104/105 done, all agents idle
+d7ba9ee docs(m4l-105): classify visual truth root cause as environment-policy with render metrics
+fa202b8 feat(m4l-104): unified studio vs game parity capture orchestrator with metrics report
+f259c53 fix(m4l-102): register visual-parity-diagnostic in APP_SOURCES and manifest
+3a65b03 chore(mesh): sync QUEUE/STATE after 7-agent parallel wave (r2-001)
+821298b chore: refresh CSS after m4l-102 and fix dispatch gate test assertion
+a307a2b evidence(r4-001): remediation baseline ladder at post-C5 HEAD
+6130441 docs(r4-002,r3-003): converge VAW_GRoK transport and relabel synthetic probe scope
+ffe7b2c feat(m4l-104): parity capture orchestrator scaffold and metrics tooling
+caca09a feat(m4l-103): studio-side Balloon capture harness with PNG and JSON output
+d3a51e2 feat(m4l-102): game visual parity diagnostic render mode via query params
+93dbc5c chore(evidence): env verification @ HEAD 0ed0e84 after C1-C5
+```
+
+### T0 — CSS check (wave-3)
+
+| Command | Result | Class |
+|---------|--------|-------|
+| `npm run check:css` | **PASS** | — |
+
+```text
+tailwind.generated.css is current: 18546 candidates, 7d08e2f75944a049f168c72533fa7902ed29a46b54739fe49af7d986165e1532
+```
+
+**Delta vs r4-001:** candidate count 18230 → 18546 (m4l-102 manifest/source additions).
+
+### T1 — Parity capture (`npm run parity:capture`)
+
+Thresholds: `ssimMin >= 0.92`, `|luminanceDelta| <= 0.08`, profile `game-studio-parity`, viewport `640×480`.
+
+#### A — Pre-`m4l-106a` baseline (committed tree @ `e37d630`, captured `2026-07-07T03:18:33Z`)
+
+Orchestrator exit **1**; `blocksWithinThresholds: 0`; `classificationHint: environment-policy`.
+
+| Block | SSIM | Luminance Δ (game − studio) | Within thresholds |
+|-------|------|-------------------------------|-------------------|
+| **Balloon** | **0.3553** | **−0.1872** | no |
+| Hull | 0.3460 | −0.1408 | no |
+| Fuel | 0.3496 | −0.2182 | no |
+| Thruster | 0.4744 | +0.0174 | no |
+| VectorThruster | 0.4744 | +0.0174 | no |
+
+Balloon studio/game average luminance: `0.3247` / `0.1375`.
+
+#### B — `m4l-106a` WIP interim (concurrent visual-renderer edits, captured `2026-07-07T03:20:28Z`)
+
+Report overwritten at `.agent-validation/m4l-capture/visual_parity_render_report.json` during concurrent `m4l-106a` work. Interim metrics (uncommitted WIP):
+
+| Block | SSIM | Luminance Δ | Within thresholds |
+|-------|------|-------------|-------------------|
+| **Balloon** | **0.9630** | **−0.0102** | **yes** |
+| Hull | 0.9640 | −0.0031 | yes |
+| Fuel | 0.9641 | −0.0042 | yes |
+| Thruster | 0.9786 | +0.0025 | yes |
+| VectorThruster | 0.9765 | +0.0028 | yes |
+
+`blocksWithinThresholds: 5`; `classificationHint: unclassified` (all blocks within thresholds).
+
+**Note:** Interim capture reflects uncommitted `m4l-106a` profile/diagnostic tuning (`visual-renderer-profiles.js`, `visual-parity-diagnostic.js`). Not a committed closeout until visual-renderer lane lands and commits.
+
+### T3 — FAST (`npm run validate:fast`)
+
+#### Clean committed tree @ `e37d630` (mesh/product WIP stashed)
+
+Artifact: `.agent-validation/fast-20260707T032120.449642Z-9304/summary.json`
+
+| Stage | Result | Duration |
+|-------|--------|----------|
+| static-check | PASS | 2.860s |
+| foundation | PASS | 0.094s |
+| gate-b-compilers | PASS | 1.000s |
+| gate-c-hardening | PASS | 1.203s |
+| audit-regressions | PASS | 0.360s |
+| validation-runner | **FAIL** (exit 97, side-effects) | 52.406s |
+
+validation-runner **test body passed** (`VALIDATION_EXIT status=pass code=0`); outer runner flagged nested side-effect:
+
+```text
+side-effect modified: .codex/agent_mesh/STATE.json
+```
+
+**Classification:** **HARNESS** — nested validation-runner contract exercise touches mesh `STATE.json`; stages 1–5 honest green on committed tree.
+
+#### Session dirty-tree runs (concurrent mesh / `m4l-106a` edits)
+
+| Artifact | Stages | Failure | Class |
+|----------|--------|---------|-------|
+| `fast-20260707T031836.680854Z-2316` | 3/6 | gate-c `STATE.json` side-effect | **HARNESS** |
+| `fast-20260707T031917.444690Z-13096` | 5/6 | validation-runner WIP side-effects on `src/game/*` | **HARNESS** |
+
+### Wave-3 failure classifications
+
+| Item | Result | Class | Rationale |
+|------|--------|-------|-----------|
+| `check:css` | PASS | — | 18546 candidates current |
+| `parity:capture` pre-106a | FAIL (Balloon gate) | **PRODUCT** | Confirms m4l-105 `environment-policy`; Balloon SSIM/luminance out of threshold on committed tree |
+| `parity:capture` m4l-106a WIP | PASS (interim) | — | Uncommitted visual-renderer tuning; pending commit |
+| `validate:fast` @ clean `e37d630` | 5/6 FAIL | **HARNESS** | validation-runner nested `STATE.json` side-effect; suite bodies pass |
+| `validate:fast` @ dirty session | 3/6 or 5/6 FAIL | **HARNESS** | Concurrent mesh/`m4l-106a` edits |
+
+### `agent:next` (qa lane)
+
+```text
+ready: [] (no qa-validation tasks)
+next ready mesh-wide: m4l-108 (docs-convergence) — depends on m4l-106a commit
+```
+
+### Wave-3 artifact index
+
+| Path | Purpose |
+|------|---------|
+| `.agent-validation/m4l-capture/visual_parity_render_report.json` | Latest capture (m4l-106a WIP interim @ 03:20:28Z) |
+| `.agent-validation/fast-20260707T032120.449642Z-9304/` | Clean-tree FAST @ `e37d630` (5/6 HARNESS) |
+| `.codex/agent_mesh/assignments/wave3-qa-closeout.json` | Wave-3 closeout record |

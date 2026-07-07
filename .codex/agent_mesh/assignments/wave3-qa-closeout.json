@@ -1,0 +1,94 @@
+{
+  "taskId": "wave3-qa-closeout",
+  "phase": "M4L",
+  "lane": "qa-validation",
+  "slot": "qa-validation-1",
+  "contextTask": "m4l-106a",
+  "result": "conditional-pass",
+  "completedAt": "2026-07-07T03:22:30Z",
+  "headSha": "e37d630b6cd4fa2459ea92e67ea7a1192fee111d",
+  "headShort": "e37d630",
+  "worktreeAtCloseout": "dirty-m4l-106a-wip",
+  "evidencePath": "evidence/ENV_BASELINE_2026-07-07-remediation.md",
+  "validation": {
+    "check:css": {
+      "result": "pass",
+      "candidates": 18546,
+      "hashPrefix": "7d08e2f7"
+    },
+    "parity:capture": {
+      "preM4l106a": {
+        "result": "fail",
+        "capturedAt": "2026-07-07T03:18:33.342Z",
+        "classification": "PRODUCT",
+        "classificationHint": "environment-policy",
+        "blocksWithinThresholds": 0,
+        "balloon": {
+          "ssim": 0.3553,
+          "luminanceDelta": -0.1872,
+          "studioLuminance": 0.3247,
+          "gameLuminance": 0.1375,
+          "withinThresholds": false
+        },
+        "thresholds": {
+          "ssimMin": 0.92,
+          "luminanceDeltaMax": 0.08
+        }
+      },
+      "m4l106aWipInterim": {
+        "result": "pass",
+        "capturedAt": "2026-07-07T03:20:28.209Z",
+        "note": "uncommitted visual-renderer WIP; report at .agent-validation/m4l-capture/visual_parity_render_report.json",
+        "blocksWithinThresholds": 5,
+        "balloon": {
+          "ssim": 0.963,
+          "luminanceDelta": -0.0102,
+          "withinThresholds": true
+        },
+        "allBlocks": {
+          "Balloon": { "ssim": 0.963, "luminanceDelta": -0.0102 },
+          "Hull": { "ssim": 0.964, "luminanceDelta": -0.0031 },
+          "Fuel": { "ssim": 0.9641, "luminanceDelta": -0.0042 },
+          "Thruster": { "ssim": 0.9786, "luminanceDelta": 0.0025 },
+          "VectorThruster": { "ssim": 0.9765, "luminanceDelta": 0.0028 }
+        }
+      }
+    },
+    "validate:fast": {
+      "cleanTree": {
+        "result": "fail",
+        "artifact": ".agent-validation/fast-20260707T032120.449642Z-9304/summary.json",
+        "stagesPass": 5,
+        "stagesFail": 1,
+        "classification": "HARNESS",
+        "failedStage": "validation-runner",
+        "note": "nested runner STATE.json side-effect; stages 1-5 and test_validation_runner.py body pass"
+      },
+      "dirtySession": {
+        "result": "fail",
+        "classification": "HARNESS",
+        "note": "concurrent mesh sync and m4l-106a WIP edits caused gate-c or validation-runner side-effect failures"
+      }
+    }
+  },
+  "agentNext": {
+    "qaValidationReady": [],
+    "meshReady": [
+      {
+        "id": "m4l-108",
+        "lane": "docs-convergence",
+        "blockedBy": "m4l-106a commit"
+      }
+    ]
+  },
+  "unlocks": [
+    "m4l-106a visual-renderer commit + re-run validate:fast on clean post-commit tree",
+    "m4l-108 docs-convergence after m4l-106a lands"
+  ],
+  "followUp": [
+    "visual-renderer-1: commit m4l-106a WIP (profiles + diagnostic parity tuning)",
+    "qa-validation-1: re-run parity:capture + validate:fast after m4l-106a commit for honest 6/6",
+    "dispatcher: reconcile STATE headSha to committed HEAD after m4l-106a"
+  ],
+  "productEdits": false
+}
