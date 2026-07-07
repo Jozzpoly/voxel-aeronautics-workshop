@@ -30,7 +30,7 @@ First read:
 
 Start gate:
 - git status --short --branch
-- git rev-parse HEAD origin/current_work origin/main
+- git rev-parse HEAD origin/VAW_GRoK
 - git diff --stat
 - git diff --name-status
 - git status --porcelain=v1 -- SOURCE_MANIFEST.json assets/visual_packs/local_working_visuals release .agent-validation tailwind.generated.css
@@ -93,7 +93,7 @@ Najpierw przeczytaj:
 
 Start gate:
 - git status --short --branch
-- git rev-parse HEAD origin/current_work origin/main
+- git rev-parse HEAD origin/VAW_GRoK
 - git diff --stat
 - git diff --name-status
 - git status --porcelain=v1 -- SOURCE_MANIFEST.json assets/visual_packs/local_working_visuals release .agent-validation

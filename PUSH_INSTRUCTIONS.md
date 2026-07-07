@@ -8,14 +8,21 @@ Use Workflow V3:
 direct Git > one final milestone ZIP > complete single file > patch for recovery/audit
 ```
 
-Stage 1 and Documentation Convergence Stage 2 are published milestones on `maintenance/workflow-repair-clean`. Always read the latest branch SHA before starting; do not hardcode an older checkpoint as the current base.
+Stage 1 and Documentation Convergence Stage 2 are published milestones on `VAW_GRoK` (`origin/VAW_GRoK`). Always read the latest branch SHA before starting; do not hardcode an older checkpoint as the current base.
 
 `maintenance/workflow-bootstrap` is incomplete historical evidence and must not be extended, merged or used as transport.
+
+Owner transport policy (2026-07-07):
+
+- **Transport base:** `VAW_GRoK` only (`origin/VAW_GRoK` at `github.com/Jozzpoly/voxel-aeronautics-workshop`).
+- Local feature branches off `VAW_GRoK` are allowed; merge back before push.
+- Do **not** push to `main`, `current_work`, or other remotes without explicit owner approval.
+- Historical recovery or maintenance branch names are not valid transport unless Git verifies they still exist.
 
 ## Normal publication
 
 ```powershell
-$Branch = 'maintenance/workflow-repair-clean'
+$Branch = 'VAW_GRoK'
 
 git fetch origin --prune
 git switch $Branch

@@ -41,3 +41,14 @@ stable landing line. CI remains useful on checkpoint pushes while release-heavy
 jobs stay tied to reviewed or manual release intent.
 
 Release artifact retention remains a separate owner decision.
+
+## Supplement (2026-07-07) — VAW_GRoK transport
+
+Owner-approved transport policy supersedes the default checkpoint wording above for publication and agent start gates until explicitly revised.
+
+- **Transport base:** `VAW_GRoK` only (`origin/VAW_GRoK` at `github.com/Jozzpoly/voxel-aeronautics-workshop`).
+- `VAW_GRoK` is a copy of reviewed `current_work` content; treat `origin/VAW_GRoK` as the remote SHA to read back after push.
+- Local feature branches off `VAW_GRoK` are allowed; merge back before push.
+- Do **not** push to `main`, `current_work`, or other remotes without explicit owner approval.
+- `PUSH_INSTRUCTIONS.md` and `README_FOR_AGENTS.md` are the operational transport authority; this supplement records the ADR alignment only.
+- Historical recovery or maintenance branch names remain invalid transport unless Git verifies they still exist intentionally.
