@@ -1,0 +1,38 @@
+{
+  "taskId": "m5-003",
+  "lane": "visual-renderer",
+  "codename": "PIXEL",
+  "closedAt": "2026-07-07T04:10:00Z",
+  "headSha": "2aa5d06",
+  "result": "pass",
+  "deliverables": [
+    "src/game/module_visual_factory.js",
+    "src/game/visual_asset_composition.js",
+    "src/game/visual_asset_dev_controls.js",
+    "src/game/visual-parity-diagnostic.js",
+    "tools/visual_parity_render_capture.mjs",
+    "tests/test_module_visual_cell_scale.js"
+  ],
+  "validation": {
+    "node tests/test_module_visual_cell_scale.js": "PASS",
+    "node tests/test_visual_asset_composition.js": "PASS",
+    "npm run validate:fast": "PASS 6/6",
+    "npm run parity:capture -- --out .agent-validation/m5-003-flush-capture --cell-scale 1": "PASS 5/5 within thresholds"
+  },
+  "devFlag": {
+    "defaultScale": 0.96,
+    "flushScale": 1,
+    "queryParams": ["cellScale", "moduleCellScale", "voxelFit"],
+    "storageKey": "vaw.moduleVisualCellScale",
+    "hotkey": "Shift+G",
+    "windowApi": "VAW_MODULE_CELL_SCALE"
+  },
+  "parityEvidence": {
+    "reportPath": ".agent-validation/m5-003-flush-capture/visual_parity_render_report.json",
+    "moduleVisualCellScale": 1,
+    "blocksWithinThresholds": 5,
+    "blocksCaptured": 5,
+    "minSsim": 0.9583
+  },
+  "note": "ADR 0046 G3 satisfied; flush 1.0 is opt-in only, default remains 0.96"
+}

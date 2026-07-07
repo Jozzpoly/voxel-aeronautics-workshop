@@ -1,15 +1,5 @@
 {
-  "spawnPack": [
-    {
-      "taskId": "m5-003",
-      "lane": "visual-renderer",
-      "codename": "PIXEL",
-      "slotId": "visual-renderer-1",
-      "title": "Dev-flag path to cell scale 1.0 with parity re-capture gate",
-      "priority": 63,
-      "prompt": "You are PIXEL (visual-renderer) on the VAW agent team.\n\nTASK m5-003: Dev-flag path to cell scale 1.0 with parity re-capture gate\n\nRepo: C:\\Pliki_Joza\\Gamo_devovo\\VAW\\VAW\\voxel-aeronautics-workshop-current_work-GRok\nLane: visual-renderer\nPhase: M5\nSkill card: .codex/agent_mesh/skills/visual-renderer.md\nNO PUSH unless owner explicitly approves after DEC-REMEDIATION-COMPLETE.\n\nALLOWED_PATHS:\n  - src/game/scene_environment.js\n  - src/game/visual-parity-diagnostic.js\n  - src/game/visual-renderer-profiles.js\n  - src/game/visual_asset_loader.js\n  - src/game/visual_asset_dev_controls.js\n  - src/game/module_visual_factory.js\n  - src/game.js\n  - index.html\n\nFORBIDDEN_PATHS:\n  - src/foundation/**\n  - src/runtime/**\n  - assets/visual_packs/local_working_visuals/**\n\nCompleted dependencies: m5-002\n\nRead first:\n  - README_FOR_AGENTS.md\n  - .codex/agent_mesh/COLLABORATION_SYSTEM.md\n  - .codex/agent_mesh/skills/visual-renderer.md\n\nDeliverable:\n  Explicit 1.0 opt-in; parity:capture documents any SSIM delta\n\nValidation:\n  - npm run parity:capture\n  - npm run test\n\nNotes:\n  None\n\nWhen finished:\n1. Run all validation commands on current HEAD\n2. python tools/agent_dispatch.py complete --task m5-003 --result <pass|fail|blocked> --note \"...\"\n3. npm run agent:next — if your lane has another ready task, report idle; do NOT self-assign\n"
-    }
-  ],
-  "count": 1,
+  "spawnPack": [],
+  "count": 0,
   "assign": true
 }
