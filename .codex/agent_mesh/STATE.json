@@ -5,7 +5,7 @@
   "activeBranch": "local/agent-mesh-bootstrap",
   "transportBranch": "VAW_GRoK",
   "transportNote": "VAW_GRoK == current_work @ 80c0ae4 (owner 2026-07-07)",
-  "headSha": "319eeb7",
+  "headSha": "76d2ecf",
   "remoteSha": "80c0ae4",
   "remoteUrl": "https://github.com/Jozzpoly/voxel-aeronautics-workshop.git",
   "worktreeClass": "clean",
