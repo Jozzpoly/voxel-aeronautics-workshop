@@ -7,7 +7,7 @@ Current detailed roadmap rebase: `docs/ROADMAP_REBASE_2026-07-01.md`. Current re
 - `APP_VERSION=0.8.2-foundation.workbench-foundation`
 - `RELEASE_ID=foundation-workbench-foundation`
 - Blueprint v12, CompiledCraft V5, RuntimeAssemblyPlan V3.
-- Current checkpoint branch for foundation hardening: `current_work`.
+- Current transport branch: `VAW_GRoK` (`origin/VAW_GRoK`). Local feature branches merge back before push. `current_work` remains the historical checkpoint name in older docs.
 
 `CraftModel` is the sole workshop source of truth. `CraftCompiler` is the only verified path to compiled runtime data. Structural, mechanical and future signal graphs remain separate. AssemblyBuilder is the runtime allocation boundary; Physics Port is strict and backend-neutral.
 

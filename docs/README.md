@@ -1,7 +1,7 @@
 # VAW Documentation Index
 
 Status: Active documentation index
-Last verified: 2026-07-01
+Last verified: 2026-07-07
 Authority: Navigation and authority classification for current repository docs.
 
 Authority order: current user decision, latest verified remote SHA, source/tests from that SHA, active contracts, accepted ADRs, current evidence, recovery evidence, then history.
@@ -16,7 +16,7 @@ Authority order: current user decision, latest verified remote SHA, source/tests
 - `docs/ROADMAP_REBASE_2026-07-01.md`
 - `PROGRAMMABLE_MACHINE_RESEARCH.md`
 
-Current state: Gate C is the stable gameplay base. The immediate foundation concern is no longer only workflow/provenance; the 2026-07-01 roadmap rebase makes Visual Truth, VectorThruster direction proof, Voxel Fit, Mechanical V2 and Device Tuning the ordered planning path before broad Gate D/E work.
+Current state: Gate C is the stable gameplay base. **M4L Visual Truth is closed** on `VAW_GRoK` (render parity 5/5, `environment-policy` fix). **M5 Voxel Fit** is the next primary milestone; M4LC (runtime VectorThruster probe wiring) and M6 Mechanical V2 follow per `ROADMAP_NEXT.md` and `docs/ROADMAP_REBASE_2026-07-01.md`.
 
 `ROADMAP_NEXT.md` remains the short active route map. `docs/ROADMAP_REBASE_2026-07-01.md` is the detailed active rebase behind it. Future roadmap reviews must explicitly supersede that rebase instead of adding competing active plans.
 

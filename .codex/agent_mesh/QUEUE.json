@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-07T03:33:18Z",
+  "updatedAt": "2026-07-07T03:37:21Z",
   "phases": [
     {
       "id": "REMEDIATION",
@@ -530,7 +530,7 @@
       "phase": "M4LC",
       "priority": 50,
       "lane": "tooling-tests",
-      "status": "ready",
+      "status": "in_progress",
       "title": "Wire VectorThruster probe to real runtime modules",
       "dependsOn": [
         "m4l-108"
@@ -539,7 +539,9 @@
       "validation": [
         "npm run probe:vector-thruster",
         "npm run test"
-      ]
+      ],
+      "assignedAt": "2026-07-07T03:37:21Z",
+      "assignedSlot": "tooling-tests-1"
     },
     {
       "id": "m4lc-202",

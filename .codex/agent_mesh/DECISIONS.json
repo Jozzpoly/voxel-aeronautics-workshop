@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-07T12:00:00Z",
+  "updatedAt": "2026-07-07T03:45:00Z",
   "authority": {
     "order": [
       "owner explicit decision",
@@ -148,6 +148,21 @@
       "evidence": ".agent-validation/fast-20260707T033309.668837Z-23520/summary.json",
       "note": "m4l-108 closed; validate:fast 6/6 @ 319eeb7; G8/G10 push gates remain for r4-004",
       "unlocks": { "transport": true }
+    },
+    {
+      "id": "DEC-PUSH-RELEASE",
+      "type": "owner_approval",
+      "title": "Push publication to origin/VAW_GRoK",
+      "status": "approved",
+      "actor": "owner",
+      "findingIds": ["AUD-007"],
+      "dependsOnDecisions": ["DEC-REMEDIATION-COMPLETE"],
+      "recordedAt": "2026-07-07",
+      "recordedBy": "owner",
+      "ownerNote": "Pushnij na VAW_GRoK; uzupelnij dokumentacje i README postepu od 80c0ae4.",
+      "approvedAt": "2026-07-07T03:45:00Z",
+      "releases": ["DEC-PUSH-HOLD"],
+      "note": "28 commits 80c0ae4..bd0eab0; validate:fast 6/6 pre-push; README progress section added"
     }
   ]
 }

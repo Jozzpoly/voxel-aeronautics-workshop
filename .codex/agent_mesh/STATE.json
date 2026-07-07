@@ -5,24 +5,24 @@
   "activeBranch": "local/agent-mesh-bootstrap",
   "transportBranch": "VAW_GRoK",
   "transportNote": "VAW_GRoK == current_work @ 80c0ae4 (owner 2026-07-07)",
-  "headSha": "76d2ecf",
+  "headSha": "bd0eab0",
   "remoteSha": "80c0ae4",
   "remoteUrl": "https://github.com/Jozzpoly/voxel-aeronautics-workshop.git",
   "worktreeClass": "clean",
-  "worktreeNote": "m4l-108 closed; DEC-REMEDIATION-COMPLETE approved; push held G10",
+  "worktreeNote": "DEC-PUSH-RELEASE approved; publishing 80c0ae4..bd0eab0 to origin/VAW_GRoK",
   "openDecisionBlocks": [],
   "lastCycle": {
-    "timestamp": "2026-07-07T03:32:15Z",
+    "timestamp": "2026-07-07T03:37:21Z",
     "dispatcher": "dispatcher-1",
     "event": "cycle",
     "assigned": [
-      "m4l-108"
+      "m4lc-201"
     ],
     "parallelCount": 1
   },
   "openBlockers": [],
   "metrics": {
-    "cyclesCompleted": 3,
+    "cyclesCompleted": 4,
     "tasksCompleted": 26,
     "tasksFailed": 0,
     "tasksBlocked": 3,
