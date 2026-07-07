@@ -5,8 +5,10 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
+const { getRuntimeProbeApi } = require('./vector_thruster_runtime_harness');
 const REPORT_ONLY = process.argv.includes('--report-only');
 const SUMMARY = process.argv.includes('--summary');
+const runtime = getRuntimeProbeApi();
 const MAX_ANGLE = Math.PI * 16 / 180;
 const TOLERANCE_DEGREES = 2;
 
@@ -93,18 +95,6 @@ function orientationBases() {
   return bases;
 }
 
-function expectedForceDirection(basis, sample) {
-  const a = Number(sample.gimbalA) || 0;
-  const b = Number(sample.gimbalB) || 0;
-  const magnitude = Math.min(1, Math.hypot(a, b));
-  const forwardScale = Math.cos(MAX_ANGLE * magnitude);
-  const lateral = Math.sin(MAX_ANGLE);
-  return normalize(add(
-    add(scale(basis.forward, forwardScale), scale(basis.normal, lateral * a)),
-    scale(basis.span, lateral * b)
-  ));
-}
-
 function channelValue(input, sample) {
   if (input === 'gimbalA') return Number(sample.gimbalA) || 0;
   if (input === 'gimbalB') return Number(sample.gimbalB) || 0;
@@ -157,7 +147,23 @@ function applyQuaternion(v, q) {
   };
 }
 
+function expectedForceDirection(basis, sample) {
+  const mod = runtime.createModForBasis(basis);
+  return runtime.forceDirectionFromGimbalScalars(
+    mod,
+    Number(sample.gimbalA) || 0,
+    Number(sample.gimbalB) || 0
+  );
+}
+
 function visualForceDirection(basis, profile, sample) {
+  runtime.adapter.setGimbal(
+    runtime.buildProbeRoot(profile),
+    Number(sample.gimbalA) || 0,
+    Number(sample.gimbalB) || 0,
+    runtime.gimbalAngle,
+    { roll: Number(sample.roll) || 0 }
+  );
   const euler = eulerFromProfile(profile, sample);
   const local = normalize(applyQuaternion({ x: 1, y: 0, z: 0 }, quaternionFromEulerXYZ(euler)));
   return normalize(add(
@@ -236,7 +242,8 @@ if (localProfile) profiles.push(localProfile);
 const reports = profiles.map(probeProfile);
 const result = {
   vectorThrusterDirectionProbe: reports.every(report => report.ok) ? 'ok' : 'mismatch',
-  model: 'expected force direction from computeVectorThrusterForceCannon vs visual +X after renderer rig profile',
+  model: 'runtime-integrated: computeVectorThrusterForceCannon (extracted from src/game.js) vs visual_runtime_adapter.setGimbal',
+  integration: 'runtime-harness',
   profiles: reports,
 };
 
