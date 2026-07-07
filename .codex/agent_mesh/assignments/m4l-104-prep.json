@@ -1,0 +1,180 @@
+{
+  "taskId": "m4l-104",
+  "phase": "prep",
+  "preparedAt": "2026-07-07T03:15:00Z",
+  "preparedBy": "tooling-tests-1",
+  "status": "blocked-on-dependencies",
+  "blockedBy": ["m4l-102", "m4l-103"],
+  "summary": "Unified capture orchestrator prep — research complete, npm script wired, scaffold stubs added. Full implementation waits for game diagnostic render mode (m4l-102) and Studio capture harness (m4l-103).",
+  "goal": "npm run parity:capture compares Studio vs game under matched renderer profile and emits visual_parity_render_report.json for m4l-105 classification.",
+  "existingFoundation": {
+    "visual_parity_baseline.py": {
+      "path": "tools/visual_parity_baseline.py",
+      "status": "done",
+      "provides": [
+        "Static glTF texture luminance per block",
+        "Renderer source-flag diff (fog/shadow/lights/color-space)",
+        "Classification hint with requiresRenderCaptureForFinalWeighting: true"
+      ],
+      "gap": "No --render-report flag yet (m4l-105 will consume orchestrator output)"
+    },
+    "visual_renderer_profiles.js": {
+      "path": "src/game/visual-renderer-profiles.js",
+      "status": "done",
+      "provides": [
+        "STUDIO_PREVIEW_PROFILE",
+        "GAME_DEFAULT_PROFILE",
+        "GAME_STUDIO_PARITY_PROFILE"
+      ],
+      "notes": "GAME_STUDIO_PARITY_PROFILE is the intended capture profile for fair Studio-vs-game comparison (no fog, no shadows, Studio lights)."
+    },
+    "browser_smoke_pattern": {
+      "path": "tests/run_browser_smoke.mjs",
+      "status": "done",
+      "provides": [
+        "Static file server on ephemeral port",
+        "Chrome/Edge CDP launch without puppeteer",
+        "Runtime.evaluate for readiness gates"
+      ],
+      "reuse": "Game-side PNG capture should reuse CDP + static server pattern; add Page.captureScreenshot after diagnostic scene ready."
+    },
+    "studio_minimal_viewer": {
+      "path": "tools/blockbench_import_studio/src/minimal_gltf_viewer.js",
+      "status": "done",
+      "provides": [
+        "Studio preview scene (no fog, preserveDrawingBuffer, sRGB output)",
+        "fitCameraToObject for consistent framing"
+      ]
+    }
+  },
+  "dependencyGaps": {
+    "m4l-102": {
+      "title": "Game diagnostic render mode",
+      "lane": "visual-renderer",
+      "status": "in_progress",
+      "expectedDeliverable": "src/game/visual-parity-diagnostic.js",
+      "missingArtifacts": [
+        "src/game/visual-parity-diagnostic.js",
+        "Query-param or dedicated page entry wiring in index.html / src/game.js"
+      ],
+      "contractNeeded": {
+        "urlPattern": "/?visualParity=1&block=Balloon&profile=game-studio-parity",
+        "readySignal": "window.__VAW_VISUAL_PARITY_READY__ === true",
+        "metadataSignal": "window.__VAW_VISUAL_PARITY_META__",
+        "metaFields": [
+          "blockType",
+          "assetId",
+          "modelPath",
+          "profileId",
+          "camera",
+          "viewport",
+          "frameHash"
+        ],
+        "pngExtraction": "CDP Page.captureScreenshot on #canvas-container canvas after ready signal"
+      }
+    },
+    "m4l-103": {
+      "title": "Studio-side capture harness",
+      "lane": "studio-pipeline",
+      "status": "in_progress",
+      "expectedDeliverable": "tools/visual_parity_capture_studio.mjs",
+      "missingArtifacts": [
+        "tools/visual_parity_capture_studio.mjs"
+      ],
+      "contractNeeded": {
+        "cli": "node tools/visual_parity_capture_studio.mjs --block Balloon --out <dir>",
+        "outputsPerBlock": [
+          "<block>-studio.png",
+          "<block>-studio.json"
+        ],
+        "jsonFields": [
+          "blockType",
+          "assetId",
+          "modelPath",
+          "profileId",
+          "camera",
+          "viewport",
+          "capturedAt"
+        ],
+        "implementationOptions": [
+          "Headless Chromium against tools/blockbench_import_studio/minimal_viewer.html",
+          "Node canvas readback if studio harness exports frame buffer directly"
+        ]
+      }
+    }
+  },
+  "scaffoldAdded": {
+    "packageJsonScript": "parity:capture -> node tools/visual_parity_render_capture.mjs",
+    "orchestratorStub": "tools/visual_parity_render_capture.mjs",
+    "metricsStub": "tools/visual_parity_metrics.py"
+  },
+  "plannedOrchestratorFlow": [
+    "1. Parse CLI: --pack, --blocks, --profile, --out (default .agent-validation/m4l-capture)",
+    "2. Assert m4l-102/103 artifacts exist; fail fast with dependency report if not",
+    "3. For each block (default: Balloon first, then Hull/Fuel/Thruster/VectorThruster):",
+    "   a. Invoke visual_parity_capture_studio.mjs --block <block> --out <out>/studio",
+    "   b. Start static server; CDP-open game diagnostic URL with matched profile",
+    "   c. Capture game PNG + metadata JSON to <out>/game",
+    "   d. Run visual_parity_metrics.py --studio <png> --game <png> --meta-studio ... --meta-game ...",
+    "4. Aggregate per-block metrics into visual_parity_render_report.json",
+    "5. Exit 0 if all blocks captured; exit 1 if metrics below thresholds (informational for m4l-105)"
+  ],
+  "reportSchema": {
+    "outputPath": ".agent-validation/m4l-capture/visual_parity_render_report.json",
+    "topLevelFields": {
+      "visualParityRenderReport": "M4L",
+      "capturedAt": "ISO-8601 UTC",
+      "packRoot": "assets/visual_packs/local_working_visuals",
+      "profileId": "game-studio-parity",
+      "blocks": "requested block list",
+      "thresholds": {
+        "ssimMin": 0.92,
+        "luminanceDeltaMax": 0.08,
+        "notes": "Initial thresholds for m4l-106a Balloon gate; tune after first real capture"
+      },
+      "comparisons": [
+        {
+          "blockType": "Balloon",
+          "assetId": "local_balloon_visual",
+          "studio": { "png": "relative path", "metadata": {} },
+          "game": { "png": "relative path", "metadata": {} },
+          "metrics": {
+            "ssim": "0-1",
+            "averageLuminance": { "studio": 0, "game": 0, "delta": 0 },
+            "withinThresholds": true
+          }
+        }
+      ],
+      "summary": {
+        "blocksCaptured": 0,
+        "blocksWithinThresholds": 0,
+        "classificationHint": "environment-policy | material-policy | asset-data | unclassified"
+      }
+    }
+  },
+  "metricsModulePlan": {
+    "path": "tools/visual_parity_metrics.py",
+    "dependencies": ["PIL (already used by visual_parity_baseline.py)"],
+    "functions": [
+      "image_luminance_stats(png) — reuse BT.601 weights from visual_parity_baseline.py",
+      "structural_similarity(studio_png, game_png) — PIL grayscale SSIM approximation or MSE fallback",
+      "compare_pair(studio_png, game_png, thresholds) -> dict"
+    ],
+    "cli": "node tools/run_with_python_env.js python tools/visual_parity_metrics.py --studio <png> --game <png> [--json-out <path>]"
+  },
+  "classificationHintsForM4l105": {
+    "environment-policy": "GAME_STUDIO_PARITY_PROFILE captures match but GAME_DEFAULT_PROFILE differs strongly",
+    "material-policy": "Matched lighting but persistent per-material luminance skew",
+    "asset-data": "Even under GAME_STUDIO_PARITY_PROFILE, Studio and game diverge with same camera framing"
+  },
+  "validationLadder": {
+    "prep": "npm run parity:capture (expect exit 2 + dependency blocked JSON until m4l-102/103 land)",
+    "full": "npm run parity:capture (exit 0, report JSON present with Balloon + at least one comparator block)"
+  },
+  "nextAgentActions": [
+    "m4l-102: land visual-parity-diagnostic.js with __VAW_VISUAL_PARITY_READY__ contract",
+    "m4l-103: land visual_parity_capture_studio.mjs CLI producing PNG+JSON for Balloon",
+    "m4l-104: replace orchestrator stub guards with full capture loop + metrics aggregation",
+    "m4l-105: extend visual_parity_baseline.py --render-report to merge static + render evidence"
+  ]
+}
