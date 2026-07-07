@@ -180,6 +180,26 @@ def test_snapshot_covers_ignored_modes_symlinks_and_unusual_paths() -> None:
     assert recreated != original
 
 
+def test_terminals_directory_excluded_from_side_effects() -> None:
+    root = make_repo()
+    plan = Plan(
+        "terminals-excluded",
+        (
+            stage(
+                "terminals-write",
+                "from pathlib import Path; Path('terminals').mkdir(exist_ok=True); "
+                "Path('terminals/1.txt').write_text('shell log\\n')",
+            ),
+        ),
+    )
+    code, _, summary = run_plan(plan, root)
+    assert code == 0
+    record = summary["stages"][0]
+    assert record["status"] == "pass"
+    assert record["sideEffects"] == []
+    assert (root / "terminals" / "1.txt").read_text(encoding="utf-8") == "shell log\n"
+
+
 def test_ignored_side_effects_fail_but_artifact_root_is_allowed() -> None:
     root = make_repo()
     (root / ".gitignore").write_text("dist/\n*.log\n.agent-validation/\n", encoding="utf-8")
