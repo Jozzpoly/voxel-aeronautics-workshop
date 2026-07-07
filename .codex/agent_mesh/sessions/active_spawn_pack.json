@@ -1,24 +1,15 @@
 {
   "spawnPack": [
     {
-      "taskId": "m5-001",
+      "taskId": "m5-003",
       "lane": "visual-renderer",
       "codename": "PIXEL",
       "slotId": "visual-renderer-1",
-      "title": "Named MODULE_VISUAL_CELL_SCALE constant at 0.96 (no visual change)",
-      "priority": 61,
-      "prompt": "You are PIXEL (visual-renderer) on the VAW agent team.\n\nTASK m5-001: Named MODULE_VISUAL_CELL_SCALE constant at 0.96 (no visual change)\n\nRepo: C:\\Pliki_Joza\\Gamo_devovo\\VAW\\VAW\\voxel-aeronautics-workshop-current_work-GRok\nLane: visual-renderer\nPhase: M5\nSkill card: .codex/agent_mesh/skills/visual-renderer.md\nNO PUSH unless owner explicitly approves after DEC-REMEDIATION-COMPLETE.\n\nALLOWED_PATHS:\n  - src/game/scene_environment.js\n  - src/game/visual-parity-diagnostic.js\n  - src/game/visual-renderer-profiles.js\n  - src/game/visual_asset_loader.js\n  - src/game/visual_asset_dev_controls.js\n  - src/game/module_visual_factory.js\n  - src/game.js\n  - index.html\n\nFORBIDDEN_PATHS:\n  - src/foundation/**\n  - src/runtime/**\n  - assets/visual_packs/local_working_visuals/**\n\nCompleted dependencies: m5-000\n\nRead first:\n  - README_FOR_AGENTS.md\n  - .codex/agent_mesh/COLLABORATION_SYSTEM.md\n  - .codex/agent_mesh/skills/visual-renderer.md\n\nDeliverable:\n  module_visual_factory uses named policy constant; zero visual delta at 0.96\n\nValidation:\n  - npm run test\n  - npm run visual:test\n\nNotes:\n  Requires LANES.json allowlist for module_visual_factory.js\n\nWhen finished:\n1. Run all validation commands on current HEAD\n2. python tools/agent_dispatch.py complete --task m5-001 --result <pass|fail|blocked> --note \"...\"\n3. npm run agent:next — if your lane has another ready task, report idle; do NOT self-assign\n"
-    },
-    {
-      "taskId": "m6-000",
-      "lane": "docs-convergence",
-      "codename": "SCRIBE",
-      "slotId": "docs-convergence-1",
-      "title": "Mechanical V2 ADR design spike outline",
-      "priority": 70,
-      "prompt": "You are SCRIBE (docs-convergence) on the VAW agent team.\n\nTASK m6-000: Mechanical V2 ADR design spike outline\n\nRepo: C:\\Pliki_Joza\\Gamo_devovo\\VAW\\VAW\\voxel-aeronautics-workshop-current_work-GRok\nLane: docs-convergence\nPhase: M6\nSkill card: .codex/agent_mesh/skills/docs-convergence.md\nNO PUSH unless owner explicitly approves after DEC-REMEDIATION-COMPLETE.\n\nALLOWED_PATHS:\n  - docs/**\n  - *.md\n  - .codex/handoff/**\n\nFORBIDDEN_PATHS:\n  - src/**\n  - assets/visual_packs/local_working_visuals/**\n\nCompleted dependencies: m5-000\n\nRead first:\n  - README_FOR_AGENTS.md\n  - .codex/agent_mesh/COLLABORATION_SYSTEM.md\n  - .codex/agent_mesh/skills/docs-convergence.md\n\nDeliverable:\n  docs/adr draft for joint frames, limits, motor modes; no schema edits\n\nValidation:\n  - node tools/run_with_python_env.js python tests/test_documentation_contract.py\n\nNotes:\n  None\n\nWhen finished:\n1. Run all validation commands on current HEAD\n2. python tools/agent_dispatch.py complete --task m6-000 --result <pass|fail|blocked> --note \"...\"\n3. npm run agent:next — if your lane has another ready task, report idle; do NOT self-assign\n"
+      "title": "Dev-flag path to cell scale 1.0 with parity re-capture gate",
+      "priority": 63,
+      "prompt": "You are PIXEL (visual-renderer) on the VAW agent team.\n\nTASK m5-003: Dev-flag path to cell scale 1.0 with parity re-capture gate\n\nRepo: C:\\Pliki_Joza\\Gamo_devovo\\VAW\\VAW\\voxel-aeronautics-workshop-current_work-GRok\nLane: visual-renderer\nPhase: M5\nSkill card: .codex/agent_mesh/skills/visual-renderer.md\nNO PUSH unless owner explicitly approves after DEC-REMEDIATION-COMPLETE.\n\nALLOWED_PATHS:\n  - src/game/scene_environment.js\n  - src/game/visual-parity-diagnostic.js\n  - src/game/visual-renderer-profiles.js\n  - src/game/visual_asset_loader.js\n  - src/game/visual_asset_dev_controls.js\n  - src/game/module_visual_factory.js\n  - src/game.js\n  - index.html\n\nFORBIDDEN_PATHS:\n  - src/foundation/**\n  - src/runtime/**\n  - assets/visual_packs/local_working_visuals/**\n\nCompleted dependencies: m5-002\n\nRead first:\n  - README_FOR_AGENTS.md\n  - .codex/agent_mesh/COLLABORATION_SYSTEM.md\n  - .codex/agent_mesh/skills/visual-renderer.md\n\nDeliverable:\n  Explicit 1.0 opt-in; parity:capture documents any SSIM delta\n\nValidation:\n  - npm run parity:capture\n  - npm run test\n\nNotes:\n  None\n\nWhen finished:\n1. Run all validation commands on current HEAD\n2. python tools/agent_dispatch.py complete --task m5-003 --result <pass|fail|blocked> --note \"...\"\n3. npm run agent:next — if your lane has another ready task, report idle; do NOT self-assign\n"
     }
   ],
-  "count": 2,
+  "count": 1,
   "assign": true
 }

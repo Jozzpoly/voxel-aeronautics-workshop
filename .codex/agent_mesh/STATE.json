@@ -1,41 +1,34 @@
 {
   "version": 1,
-  "meshPhase": "M4LC-active",
-  "milestone": "M5-voxel-fit-planned",
+  "meshPhase": "M5-active",
+  "milestone": "M5-voxel-fit-G2-closed",
   "activeBranch": "local/agent-mesh-bootstrap",
   "transportBranch": "VAW_GRoK",
   "transportNote": "VAW_GRoK == current_work @ 80c0ae4 (owner 2026-07-07)",
-  "headSha": "024ad1b",
+  "headSha": "3e7beca",
   "remoteSha": "024ad1b",
   "remoteUrl": "https://github.com/Jozzpoly/voxel-aeronautics-workshop.git",
   "worktreeClass": "clean",
   "worktreeNote": "Published origin/VAW_GRoK @ 142d834; M5 next",
   "openDecisionBlocks": [],
   "lastCycle": {
-    "timestamp": "2026-07-07T03:56:01Z",
+    "timestamp": "2026-07-07T03:59:36Z",
     "dispatcher": "dispatcher-1",
     "event": "cycle",
     "assigned": [
-      "m5-001",
-      "m6-000"
+      "m5-003"
     ],
-    "parallelCount": 2
+    "parallelCount": 1
   },
   "openBlockers": [],
   "metrics": {
-    "cyclesCompleted": 7,
-    "tasksCompleted": 29,
+    "cyclesCompleted": 9,
+    "tasksCompleted": 30,
     "tasksFailed": 0,
     "tasksBlocked": 3,
     "remediationTasksTotal": 18
   },
   "history": [
-    {
-      "at": "2026-07-07T02:36:56Z",
-      "event": "task_pass",
-      "taskId": "m0-004",
-      "note": "validate:fast 6/6 PASS after terminals exclusion fix"
-    },
     {
       "at": "2026-07-07T02:37:02Z",
       "event": "task_pass",
@@ -149,6 +142,12 @@
       "event": "task_pass",
       "taskId": "m6-000",
       "note": "ADR 0047 draft"
+    },
+    {
+      "at": "2026-07-07T03:59:31Z",
+      "event": "task_pass",
+      "taskId": "m5-002",
+      "note": "test_module_visual_cell_scale.js; validate:fast 6/6"
     }
   ]
 }

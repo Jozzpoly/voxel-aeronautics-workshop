@@ -1,0 +1,24 @@
+{
+  "taskId": "m5-002",
+  "lane": "tooling-tests",
+  "codename": "TOOL",
+  "closedAt": "2026-07-07T04:00:00Z",
+  "headSha": "3e7beca",
+  "result": "pass",
+  "deliverables": [
+    "tests/test_module_visual_cell_scale.js",
+    "tests/run_all.py integration"
+  ],
+  "validation": {
+    "node tests/test_module_visual_cell_scale.js": "PASS",
+    "npm run validate:fast": "PASS 6/6",
+    "gate": "M5 G2 placement proof @ MODULE_VISUAL_CELL_SCALE 0.96"
+  },
+  "coverage": {
+    "moduleVisualCellScale": 0.96,
+    "hitProxyPolicy": "vawHitProxy + isVoxelHitProxy + decorative no-raycast",
+    "ghostPlacementOpacity": 0.52,
+    "blockTypesChecked": ["Hull", "Thruster", "VectorThruster", "Core", "Balloon"]
+  },
+  "note": "ADR 0046 G2 satisfied; m5-003 unblocked"
+}

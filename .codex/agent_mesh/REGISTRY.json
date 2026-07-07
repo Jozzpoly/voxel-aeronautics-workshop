@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updatedAt": "2026-07-07T03:57:22Z",
+  "updatedAt": "2026-07-07T03:59:36Z",
   "rosterRef": "TEAM_ROSTER.json",
   "slots": [
     {
@@ -34,9 +34,9 @@
       "id": "visual-renderer-1",
       "codename": "PIXEL",
       "lane": "visual-renderer",
-      "status": "idle",
+      "status": "busy",
       "role": "scene_environment, diagnostic render mode, renderer profiles",
-      "currentTaskId": null,
+      "currentTaskId": "m5-003",
       "skillCard": "skills/visual-renderer.md"
     },
     {
