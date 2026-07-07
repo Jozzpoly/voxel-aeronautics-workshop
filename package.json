@@ -27,7 +27,10 @@
     "agent:next": "node tools/run_with_python_env.js python tools/agent_dispatch.py next --count 5",
     "agent:decisions": "node tools/run_with_python_env.js python tools/agent_dispatch.py decisions",
     "agent:gate-check": "node tools/run_with_python_env.js python tools/agent_dispatch.py gate-check",
-    "agent:reconcile": "node tools/run_with_python_env.js python tools/agent_dispatch.py reconcile"
+    "agent:reconcile": "node tools/run_with_python_env.js python tools/agent_dispatch.py reconcile",
+    "agent:cycle": "node tools/run_with_python_env.js python tools/agent_dispatch.py cycle --max-parallel 6",
+    "agent:spawn-pack": "node tools/run_with_python_env.js python tools/agent_dispatch.py spawn-pack --count 6",
+    "agent:fatigue": "node tools/run_with_python_env.js python tools/agent_dispatch.py fatigue"
   },
   "engines": {
     "node": ">=18",

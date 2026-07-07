@@ -401,26 +401,40 @@ def cmd_block(task_id: str, reason: str, blocker_class: str) -> int:
     return 0
 
 
-def cmd_prompt(task_id: str) -> int:
+def load_roster() -> dict[str, dict[str, Any]]:
+    path = MESH / "TEAM_ROSTER.json"
+    if not path.exists():
+        return {}
+    doc = load_json(path)
+    return {member["lane"]: member for member in doc.get("members", [])}
+
+
+def build_task_prompt(task_id: str) -> str:
     queue = load_json(MESH / "QUEUE.json")
     lanes = load_json(MESH / "LANES.json")
     tasks = task_index(queue)
+    roster = load_roster()
     task = tasks.get(task_id)
     if not task:
-        print(json.dumps({"error": f"unknown task {task_id}"}), file=sys.stderr)
-        return 2
+        raise ValueError(f"unknown task {task_id}")
 
     lane_def = lanes["lanes"].get(task["lane"], {})
     allowed, forbidden = merge_paths(lane_def, task.get("allowedPathsExtra"))
     deps = task.get("dependsOn", [])
     done_deps = [d for d in deps if tasks.get(d, {}).get("status") == "done"]
+    member = roster.get(task["lane"], {})
+    codename = member.get("codename", task["lane"])
+    skill_card = member.get("skillCard", f"skills/{task['lane']}.md")
 
-    prompt = f"""VAW lane agent task {task_id}: {task['title']}
+    return f"""You are {codename} ({task['lane']}) on the VAW agent team.
+
+TASK {task_id}: {task['title']}
 
 Repo: {ROOT}
 Lane: {task['lane']}
 Phase: {task.get('phase')}
-Milestone: {task.get('phase')} / {queue['phases'][0]['milestone'] if task.get('phase') == 'M0' else task.get('phase')}
+Skill card: .codex/agent_mesh/{skill_card}
+NO PUSH unless owner explicitly approves after DEC-REMEDIATION-COMPLETE.
 
 ALLOWED_PATHS:
 {chr(10).join('  - ' + p for p in allowed)}
@@ -432,8 +446,8 @@ Completed dependencies: {', '.join(done_deps) if done_deps else 'none'}
 
 Read first:
   - README_FOR_AGENTS.md
-  - AGENT_WORKFLOW.md
-  - .codex/agent_mesh/DISPATCHER_ROLE.md (report-back rules)
+  - .codex/agent_mesh/COLLABORATION_SYSTEM.md
+  - .codex/agent_mesh/{skill_card}
 
 Deliverable:
   {task.get('acceptance', 'See QUEUE.json')}
@@ -444,10 +458,149 @@ Validation:
 Notes:
   {task.get('notes', 'None')}
 
-When finished, report: result pass|fail|blocked, changed paths, validation output.
-Dispatcher will run: python tools/agent_dispatch.py complete --task {task_id} --result <pass|fail|blocked>
+When finished:
+1. Run all validation commands on current HEAD
+2. python tools/agent_dispatch.py complete --task {task_id} --result <pass|fail|blocked> --note "..."
+3. npm run agent:next — if your lane has another ready task, report idle; do NOT self-assign
 """
-    print(prompt)
+
+
+def cmd_prompt(task_id: str) -> int:
+    try:
+        print(build_task_prompt(task_id))
+    except ValueError as error:
+        print(json.dumps({"error": str(error)}), file=sys.stderr)
+        return 2
+    return 0
+
+
+def pick_parallel_ready(max_count: int) -> list[dict[str, Any]]:
+    queue = load_json(MESH / "QUEUE.json")
+    ready = ready_tasks(queue)
+    picks: list[dict[str, Any]] = []
+    used_lanes: set[str] = set()
+    for task in ready:
+        lane = task["lane"]
+        if lane == "dispatcher" or lane in used_lanes:
+            continue
+        picks.append(task)
+        used_lanes.add(lane)
+        if len(picks) >= max_count:
+            break
+    return picks
+
+
+def cmd_spawn_pack(count: int, assign: bool) -> int:
+    roster = load_roster()
+    picks = pick_parallel_ready(count)
+    pack: list[dict[str, Any]] = []
+    for task in picks:
+        task_id = task["id"]
+        lane = task["lane"]
+        if assign:
+            code = cmd_assign(lane, task_id)
+            if code != 0:
+                continue
+        member = roster.get(lane, {})
+        pack.append({
+            "taskId": task_id,
+            "lane": lane,
+            "codename": member.get("codename", lane),
+            "slotId": member.get("slotId"),
+            "title": task["title"],
+            "priority": task.get("priority"),
+            "prompt": build_task_prompt(task_id),
+        })
+    out = {"spawnPack": pack, "count": len(pack), "assign": assign}
+    sessions = MESH / "sessions"
+    sessions.mkdir(parents=True, exist_ok=True)
+    save_json(sessions / "active_spawn_pack.json", out)
+    print(json.dumps(out, indent=2))
+    return 0
+
+
+def cmd_cycle(max_parallel: int) -> int:
+    cmd_reconcile()
+    state = load_json(MESH / "STATE.json")
+    roster = load_roster()
+    picks = pick_parallel_ready(max_parallel)
+    assigned: list[str] = []
+    pack: list[dict[str, Any]] = []
+    for task in picks:
+        task_id = task["id"]
+        if cmd_assign(task["lane"], task_id) != 0:
+            continue
+        assigned.append(task_id)
+        lane = task["lane"]
+        member = roster.get(lane, {})
+        pack.append({
+            "taskId": task_id,
+            "lane": lane,
+            "codename": member.get("codename", lane),
+            "slotId": member.get("slotId"),
+            "title": task["title"],
+            "priority": task.get("priority"),
+            "prompt": build_task_prompt(task_id),
+        })
+    sessions = MESH / "sessions"
+    sessions.mkdir(parents=True, exist_ok=True)
+    save_json(sessions / "active_spawn_pack.json", {
+        "spawnPack": pack,
+        "count": len(pack),
+        "assign": True,
+    })
+    state["lastCycle"] = {
+        "timestamp": utc_now(),
+        "dispatcher": "dispatcher-1",
+        "event": "cycle",
+        "assigned": assigned,
+        "parallelCount": len(assigned),
+    }
+    state["metrics"]["cyclesCompleted"] = state["metrics"].get("cyclesCompleted", 0) + 1
+    cycles = MESH / "cycles"
+    cycles.mkdir(parents=True, exist_ok=True)
+    cycle_path = cycles / f"CYCLE-{utc_now().replace(':', '').replace('-', '')}.json"
+    save_json(cycle_path, {
+        "at": utc_now(),
+        "assigned": assigned,
+        "spawnPackPath": "sessions/active_spawn_pack.json",
+    })
+    save_json(MESH / "STATE.json", state)
+    print(json.dumps({
+        "cycle": "complete",
+        "assigned": assigned,
+        "spawnPack": "sessions/active_spawn_pack.json",
+        "cycleArchive": str(cycle_path.relative_to(ROOT)),
+    }, indent=2))
+    return 0
+
+
+def cmd_fatigue() -> int:
+    queue = load_json(MESH / "QUEUE.json")
+    by_lane: dict[str, int] = {}
+    total = 0
+    for task in queue["tasks"]:
+        if task.get("status") != "done":
+            continue
+        lane = task.get("lane", "unknown")
+        by_lane[lane] = by_lane.get(lane, 0) + 1
+        total += 1
+    shares = {
+        lane: round(count / total, 3) if total else 0.0
+        for lane, count in by_lane.items()
+    }
+    alerts = [
+        {"lane": lane, "share": share, "reason": "lane load >40% of completed tasks"}
+        for lane, share in shares.items()
+        if share > 0.4
+    ]
+    print(json.dumps({
+        "completedByLane": by_lane,
+        "shares": shares,
+        "totalDone": total,
+        "alerts": alerts,
+        "recommendation": "spawn-pack parallel wave" if alerts else "balanced",
+    }, indent=2))
     return 0
 
 
@@ -482,6 +635,15 @@ def main() -> int:
     p_prompt = sub.add_parser("prompt", help="Emit spawn prompt for a task")
     p_prompt.add_argument("--task", required=True)
 
+    p_pack = sub.add_parser("spawn-pack", help="Build parallel spawn pack for parent orchestrator")
+    p_pack.add_argument("--count", type=int, default=6)
+    p_pack.add_argument("--assign", action="store_true", help="Assign tasks before building pack")
+
+    p_cycle = sub.add_parser("cycle", help="Reconcile, assign parallel ready work, write spawn pack")
+    p_cycle.add_argument("--max-parallel", type=int, default=6)
+
+    sub.add_parser("fatigue", help="Report lane load imbalance")
+
     args = parser.parse_args()
     if not MESH.exists():
         print(json.dumps({"error": f"missing agent mesh at {MESH}"}), file=sys.stderr)
@@ -497,6 +659,9 @@ def main() -> int:
         "complete": lambda: cmd_complete(args.task, args.result, args.note),
         "block": lambda: cmd_block(args.task, args.reason, args.blocker_class),
         "prompt": lambda: cmd_prompt(args.task),
+        "spawn-pack": lambda: cmd_spawn_pack(args.count, args.assign),
+        "cycle": lambda: cmd_cycle(args.max_parallel),
+        "fatigue": cmd_fatigue,
     }
     return handlers[args.command]()
 

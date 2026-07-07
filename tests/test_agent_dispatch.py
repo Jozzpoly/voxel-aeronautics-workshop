@@ -11,11 +11,13 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 from agent_dispatch import (  # noqa: E402
     MESH,
+    build_task_prompt,
     decision_index,
     deps_satisfied,
     decisions_approved,
     load_decisions,
     load_json,
+    load_roster,
     task_assignable,
     task_blocked_by_decision,
     task_index,
@@ -75,3 +77,42 @@ def test_remediation_phase_present() -> None:
     assert "REMEDIATION" in phase_ids
     remediation_tasks = [task for task in queue["tasks"] if task.get("phase") == "REMEDIATION"]
     assert remediation_tasks, "remediation tasks expected in QUEUE"
+
+
+def test_team_roster_has_eight_members() -> None:
+    roster = load_json(MESH / "TEAM_ROSTER.json")
+    members = roster.get("members", [])
+    assert len(members) == 8
+    codenames = {member["codename"] for member in members}
+    assert codenames == {"KAI", "MIRA", "TOOL", "PIXEL", "FORGE", "SCRIBE", "PROOF", "SAGE"}
+
+
+def test_registry_codenames_match_roster() -> None:
+    roster = {member["slotId"]: member["codename"] for member in load_json(MESH / "TEAM_ROSTER.json")["members"]}
+    registry = load_json(MESH / "REGISTRY.json")
+    for slot in registry["slots"]:
+        assert slot.get("codename") == roster[slot["id"]]
+
+
+def test_build_task_prompt_includes_codename() -> None:
+    roster = load_roster()
+    queue = load_json(MESH / "QUEUE.json")
+    task = next(t for t in queue["tasks"] if t["id"] == "m4l-108")
+    member = roster[task["lane"]]
+    prompt = build_task_prompt("m4l-108")
+    assert member["codename"] in prompt
+    assert "COLLABORATION_SYSTEM.md" in prompt
+
+
+def test_skill_cards_exist() -> None:
+    for name in (
+        "dispatcher.md",
+        "env-infra.md",
+        "tooling-tests.md",
+        "visual-renderer.md",
+        "studio-pipeline.md",
+        "docs-convergence.md",
+        "qa-validation.md",
+        "planner-auditor.md",
+    ):
+        assert (MESH / "skills" / name).is_file(), name

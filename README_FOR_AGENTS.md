@@ -6,16 +6,22 @@ Authority: Operational routing only; product truth remains in source, active con
 
 Use this file before searching widely. It should get a fresh agent onto the correct branch, validation path and scope boundary in under 10 minutes.
 
-## Multi-agent mesh
+## Multi-agent mesh (7 lane agents + KAI dispatcher)
 
-For parallel milestone work, read `.codex/agent_mesh/README.md` first. The **Dispatcher** agent owns `QUEUE.json` / `STATE.json` / `REGISTRY.json` and assigns ready tasks to idle lane agents.
+For parallel milestone work, read `.codex/agent_mesh/TEAM_CHARTER.md` and `COLLABORATION_SYSTEM.md` first.
+
+**Team roster:** `TEAM_ROSTER.json` — KAI, MIRA, TOOL, PIXEL, FORGE, SCRIBE, PROOF, SAGE.
+
+**Session start (parallel by default):**
 
 ```text
-node tools/run_with_python_env.js python tools/agent_dispatch.py status
-node tools/run_with_python_env.js python tools/agent_dispatch.py next --count 3
+npm run agent:cycle
+# Parent launches ALL entries in .codex/agent_mesh/sessions/active_spawn_pack.json in parallel
+npm run agent:status
+npm run agent:fatigue
 ```
 
-Lane agents execute bounded tasks; the Dispatcher does not edit product code.
+KAI owns `QUEUE.json` / `STATE.json` / `REGISTRY.json`. Lane agents read their `skills/<lane>.md` skill card. Dispatcher does not edit product code.
 
 ## Start Gate
 
