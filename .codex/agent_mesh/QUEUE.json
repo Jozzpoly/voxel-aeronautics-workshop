@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-07T03:37:21Z",
+  "updatedAt": "2026-07-07T03:55:55Z",
   "phases": [
     {
       "id": "REMEDIATION",
@@ -530,7 +530,7 @@
       "phase": "M4LC",
       "priority": 50,
       "lane": "tooling-tests",
-      "status": "in_progress",
+      "status": "done",
       "title": "Wire VectorThruster probe to real runtime modules",
       "dependsOn": [
         "m4l-108"
@@ -541,14 +541,16 @@
         "npm run test"
       ],
       "assignedAt": "2026-07-07T03:37:21Z",
-      "assignedSlot": "tooling-tests-1"
+      "assignedSlot": "tooling-tests-1",
+      "completedAt": "2026-07-07T04:15:00Z",
+      "lastNote": "vector_thruster_runtime_harness.js; probe 192/192 runtime-integrated; test_vector_thruster_runtime_probe.js"
     },
     {
       "id": "m4lc-202",
       "phase": "M4LC",
       "priority": 51,
       "lane": "tooling-tests",
-      "status": "pending",
+      "status": "done",
       "title": "Add VectorThruster integration test to run_all.py / FAST_PLAN",
       "dependsOn": [
         "m4lc-201"
@@ -557,6 +559,109 @@
       "validation": [
         "npm run validate:fast",
         "npm run test"
+      ],
+      "completedAt": "2026-07-07T04:16:00Z",
+      "lastNote": "test_vector_thruster_runtime_probe.js added to run_all.py"
+    },
+    {
+      "id": "m4lc-203",
+      "phase": "M4LC",
+      "priority": 52,
+      "lane": "qa-validation",
+      "status": "done",
+      "title": "M4LC closeout evidence and DEC-M4LC-COMPLETE gate",
+      "dependsOn": [
+        "m4lc-202"
+      ],
+      "acceptance": "validate:fast 6/6 + probe 192/192 archived; synthetic-only labels removed from active docs",
+      "validation": [
+        "npm run validate:fast",
+        "npm run probe:vector-thruster"
+      ],
+      "assignedAt": "2026-07-07T03:53:19Z",
+      "assignedSlot": "qa-validation-1",
+      "completedAt": "2026-07-07T03:55:55Z",
+      "lastNote": "validate:fast 6/6; probe 192/192 runtime-integrated; evidence archived"
+    },
+    {
+      "id": "m5-000",
+      "phase": "M5",
+      "priority": 60,
+      "lane": "docs-convergence",
+      "status": "done",
+      "completedAt": "2026-07-07T04:20:00Z",
+      "lastNote": "ADR 0046 draft + 0.96 inventory; test_documentation_contract PASS",
+      "title": "ADR 0046 Voxel Fit render policy spike and 0.96 audit inventory",
+      "dependsOn": [
+        "m4lc-203"
+      ],
+      "acceptance": "docs/adr/0046-voxel-fit-render-policy.md draft + 0.96 call-site inventory",
+      "validation": [
+        "node tools/run_with_python_env.js python tests/test_documentation_contract.py"
+      ]
+    },
+    {
+      "id": "m5-001",
+      "phase": "M5",
+      "priority": 61,
+      "lane": "visual-renderer",
+      "status": "ready",
+      "title": "Named MODULE_VISUAL_CELL_SCALE constant at 0.96 (no visual change)",
+      "dependsOn": [
+        "m5-000"
+      ],
+      "acceptance": "module_visual_factory uses named policy constant; zero visual delta at 0.96",
+      "validation": [
+        "npm run test",
+        "npm run visual:test"
+      ],
+      "notes": "Requires LANES.json allowlist for module_visual_factory.js"
+    },
+    {
+      "id": "m5-002",
+      "phase": "M5",
+      "priority": 62,
+      "lane": "tooling-tests",
+      "status": "pending",
+      "title": "Hit-proxy and ghost placement regression tests at current scale",
+      "dependsOn": [
+        "m5-001"
+      ],
+      "acceptance": "tests cover vawHitProxy raycast + ghost readability at scale 0.96",
+      "validation": [
+        "npm run test",
+        "npm run validate:fast"
+      ]
+    },
+    {
+      "id": "m5-003",
+      "phase": "M5",
+      "priority": 63,
+      "lane": "visual-renderer",
+      "status": "pending",
+      "title": "Dev-flag path to cell scale 1.0 with parity re-capture gate",
+      "dependsOn": [
+        "m5-002"
+      ],
+      "acceptance": "Explicit 1.0 opt-in; parity:capture documents any SSIM delta",
+      "validation": [
+        "npm run parity:capture",
+        "npm run test"
+      ]
+    },
+    {
+      "id": "m6-000",
+      "phase": "M6",
+      "priority": 70,
+      "lane": "docs-convergence",
+      "status": "ready",
+      "title": "Mechanical V2 ADR design spike outline",
+      "dependsOn": [
+        "m5-000"
+      ],
+      "acceptance": "docs/adr draft for joint frames, limits, motor modes; no schema edits",
+      "validation": [
+        "node tools/run_with_python_env.js python tests/test_documentation_contract.py"
       ]
     }
   ]

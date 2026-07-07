@@ -54,14 +54,14 @@
         "src/game/visual-renderer-profiles.js",
         "src/game/visual_asset_loader.js",
         "src/game/visual_asset_dev_controls.js",
+        "src/game/module_visual_factory.js",
         "src/game.js",
         "index.html"
       ],
       "forbiddenPaths": [
         "src/foundation/**",
         "src/runtime/**",
-        "assets/visual_packs/local_working_visuals/**",
-        "src/game/module_visual_factory.js"
+        "assets/visual_packs/local_working_visuals/**"
       ]
     },
     "studio-pipeline": {

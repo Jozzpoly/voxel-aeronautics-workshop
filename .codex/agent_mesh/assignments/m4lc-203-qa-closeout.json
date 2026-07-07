@@ -1,0 +1,124 @@
+{
+  "taskId": "m4lc-203-qa-closeout",
+  "phase": "M4LC",
+  "lane": "qa-validation",
+  "slot": "qa-validation-1",
+  "codename": "PROOF",
+  "contextTask": "m4lc-203",
+  "parallelWave": "M4LC runtime VectorThruster closeout",
+  "result": "pass",
+  "completedAt": "2026-07-07T03:55:30Z",
+  "headSha": "426ce536544f4e46590729b98575a1100c567d26",
+  "headShort": "426ce53",
+  "branch": "local/agent-mesh-bootstrap",
+  "worktreeAtCloseout": "dirty-mesh-only",
+  "worktreeDirtyPaths": [
+    ".codex/agent_mesh/LANES.json",
+    ".codex/agent_mesh/QUEUE.json",
+    ".codex/agent_mesh/REGISTRY.json",
+    ".codex/agent_mesh/STATE.json",
+    ".codex/agent_mesh/sessions/active_spawn_pack.json",
+    ".codex/agent_mesh/cycles/CYCLE-20260707T035319Z.json",
+    ".codex/agent_mesh/meetings/ROADMAP_PLANNING_2026-07-07.md",
+    "docs/adr/0046-voxel-fit-render-policy.md"
+  ],
+  "toolchain": {
+    "node": "v24.16.0",
+    "python": "3.14.5",
+    "os": "windows 10.0.26200.8655"
+  },
+  "validation": {
+    "probe:vector-thruster": {
+      "command": "npm run probe:vector-thruster",
+      "result": "pass",
+      "exitCode": 0,
+      "durationSeconds": 1.6,
+      "vectorThrusterDirectionProbe": "ok",
+      "model": "runtime-integrated: computeVectorThrusterForceCannon (extracted from src/game.js) vs visual_runtime_adapter.setGimbal",
+      "integration": "runtime-harness",
+      "profiles": [
+        {
+          "source": "runtime-default",
+          "checked": 192,
+          "toleranceDegrees": 2,
+          "ok": true,
+          "mismatchCount": 0,
+          "worstAngleErrorDegrees": 0
+        },
+        {
+          "source": "assets\\visual_packs\\local_working_visuals\\VAW_VISUAL_ASSET_PACK_V1.json:local_vector_thruster_visual",
+          "checked": 192,
+          "toleranceDegrees": 2,
+          "ok": true,
+          "mismatchCount": 0,
+          "worstAngleErrorDegrees": 0
+        }
+      ],
+      "scopeNote": "Runtime-integrated proof after m4lc-201 wiring; no longer synthetic-only shadow-model scope"
+    },
+    "validate:fast": {
+      "command": "npm run validate:fast",
+      "result": "pass",
+      "exitCode": 0,
+      "durationSeconds": 62.6,
+      "stagesPass": 6,
+      "stagesFail": 0,
+      "outcome": "pass",
+      "artifact": ".agent-validation/fast-20260707T035410.934810Z-22492/summary.json",
+      "runDirectory": ".agent-validation/fast-20260707T035410.934810Z-22492",
+      "repositoryHead": "426ce536544f4e46590729b98575a1100c567d26",
+      "stages": [
+        { "name": "static-check", "status": "pass", "durationSeconds": 2.781 },
+        { "name": "foundation", "status": "pass", "durationSeconds": 0.078 },
+        { "name": "gate-b-compilers", "status": "pass", "durationSeconds": 0.984 },
+        { "name": "gate-c-hardening", "status": "pass", "durationSeconds": 1.203 },
+        { "name": "audit-regressions", "status": "pass", "durationSeconds": 0.36 },
+        { "name": "validation-runner", "status": "pass", "durationSeconds": 52.031 }
+      ],
+      "priorAttempt": {
+        "artifact": ".agent-validation/fast-20260707T035349.514803Z-20108/summary.json",
+        "result": "fail",
+        "classification": "HARNESS",
+        "failedStage": "gate-c-hardening",
+        "sideEffect": "docs/adr/0046-voxel-fit-render-policy.md created during concurrent agent session",
+        "note": "gate-c test body passed; honest retry after side-effect settled"
+      }
+    }
+  },
+  "ladderSummary": {
+    "totalSteps": 2,
+    "passed": 2,
+    "failed": 0,
+    "probeChecked": "192/192",
+    "validateFastStages": "6/6 PASS"
+  },
+  "scopeRelabel": {
+    "priorLabel": "synthetic-only until m4lc-201",
+    "newLabel": "runtime-integrated",
+    "evidenceUpdated": [
+      "AI_PROJECT_MEMORY.md",
+      "evidence/ENV_BASELINE_2026-07-07.md",
+      "evidence/ENV_BASELINE_2026-07-07-remediation.md"
+    ]
+  },
+  "unlocks": [
+    "M4LC lane closeout quorum input",
+    "M5 Voxel Fit as next product lane"
+  ],
+  "classifications": [
+    {
+      "item": "validate:fast first attempt",
+      "result": "fail exit 97",
+      "class": "HARNESS",
+      "rationale": "Concurrent docs/adr/0046 creation during gate-c stage; suite body passed"
+    }
+  ],
+  "productEdits": false,
+  "evidencePaths": [
+    ".codex/agent_mesh/assignments/m4lc-203-qa-closeout.json",
+    ".agent-validation/fast-20260707T035410.934810Z-22492/summary.json",
+    "AI_PROJECT_MEMORY.md",
+    "evidence/ENV_BASELINE_2026-07-07.md",
+    "evidence/ENV_BASELINE_2026-07-07-remediation.md"
+  ]
+}

@@ -127,7 +127,7 @@ Gate C hardening suite passed.
 | `npm run studio:test` | **PASS** | — |
 | `npm run visual:test` | **FAIL** | **PRODUCT** |
 | `npm run browser:smoke` | **PASS** | — |
-| `npm run probe:vector-thruster:summary` | **PASS** (192/192) | — |
+| `npm run probe:vector-thruster:summary` | **PASS** (192/192, runtime-integrated) | — |
 
 #### studio:test
 
@@ -163,9 +163,12 @@ Trigger: C3 (`m4l-101`) added `source: 'tools/blockbench_import_studio/src/minim
 
 #### probe:vector-thruster
 
+Runtime-integrated after `m4lc-201`–`m4lc-203` (`computeVectorThrusterForceCannon` vs `visual_runtime_adapter.setGimbal`).
+
 ```json
 {
   "vectorThrusterDirectionProbe": "ok",
+  "model": "runtime-integrated: computeVectorThrusterForceCannon (extracted from src/game.js) vs visual_runtime_adapter.setGimbal",
   "profiles": [
     { "source": "runtime-default", "checked": 192, "ok": true, "mismatchCount": 0 },
     { "source": "assets\\visual_packs\\local_working_visuals\\…:local_vector_thruster_visual",
@@ -186,7 +189,7 @@ Trigger: C3 (`m4l-101`) added `source: 'tools/blockbench_import_studio/src/minim
 | `studio:test` | PASS | — | Studio static/recovery contract (53 required files) |
 | `visual:test` | FAIL | **PRODUCT** | C3 profile module references Studio tool path in runtime source scan |
 | `browser:smoke` | PASS | — | Core panels + zero console errors |
-| `probe:vector-thruster` | PASS 192/192 | — | Synthetic probe per `DEC-PROBE-SCOPE` |
+| `probe:vector-thruster` | PASS 192/192 (runtime-integrated) | — | Runtime-harness probe via `computeVectorThrusterForceCannon` and `setGimbal` (`m4lc-203` closeout) |
 
 ---
 

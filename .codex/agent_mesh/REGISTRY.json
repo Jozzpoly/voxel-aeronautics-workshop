@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updatedAt": "2026-07-07T03:37:21Z",
+  "updatedAt": "2026-07-07T03:55:55Z",
   "rosterRef": "TEAM_ROSTER.json",
   "slots": [
     {
@@ -25,9 +25,9 @@
       "id": "tooling-tests-1",
       "codename": "TOOL",
       "lane": "tooling-tests",
-      "status": "busy",
+      "status": "idle",
       "role": "tools/, tests/, agent_dispatch, probe wiring",
-      "currentTaskId": "m4lc-201",
+      "currentTaskId": null,
       "skillCard": "skills/tooling-tests.md"
     },
     {

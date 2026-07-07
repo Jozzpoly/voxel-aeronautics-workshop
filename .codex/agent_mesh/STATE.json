@@ -1,40 +1,32 @@
 {
   "version": 1,
-  "meshPhase": "M4L-closed",
-  "milestone": "M5-voxel-fit-next",
+  "meshPhase": "M4LC-active",
+  "milestone": "M5-voxel-fit-planned",
   "activeBranch": "local/agent-mesh-bootstrap",
   "transportBranch": "VAW_GRoK",
   "transportNote": "VAW_GRoK == current_work @ 80c0ae4 (owner 2026-07-07)",
-  "headSha": "5f01754",
-  "remoteSha": "5f01754",
+  "headSha": "024ad1b",
+  "remoteSha": "024ad1b",
   "remoteUrl": "https://github.com/Jozzpoly/voxel-aeronautics-workshop.git",
   "worktreeClass": "clean",
   "worktreeNote": "Published origin/VAW_GRoK @ 142d834; M5 next",
   "openDecisionBlocks": [],
   "lastCycle": {
-    "timestamp": "2026-07-07T03:37:21Z",
+    "timestamp": "2026-07-07T03:55:51Z",
     "dispatcher": "dispatcher-1",
     "event": "cycle",
-    "assigned": [
-      "m4lc-201"
-    ],
-    "parallelCount": 1
+    "assigned": [],
+    "parallelCount": 0
   },
   "openBlockers": [],
   "metrics": {
-    "cyclesCompleted": 4,
-    "tasksCompleted": 26,
+    "cyclesCompleted": 6,
+    "tasksCompleted": 27,
     "tasksFailed": 0,
     "tasksBlocked": 3,
     "remediationTasksTotal": 18
   },
   "history": [
-    {
-      "at": "2026-07-07T02:32:24Z",
-      "event": "task_pass",
-      "taskId": "m0-003",
-      "note": "tailwindcss@4.1.10 --no-save; check:css green"
-    },
     {
       "at": "2026-07-07T02:32:24Z",
       "event": "task_pass",
@@ -148,6 +140,12 @@
       "event": "task_pass",
       "taskId": "m4l-108",
       "note": "M4L closed in ROADMAP_NEXT + handoff"
+    },
+    {
+      "at": "2026-07-07T03:55:55Z",
+      "event": "task_pass",
+      "taskId": "m4lc-203",
+      "note": "validate:fast 6/6; probe 192/192 runtime-integrated; evidence archived"
     }
   ]
 }

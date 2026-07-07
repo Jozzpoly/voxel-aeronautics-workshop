@@ -74,7 +74,7 @@ VALIDATION_EXIT status=pass code=0 duration=2.703s
 | `npm run studio:test` | **PASS** | — |
 | `npm run visual:test` | **PASS** | — |
 | `npm run browser:smoke` | **PASS** | — |
-| `npm run probe:vector-thruster:summary` | **PASS** (192/192, synthetic-only until `m4lc-201`) | — |
+| `npm run probe:vector-thruster:summary` | **PASS** (192/192, runtime-integrated) | — |
 | `audit_visual_asset_pack.py` | **PASS** (`ok: true`) | — |
 | `visual_parity_baseline.py` | **PASS** (classification emitted) | — |
 
@@ -93,7 +93,7 @@ VALIDATION_EXIT status=pass code=0 duration=2.703s
 
 #### probe:vector-thruster (baseline)
 
-**Scope note:** `192 / 192` is **synthetic-only** until `m4lc-201`. The probe exercises shadow-model math in Node (`tools/probe_vector_thruster_direction.js`); it does not yet prove runtime wiring through `computeVectorThrusterForceCannon` and `setGimbal`.
+**Scope note:** `192 / 192` is **runtime-integrated** after `m4lc-201`–`m4lc-203`. The probe exercises `computeVectorThrusterForceCannon` (extracted from `src/game.js`) against `visual_runtime_adapter.setGimbal` in Node (`tools/probe_vector_thruster_direction.js`).
 
 ```json
 {
@@ -201,7 +201,7 @@ $ npm run browser:smoke
 
 ### T2 — probe:vector-thruster:summary
 
-Synthetic-only until `m4lc-201` (shadow-model Node math; not runtime-integrated proof).
+Runtime-integrated after `m4lc-201`–`m4lc-203` (`computeVectorThrusterForceCannon` vs `setGimbal`).
 
 ```text
 $ npm run probe:vector-thruster:summary
@@ -287,7 +287,7 @@ Per `AGENT_WORKFLOW.md` failure classes: `PRODUCT` | `HARNESS` | `ENVIRONMENT` |
 | `studio:test` | PASS | — | Studio static/recovery contract |
 | `visual:test` | PASS | — | Visual asset integration contract |
 | `browser:smoke` | PASS | — | Browser launch + core panels + zero console errors |
-| `probe:vector-thruster` | PASS 192/192 (synthetic-only until `m4lc-201`) | — | Shadow-model Node probe within 2° tolerance; not runtime-integrated proof |
+| `probe:vector-thruster` | PASS 192/192 (runtime-integrated) | — | Runtime-harness probe within 2° tolerance via `computeVectorThrusterForceCannon` and `setGimbal` |
 | `audit_visual_asset_pack` | PASS (`ok: true`) | — | Pack models present; info diagnostics only |
 | `visual_parity_baseline` | PASS (classification) | — | `requiresRenderCaptureForFinalWeighting: true` is expected M4L gate input, not a failure |
 | `validate:fast` gate-c-hardening (baseline) | FAIL | **ENVIRONMENT** | Stale `tailwind.generated.css` hash; local Tailwind 4.1.10 gap blocked regeneration at baseline |

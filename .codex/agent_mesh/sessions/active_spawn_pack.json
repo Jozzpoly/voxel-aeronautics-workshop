@@ -1,15 +1,5 @@
 {
-  "spawnPack": [
-    {
-      "taskId": "m4lc-201",
-      "lane": "tooling-tests",
-      "codename": "TOOL",
-      "slotId": "tooling-tests-1",
-      "title": "Wire VectorThruster probe to real runtime modules",
-      "priority": 50,
-      "prompt": "You are TOOL (tooling-tests) on the VAW agent team.\n\nTASK m4lc-201: Wire VectorThruster probe to real runtime modules\n\nRepo: C:\\Pliki_Joza\\Gamo_devovo\\VAW\\VAW\\voxel-aeronautics-workshop-current_work-GRok\nLane: tooling-tests\nPhase: M4LC\nSkill card: .codex/agent_mesh/skills/tooling-tests.md\nNO PUSH unless owner explicitly approves after DEC-REMEDIATION-COMPLETE.\n\nALLOWED_PATHS:\n  - tools/**\n  - tests/**\n  - package.json\n\nFORBIDDEN_PATHS:\n  - src/foundation/craft_model.js\n  - src/foundation/craft_compiler.js\n  - src/foundation/blueprint.js\n  - assets/visual_packs/local_working_visuals/**\n\nCompleted dependencies: m4l-108\n\nRead first:\n  - README_FOR_AGENTS.md\n  - .codex/agent_mesh/COLLABORATION_SYSTEM.md\n  - .codex/agent_mesh/skills/tooling-tests.md\n\nDeliverable:\n  Test imports computeVectorThrusterForceCannon + visual_runtime_adapter.setGimbal; 192/192\n\nValidation:\n  - npm run probe:vector-thruster\n  - npm run test\n\nNotes:\n  None\n\nWhen finished:\n1. Run all validation commands on current HEAD\n2. python tools/agent_dispatch.py complete --task m4lc-201 --result <pass|fail|blocked> --note \"...\"\n3. npm run agent:next — if your lane has another ready task, report idle; do NOT self-assign\n"
-    }
-  ],
-  "count": 1,
+  "spawnPack": [],
+  "count": 0,
   "assign": true
 }
