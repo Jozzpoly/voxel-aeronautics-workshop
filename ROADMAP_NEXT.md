@@ -9,6 +9,7 @@ Active detailed rebase: `docs/ROADMAP_REBASE_2026-07-01.md`.
 - Gate B - deterministic rigid islands and mechanical graph.
 - Gate C - durable Assembly Spaces, ownership, migration, runtime presentation and minimal authoring.
 - Future-readiness hardening - strict import/physics boundaries, offline dependencies, fixed-step health, indexed hot paths and persistence recovery.
+- Visual authoring M4L - Visual Truth and VectorThruster proof. Evidence: `m4l-101` shared renderer profiles (`STUDIO_PREVIEW_PROFILE`, `GAME_DEFAULT_PROFILE`, `GAME_STUDIO_PARITY_PROFILE`); `m4l-102` game diagnostic render mode; `m4l-103` Studio capture harness; `m4l-104` unified parity orchestrator (`npm run parity:capture`); `m4l-105` root-cause classification `environment-policy` (`docs/M4L_VISUAL_TRUTH_BASELINE_2026-07-01.md`); `m4l-106a` game environment policy fix; `m4l-107` Studio duplicate-material diagnostics. Final render capture: **5/5** blocks within thresholds (`blocksWithinThresholds: 5` in `.agent-validation/m4l-capture/visual_parity_render_report.json`); Balloon SSIM **0.963**, luminance delta **−0.0102**. VectorThruster 24-orientation probe remains **synthetic-only** until M4LC `m4lc-201` wires runtime integration.
 
 ## Current: Workbench Foundation / Authoring UX Recovery
 
@@ -27,21 +28,10 @@ Active detailed rebase: `docs/ROADMAP_REBASE_2026-07-01.md`.
 - Visual Asset Pack M4I-B is present on `current_work`: local visual-pack audit remains read-only by default and can produce dry-run cleanup suggestions for protected-art issues such as inherited Balloon rig aliases.
 - Visual Asset Pack M4J is present on `current_work`: VectorThruster can declare an optional renderer-only rig profile for `gimbalA`, `gimbalB` and roll preview axes; Studio, validators, audit tooling and runtime adapter understand the profile while keeping Blueprint/CraftModel/physics/control semantics untouched.
 - Visual authoring M4K is the active polish lane: clean-candidate validation protects `SOURCE_MANIFEST.json` from dirty local visual WIP, Balloon cleanup remains owner-approved only, and real VectorThruster asset proof stays renderer-only.
-- Visual authoring M4L is in progress: the local VectorThruster profile and runtime default pass the 24-orientation visual-vs-force probe, a local imported-visual parity baseline covers Balloon/Hull/Fuel/Thruster/VectorThruster, and the game renderer now matches Studio's sRGB output policy. Remaining visual-truth work is a diagnostic render/capture for lighting, fog and shadow parity, not asset recolor.
 - Mission Map / Terrain Authoring expansion is present on `current_work`: the proving range is materially larger, fog is reduced for long-distance navigation, all mission pads and collidable landmarks are data-driven through `TEST_RANGE`, terrain appearance is controlled through procedural material/patch/strip data, Studio Terrain Authoring V1 can edit/save the local renderer-only terrain preset, and `npm run mission:validate` checks pad/gate clearance plus local preset validity.
 - Roadmap Rebase 2026-07-01 is active: owner feedback about visual darkness, effects, block gaps, VectorThruster direction, primitive hinge behavior, servo/mechanism ambitions and future block binding/programming is captured as product planning input in `docs/ROADMAP_REBASE_2026-07-01.md`.
 
-## Next: M4L - Visual Truth And VectorThruster Proof
-
-- Balloon manifest cleanup is closed: inherited optional `flame` and `gimbalAssembly` bindings were cleared to `null` without touching model files, transforms, materials or installed-pack policy; do not reopen without new diagnostics.
-- Keep local visual-pack audit as evidence, not broad permission to rewrite `local_working_visuals`.
-- Maintain the Studio-vs-game visual parity baseline across all local imported block visuals before recoloring assets.
-- Treat the visible darkness as a shared imported-visual renderer/preview mismatch: color-space output is now aligned, and remaining evidence points at lighting/shadow/fog or Studio preview differences.
-- Keep the VectorThruster 24-orientation proof green: compare visual nozzle direction after `setGimbal` with the actual gameplay force direction.
-- Do not hardcode one-off runtime Euler-axis patches; the current fix is renderer-only profile/sign alignment under the existing ADR 0045 contract.
-- Improve thruster fire as a renderer-only effects MVP after direction correctness is testable.
-
-## Then: M5 - Voxel Fit And Renderer Optimization Contract
+## Next: M5 - Voxel Fit And Renderer Optimization Contract
 
 - Remove or replace the hidden `0.96` visual shrink as an explicit render policy.
 - Prove hit proxies, placement ghost readability, imported visuals and selection still work with flush blocks.
@@ -69,7 +59,7 @@ Active detailed rebase: `docs/ROADMAP_REBASE_2026-07-01.md`.
 - M2A-M2C - Source layout hardening is present on `current_work`: visual asset composition wiring moved behind `game.visual-asset-composition`, direct composition tests cover that seam, and power/HUD readouts moved behind `game.power-control-readouts`. `src/game.js` remains the final composition entrypoint and stays below the architecture guard without gameplay, physics, schema or visual-runtime semantic changes.
 - M3A-M3B - Reliable browser/UI smoke is present as `npm run browser:smoke`: it starts a local static server, probes for a real Chromium/Chrome/Edge CDP target, enters the normal help-modal start path, checks starter-craft/UI/Flight Focus/contract-panel hit-testing, and reports stage-aware `PASS`/`ENVIRONMENT`/`PRODUCT` evidence outside the default core gate. M3B also tightens `game.js` architecture guards and expands seam tests for visual composition plus power/HUD readouts.
 - M3C - Audit ledger cleanup is present on `current_work`: Visual Asset Pack V1 has one canonical contract doc, stale workflow/research strings are corrected, root readiness evidence moved to history, new `window.VAW_*` globals are guarded, checkpoint/CI policy is captured in ADR 0044, and `.agent-validation/` pruning is dry-run-first.
-- M4 - Visual authoring reliability. M4K protects provenance and local visual WIP; M4L must prove visual truth, material parity and VectorThruster visual-vs-force direction across all 24 orientations while keeping Visual Asset Pack V1 renderer-only.
+- M4 - Visual authoring reliability. M4K protects provenance and local visual WIP; M4L visual truth is closed (render parity 5/5, `environment-policy` fix). M4LC remains for runtime VectorThruster proof (`m4lc-201`); synthetic 24-orientation probe is not in-game parity until that lane lands.
 - M5 - Voxel Fit and renderer optimization contract. Remove hidden visual gaps deliberately, preserve hit testing and prepare greedy meshing boundaries.
 - M6 - Mechanical V2 design spike. Redesign hinge/joint capability before schema growth.
 - M7 - Device tuning and direct binding. Introduce stable device endpoints and simple user-facing control without a broad programming system.
