@@ -1,18 +1,29 @@
 (() => {
   'use strict';
 
+  function hostRequire() {
+    if (typeof require === 'function') return require;
+    const mainModule = typeof process !== 'undefined' ? process.mainModule : null;
+    if (mainModule && typeof mainModule.require === 'function') return mainModule.require.bind(mainModule);
+    return null;
+  }
+
+  function ensureRendererProfilesModule(VAW) {
+    const moduleId = 'game.visual-renderer-profiles';
+    if (VAW.inspect().defined.includes(moduleId)) return VAW.require(moduleId);
+    const nodeRequire = hostRequire();
+    if (!nodeRequire) throw new Error(`${moduleId} must be registered before game.scene-environment is used.`);
+    const path = nodeRequire('path');
+    const profilesPath = path.join(process.cwd(), 'src/game/visual-renderer-profiles.js');
+    return nodeRequire(profilesPath).ensureVawModule(VAW);
+  }
+
   window.VAW.define('game.scene-environment', [], () => {
+    ensureRendererProfilesModule(window.VAW);
+
     function requireObject(value, name) {
       if (!value || typeof value !== 'object') throw new TypeError(`${name} is required.`);
       return value;
-    }
-
-    function configureRendererColorOutput(renderer, THREE) {
-      if ('outputColorSpace' in renderer && THREE.SRGBColorSpace) {
-        renderer.outputColorSpace = THREE.SRGBColorSpace;
-      } else if ('outputEncoding' in renderer && THREE.sRGBEncoding) {
-        renderer.outputEncoding = THREE.sRGBEncoding;
-      }
     }
 
     function create(options = {}) {
@@ -26,33 +37,37 @@
       const BLOCKS = requireObject(options.BLOCKS, 'BLOCKS');
       if (!container?.appendChild) throw new TypeError('Scene container is required.');
 
+      const Profiles = window.VAW.require('game.visual-renderer-profiles');
+      const {
+        GAME_DEFAULT_PROFILE,
+        applySceneFog,
+        buildRendererOptions,
+        applyRendererProfile,
+        createLightsFromProfile
+      } = Profiles;
+
       const scene = new THREE.Scene();
       const terrainConfig = TEST_RANGE.terrain || {};
       const fogConfig = terrainConfig.fog || {};
-      const fogColor = Number.isFinite(fogConfig.color) ? fogConfig.color : 0x0b1220;
-      scene.background = new THREE.Color(fogColor);
-      scene.fog = new THREE.FogExp2(fogColor, Number.isFinite(fogConfig.density) ? fogConfig.density : 0.0038);
+      applySceneFog(scene, THREE, GAME_DEFAULT_PROFILE, fogConfig);
 
       const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 1000);
-      const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      const renderer = new THREE.WebGLRenderer(buildRendererOptions(GAME_DEFAULT_PROFILE));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, GAME_DEFAULT_PROFILE.renderer.pixelRatioCap));
       renderer.setSize(window.innerWidth, window.innerHeight);
-      configureRendererColorOutput(renderer, THREE);
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      applyRendererProfile(renderer, THREE, GAME_DEFAULT_PROFILE);
       container.appendChild(renderer.domElement);
 
-      scene.add(new THREE.AmbientLight(0xffffff, 0.66));
-      scene.add(new THREE.HemisphereLight(0xcde8ff, 0x152238, 0.62));
+      for (const light of createLightsFromProfile(THREE, GAME_DEFAULT_PROFILE)) {
+        scene.add(light);
+      }
 
-      const sun = new THREE.DirectionalLight(0xffffff, 0.95);
-      sun.position.set(12, 20, 10);
-      sun.castShadow = true;
-      sun.shadow.mapSize.width = 2048;
-      sun.shadow.mapSize.height = 2048;
-      scene.add(sun);
-
-      const gridHelper = new THREE.GridHelper(GRID.halfExtent * 2, GRID.halfExtent * 2, 0x3b4b66, 0x1c2940);
+      const gridHelper = new THREE.GridHelper(
+        GRID.halfExtent * 2,
+        GRID.halfExtent * 2,
+        GAME_DEFAULT_PROFILE.grid.centerLine,
+        GAME_DEFAULT_PROFILE.grid.gridLine
+      );
       gridHelper.position.y = -0.5;
       scene.add(gridHelper);
 

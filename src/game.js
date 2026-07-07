@@ -2,6 +2,32 @@
 
     if (!window.VAW) throw new Error('Foundation kernel was not initialized before game.js.');
 
+    (function ensureVisualRendererProfiles() {
+      const moduleId = 'game.visual-renderer-profiles';
+      if (window.VAW.inspect().defined.includes(moduleId)) return;
+      const nodeRequire = typeof require === 'function'
+        ? require
+        : (typeof process !== 'undefined' && process.mainModule && process.mainModule.require
+          ? process.mainModule.require.bind(process.mainModule)
+          : null);
+      if (nodeRequire) {
+        const path = nodeRequire('path');
+        const profilesPath = path.join(process.cwd(), 'src/game/visual-renderer-profiles.js');
+        nodeRequire(profilesPath).ensureVawModule(window.VAW);
+        return;
+      }
+      const request = new XMLHttpRequest();
+      request.open('GET', 'src/game/visual-renderer-profiles.js', false);
+      request.send();
+      if (request.status !== 200) {
+        throw new Error('Failed to load visual-renderer-profiles.js for browser bootstrap.');
+      }
+      const module = { exports: {} };
+      // eslint-disable-next-line no-new-func
+      const factory = new Function('module', 'exports', `${request.responseText}\n;return module.exports;`);
+      window.VAW.define(moduleId, [], () => factory(module, module.exports));
+    })();
+
     const SceneEnvironment = window.VAW.require('game.scene-environment');
     const CareerService = window.VAW.require('game.career-service');
     const WorkspaceController = window.VAW.require('game.workspace-controller');
