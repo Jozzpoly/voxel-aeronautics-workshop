@@ -124,7 +124,7 @@ function createVisualParityDiagnostic(Profiles) {
     if (documentRef.body?.style) documentRef.body.style.overflow = 'hidden';
   }
 
-  function createStatusOverlay(document, request, profile) {
+  function createStatusOverlay(document, request, profile, cellScale) {
     const overlay = document.createElement('div');
     overlay.id = 'visual-parity-diagnostic-status';
     overlay.setAttribute('role', 'status');
@@ -142,7 +142,7 @@ function createVisualParityDiagnostic(Profiles) {
       'max-width:min(92vw,520px)'
     ].join(';');
     const target = request.block || request.assetId;
-    overlay.textContent = `visual-parity • profile=${profile.id} • target=${target}`;
+    overlay.textContent = `visual-parity • profile=${profile.id} • target=${target} • cellScale=${cellScale}`;
     document.body.appendChild(overlay);
     return overlay;
   }
@@ -240,6 +240,13 @@ function createVisualParityDiagnostic(Profiles) {
     modelRoot.userData.isVoxelRoot = true;
     modelRoot.userData.type = target.blockType || target.asset.assetId;
     modelRoot.userData.visualAssetId = target.asset.assetId;
+    const ModuleVisualFactory = VAW.require('game.module-visual-factory');
+    const cellScale = ModuleVisualFactory.parseModuleVisualCellScaleDevFlag({
+      search: windowRef?.location?.search || '',
+      storage: windowRef?.localStorage
+    });
+    modelRoot.scale.set(cellScale, cellScale, cellScale);
+    modelRoot.userData.moduleVisualCellScale = cellScale;
     scene.add(modelRoot);
 
     const attached = await loader.attachImportedVisual(modelRoot);
@@ -271,7 +278,7 @@ function createVisualParityDiagnostic(Profiles) {
     };
     windowRef?.addEventListener?.('resize', resize);
 
-    createStatusOverlay(documentRef, request, profile);
+    createStatusOverlay(documentRef, request, profile, cellScale);
 
     const state = Object.freeze({
       ready: true,
@@ -286,6 +293,7 @@ function createVisualParityDiagnostic(Profiles) {
       camera,
       renderer,
       modelRoot,
+      moduleVisualCellScale: cellScale,
       render,
       dispose() {
         if (frameId != null) windowRef?.cancelAnimationFrame?.(frameId);

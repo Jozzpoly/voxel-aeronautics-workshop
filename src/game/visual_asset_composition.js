@@ -37,11 +37,16 @@
         : console.warn.bind(console);
       visualAssetLoader.bootstrapInstalledPacks().catch(warn);
       const visualRuntimeAdapter = VisualRuntimeAdapter.create();
+      const cellScale = ModuleVisualFactory.parseModuleVisualCellScaleDevFlag({
+        search: window?.location?.search || '',
+        storage: window?.localStorage
+      });
       const moduleVisualFactory = ModuleVisualFactory.create({
         THREE,
         sharedGeometry,
         cloneMaterial,
-        visualAssetRegistry
+        visualAssetRegistry,
+        cellScale
       });
       const visualAssetDevControls = VisualAssetDevControls.create({
         visualAssetLoader,
@@ -56,7 +61,8 @@
         visualRuntimeAdapter,
         moduleVisualFactory,
         visualAssetDevControls,
-        createModuleVisual: moduleVisualFactory.createModuleVisual
+        createModuleVisual: moduleVisualFactory.createModuleVisual,
+        moduleVisualCellScale: moduleVisualFactory.activeCellScale
       });
     }
 

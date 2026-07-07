@@ -25,9 +25,23 @@ for (const relative of [
 }
 
 const ModuleVisualFactory = global.VAW.require('game.module-visual-factory');
-const { MODULE_VISUAL_CELL_SCALE, create } = ModuleVisualFactory;
+const {
+  MODULE_VISUAL_CELL_SCALE,
+  MODULE_VISUAL_CELL_SCALE_DEFAULT,
+  MODULE_VISUAL_CELL_SCALE_FLUSH,
+  parseModuleVisualCellScaleDevFlag,
+  create
+} = ModuleVisualFactory;
 
-assert.strictEqual(MODULE_VISUAL_CELL_SCALE, 0.96, 'M5 G1 policy must remain 0.96 until G3 scale experiment.');
+assert.strictEqual(MODULE_VISUAL_CELL_SCALE, 0.96, 'Default export must remain 0.96.');
+assert.strictEqual(MODULE_VISUAL_CELL_SCALE_DEFAULT, 0.96);
+assert.strictEqual(MODULE_VISUAL_CELL_SCALE_FLUSH, 1);
+assert.strictEqual(parseModuleVisualCellScaleDevFlag({ search: '?cellScale=1' }), 1);
+assert.strictEqual(parseModuleVisualCellScaleDevFlag({ search: '?voxelFit=flush' }), 1);
+assert.strictEqual(parseModuleVisualCellScaleDevFlag({ search: '' }), 0.96);
+const storage = { values: new Map(), getItem(key) { return this.values.get(key) || null; }, setItem(key, value) { this.values.set(key, value); } };
+storage.setItem('vaw.moduleVisualCellScale', '1');
+assert.strictEqual(parseModuleVisualCellScaleDevFlag({ search: '', storage }), 1);
 
 function cloneMaterial() {
   return new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x000000 });
@@ -93,8 +107,20 @@ const oriented = factory.createModuleVisual('Thruster', 12, false);
 assertScale(oriented);
 assert.notStrictEqual(oriented.quaternion.w, 1, 'Oriented blocks must still apply basis rotation under cell scale.');
 
+const flushFactory = create({
+  THREE,
+  sharedGeometry: new THREE.BoxGeometry(1, 1, 1),
+  cloneMaterial,
+  cellScale: MODULE_VISUAL_CELL_SCALE_FLUSH
+});
+const flushHull = flushFactory.createModuleVisual('Hull', 0, false);
+assert.strictEqual(flushHull.scale.x, 1);
+assert.strictEqual(flushHull.userData.moduleVisualCellScale, 1);
+
 console.log(JSON.stringify({
   moduleVisualCellScale: MODULE_VISUAL_CELL_SCALE,
+  moduleVisualCellScaleFlush: MODULE_VISUAL_CELL_SCALE_FLUSH,
+  devFlagParse: 'ok',
   hitProxyPolicy: 'ok',
   ghostPlacementOpacity: 0.52,
   blockTypesChecked: blockTypes.length,

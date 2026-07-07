@@ -2,6 +2,8 @@
   'use strict';
 
   window.VAW.define('game.visual-asset-dev-controls', [], () => {
+    const MODULE_CELL_SCALE_STORAGE_KEY = 'vaw.moduleVisualCellScale';
+
     function create({ visualAssetLoader, visualAssetRegistry, blockTypes = null, showStatus = () => {}, logger = console, document = null, window = null, buttonId = 'btn-reload-visual-assets', debugButtonId = 'btn-visual-debug-toggle' } = {}) {
       if (!visualAssetLoader?.reloadInstalledPacks) throw new TypeError('Visual asset dev controls require a visual asset loader.');
       const types = Array.isArray(blockTypes) ? Object.freeze(Array.from(blockTypes)) : undefined;
@@ -55,6 +57,28 @@
         showStatus(debugVisualsVisible ? 'VISUAL DEBUG ON' : 'VISUAL DEBUG OFF', 1200);
         return debugVisualsVisible;
       }
+      function moduleCellScaleFlushEnabled() {
+        try {
+          const stored = window?.localStorage?.getItem?.(MODULE_CELL_SCALE_STORAGE_KEY);
+          return stored === '1' || stored === '1.0' || stored === 'flush';
+        } catch (_) {
+          return false;
+        }
+      }
+      function setModuleCellScaleFlush(enabled) {
+        if (disposed) return moduleCellScaleFlushEnabled();
+        try {
+          window?.localStorage?.setItem?.(MODULE_CELL_SCALE_STORAGE_KEY, enabled ? '1' : '0.96');
+        } catch (error) {
+          logger?.warn?.('Module cell scale preference could not be stored.', error);
+        }
+        const flush = moduleCellScaleFlushEnabled();
+        showStatus(
+          flush ? 'VOXEL FIT FLUSH (1.0) — reload craft to apply' : 'VOXEL FIT DEFAULT (0.96) — reload craft to apply',
+          2400
+        );
+        return flush;
+      }
       const reloadButton = document?.getElementById?.(buttonId);
       if (reloadButton) rememberListener(reloadButton, 'click', () => { reload(); });
       const debugButton = document?.getElementById?.(debugButtonId);
@@ -66,8 +90,15 @@
           visible: () => debugVisualsVisible,
           owner: ownerToken
         });
+        const cellScaleApi = Object.freeze({
+          flushEnabled: moduleCellScaleFlushEnabled,
+          setFlushEnabled: setModuleCellScaleFlush,
+          storageKey: MODULE_CELL_SCALE_STORAGE_KEY,
+          owner: ownerToken
+        });
         window.VAW_VISUAL_ASSET_DIAGNOSTICS = diagnostics;
         window.VAW_VISUAL_ASSET_DEBUG = debugApi;
+        window.VAW_MODULE_CELL_SCALE = cellScaleApi;
         if (canUseBroadcastChannel(window)) {
           try {
             broadcastChannel = new window.BroadcastChannel('vaw-visual-assets');
@@ -94,6 +125,10 @@
             event.preventDefault();
             setDebugVisualsVisible(!debugVisualsVisible);
           }
+          if (key === 'g') {
+            event.preventDefault();
+            setModuleCellScaleFlush(!moduleCellScaleFlushEnabled());
+          }
         });
       }
       function dispose() {
@@ -106,8 +141,17 @@
         broadcastChannel = null;
         if (window?.VAW_VISUAL_ASSET_DIAGNOSTICS === diagnostics) delete window.VAW_VISUAL_ASSET_DIAGNOSTICS;
         if (window?.VAW_VISUAL_ASSET_DEBUG?.owner === ownerToken) delete window.VAW_VISUAL_ASSET_DEBUG;
+        if (window?.VAW_MODULE_CELL_SCALE?.owner === ownerToken) delete window.VAW_MODULE_CELL_SCALE;
       }
-      return Object.freeze({ diagnostics, reload, setDebugVisualsVisible, dispose, broadcastChannel });
+      return Object.freeze({
+        diagnostics,
+        reload,
+        setDebugVisualsVisible,
+        moduleCellScaleFlushEnabled,
+        setModuleCellScaleFlush,
+        dispose,
+        broadcastChannel
+      });
     }
     return Object.freeze({ create });
   });

@@ -58,7 +58,8 @@ function parseArgs(argv) {
     profile: DEFAULT_PROFILE,
     out: DEFAULT_OUT,
     width: DEFAULT_WIDTH,
-    height: DEFAULT_HEIGHT
+    height: DEFAULT_HEIGHT,
+    cellScale: null
   };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
@@ -86,6 +87,11 @@ function parseArgs(argv) {
       options.height = Math.max(64, Number(argv[++index]) || DEFAULT_HEIGHT);
       continue;
     }
+    if (token === '--cell-scale' && argv[index + 1]) {
+      const value = String(argv[++index]).trim().toLowerCase();
+      options.cellScale = value === 'flush' || value === '1' || value === '1.0' ? 1 : Number(value);
+      continue;
+    }
     if (token === '--help' || token === '-h') {
       options.help = true;
     }
@@ -103,6 +109,7 @@ Options:
   --out <dir>        Capture output directory (default: .agent-validation/m4l-capture)
   --width <px>       Viewport width for captures (default: ${DEFAULT_WIDTH})
   --height <px>      Viewport height for captures (default: ${DEFAULT_HEIGHT})
+  --cell-scale <n>   Game module cell scale dev-flag (e.g. 1 or flush for M5 voxel-fit experiment)
 
 Emits: <out>/${REPORT_NAME} when dependencies are satisfied and capture succeeds.
 `;
@@ -374,12 +381,15 @@ async function waitFor(cdp, expression, description, timeoutMs = 30000) {
   throw new Error(`Timed out waiting for ${description}; last=${JSON.stringify(lastValue)}`);
 }
 
-function buildGamePageUrl(baseUrl, blockType, profileId) {
+function buildGamePageUrl(baseUrl, blockType, profileId, cellScale = null) {
   const query = new URLSearchParams({
     visualParity: '1',
     block: blockType,
     profile: profileId
   });
+  if (cellScale != null && Number(cellScale) > 0 && Number(cellScale) !== 0.96) {
+    query.set('cellScale', String(cellScale));
+  }
   return `${baseUrl}/index.html?${query.toString()}`;
 }
 
@@ -396,7 +406,7 @@ async function captureGameBlock(options, blockType) {
   const profile = path.join(os.tmpdir(), `vaw-game-parity-capture-${process.pid}-${blockType}`);
   const server = await startStaticServer(port);
   const baseUrl = `http://127.0.0.1:${port}`;
-  const pageUrl = buildGamePageUrl(baseUrl, blockType, options.profile);
+  const pageUrl = buildGamePageUrl(baseUrl, blockType, options.profile, options.cellScale);
   const names = gameFileNames(blockType);
   const outputDir = path.join(options.out, 'game');
   const pngPath = path.join(outputDir, names.png);
@@ -627,6 +637,7 @@ function buildSuccessReport(options, comparisons, errors) {
     capturedAt: new Date().toISOString(),
     packRoot: options.pack,
     profileId: options.profile,
+    moduleVisualCellScale: options.cellScale == null ? 0.96 : Number(options.cellScale),
     blocks: options.blocks,
     viewport: {
       width: options.width,

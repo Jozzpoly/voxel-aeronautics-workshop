@@ -2,10 +2,49 @@
   'use strict';
 
   window.VAW.define('game.module-visual-factory', ['game.orientation-service'], OrientationService => {
-    const MODULE_VISUAL_CELL_SCALE = 0.96;
+    const MODULE_VISUAL_CELL_SCALE_DEFAULT = 0.96;
+    const MODULE_VISUAL_CELL_SCALE_FLUSH = 1;
+    const MODULE_VISUAL_CELL_SCALE = MODULE_VISUAL_CELL_SCALE_DEFAULT;
+    const MODULE_VISUAL_CELL_SCALE_STORAGE_KEY = 'vaw.moduleVisualCellScale';
+
+    function normalizeCellScaleToken(token) {
+      const value = String(token || '').trim().toLowerCase();
+      if (!value) return null;
+      if (value === 'flush' || value === '1' || value === '1.0') return MODULE_VISUAL_CELL_SCALE_FLUSH;
+      if (value === 'default' || value === '0.96' || value === 'gap') return MODULE_VISUAL_CELL_SCALE_DEFAULT;
+      const numeric = Number(value);
+      if (Number.isFinite(numeric) && numeric > 0 && numeric <= 1.25) return numeric;
+      return null;
+    }
+
+    function readQueryParam(search, key) {
+      const query = String(search || '').replace(/^\?/, '');
+      if (!query) return '';
+      const pattern = new RegExp(`(?:^|&)${key}=([^&]*)`);
+      const match = query.match(pattern);
+      return match ? decodeURIComponent(match[1].replace(/\+/g, ' ')) : '';
+    }
+
+    function parseModuleVisualCellScaleDevFlag({ search = '', storage = null } = {}) {
+      const fromQuery = normalizeCellScaleToken(
+        readQueryParam(search, 'cellScale')
+        || readQueryParam(search, 'moduleCellScale')
+        || readQueryParam(search, 'voxelFit')
+      );
+      if (fromQuery != null) return fromQuery;
+      try {
+        const fromStorage = normalizeCellScaleToken(storage?.getItem?.(MODULE_VISUAL_CELL_SCALE_STORAGE_KEY));
+        if (fromStorage != null) return fromStorage;
+      } catch (_) { /* localStorage may be unavailable in tests. */ }
+      return MODULE_VISUAL_CELL_SCALE_DEFAULT;
+    }
 
     function create(options = {}) {
       const { THREE = window.THREE, sharedGeometry, cloneMaterial, visualAssetRegistry = null } = options;
+      const cellScale = Number(options.cellScale);
+      const activeCellScale = Number.isFinite(cellScale) && cellScale > 0
+        ? cellScale
+        : MODULE_VISUAL_CELL_SCALE_DEFAULT;
       if (!THREE?.Mesh || !THREE?.Group || !sharedGeometry || typeof cloneMaterial !== 'function') {
         throw new TypeError('Module visual factory requires THREE, shared geometry, and cloneMaterial.');
       }
@@ -32,7 +71,8 @@
         root.userData.orientation = normalizeOrientationId(orientation);
         root.userData.visualAssetId = visualAsset?.assetId || null;
         root.userData.visualAssetStatus = visualAsset ? 'registered-fallback' : 'procedural-fallback';
-        root.scale.set(MODULE_VISUAL_CELL_SCALE, MODULE_VISUAL_CELL_SCALE, MODULE_VISUAL_CELL_SCALE);
+        root.scale.set(activeCellScale, activeCellScale, activeCellScale);
+        root.userData.moduleVisualCellScale = activeCellScale;
         if (partUsesOrientation(type)) {
           root.quaternion.copy(getModuleBasis(orientation).quaternion);
         } else {
@@ -238,9 +278,19 @@
         return root;
       }
 
-      return Object.freeze({ createModuleVisual });
+      return Object.freeze({
+        createModuleVisual,
+        activeCellScale: () => activeCellScale
+      });
     }
 
-    return Object.freeze({ create, MODULE_VISUAL_CELL_SCALE });
+    return Object.freeze({
+      create,
+      MODULE_VISUAL_CELL_SCALE,
+      MODULE_VISUAL_CELL_SCALE_DEFAULT,
+      MODULE_VISUAL_CELL_SCALE_FLUSH,
+      MODULE_VISUAL_CELL_SCALE_STORAGE_KEY,
+      parseModuleVisualCellScaleDevFlag
+    });
   });
 })();
