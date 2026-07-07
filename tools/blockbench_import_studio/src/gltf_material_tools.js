@@ -147,6 +147,69 @@
       }));
   }
 
+  function materialDisplayName(material, index) {
+    const trimmed = String(material?.name || '').trim();
+    return trimmed || '(unnamed)';
+  }
+
+  function materialNameKey(material, index) {
+    const trimmed = String(material?.name || '').trim();
+    return trimmed ? trimmed.toLowerCase() : '__unnamed__';
+  }
+
+  function duplicateMaterialNameGroups(gltfJson = {}) {
+    const materials = Array.isArray(gltfJson.materials) ? gltfJson.materials : [];
+    const byKey = new Map();
+    materials.forEach((material, index) => {
+      const key = materialNameKey(material, index);
+      if (!byKey.has(key)) byKey.set(key, { name: materialDisplayName(material, index), materialIndices: [] });
+      byKey.get(key).materialIndices.push(index);
+    });
+    return [...byKey.values()]
+      .filter(group => group.materialIndices.length > 1)
+      .map(group => ({
+        name: group.name,
+        materialIndices: group.materialIndices,
+        materialIndexCount: group.materialIndices.length,
+      }));
+  }
+
+  function materialNameReferenceCounts(gltfJson = {}) {
+    const materials = Array.isArray(gltfJson.materials) ? gltfJson.materials : [];
+    const meshes = Array.isArray(gltfJson.meshes) ? gltfJson.meshes : [];
+    const nodes = Array.isArray(gltfJson.nodes) ? gltfJson.nodes : [];
+    const byKey = new Map();
+
+    function ensureRow(key, displayName) {
+      if (!byKey.has(key)) {
+        byKey.set(key, { name: displayName, primitiveReferenceCount: 0, materialIndices: new Set() });
+      }
+      return byKey.get(key);
+    }
+
+    nodes.forEach(node => {
+      if (!Number.isInteger(node.mesh) || !meshes[node.mesh]) return;
+      for (const primitive of meshes[node.mesh].primitives || []) {
+        const materialIndex = Number.isInteger(primitive.material) ? primitive.material : -1;
+        const material = materialIndex >= 0 ? materials[materialIndex] : null;
+        const displayName = material
+          ? materialDisplayName(material, materialIndex)
+          : (materialIndex >= 0 ? `material_${materialIndex}` : '(default material)');
+        const key = material ? materialNameKey(material, materialIndex) : (materialIndex >= 0 ? `__index_${materialIndex}__` : '__default__');
+        const row = ensureRow(key, displayName);
+        row.primitiveReferenceCount += 1;
+        if (materialIndex >= 0) row.materialIndices.add(materialIndex);
+      }
+    });
+
+    return [...byKey.values()].map(row => ({
+      name: row.name,
+      primitiveReferenceCount: row.primitiveReferenceCount,
+      materialIndexCount: row.materialIndices.size,
+      materialIndices: [...row.materialIndices].sort((a, b) => a - b),
+    }));
+  }
+
   function uniqueMaterialName(gltfJson, baseName) {
     const used = new Set((gltfJson.materials || []).map(material => String(material.name || '').toLowerCase()).filter(Boolean));
     let name = baseName;
@@ -227,6 +290,8 @@
   const api = {
     collectNodePathRecords,
     materialUsage,
+    materialNameReferenceCounts,
+    duplicateMaterialNameGroups,
     normalizeMaterialNames,
     sharedAlphaMaterialWarnings,
     suggestFireNodePaths,

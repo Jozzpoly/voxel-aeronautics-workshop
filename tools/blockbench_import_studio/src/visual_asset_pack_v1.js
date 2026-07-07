@@ -5,6 +5,30 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
+  let MaterialTools = null;
+  try {
+    MaterialTools = require('./gltf_material_tools.js');
+  } catch (_) {
+    MaterialTools = null;
+  }
+
+  function resolveMaterialTools() {
+    if (MaterialTools) return MaterialTools;
+    if (typeof globalThis !== 'undefined' && globalThis.VAW_GLTF_MATERIAL_TOOLS) return globalThis.VAW_GLTF_MATERIAL_TOOLS;
+    return null;
+  }
+
+  function buildMaterialNameFacts(gltfJson = {}) {
+    const tools = resolveMaterialTools();
+    if (tools) {
+      return {
+        duplicateGroups: tools.duplicateMaterialNameGroups(gltfJson),
+        referenceCounts: tools.materialNameReferenceCounts(gltfJson),
+      };
+    }
+    return { duplicateGroups: [], referenceCounts: [] };
+  }
+
   const FORMAT = 'VAW_VISUAL_ASSET_PACK_V1';
   const ALLOWED_ASSET_KINDS = new Set(['blockVisual']);
   const ALLOWED_BLOCK_TYPES = new Set([
@@ -233,7 +257,7 @@
     if (transform.scale !== undefined) validateVector3Object(transform.scale, diagnostics, `${path}.scale`);
   }
 
-  function validateMaterialPolicy(policy, diagnostics, assetPath) {
+  function validateMaterialPolicy(policy, diagnostics, assetPath, materialNameFacts = null) {
     if (policy === undefined) {
       diagnostics.push(diagnostic('error', 'asset.materialPolicyMissing', `${assetPath}.materialPolicy is required and must be an object.`));
       return;
@@ -259,6 +283,27 @@
           if (!name) diagnostics.push(diagnostic('error', 'asset.materialOverrideNameMissing', `${overridePath}.materialName must name a glTF material.`));
           if (item.alpha !== undefined && !ALLOWED_ALPHA_POLICIES.has(item.alpha)) diagnostics.push(diagnostic('error', 'asset.materialOverrideAlphaInvalid', `${overridePath}.alpha has unsupported value '${item.alpha}'.`));
           if (item.doubleSided !== undefined && !ALLOWED_DOUBLE_SIDED_POLICIES.has(item.doubleSided)) diagnostics.push(diagnostic('error', 'asset.materialOverrideDoubleSidedInvalid', `${overridePath}.doubleSided has unsupported value '${item.doubleSided}'.`));
+          const overrideName = String(item.materialName || item.name || '').trim();
+          if (overrideName && materialNameFacts) {
+            const key = overrideName.toLowerCase();
+            const duplicateGroup = (materialNameFacts.duplicateGroups || []).find(group => group.name.toLowerCase() === key);
+            const referenceRow = (materialNameFacts.referenceCounts || []).find(row => row.name.toLowerCase() === key);
+            if (duplicateGroup) {
+              diagnostics.push(diagnostic(
+                'warning',
+                'material.duplicateMaterialName',
+                `${overridePath}.materialName "${overrideName}" matches ${duplicateGroup.materialIndexCount} glTF materials at indices ${duplicateGroup.materialIndices.join(', ')}. Rename duplicate materials in Blockbench before export.`,
+                { materialName: overrideName, materialIndices: duplicateGroup.materialIndices }
+              ));
+            } else if (referenceRow && referenceRow.primitiveReferenceCount > 1) {
+              diagnostics.push(diagnostic(
+                'warning',
+                'material.duplicateMaterialName',
+                `${overridePath}.materialName "${overrideName}" is used by ${referenceRow.primitiveReferenceCount} mesh primitives; the override applies to every match. Rename materials in Blockbench when separate alpha policies are required.`,
+                { materialName: overrideName, primitiveReferenceCount: referenceRow.primitiveReferenceCount }
+              ));
+            }
+          }
         });
       }
     }
@@ -362,7 +407,7 @@
         }
       }
     }
-    validateMaterialPolicy(asset.materialPolicy, diagnostics, assetPath);
+    validateMaterialPolicy(asset.materialPolicy, diagnostics, assetPath, context.materialNameFacts);
     return diagnostics;
   }
 
@@ -370,10 +415,15 @@
     const diagnostics = [];
     const nodeLookup = buildNodeLookup(gltfJson);
     const animationLookup = buildAnimationLookup(gltfJson);
+    const materialNameFacts = buildMaterialNameFacts(gltfJson);
     const duplicateSeverity = manifest ? 'warning' : 'info';
     if (nodeLookup.duplicateNames.length) diagnostics.push(diagnostic(duplicateSeverity, 'gltf.duplicateNodeNames', `Duplicate node names detected: ${nodeLookup.duplicateNames.join(', ')}. This is common in Blockbench. Preview is allowed; VAW export only blocks if a binding uses an ambiguous name/path.`));
     if (nodeLookup.duplicatePaths.length) diagnostics.push(diagnostic(duplicateSeverity, 'gltf.duplicateNodePaths', `Duplicate node paths detected: ${nodeLookup.duplicatePaths.join(', ')}. Preview is allowed; export blocks only ambiguous bindings.`));
     if (animationLookup.duplicateNames.length) diagnostics.push(diagnostic('warning', 'gltf.duplicateClipNames', `Duplicate clip names detected: ${animationLookup.duplicateNames.join(', ')}. Rename clips before binding them for export.`));
+    if (materialNameFacts.duplicateGroups.length) {
+      const names = materialNameFacts.duplicateGroups.map(group => group.name).join(', ');
+      diagnostics.push(diagnostic(duplicateSeverity, 'gltf.duplicateMaterialNames', `Duplicate glTF material names detected: ${names}. Rename materials in Blockbench before binding per-material overrides for export.`));
+    }
     const missingDeps = (dependencies || []).filter(dep => dep.status === 'missing' || dep.status === 'ambiguous' || dep.status === 'external');
     for (const dep of missingDeps) diagnostics.push(diagnostic(dep.status === 'missing' ? 'error' : 'warning', `dependency.${dep.status}`, `${dep.kind || 'dependency'} '${dep.displayUri || dep.uri || '(empty)'}' is ${dep.status}.`));
 
@@ -401,7 +451,7 @@
           if (seenAssetIds.has(asset.assetId)) diagnostics.push(diagnostic('error', 'asset.assetIdDuplicate', `Duplicate assetId '${asset.assetId}' in assets[${index}].`));
           seenAssetIds.add(asset.assetId);
         }
-        diagnostics.push(...validateAsset(asset, index, { nodeLookup, animationLookup, modelRecord, manifestBasePath }));
+        diagnostics.push(...validateAsset(asset, index, { nodeLookup, animationLookup, modelRecord, manifestBasePath, materialNameFacts }));
       });
     }
 

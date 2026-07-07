@@ -101,7 +101,64 @@
     return rows;
   }
 
-  function buildDiagnostics(images, materials, meshes) {
+  function materialDisplayName(material, index) {
+    const trimmed = String(material?.name || '').trim();
+    return trimmed || '(unnamed)';
+  }
+
+  function materialNameKey(material, index) {
+    const trimmed = String(material?.name || '').trim();
+    return trimmed ? trimmed.toLowerCase() : '__unnamed__';
+  }
+
+  function collectDuplicateMaterialNames(gltfJson = {}, meshes = []) {
+    const materials = Array.isArray(gltfJson.materials) ? gltfJson.materials : [];
+    const byKey = new Map();
+    materials.forEach((material, index) => {
+      const key = materialNameKey(material, index);
+      if (!byKey.has(key)) byKey.set(key, { name: materialDisplayName(material, index), materialIndices: [] });
+      byKey.get(key).materialIndices.push(index);
+    });
+    const duplicateDefinitions = [...byKey.values()]
+      .filter(group => group.materialIndices.length > 1)
+      .map(group => ({
+        name: group.name,
+        materialIndices: group.materialIndices,
+        materialIndexCount: group.materialIndices.length,
+        runtimeMeshCount: 0,
+      }));
+
+    const runtimeCounts = new Map();
+    const runtimeLabels = new Map();
+    for (const mesh of meshes) {
+      for (const materialName of mesh.materialNames || []) {
+        const label = String(materialName || '').trim();
+        if (!label || label === '(material)') continue;
+        const key = label.toLowerCase();
+        runtimeCounts.set(key, (runtimeCounts.get(key) || 0) + 1);
+        if (!runtimeLabels.has(key)) runtimeLabels.set(key, label);
+      }
+    }
+
+    const merged = new Map(duplicateDefinitions.map(group => [group.name.toLowerCase(), { ...group }]));
+    for (const [key, count] of runtimeCounts.entries()) {
+      if (count <= 1) continue;
+      const existing = merged.get(key);
+      if (existing) {
+        existing.runtimeMeshCount = count;
+        continue;
+      }
+      merged.set(key, {
+        name: runtimeLabels.get(key) || key,
+        materialIndices: [],
+        materialIndexCount: 0,
+        runtimeMeshCount: count,
+      });
+    }
+    return [...merged.values()];
+  }
+
+  function buildDiagnostics(images, materials, meshes, duplicateMaterialNames = []) {
     const diagnostics = [];
     for (const image of images) {
       if (['missing', 'ambiguous', 'missing-uri', 'missing-image-source'].includes(image.status)) {
@@ -116,6 +173,27 @@
     for (const mesh of meshes) {
       for (const code of mesh.warningCodes || []) diagnostics.push({ severity: code === 'mesh.noPositions' ? 'error' : 'warning', code, message: `${mesh.name}: ${code}` });
     }
+    for (const group of duplicateMaterialNames) {
+      const indexLabel = group.materialIndexCount > 1
+        ? `glTF material indices ${group.materialIndices.join(', ')}`
+        : '';
+      const runtimeLabel = group.runtimeMeshCount > 1
+        ? `${group.runtimeMeshCount} runtime meshes`
+        : '';
+      const scope = [indexLabel, runtimeLabel].filter(Boolean).join(' · ');
+      const renameHint = group.materialIndexCount > 1
+        ? 'Rename duplicate materials in Blockbench before export.'
+        : 'Per-material overrides apply to every mesh that shares this name; rename in Blockbench when you need separate alpha policies.';
+      diagnostics.push({
+        severity: 'warning',
+        code: 'material.duplicateMaterialName',
+        message: `${group.name} is ambiguous (${scope || 'multiple matches'}). ${renameHint}`,
+        materialName: group.name,
+        materialIndices: group.materialIndices,
+        materialIndexCount: group.materialIndexCount,
+        runtimeMeshCount: group.runtimeMeshCount,
+      });
+    }
     return diagnostics;
   }
 
@@ -123,9 +201,10 @@
     const images = imageStatus(gltfJson, bundle, basePath);
     const materials = materialStatus(gltfJson, images);
     const meshes = collectRuntimeMeshes(gltfScene);
+    const duplicateMaterialNames = collectDuplicateMaterialNames(gltfJson, meshes);
     const missingImages = images.filter(image => image.status === 'missing' || image.status === 'ambiguous' || image.status === 'missing-uri' || image.status === 'missing-image-source');
     const texturedMaterials = materials.filter(material => material.slots.length > 0);
-    const diagnostics = buildDiagnostics(images, materials, meshes);
+    const diagnostics = buildDiagnostics(images, materials, meshes, duplicateMaterialNames);
     return {
       schemaVersion: 2,
       ok: diagnostics.filter(item => item.severity === 'error').length === 0 && missingImages.length === 0,
@@ -136,6 +215,7 @@
         runtimeMeshCount: meshes.length,
         texturedMaterialCount: texturedMaterials.length,
         missingOrAmbiguousImageCount: missingImages.length,
+        duplicateMaterialNameCount: duplicateMaterialNames.length,
         diagnosticCount: diagnostics.length,
         warningCount: diagnostics.filter(item => item.severity === 'warning').length,
         errorCount: diagnostics.filter(item => item.severity === 'error').length,
@@ -143,6 +223,7 @@
       images,
       materials,
       meshes,
+      duplicateMaterialNames,
       diagnostics,
       missingImages,
     };
@@ -201,5 +282,12 @@
     return new THREE.MeshBasicMaterial({ map: texture, name: 'VAW diagnostic checker override' });
   }
 
-  return Object.freeze({ analyzeTextures, applyPixelMode, forceDoubleSided, makeCheckerMaterial, buildDiagnostics });
+  return Object.freeze({
+    analyzeTextures,
+    applyPixelMode,
+    forceDoubleSided,
+    makeCheckerMaterial,
+    buildDiagnostics,
+    collectDuplicateMaterialNames,
+  });
 });

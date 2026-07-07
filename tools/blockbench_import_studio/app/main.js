@@ -1802,7 +1802,8 @@
       const summary = report ? report.summary : null;
       el['texture-summary'].innerHTML = summary ? [
         ['images', summary.imageCount], ['textures', summary.textureCount], ['materials', summary.materialCount],
-        ['runtime meshes', summary.runtimeMeshCount], ['missing/ambiguous images', summary.missingOrAmbiguousImageCount], ['diag', summary.diagnosticCount || 0], ['warnings', summary.warningCount || 0]
+        ['runtime meshes', summary.runtimeMeshCount], ['duplicate material names', summary.duplicateMaterialNameCount || 0],
+        ['missing/ambiguous images', summary.missingOrAmbiguousImageCount], ['diag', summary.diagnosticCount || 0], ['warnings', summary.warningCount || 0]
       ].map(([key, value]) => `<div class="fact"><strong>${escapeHtml(key)}</strong><span>${escapeHtml(String(value))}</span></div>`).join('') : '';
     }
     if (el['texture-list']) {

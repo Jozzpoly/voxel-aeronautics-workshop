@@ -81,6 +81,35 @@ async function main() {
   const missingTextureReport = TextureReport.analyzeTextures({ gltfJson: gltf, bundle: Resolver.createBundle([new FakeFile('model.gltf', 'project/model.gltf', JSON.stringify(gltf))]), basePath: 'project' });
   assert.ok(missingTextureReport.diagnostics.some(item => item.code.startsWith('texture.image.')));
 
+  const duplicateMaterialGltf = {
+    asset: { version: '2.0' },
+    materials: [
+      { name: 'NozzleMat', alphaMode: 'OPAQUE' },
+      { name: 'NozzleMat', alphaMode: 'MASK', alphaCutoff: 0.1 },
+      { name: 'FlameMat', alphaMode: 'BLEND' },
+    ],
+    meshes: [
+      { primitives: [{ material: 0 }] },
+      { primitives: [{ material: 1 }] },
+      { primitives: [{ material: 2 }] },
+    ],
+    nodes: [
+      { name: 'Root', children: [1, 2, 3] },
+      { name: 'nozzle', mesh: 0 },
+      { name: 'nozzleTrim', mesh: 1 },
+      { name: 'flame', mesh: 2 },
+    ],
+  };
+  const duplicateMaterialReport = TextureReport.analyzeTextures({ gltfJson: duplicateMaterialGltf });
+  assert.equal(duplicateMaterialReport.summary.duplicateMaterialNameCount, 1, 'duplicate glTF material names should be counted before export');
+  assert.ok(
+    duplicateMaterialReport.diagnostics.some(item => item.code === 'material.duplicateMaterialName' && /NozzleMat/i.test(item.message)),
+    'texture diagnostics must surface duplicate material names before export'
+  );
+  const duplicateMaterialGroups = MaterialTools.duplicateMaterialNameGroups(duplicateMaterialGltf);
+  assert.equal(duplicateMaterialGroups.length, 1);
+  assert.deepEqual(duplicateMaterialGroups[0].materialIndices, [0, 1]);
+
   const sharedAlphaGltf = {
     asset: { version: '2.0' },
     materials: [{ alphaMode: 'MASK', alphaCutoff: 0.05, doubleSided: true }],
@@ -104,6 +133,9 @@ async function main() {
   assert.equal(split.gltfJson.materials[1].alphaMode, 'BLEND');
   assert.equal(split.gltfJson.meshes[0].primitives[0].material, 0, 'body primitive must keep original material');
   assert.equal(split.gltfJson.meshes[1].primitives[0].material, 1, 'fire primitive must use split blend material');
+  const splitMaterialReport = TextureReport.analyzeTextures({ gltfJson: split.gltfJson });
+  assert.equal(splitMaterialReport.summary.duplicateMaterialNameCount, 0, 'split fire/body materials must not look like duplicate names');
+  assert.equal(splitMaterialReport.diagnostics.some(item => item.code === 'material.duplicateMaterialName'), false);
 
   const projectReport = ProjectFilesReport.buildProjectFilesReport({
     bundle,
@@ -182,6 +214,21 @@ async function main() {
   assert.equal(validPackResult.vawReady, true);
   assert.equal(validPackResult.facts.packId, 'core_blockbench_test');
   assert.ok(validPackResult.diagnostics.some(d => d.code === 'gltf.duplicateNodeNames' && d.severity === 'warning'), 'duplicate node names should warn, not block path-based bindings');
+
+  const duplicateMaterialPack = VisualAssetPack.inferManifest(duplicateMaterialGltf, { basename: 'duplicate_materials.gltf', normalizedPath: 'models/duplicate_materials.gltf' }, { blockTypes: ['Thruster'] });
+  duplicateMaterialPack.assets[0].materialPolicy.materialOverrides = [
+    { materialName: 'NozzleMat', alpha: 'opaque' },
+    { materialName: 'FlameMat', alpha: 'blend' },
+  ];
+  const duplicateMaterialPackResult = VisualAssetPack.validateManifest({
+    manifest: duplicateMaterialPack,
+    gltfJson: duplicateMaterialGltf,
+    dependencies: [],
+    modelRecord: { normalizedPath: 'models/duplicate_materials.gltf' },
+  });
+  assert.equal(duplicateMaterialPackResult.vawReady, true, 'duplicate material names warn but do not block export');
+  assert.ok(duplicateMaterialPackResult.diagnostics.some(d => d.code === 'gltf.duplicateMaterialNames' && /NozzleMat/i.test(d.message)), 'manifest validation must surface duplicate glTF material names before export');
+  assert.ok(duplicateMaterialPackResult.diagnostics.some(d => d.code === 'material.duplicateMaterialName' && /NozzleMat/i.test(d.message)), 'material override ambiguity must warn before export');
 
   const inferredWithoutBlockType = VisualAssetPack.inferManifest(embeddedGltf, { basename: 'test_anim.gltf', normalizedPath: 'embedded/test_model_alfa_anim_BaA.gltf' });
   assert.deepEqual(inferredWithoutBlockType.assets[0].bindings.blockTypes, [], 'Studio must not silently default inferred packs to Thruster.');
