@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-07T03:18:53Z",
+  "updatedAt": "2026-07-07T03:23:53Z",
   "phases": [
     {
       "id": "REMEDIATION",
@@ -394,7 +394,7 @@
       "phase": "M4L",
       "priority": 35,
       "lane": "visual-renderer",
-      "status": "in_progress",
+      "status": "done",
       "title": "Fix game environment policy (expected path)",
       "dependsOn": [
         "m4l-105"
@@ -407,7 +407,9 @@
       ],
       "notes": "Only if m4l-105 classifies environment-policy",
       "assignedAt": "2026-07-07T03:17:51Z",
-      "assignedSlot": "visual-renderer-1"
+      "assignedSlot": "visual-renderer-1",
+      "completedAt": "2026-07-07T03:23:53Z",
+      "lastNote": "Balloon SSIM 0.963 luminance delta -0.0102; 5/5 blocks pass parity:capture exit 0"
     },
     {
       "id": "m4l-107",
@@ -505,7 +507,7 @@
       "phase": "M4L",
       "priority": 40,
       "lane": "docs-convergence",
-      "status": "pending",
+      "status": "ready",
       "title": "M4L milestone closure",
       "dependsOn": [
         "m4l-106a",

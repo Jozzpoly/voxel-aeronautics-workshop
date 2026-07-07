@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-07T03:18:53Z",
+  "updatedAt": "2026-07-07T03:23:53Z",
   "slots": [
     {
       "id": "dispatcher-1",
@@ -29,9 +29,9 @@
     {
       "id": "visual-renderer-1",
       "lane": "visual-renderer",
-      "status": "busy",
+      "status": "idle",
       "role": "scene_environment, diagnostic render mode, renderer profiles",
-      "currentTaskId": "m4l-106a",
+      "currentTaskId": null,
       "notes": "Reconciled r0-004: ghost busy cleared"
     },
     {
