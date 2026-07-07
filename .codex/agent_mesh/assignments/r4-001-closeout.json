@@ -1,0 +1,54 @@
+{
+  "taskId": "r4-001",
+  "phase": "REMEDIATION",
+  "lane": "qa-validation",
+  "slot": "qa-validation-1",
+  "result": "pass",
+  "completedAt": "2026-07-07T03:10:00Z",
+  "headSha": "0ed0e84cc02d4830a1185d6d6b8ab62d2ac6b32a",
+  "headShort": "0ed0e84",
+  "commitStack": {
+    "C1-harness": "d3337b6",
+    "C2-agent-mesh": "1e97566",
+    "C3-m4l-101-profiles": "5d1dc2b",
+    "C4-m4l-107-studio-diagnostics": "7b1b1ca",
+    "C5-css-regen": "0ed0e84"
+  },
+  "evidencePath": "evidence/ENV_BASELINE_2026-07-07-remediation.md",
+  "validation": {
+    "check:css": {
+      "result": "pass",
+      "note": "18230 candidates, hash 107d94a7…"
+    },
+    "validate:fast": {
+      "result": "fail",
+      "artifact": ".agent-validation/fast-20260707T030824.701157Z-4268/summary.json",
+      "stagesPass": 3,
+      "stagesFail": 1,
+      "classification": "HARNESS",
+      "note": "gate-c side-effects from concurrent r4-002 dirty paths; suite body passed"
+    },
+    "studio:test": { "result": "pass" },
+    "visual:test": {
+      "result": "fail",
+      "classification": "PRODUCT",
+      "note": "visual-renderer-profiles.js Studio path string triggers integration guard (C3)"
+    },
+    "browser:smoke": {
+      "result": "pass",
+      "starterBlocks": 17,
+      "consoleErrors": 0
+    },
+    "probe:vector-thruster:summary": {
+      "result": "pass",
+      "checked": 192,
+      "profiles": 2
+    }
+  },
+  "unlocks": ["DEC-REMEDIATION-COMPLETE quorum input"],
+  "followUp": [
+    "Re-run validate:fast on clean tree after r4-002 lands",
+    "visual-renderer lane: fix C3 Studio path annotation for visual:test green"
+  ],
+  "productEdits": false
+}
