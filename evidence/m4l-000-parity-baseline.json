@@ -1,0 +1,293 @@
+﻿{
+  "visualParityBaseline": "M4L",
+  "packRoot": "C:\\Pliki_Joza\\Gamo_devovo\\VAW\\VAW\\voxel-aeronautics-workshop-current_work-GRok\\assets\\visual_packs\\local_working_visuals",
+  "manifest": "C:\\Pliki_Joza\\Gamo_devovo\\VAW\\VAW\\voxel-aeronautics-workshop-current_work-GRok\\assets\\visual_packs\\local_working_visuals\\VAW_VISUAL_ASSET_PACK_V1.json",
+  "blocks": [
+    "Balloon",
+    "Hull",
+    "Fuel",
+    "Thruster",
+    "VectorThruster"
+  ],
+  "assets": [
+    {
+      "assetId": "local_hull_visual",
+      "blockTypes": [
+        "Hull"
+      ],
+      "modelPath": "models/blocks/hull/model.gltf",
+      "materialPolicy": {
+        "pixelated": true,
+        "alpha": "auto",
+        "doubleSided": "from-gltf"
+      },
+      "materials": [
+        {
+          "index": 0,
+          "name": "",
+          "alphaMode": "MASK",
+          "hasBaseColorTexture": true,
+          "baseColorFactor": null,
+          "doubleSided": true
+        }
+      ],
+      "duplicateMaterialNames": [],
+      "images": [
+        {
+          "index": 0,
+          "name": "",
+          "hasUri": true,
+          "luma": {
+            "visiblePixels": 6144,
+            "average": 0.4349,
+            "min": 0.1185,
+            "max": 0.7666
+          }
+        }
+      ],
+      "averageTextureLuma": 0.4349
+    },
+    {
+      "assetId": "local_fuel_visual",
+      "blockTypes": [
+        "Fuel"
+      ],
+      "modelPath": "models/blocks/fuel/model.gltf",
+      "materialPolicy": {
+        "pixelated": true,
+        "alpha": "auto",
+        "doubleSided": "from-gltf"
+      },
+      "materials": [
+        {
+          "index": 0,
+          "name": "",
+          "alphaMode": "MASK",
+          "hasBaseColorTexture": true,
+          "baseColorFactor": null,
+          "doubleSided": true
+        }
+      ],
+      "duplicateMaterialNames": [],
+      "images": [
+        {
+          "index": 0,
+          "name": "",
+          "hasUri": true,
+          "luma": {
+            "visiblePixels": 6144,
+            "average": 0.6586,
+            "min": 0.102,
+            "max": 0.9255
+          }
+        }
+      ],
+      "averageTextureLuma": 0.6586
+    },
+    {
+      "assetId": "local_thruster_visual",
+      "blockTypes": [
+        "Thruster"
+      ],
+      "modelPath": "models/blocks/thruster/model.gltf",
+      "materialPolicy": {
+        "pixelated": true,
+        "alpha": "auto",
+        "doubleSided": "from-gltf",
+        "materialOverrides": [
+          {
+            "materialName": "material_0",
+            "alpha": "mask"
+          },
+          {
+            "materialName": "material_0__fire_blend",
+            "alpha": "blend"
+          }
+        ]
+      },
+      "materials": [
+        {
+          "index": 0,
+          "name": "material_0",
+          "alphaMode": "MASK",
+          "hasBaseColorTexture": true,
+          "baseColorFactor": null,
+          "doubleSided": true
+        },
+        {
+          "index": 1,
+          "name": "material_0__fire_blend",
+          "alphaMode": "BLEND",
+          "hasBaseColorTexture": true,
+          "baseColorFactor": null,
+          "doubleSided": true
+        }
+      ],
+      "duplicateMaterialNames": [],
+      "images": [
+        {
+          "index": 0,
+          "name": "",
+          "hasUri": true,
+          "luma": {
+            "visiblePixels": 10360,
+            "average": 0.4467,
+            "min": 0.0824,
+            "max": 1.0
+          }
+        }
+      ],
+      "averageTextureLuma": 0.4467
+    },
+    {
+      "assetId": "local_vector_thruster_visual",
+      "blockTypes": [
+        "VectorThruster"
+      ],
+      "modelPath": "models/blocks/vector_thruster/model.gltf",
+      "materialPolicy": {
+        "pixelated": true,
+        "alpha": "auto",
+        "doubleSided": "from-gltf",
+        "materialOverrides": [
+          {
+            "materialName": "material_0",
+            "alpha": "mask"
+          },
+          {
+            "materialName": "material_0__fire_blend",
+            "alpha": "blend"
+          }
+        ]
+      },
+      "materials": [
+        {
+          "index": 0,
+          "name": "material_0",
+          "alphaMode": "MASK",
+          "hasBaseColorTexture": true,
+          "baseColorFactor": null,
+          "doubleSided": true
+        },
+        {
+          "index": 1,
+          "name": "material_0__fire_blend",
+          "alphaMode": "BLEND",
+          "hasBaseColorTexture": true,
+          "baseColorFactor": null,
+          "doubleSided": true
+        }
+      ],
+      "duplicateMaterialNames": [],
+      "images": [
+        {
+          "index": 0,
+          "name": "",
+          "hasUri": true,
+          "luma": {
+            "visiblePixels": 10360,
+            "average": 0.4467,
+            "min": 0.0824,
+            "max": 1.0
+          }
+        }
+      ],
+      "averageTextureLuma": 0.4467
+    },
+    {
+      "assetId": "local_balloon_visual",
+      "blockTypes": [
+        "Balloon"
+      ],
+      "modelPath": "models/blocks/balloon/model.gltf",
+      "materialPolicy": {
+        "pixelated": true,
+        "alpha": "auto",
+        "doubleSided": "from-gltf"
+      },
+      "materials": [
+        {
+          "index": 0,
+          "name": "material_0",
+          "alphaMode": "MASK",
+          "hasBaseColorTexture": true,
+          "baseColorFactor": null,
+          "doubleSided": true
+        }
+      ],
+      "duplicateMaterialNames": [],
+      "images": [
+        {
+          "index": 0,
+          "name": "",
+          "hasUri": true,
+          "luma": {
+            "visiblePixels": 6144,
+            "average": 0.5153,
+            "min": 0.0941,
+            "max": 0.9333
+          }
+        }
+      ],
+      "averageTextureLuma": 0.5153
+    }
+  ],
+  "renderer": {
+    "game": {
+      "source": "src/game/scene_environment.js",
+      "setsOutputColorSpace": true,
+      "fogEnabled": true,
+      "shadowMapEnabled": true,
+      "lightLines": [
+        "scene.add(new THREE.AmbientLight(0xffffff, 0.66));",
+        "scene.add(new THREE.HemisphereLight(0xcde8ff, 0x152238, 0.62));",
+        "const sun = new THREE.DirectionalLight(0xffffff, 0.95);"
+      ],
+      "background": "0x0b1220"
+    },
+    "studio": {
+      "source": "tools/blockbench_import_studio/src/minimal_gltf_viewer.js",
+      "setsOutputColorSpace": true,
+      "fogEnabled": false,
+      "shadowMapEnabled": false,
+      "lightLines": [
+        "this.scene.add(new THREE.HemisphereLight(0xffffff, 0x1a2b44, 1.35));",
+        "const key = new THREE.DirectionalLight(0xffffff, 1.75);",
+        "const rim = new THREE.DirectionalLight(0x9edcff, 0.6);"
+      ],
+      "background": "0x07111f"
+    }
+  },
+  "classification": {
+    "importedVisualDarkness": "renderer-preview-mismatch",
+    "balloonDarkness": "renderer-preview-mismatch",
+    "importedVisualsPreviewMismatch": true,
+    "affectedBlocksBySharedRendererSettings": [
+      "Balloon",
+      "Fuel",
+      "Hull",
+      "Thruster",
+      "VectorThruster"
+    ],
+    "primaryCauses": [
+      "lighting/fog/shadow/preview mismatch"
+    ],
+    "ruledOutForNow": [
+      "obvious Balloon texture luminance outlier",
+      "Balloon-specific materialPolicy difference",
+      "Balloon duplicate material-name override ambiguity"
+    ],
+    "textureLumaByBlock": {
+      "Balloon": 0.5153,
+      "Fuel": 0.6586,
+      "Hull": 0.4349,
+      "Thruster": 0.4467,
+      "VectorThruster": 0.4467
+    },
+    "packAverageTextureLuma": 0.5004,
+    "balloonToComparatorTextureLumaRatio": 1.1849,
+    "balloonToPackAverageTextureLumaRatio": 1.0298,
+    "visibilityNote": "Shared renderer settings affect all imported visuals; high-luminance or large bright surfaces make the mismatch easier to see.",
+    "requiresRenderCaptureForFinalWeighting": true
+  }
+}

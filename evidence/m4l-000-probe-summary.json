@@ -1,0 +1,28 @@
+﻿
+> voxel-aeronautics-workshop@0.8.2-foundation.workbench-foundation probe:vector-thruster:summary
+> node tools/probe_vector_thruster_direction.js --summary --report-only
+
+{
+  "vectorThrusterDirectionProbe": "ok",
+  "model": "expected force direction from computeVectorThrusterForceCannon vs visual +X after renderer rig profile",
+  "profiles": [
+    {
+      "source": "runtime-default",
+      "checked": 192,
+      "toleranceDegrees": 2,
+      "ok": true,
+      "mismatchCount": 0,
+      "worstAngleErrorDegrees": 0,
+      "worstCase": null
+    },
+    {
+      "source": "assets\\visual_packs\\local_working_visuals\\VAW_VISUAL_ASSET_PACK_V1.json:local_vector_thruster_visual",
+      "checked": 192,
+      "toleranceDegrees": 2,
+      "ok": true,
+      "mismatchCount": 0,
+      "worstAngleErrorDegrees": 0,
+      "worstCase": null
+    }
+  ]
+}

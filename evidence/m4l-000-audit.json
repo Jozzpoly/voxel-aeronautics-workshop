@@ -1,0 +1,279 @@
+﻿{
+  "assetReports": [
+    {
+      "assetId": "local_hull_visual",
+      "blockTypes": [
+        "Hull"
+      ],
+      "cleanupSuggestions": [],
+      "diagnostics": [],
+      "modelExists": true,
+      "modelPath": "models/blocks/hull/model.gltf"
+    },
+    {
+      "assetId": "local_fuel_visual",
+      "blockTypes": [
+        "Fuel"
+      ],
+      "cleanupSuggestions": [],
+      "diagnostics": [],
+      "modelExists": true,
+      "modelPath": "models/blocks/fuel/model.gltf"
+    },
+    {
+      "assetId": "local_thruster_visual",
+      "blockTypes": [
+        "Thruster"
+      ],
+      "cleanupSuggestions": [
+        {
+          "action": "review-spelling",
+          "assetId": "local_thruster_visual",
+          "blockTypes": [
+            "Thruster"
+          ],
+          "currentValue": "/thuster_base_bone",
+          "path": "assets[2].bindings.nodes.visualRoot",
+          "reason": "Binding spelling contains \"thuster\"; review whether this is intentional.",
+          "suggestedValue": "/thuster_base_bone"
+        },
+        {
+          "action": "review-spelling",
+          "assetId": "local_thruster_visual",
+          "blockTypes": [
+            "Thruster"
+          ],
+          "currentValue": "thuster_fire",
+          "path": "assets[2].bindings.nodes.flame",
+          "reason": "Binding spelling contains \"thuster\"; review whether this is intentional.",
+          "suggestedValue": "thuster_fire"
+        }
+      ],
+      "diagnostics": [
+        {
+          "code": "visualAssetAudit.suspiciousBindingSpelling",
+          "message": "Binding \"/thuster_base_bone\" contains \"thuster\"; review whether this is an intentional model node name or a carried-over typo.",
+          "path": "assets[2].bindings.nodes.visualRoot",
+          "severity": "info"
+        },
+        {
+          "code": "visualAssetAudit.suspiciousBindingSpelling",
+          "message": "Binding \"thuster_fire\" contains \"thuster\"; review whether this is an intentional model node name or a carried-over typo.",
+          "path": "assets[2].bindings.nodes.flame",
+          "severity": "info"
+        }
+      ],
+      "modelExists": true,
+      "modelPath": "models/blocks/thruster/model.gltf"
+    },
+    {
+      "assetId": "local_vector_thruster_visual",
+      "blockTypes": [
+        "VectorThruster"
+      ],
+      "cleanupSuggestions": [
+        {
+          "action": "review-spelling",
+          "assetId": "local_vector_thruster_visual",
+          "blockTypes": [
+            "VectorThruster"
+          ],
+          "currentValue": "/thuster_base_bone",
+          "path": "assets[3].bindings.nodes.visualRoot",
+          "reason": "Binding spelling contains \"thuster\"; review whether this is intentional.",
+          "suggestedValue": "/thuster_base_bone"
+        },
+        {
+          "action": "review-spelling",
+          "assetId": "local_vector_thruster_visual",
+          "blockTypes": [
+            "VectorThruster"
+          ],
+          "currentValue": "thuster_fire",
+          "path": "assets[3].bindings.nodes.flame",
+          "reason": "Binding spelling contains \"thuster\"; review whether this is intentional.",
+          "suggestedValue": "thuster_fire"
+        },
+        {
+          "action": "review-spelling",
+          "assetId": "local_vector_thruster_visual",
+          "blockTypes": [
+            "VectorThruster"
+          ],
+          "currentValue": "thuster_nozzle",
+          "path": "assets[3].bindings.nodes.gimbalAssembly",
+          "reason": "Binding spelling contains \"thuster\"; review whether this is intentional.",
+          "suggestedValue": "thuster_nozzle"
+        }
+      ],
+      "diagnostics": [
+        {
+          "code": "visualAssetAudit.suspiciousBindingSpelling",
+          "message": "Binding \"/thuster_base_bone\" contains \"thuster\"; review whether this is an intentional model node name or a carried-over typo.",
+          "path": "assets[3].bindings.nodes.visualRoot",
+          "severity": "info"
+        },
+        {
+          "code": "visualAssetAudit.suspiciousBindingSpelling",
+          "message": "Binding \"thuster_fire\" contains \"thuster\"; review whether this is an intentional model node name or a carried-over typo.",
+          "path": "assets[3].bindings.nodes.flame",
+          "severity": "info"
+        },
+        {
+          "code": "visualAssetAudit.suspiciousBindingSpelling",
+          "message": "Binding \"thuster_nozzle\" contains \"thuster\"; review whether this is an intentional model node name or a carried-over typo.",
+          "path": "assets[3].bindings.nodes.gimbalAssembly",
+          "severity": "info"
+        }
+      ],
+      "modelExists": true,
+      "modelPath": "models/blocks/vector_thruster/model.gltf"
+    },
+    {
+      "assetId": "local_balloon_visual",
+      "blockTypes": [
+        "Balloon"
+      ],
+      "cleanupSuggestions": [],
+      "diagnostics": [],
+      "modelExists": true,
+      "modelPath": "models/blocks/balloon/model.gltf"
+    }
+  ],
+  "assets": [
+    {
+      "assetId": "local_hull_visual",
+      "blockTypes": [
+        "Hull"
+      ],
+      "modelExists": true,
+      "modelPath": "models/blocks/hull/model.gltf"
+    },
+    {
+      "assetId": "local_fuel_visual",
+      "blockTypes": [
+        "Fuel"
+      ],
+      "modelExists": true,
+      "modelPath": "models/blocks/fuel/model.gltf"
+    },
+    {
+      "assetId": "local_thruster_visual",
+      "blockTypes": [
+        "Thruster"
+      ],
+      "modelExists": true,
+      "modelPath": "models/blocks/thruster/model.gltf"
+    },
+    {
+      "assetId": "local_vector_thruster_visual",
+      "blockTypes": [
+        "VectorThruster"
+      ],
+      "modelExists": true,
+      "modelPath": "models/blocks/vector_thruster/model.gltf"
+    },
+    {
+      "assetId": "local_balloon_visual",
+      "blockTypes": [
+        "Balloon"
+      ],
+      "modelExists": true,
+      "modelPath": "models/blocks/balloon/model.gltf"
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "visualAssetAudit.suspiciousBindingSpelling",
+      "message": "Binding \"/thuster_base_bone\" contains \"thuster\"; review whether this is an intentional model node name or a carried-over typo.",
+      "path": "assets[2].bindings.nodes.visualRoot",
+      "severity": "info"
+    },
+    {
+      "code": "visualAssetAudit.suspiciousBindingSpelling",
+      "message": "Binding \"thuster_fire\" contains \"thuster\"; review whether this is an intentional model node name or a carried-over typo.",
+      "path": "assets[2].bindings.nodes.flame",
+      "severity": "info"
+    },
+    {
+      "code": "visualAssetAudit.suspiciousBindingSpelling",
+      "message": "Binding \"/thuster_base_bone\" contains \"thuster\"; review whether this is an intentional model node name or a carried-over typo.",
+      "path": "assets[3].bindings.nodes.visualRoot",
+      "severity": "info"
+    },
+    {
+      "code": "visualAssetAudit.suspiciousBindingSpelling",
+      "message": "Binding \"thuster_fire\" contains \"thuster\"; review whether this is an intentional model node name or a carried-over typo.",
+      "path": "assets[3].bindings.nodes.flame",
+      "severity": "info"
+    },
+    {
+      "code": "visualAssetAudit.suspiciousBindingSpelling",
+      "message": "Binding \"thuster_nozzle\" contains \"thuster\"; review whether this is an intentional model node name or a carried-over typo.",
+      "path": "assets[3].bindings.nodes.gimbalAssembly",
+      "severity": "info"
+    }
+  ],
+  "ok": true,
+  "packRoot": "C:\\Pliki_Joza\\Gamo_devovo\\VAW\\VAW\\voxel-aeronautics-workshop-current_work-GRok\\assets\\visual_packs\\local_working_visuals",
+  "suggestedManifestCleanup": {
+    "actions": [
+      {
+        "action": "review-spelling",
+        "assetId": "local_thruster_visual",
+        "blockTypes": [
+          "Thruster"
+        ],
+        "currentValue": "/thuster_base_bone",
+        "path": "assets[2].bindings.nodes.visualRoot",
+        "reason": "Binding spelling contains \"thuster\"; review whether this is intentional.",
+        "suggestedValue": "/thuster_base_bone"
+      },
+      {
+        "action": "review-spelling",
+        "assetId": "local_thruster_visual",
+        "blockTypes": [
+          "Thruster"
+        ],
+        "currentValue": "thuster_fire",
+        "path": "assets[2].bindings.nodes.flame",
+        "reason": "Binding spelling contains \"thuster\"; review whether this is intentional.",
+        "suggestedValue": "thuster_fire"
+      },
+      {
+        "action": "review-spelling",
+        "assetId": "local_vector_thruster_visual",
+        "blockTypes": [
+          "VectorThruster"
+        ],
+        "currentValue": "/thuster_base_bone",
+        "path": "assets[3].bindings.nodes.visualRoot",
+        "reason": "Binding spelling contains \"thuster\"; review whether this is intentional.",
+        "suggestedValue": "/thuster_base_bone"
+      },
+      {
+        "action": "review-spelling",
+        "assetId": "local_vector_thruster_visual",
+        "blockTypes": [
+          "VectorThruster"
+        ],
+        "currentValue": "thuster_fire",
+        "path": "assets[3].bindings.nodes.flame",
+        "reason": "Binding spelling contains \"thuster\"; review whether this is intentional.",
+        "suggestedValue": "thuster_fire"
+      },
+      {
+        "action": "review-spelling",
+        "assetId": "local_vector_thruster_visual",
+        "blockTypes": [
+          "VectorThruster"
+        ],
+        "currentValue": "thuster_nozzle",
+        "path": "assets[3].bindings.nodes.gimbalAssembly",
+        "reason": "Binding spelling contains \"thuster\"; review whether this is intentional.",
+        "suggestedValue": "thuster_nozzle"
+      }
+    ],
+    "mode": "dry-run"
+  }
+}

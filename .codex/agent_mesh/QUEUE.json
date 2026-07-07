@@ -1,0 +1,347 @@
+{
+  "version": 1,
+  "updatedAt": "2026-07-07T02:37:02Z",
+  "phases": [
+    {
+      "id": "M0",
+      "label": "Environment baseline",
+      "milestone": "M0-env"
+    },
+    {
+      "id": "M4L",
+      "label": "Visual Truth completion",
+      "milestone": "M4L"
+    },
+    {
+      "id": "M4LC",
+      "label": "VectorThruster real integration gate",
+      "milestone": "M4L-C-prime"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "m0-001",
+      "phase": "M0",
+      "priority": 10,
+      "lane": "env-infra",
+      "status": "done",
+      "title": "Synthetic git init for local validation",
+      "dependsOn": [],
+      "allowedPathsExtra": [],
+      "acceptance": "git rev-parse HEAD succeeds; branch current_work",
+      "validation": [
+        "git status --short --branch",
+        "git rev-parse HEAD"
+      ],
+      "result": "pass",
+      "notes": "Synthetic init 75a3762 — not origin/current_work"
+    },
+    {
+      "id": "m0-002",
+      "phase": "M0",
+      "priority": 11,
+      "lane": "env-infra",
+      "status": "done",
+      "title": "Align with origin/VAW_GRoK (owner-authorized branch)",
+      "dependsOn": [
+        "m0-001"
+      ],
+      "acceptance": "git fetch works; local VAW_GRoK tracks origin/VAW_GRoK",
+      "validation": [
+        "git rev-parse HEAD origin/VAW_GRoK",
+        "git fetch origin --prune"
+      ],
+      "result": "pass",
+      "notes": "Owner 2026-07-07: use only VAW_GRoK; local feature branches allowed; ask before other remotes"
+    },
+    {
+      "id": "m0-003",
+      "phase": "M0",
+      "priority": 12,
+      "lane": "env-infra",
+      "status": "done",
+      "title": "Resolve tailwind.generated.css stale check",
+      "dependsOn": [
+        "m0-001"
+      ],
+      "acceptance": "npm run check:css exit 0 OR documented ENVIRONMENT waiver with owner approval",
+      "validation": [
+        "npm run check:css",
+        "npm run generate:css"
+      ],
+      "notes": "FAIL class ENVIRONMENT until Tailwind 4.1.10 installed",
+      "assignedAt": "2026-07-07T02:29:57Z",
+      "assignedSlot": "env-infra-1",
+      "completedAt": "2026-07-07T02:32:24Z",
+      "lastNote": "tailwindcss@4.1.10 --no-save; check:css green"
+    },
+    {
+      "id": "m0-004",
+      "phase": "M0",
+      "priority": 13,
+      "lane": "qa-validation",
+      "status": "done",
+      "title": "validate:fast full green on current tree",
+      "dependsOn": [
+        "m0-003"
+      ],
+      "acceptance": "npm run validate:fast exit 0; all 6 stages pass",
+      "validation": [
+        "npm run validate:fast"
+      ],
+      "notes": "Currently fails gate-c-hardening via test_runtime_dependency_contract CSS check",
+      "assignedAt": "2026-07-07T02:34:04Z",
+      "assignedSlot": "qa-validation-1",
+      "completedAt": "2026-07-07T02:36:56Z",
+      "lastNote": "validate:fast 6/6 PASS after terminals exclusion fix"
+    },
+    {
+      "id": "m0-005",
+      "phase": "M0",
+      "priority": 20,
+      "lane": "docs-convergence",
+      "status": "done",
+      "title": "Fix active doc drift (roadmap, memory, handoff paths)",
+      "dependsOn": [],
+      "acceptance": "ROADMAP_NEXT no longer lists closed Balloon cleanup as next; AI_PROJECT_MEMORY probe line updated; handoff path corrected",
+      "validation": [
+        "node tools/run_with_python_env.js python tests/test_documentation_contract.py"
+      ],
+      "allowedPathsExtra": [
+        "ROADMAP_NEXT.md",
+        "AI_PROJECT_MEMORY.md",
+        ".codex/handoff/NEXT_GOAL_PROMPT_M4L_VISUAL_TRUTH_2026-07-01.md"
+      ],
+      "assignedAt": "2026-07-07T02:29:56Z",
+      "assignedSlot": "docs-convergence-1",
+      "completedAt": "2026-07-07T02:32:24Z",
+      "lastNote": "doc drift fixed; test_documentation_contract PASS"
+    },
+    {
+      "id": "m0-006",
+      "phase": "M0",
+      "priority": 21,
+      "lane": "qa-validation",
+      "status": "done",
+      "title": "Record environment baseline evidence bundle",
+      "dependsOn": [],
+      "acceptance": "evidence/ENV_BASELINE_2026-07-07.md with all tier results and classifications",
+      "validation": [
+        "npm run probe:vector-thruster:summary",
+        "npm run visual:test",
+        "npm run browser:smoke"
+      ],
+      "allowedPathsExtra": [
+        "evidence/**",
+        ".codex/agent_mesh/assignments/**"
+      ],
+      "assignedAt": "2026-07-07T02:29:57Z",
+      "assignedSlot": "qa-validation-1",
+      "completedAt": "2026-07-07T02:32:25Z",
+      "lastNote": "evidence/ENV_BASELINE_2026-07-07.md"
+    },
+    {
+      "id": "m4l-000",
+      "phase": "M4L",
+      "priority": 30,
+      "lane": "qa-validation",
+      "status": "done",
+      "title": "M4L start gate evidence snapshot",
+      "dependsOn": [
+        "m0-006"
+      ],
+      "acceptance": "audit ok:true; parity baseline JSON archived; probe summary archived",
+      "validation": [
+        "node tools/run_with_python_env.js python tools/audit_visual_asset_pack.py assets/visual_packs/local_working_visuals --allow-diagnostics --suggest-cleanup",
+        "node tools/run_with_python_env.js python tools/visual_parity_baseline.py assets/visual_packs/local_working_visuals",
+        "npm run probe:vector-thruster:summary"
+      ],
+      "assignedAt": "2026-07-07T02:36:56Z",
+      "assignedSlot": "qa-validation-1",
+      "completedAt": "2026-07-07T02:37:02Z",
+      "lastNote": "evidence/m4l-000-*.json archived"
+    },
+    {
+      "id": "m4l-101",
+      "phase": "M4L",
+      "priority": 31,
+      "lane": "visual-renderer",
+      "status": "ready",
+      "title": "Extract shared renderer profile contract",
+      "dependsOn": [
+        "m4l-000",
+        "m0-004"
+      ],
+      "acceptance": "STUDIO_PREVIEW_PROFILE, GAME_DEFAULT_PROFILE, GAME_STUDIO_PARITY_PROFILE exported; test passes",
+      "validation": [
+        "npm run test",
+        "npm run validate:fast"
+      ],
+      "allowedPathsExtra": [
+        "src/game/visual-renderer-profiles.js",
+        "tests/test_visual_renderer_profiles.js"
+      ]
+    },
+    {
+      "id": "m4l-102",
+      "phase": "M4L",
+      "priority": 32,
+      "lane": "visual-renderer",
+      "status": "pending",
+      "title": "Game diagnostic render mode",
+      "dependsOn": [
+        "m4l-101"
+      ],
+      "acceptance": "Query-param or dedicated page renders isolated imported block under named profile",
+      "validation": [
+        "npm run visual:test",
+        "npm run browser:smoke"
+      ],
+      "allowedPathsExtra": [
+        "src/game/visual-parity-diagnostic.js"
+      ]
+    },
+    {
+      "id": "m4l-103",
+      "phase": "M4L",
+      "priority": 32,
+      "lane": "studio-pipeline",
+      "status": "pending",
+      "title": "Studio-side capture harness",
+      "dependsOn": [
+        "m4l-101"
+      ],
+      "acceptance": "CLI produces PNG+JSON for Balloon from local_working_visuals",
+      "validation": [
+        "npm run studio:test"
+      ],
+      "allowedPathsExtra": [
+        "tools/visual_parity_capture_studio.mjs"
+      ]
+    },
+    {
+      "id": "m4l-104",
+      "phase": "M4L",
+      "priority": 33,
+      "lane": "tooling-tests",
+      "status": "pending",
+      "title": "Unified capture orchestrator + metrics",
+      "dependsOn": [
+        "m4l-102",
+        "m4l-103"
+      ],
+      "acceptance": "npm run parity:capture compares Studio vs game; emits visual_parity_render_report.json",
+      "validation": [
+        "npm run parity:capture"
+      ],
+      "allowedPathsExtra": [
+        "tools/visual_parity_render_capture.mjs",
+        "tools/visual_parity_metrics.py",
+        "package.json"
+      ]
+    },
+    {
+      "id": "m4l-105",
+      "phase": "M4L",
+      "priority": 34,
+      "lane": "docs-convergence",
+      "status": "pending",
+      "title": "Classify root cause from rendered evidence",
+      "dependsOn": [
+        "m4l-104"
+      ],
+      "acceptance": "Written classification: environment-policy | material-policy | asset-data with metrics",
+      "validation": [
+        "node tools/run_with_python_env.js python tools/visual_parity_baseline.py assets/visual_packs/local_working_visuals --render-report .agent-validation/m4l-capture/visual_parity_render_report.json"
+      ],
+      "allowedPathsExtra": [
+        "docs/M4L_VISUAL_TRUTH_BASELINE_2026-07-01.md"
+      ]
+    },
+    {
+      "id": "m4l-106a",
+      "phase": "M4L",
+      "priority": 35,
+      "lane": "visual-renderer",
+      "status": "pending",
+      "title": "Fix game environment policy (expected path)",
+      "dependsOn": [
+        "m4l-105"
+      ],
+      "acceptance": "Balloon within luminance/SSIM thresholds in normal game mode after environment tune",
+      "validation": [
+        "npm run parity:capture",
+        "npm run browser:smoke",
+        "npm run validate:fast"
+      ],
+      "notes": "Only if m4l-105 classifies environment-policy"
+    },
+    {
+      "id": "m4l-107",
+      "phase": "M4L",
+      "priority": 36,
+      "lane": "studio-pipeline",
+      "status": "ready",
+      "title": "Duplicate material Studio diagnostics",
+      "dependsOn": [
+        "m4l-000"
+      ],
+      "acceptance": "Studio surfaces duplicateMaterialName before export",
+      "validation": [
+        "npm run studio:test",
+        "npm run visual:test"
+      ]
+    },
+    {
+      "id": "m4l-108",
+      "phase": "M4L",
+      "priority": 40,
+      "lane": "docs-convergence",
+      "status": "pending",
+      "title": "M4L milestone closure",
+      "dependsOn": [
+        "m4l-106a",
+        "m4l-107"
+      ],
+      "acceptance": "ROADMAP_NEXT M4L closed; handoff written; full M4L validation ladder green",
+      "validation": [
+        "npm run probe:vector-thruster",
+        "npm run visual:test",
+        "npm run validate:fast",
+        "node tools/run_with_python_env.js python tests/test_documentation_contract.py"
+      ]
+    },
+    {
+      "id": "m4lc-201",
+      "phase": "M4LC",
+      "priority": 50,
+      "lane": "tooling-tests",
+      "status": "pending",
+      "title": "Wire VectorThruster probe to real runtime modules",
+      "dependsOn": [
+        "m4l-108"
+      ],
+      "acceptance": "Test imports computeVectorThrusterForceCannon + visual_runtime_adapter.setGimbal; 192/192",
+      "validation": [
+        "npm run probe:vector-thruster",
+        "npm run test"
+      ]
+    },
+    {
+      "id": "m4lc-202",
+      "phase": "M4LC",
+      "priority": 51,
+      "lane": "tooling-tests",
+      "status": "pending",
+      "title": "Add VectorThruster integration test to run_all.py / FAST_PLAN",
+      "dependsOn": [
+        "m4lc-201"
+      ],
+      "acceptance": "Probe or equivalent in default validation path",
+      "validation": [
+        "npm run validate:fast",
+        "npm run test"
+      ]
+    }
+  ]
+}

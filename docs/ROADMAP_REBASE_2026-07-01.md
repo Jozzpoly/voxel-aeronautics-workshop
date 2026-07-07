@@ -44,6 +44,8 @@ The latest owner feedback is treated as roadmap input, not as isolated bugs:
 
 ## Preliminary Evidence From 2026-07-01
 
+**SUPERSEDED:** This section is a pre-M4L audit snapshot only. For current M4L evidence, use **M4L Implementation Update - 2026-07-01** below.
+
 Commands run:
 
 ```text

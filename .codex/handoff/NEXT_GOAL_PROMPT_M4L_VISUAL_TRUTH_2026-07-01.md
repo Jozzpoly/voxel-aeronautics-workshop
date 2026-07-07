@@ -10,7 +10,7 @@ Use the current continuation prompt when starting the next focused implementatio
 
 ```text
 Work on Voxel Aeronautics Workshop in:
-C:\Pliki_Joza\Gamo_devovo\VAW\voxel-aeronautics-workshop-foundation-gate-c-assembly-spaces
+C:\Pliki_Joza\Gamo_devovo\VAW\VAW\voxel-aeronautics-workshop-current_work-GRok
 
 Goal:
 Continue M4L Visual Truth. Do not start Gate D. Do not recolor assets by taste.
@@ -75,7 +75,7 @@ Success:
 
 ```text
 Pracujesz nad Voxel Aeronautics Workshop w:
-C:\Pliki_Joza\Gamo_devovo\VAW\voxel-aeronautics-workshop-foundation-gate-c-assembly-spaces
+C:\Pliki_Joza\Gamo_devovo\VAW\VAW\voxel-aeronautics-workshop-current_work-GRok
 
 Cel nie brzmi "zrób wszystko" ani "zacznij Gate D". Cel brzmi:
 domknij M4L Visual Truth na tyle, żeby asset pipeline był realnym, wiarygodnym workflow twórczym Jozza, a VectorThruster przestał być naprawiany zgadywaniem osi.

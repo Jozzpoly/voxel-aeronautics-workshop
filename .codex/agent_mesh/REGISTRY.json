@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "updatedAt": "2026-07-07T02:37:02Z",
+  "slots": [
+    {
+      "id": "dispatcher-1",
+      "lane": "dispatcher",
+      "status": "busy",
+      "role": "Dispatcher — assignment and STATE owner",
+      "currentTaskId": null,
+      "notes": "Primary dispatcher slot; always reserved"
+    },
+    {
+      "id": "env-infra-1",
+      "lane": "env-infra",
+      "status": "idle",
+      "role": "Git, CI, CSS, validation runner environment",
+      "currentTaskId": null,
+      "notes": null
+    },
+    {
+      "id": "tooling-tests-1",
+      "lane": "tooling-tests",
+      "status": "idle",
+      "role": "tools/, tests/, agent_dispatch, probe wiring",
+      "currentTaskId": null,
+      "notes": null
+    },
+    {
+      "id": "visual-renderer-1",
+      "lane": "visual-renderer",
+      "status": "idle",
+      "role": "scene_environment, diagnostic render mode, renderer profiles",
+      "currentTaskId": null,
+      "notes": null
+    },
+    {
+      "id": "studio-pipeline-1",
+      "lane": "studio-pipeline",
+      "status": "idle",
+      "role": "Blockbench Studio, capture harness, parity metrics",
+      "currentTaskId": null,
+      "notes": null
+    },
+    {
+      "id": "docs-convergence-1",
+      "lane": "docs-convergence",
+      "status": "idle",
+      "role": "Roadmap/doc drift fixes, handoffs, M4L classification docs",
+      "currentTaskId": null,
+      "notes": null
+    },
+    {
+      "id": "qa-validation-1",
+      "lane": "qa-validation",
+      "status": "idle",
+      "role": "Run validation ladders, record evidence, no product edits",
+      "currentTaskId": null,
+      "notes": null
+    },
+    {
+      "id": "planner-auditor-1",
+      "lane": "planner-auditor",
+      "status": "idle",
+      "role": "Read-only critique, acceptance review, scope guard",
+      "currentTaskId": null,
+      "notes": null
+    }
+  ]
+}

@@ -710,7 +710,8 @@ def run_plan(
     run_dir.mkdir(parents=True, exist_ok=True)
 
     artifact_root = root / ".agent-validation"
-    initial_snapshot = repository_snapshot(root, [run_dir, artifact_root])
+    session_excluded = [run_dir, artifact_root, root / "terminals"]
+    initial_snapshot = repository_snapshot(root, session_excluded)
     fingerprint = snapshot_digest(initial_snapshot)
     if resume is not None:
         summary = _load_resume_summary(resume)
@@ -753,7 +754,7 @@ def run_plan(
                     events.emit("stage-skipped", stage=stage.name, status=record["status"])
                     continue
                 active_stage = stage.name
-                before = repository_snapshot(root, [run_dir, artifact_root])
+                before = repository_snapshot(root, session_excluded)
                 record["status"] = STATUS_PENDING
                 record["startedAt"] = utc_now()
                 record["error"] = None
@@ -778,7 +779,7 @@ def run_plan(
                     log_path.parent.mkdir(parents=True, exist_ok=True)
                     with log_path.open("a", encoding="utf-8", newline="\n") as log:
                         _durable_log_line(log, f"\nVALIDATION_RUNNER_ERROR {error_message}\n")
-                after = repository_snapshot(root, [run_dir, artifact_root])
+                after = repository_snapshot(root, session_excluded)
                 side_effects = changed_paths(before, after)
                 if side_effects and status == STATUS_PASS:
                     status = STATUS_FAIL

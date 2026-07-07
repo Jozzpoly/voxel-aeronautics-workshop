@@ -1,0 +1,120 @@
+{
+  "version": 1,
+  "lanes": {
+    "dispatcher": {
+      "label": "Dispatcher",
+      "mayWriteProductCode": false,
+      "allowedPaths": [
+        ".codex/agent_mesh/**",
+        "tools/agent_dispatch.py"
+      ],
+      "forbiddenPaths": [
+        "src/**",
+        "assets/visual_packs/local_working_visuals/**",
+        "release/**"
+      ]
+    },
+    "env-infra": {
+      "label": "Environment & Git/CI",
+      "mayWriteProductCode": false,
+      "allowedPaths": [
+        ".gitignore",
+        ".github/**",
+        "tools/validate_*.py",
+        "tools/validation_*.py",
+        "tailwind.generated.css",
+        "tools/generate_tailwind_css.js",
+        "evidence/**"
+      ],
+      "forbiddenPaths": [
+        "src/foundation/**",
+        "assets/visual_packs/local_working_visuals/**",
+        "release/**"
+      ]
+    },
+    "tooling-tests": {
+      "label": "Tooling & Test Harness",
+      "allowedPaths": [
+        "tools/**",
+        "tests/**",
+        "package.json"
+      ],
+      "forbiddenPaths": [
+        "src/foundation/craft_model.js",
+        "src/foundation/craft_compiler.js",
+        "src/foundation/blueprint.js",
+        "assets/visual_packs/local_working_visuals/**"
+      ]
+    },
+    "visual-renderer": {
+      "label": "Game Renderer & Visual Truth",
+      "allowedPaths": [
+        "src/game/scene_environment.js",
+        "src/game/visual-parity-diagnostic.js",
+        "src/game/visual-renderer-profiles.js",
+        "src/game/visual_asset_loader.js",
+        "src/game/visual_asset_dev_controls.js",
+        "src/game.js",
+        "index.html"
+      ],
+      "forbiddenPaths": [
+        "src/foundation/**",
+        "src/runtime/**",
+        "assets/visual_packs/local_working_visuals/**",
+        "src/game/module_visual_factory.js"
+      ]
+    },
+    "studio-pipeline": {
+      "label": "Blockbench Studio & Capture",
+      "allowedPaths": [
+        "tools/blockbench_import_studio/**",
+        "tools/visual_parity_capture_studio.mjs",
+        "tools/visual_parity_render_capture.mjs",
+        "tools/visual_parity_metrics.py",
+        "tools/visual_parity_baseline.py"
+      ],
+      "forbiddenPaths": [
+        "src/foundation/**",
+        "assets/visual_packs/local_working_visuals/**"
+      ]
+    },
+    "docs-convergence": {
+      "label": "Documentation & Roadmap",
+      "allowedPaths": [
+        "docs/**",
+        "*.md",
+        ".codex/handoff/**"
+      ],
+      "forbiddenPaths": [
+        "src/**",
+        "assets/visual_packs/local_working_visuals/**"
+      ]
+    },
+    "qa-validation": {
+      "label": "QA & Validation Evidence",
+      "mayWriteProductCode": false,
+      "allowedPaths": [
+        ".agent-validation/**",
+        ".codex/agent_mesh/assignments/**",
+        "evidence/**"
+      ],
+      "forbiddenPaths": [
+        "src/**",
+        "assets/visual_packs/local_working_visuals/**"
+      ]
+    },
+    "planner-auditor": {
+      "label": "Read-only Planner/Auditor",
+      "mayWriteProductCode": false,
+      "allowedPaths": [
+        ".codex/agent_mesh/assignments/**",
+        ".codex/handoff/**"
+      ],
+      "forbiddenPaths": [
+        "src/**",
+        "tools/**",
+        "assets/**"
+      ]
+    }
+  }
+}

@@ -6,23 +6,35 @@ Authority: Operational routing only; product truth remains in source, active con
 
 Use this file before searching widely. It should get a fresh agent onto the correct branch, validation path and scope boundary in under 10 minutes.
 
+## Multi-agent mesh
+
+For parallel milestone work, read `.codex/agent_mesh/README.md` first. The **Dispatcher** agent owns `QUEUE.json` / `STATE.json` / `REGISTRY.json` and assigns ready tasks to idle lane agents.
+
+```text
+node tools/run_with_python_env.js python tools/agent_dispatch.py status
+node tools/run_with_python_env.js python tools/agent_dispatch.py next --count 3
+```
+
+Lane agents execute bounded tasks; the Dispatcher does not edit product code.
+
 ## Start Gate
 
 Run and record:
 
 ```text
 git status --short --branch
-git rev-parse HEAD origin/main origin/current_work
+git rev-parse HEAD origin/VAW_GRoK
 git diff --stat
 git diff --name-status
 git diff -- SOURCE_MANIFEST.json
 git status --porcelain=v1 -- SOURCE_MANIFEST.json assets/visual_packs/local_working_visuals release .agent-validation
 ```
 
-Default branch rule:
+Branch rule (owner 2026-07-07):
 
-- Work on `current_work` for multi-session checkpoints unless Jozz explicitly names another branch.
-- Treat `main` as the reviewed stable landing line.
+- **Transport base:** `VAW_GRoK` only (`origin/VAW_GRoK` at `github.com/Jozzpoly/voxel-aeronautics-workshop`).
+- Local feature branches off `VAW_GRoK` are allowed; merge back before push.
+- Do **not** push to `main`, `current_work`, or other remotes without explicit owner approval.
 - Use named milestone branches only for isolated experiments or explicit owner direction.
 - Never use historical recovery or maintenance branch names unless Git verifies they exist.
 - Never force-push or rewrite history without explicit owner approval.

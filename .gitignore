@@ -6,5 +6,6 @@ node_modules/
 .DS_Store
 recovery-artifacts/
 .agent-validation/
+terminals/
 
 tests/windows/matrix-results/

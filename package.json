@@ -21,7 +21,9 @@
     "probe:vector-thruster:summary": "node tools/probe_vector_thruster_direction.js --summary --report-only",
     "probe:vector-thruster:report": "node tools/probe_vector_thruster_direction.js --report-only",
     "mission:validate": "node tools/validate_mission_map.js",
-    "browser:smoke": "node tests/run_browser_smoke.mjs"
+    "browser:smoke": "node tests/run_browser_smoke.mjs",
+    "agent:status": "node tools/run_with_python_env.js python tools/agent_dispatch.py status",
+    "agent:next": "node tools/run_with_python_env.js python tools/agent_dispatch.py next --count 5"
   },
   "engines": {
     "node": ">=18",

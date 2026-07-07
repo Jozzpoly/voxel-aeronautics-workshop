@@ -33,7 +33,7 @@ Active detailed rebase: `docs/ROADMAP_REBASE_2026-07-01.md`.
 
 ## Next: M4L - Visual Truth And VectorThruster Proof
 
-- Finish owner-approved Balloon manifest cleanup: clear inherited optional `flame` and `gimbalAssembly` bindings to `null` without touching model files, transforms, materials or installed-pack policy.
+- Balloon manifest cleanup is closed: inherited optional `flame` and `gimbalAssembly` bindings were cleared to `null` without touching model files, transforms, materials or installed-pack policy; do not reopen without new diagnostics.
 - Keep local visual-pack audit as evidence, not broad permission to rewrite `local_working_visuals`.
 - Maintain the Studio-vs-game visual parity baseline across all local imported block visuals before recoloring assets.
 - Treat the visible darkness as a shared imported-visual renderer/preview mismatch: color-space output is now aligned, and remaining evidence points at lighting/shadow/fog or Studio preview differences.
