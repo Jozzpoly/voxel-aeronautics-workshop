@@ -2,6 +2,8 @@
   'use strict';
 
   window.VAW.define('game.module-visual-factory', ['game.orientation-service'], OrientationService => {
+    const MODULE_VISUAL_CELL_SCALE = 0.96;
+
     function create(options = {}) {
       const { THREE = window.THREE, sharedGeometry, cloneMaterial, visualAssetRegistry = null } = options;
       if (!THREE?.Mesh || !THREE?.Group || !sharedGeometry || typeof cloneMaterial !== 'function') {
@@ -30,7 +32,7 @@
         root.userData.orientation = normalizeOrientationId(orientation);
         root.userData.visualAssetId = visualAsset?.assetId || null;
         root.userData.visualAssetStatus = visualAsset ? 'registered-fallback' : 'procedural-fallback';
-        root.scale.set(0.96, 0.96, 0.96);
+        root.scale.set(MODULE_VISUAL_CELL_SCALE, MODULE_VISUAL_CELL_SCALE, MODULE_VISUAL_CELL_SCALE);
         if (partUsesOrientation(type)) {
           root.quaternion.copy(getModuleBasis(orientation).quaternion);
         } else {
@@ -239,6 +241,6 @@
       return Object.freeze({ createModuleVisual });
     }
 
-    return Object.freeze({ create });
+    return Object.freeze({ create, MODULE_VISUAL_CELL_SCALE });
   });
 })();
