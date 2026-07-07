@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-07T03:03:30Z",
+  "updatedAt": "2026-07-07T03:11:07Z",
   "phases": [
     {
       "id": "REMEDIATION",
@@ -278,10 +278,9 @@
       "phase": "M4L",
       "priority": 31,
       "lane": "visual-renderer",
-      "status": "blocked",
+      "status": "done",
       "requiresDecisions": [
         "DEC-M0-GATE",
-        "DEC-STATE-SYNC",
         "DEC-M4L-COMMIT-STRATEGY"
       ],
       "title": "Extract shared renderer profile contract",
@@ -299,14 +298,16 @@
         "tests/test_visual_renderer_profiles.js"
       ],
       "assignedAt": "2026-07-07T02:41:18Z",
-      "assignedSlot": "visual-renderer-1"
+      "assignedSlot": "visual-renderer-1",
+      "completedAt": "2026-07-07T12:35:00Z",
+      "lastNote": "commit 5d1dc2b; test_visual_renderer_profiles PASS; DEC-M4L-COMMIT-STRATEGY A"
     },
     {
       "id": "m4l-102",
       "phase": "M4L",
       "priority": 32,
       "lane": "visual-renderer",
-      "status": "pending",
+      "status": "done",
       "title": "Game diagnostic render mode",
       "dependsOn": [
         "m4l-101"
@@ -318,14 +319,18 @@
       ],
       "allowedPathsExtra": [
         "src/game/visual-parity-diagnostic.js"
-      ]
+      ],
+      "assignedAt": "2026-07-07T03:07:40Z",
+      "assignedSlot": "visual-renderer-1",
+      "completedAt": "2026-07-07T03:11:07Z",
+      "lastNote": "m4l-102-diagnostic-render-mode-pass"
     },
     {
       "id": "m4l-103",
       "phase": "M4L",
       "priority": 32,
       "lane": "studio-pipeline",
-      "status": "pending",
+      "status": "done",
       "title": "Studio-side capture harness",
       "dependsOn": [
         "m4l-101"
@@ -336,14 +341,18 @@
       ],
       "allowedPathsExtra": [
         "tools/visual_parity_capture_studio.mjs"
-      ]
+      ],
+      "assignedAt": "2026-07-07T03:07:40Z",
+      "assignedSlot": "studio-pipeline-1",
+      "completedAt": "2026-07-07T03:10:17Z",
+      "lastNote": "studio:test PASS; CLI emits studio_balloon.png+json for Balloon from local_working_visuals via visual_parity_capture_studio.mjs"
     },
     {
       "id": "m4l-104",
       "phase": "M4L",
       "priority": 33,
       "lane": "tooling-tests",
-      "status": "pending",
+      "status": "ready",
       "title": "Unified capture orchestrator + metrics",
       "dependsOn": [
         "m4l-102",
@@ -400,10 +409,9 @@
       "phase": "M4L",
       "priority": 36,
       "lane": "studio-pipeline",
-      "status": "blocked",
+      "status": "done",
       "requiresDecisions": [
         "DEC-M0-GATE",
-        "DEC-STATE-SYNC",
         "DEC-M4L-COMMIT-STRATEGY"
       ],
       "title": "Duplicate material Studio diagnostics",
@@ -416,7 +424,74 @@
         "npm run visual:test"
       ],
       "assignedAt": "2026-07-07T02:41:19Z",
-      "assignedSlot": "studio-pipeline-1"
+      "assignedSlot": "studio-pipeline-1",
+      "completedAt": "2026-07-07T12:36:00Z",
+      "lastNote": "commit 7b1b1ca; studio:test PASS; DEC-M4L-COMMIT-STRATEGY A"
+    },
+    {
+      "id": "r2-001",
+      "phase": "REMEDIATION",
+      "priority": 7,
+      "lane": "dispatcher",
+      "status": "ready",
+      "title": "Sync STATE headSha and worktreeClass after bounded commits",
+      "dependsOn": [],
+      "acceptance": "STATE.headSha matches git HEAD; worktreeClass clean; DEC-STATE-SYNC approved",
+      "validation": [
+        "git rev-parse HEAD",
+        "git status --short"
+      ]
+    },
+    {
+      "id": "r4-001",
+      "phase": "REMEDIATION",
+      "priority": 8,
+      "lane": "qa-validation",
+      "status": "done",
+      "title": "Refresh ENV_BASELINE post-remediation commits",
+      "dependsOn": [
+        "r2-001"
+      ],
+      "acceptance": "evidence/ENV_BASELINE updated with HEAD 0ed0e84 ladder results",
+      "validation": [
+        "npm run validate:fast",
+        "npm run check:css"
+      ],
+      "completedAt": "2026-07-07T03:10:03Z",
+      "lastNote": "HEAD 0ed0e84 validate:fast 3/6 gate-c HARNESS side-effects (r4-002 dirty); check:css PASS; studio:test PASS; visual:test FAIL PRODUCT C3; browser:smoke PASS; probe 192/192; evidence/ENV_BASELINE_2026-07-07-remediation.md"
+    },
+    {
+      "id": "r4-002",
+      "phase": "REMEDIATION",
+      "priority": 9,
+      "lane": "docs-convergence",
+      "status": "done",
+      "title": "Converge PUSH_INSTRUCTIONS, handoff, ADR for VAW_GRoK transport",
+      "dependsOn": [],
+      "roadmapRef": "REMEDIATION_PLAN.md#R4",
+      "acceptance": "PUSH_INSTRUCTIONS references VAW_GRoK; handoff start gate uses VAW_GRoK; ADR supplement note",
+      "validation": [
+        "node tools/run_with_python_env.js python tests/test_documentation_contract.py"
+      ],
+      "assignedAt": "2026-07-07T03:07:41Z",
+      "assignedSlot": "docs-convergence-1",
+      "completedAt": "2026-07-07T03:08:43Z",
+      "lastNote": "PUSH_INSTRUCTIONS, handoff start gate, ADR 0044 supplement converged to VAW_GRoK transport"
+    },
+    {
+      "id": "r3-003",
+      "phase": "REMEDIATION",
+      "priority": 10,
+      "lane": "docs-convergence",
+      "status": "done",
+      "title": "Relabel probe as synthetic-only in evidence and AI_PROJECT_MEMORY",
+      "dependsOn": [],
+      "acceptance": "Probe 192/192 labeled synthetic until m4lc-201 in active docs",
+      "validation": [
+        "node tools/run_with_python_env.js python tests/test_documentation_contract.py"
+      ],
+      "completedAt": "2026-07-07T03:09:08Z",
+      "lastNote": "Probe 192/192 relabeled synthetic-only until m4lc-201 in AI_PROJECT_MEMORY and ENV_BASELINE evidence"
     },
     {
       "id": "m4l-108",

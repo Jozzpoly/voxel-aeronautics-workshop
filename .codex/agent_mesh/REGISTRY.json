@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-07T03:03:30Z",
+  "updatedAt": "2026-07-07T03:11:23Z",
   "slots": [
     {
       "id": "dispatcher-1",
       "lane": "dispatcher",
-      "status": "busy",
+      "status": "idle",
       "role": "Dispatcher — assignment and STATE owner",
       "currentTaskId": null,
       "notes": "Primary dispatcher slot; always reserved"
