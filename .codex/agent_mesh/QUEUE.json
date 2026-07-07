@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-07T03:23:53Z",
+  "updatedAt": "2026-07-07T03:33:18Z",
   "phases": [
     {
       "id": "REMEDIATION",
@@ -507,7 +507,7 @@
       "phase": "M4L",
       "priority": 40,
       "lane": "docs-convergence",
-      "status": "ready",
+      "status": "done",
       "title": "M4L milestone closure",
       "dependsOn": [
         "m4l-106a",
@@ -519,14 +519,18 @@
         "npm run visual:test",
         "npm run validate:fast",
         "node tools/run_with_python_env.js python tests/test_documentation_contract.py"
-      ]
+      ],
+      "assignedAt": "2026-07-07T03:32:15Z",
+      "assignedSlot": "docs-convergence-1",
+      "completedAt": "2026-07-07T03:33:18Z",
+      "lastNote": "M4L closed in ROADMAP_NEXT + handoff"
     },
     {
       "id": "m4lc-201",
       "phase": "M4LC",
       "priority": 50,
       "lane": "tooling-tests",
-      "status": "pending",
+      "status": "ready",
       "title": "Wire VectorThruster probe to real runtime modules",
       "dependsOn": [
         "m4l-108"

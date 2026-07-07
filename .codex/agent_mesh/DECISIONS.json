@@ -132,7 +132,7 @@
       "id": "DEC-REMEDIATION-COMPLETE",
       "type": "gate",
       "title": "Remediation R0-R4 complete",
-      "status": "proposed",
+      "status": "approved",
       "actor": "quorum",
       "quorum": { "lanes": ["planner-auditor", "qa-validation", "dispatcher"], "rule": "all" },
       "findingIds": ["AUD-001", "AUD-002", "AUD-003", "AUD-004", "AUD-005", "AUD-006"],
@@ -143,6 +143,10 @@
         "DEC-STATE-SYNC",
         "DEC-VALID-FAST-VERDICT"
       ],
+      "approvedAt": "2026-07-07T13:35:00Z",
+      "approvedBy": ["planner-auditor-1", "qa-validation-1", "dispatcher-1"],
+      "evidence": ".agent-validation/fast-20260707T033309.668837Z-23520/summary.json",
+      "note": "m4l-108 closed; validate:fast 6/6 @ 319eeb7; G8/G10 push gates remain for r4-004",
       "unlocks": { "transport": true }
     }
   ]
