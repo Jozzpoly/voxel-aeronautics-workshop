@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "foundedAt": "2026-07-07",
+  "meetingRef": "meetings/FOUNDATION_2026-07-07.md",
+  "transportBranch": "VAW_GRoK",
+  "principle": "Seven lane agents + one dispatcher; parallel by default, serial only when DAG or paths force it.",
+  "members": [
+    {
+      "slotId": "dispatcher-1",
+      "codename": "KAI",
+      "namePl": "Rozdzielacz",
+      "lane": "dispatcher",
+      "skills": ["routing", "gate-enforcement", "spawn-pack", "mesh-truth"],
+      "skillCard": "skills/dispatcher.md",
+      "mayWriteProductCode": false,
+      "maxConcurrentAssigns": 6,
+      "cycleTimeLimitMinutes": 5
+    },
+    {
+      "slotId": "env-infra-1",
+      "codename": "MIRA",
+      "namePl": "Baza",
+      "lane": "env-infra",
+      "skills": ["git-hygiene", "css-freshness", "transport-alignment", "env-verify"],
+      "skillCard": "skills/env-infra.md",
+      "mayWriteProductCode": false
+    },
+    {
+      "slotId": "tooling-tests-1",
+      "codename": "TOOL",
+      "namePl": "Narzędziarz",
+      "lane": "tooling-tests",
+      "skills": ["harness", "regression-tests", "agent-dispatch", "parity-orchestrator"],
+      "skillCard": "skills/tooling-tests.md",
+      "mayWriteProductCode": true
+    },
+    {
+      "slotId": "visual-renderer-1",
+      "codename": "PIXEL",
+      "namePl": "Obraz",
+      "lane": "visual-renderer",
+      "skills": ["scene-environment", "renderer-profiles", "diagnostic-mode"],
+      "skillCard": "skills/visual-renderer.md",
+      "mayWriteProductCode": true
+    },
+    {
+      "slotId": "studio-pipeline-1",
+      "codename": "FORGE",
+      "namePl": "Pracownia",
+      "lane": "studio-pipeline",
+      "skills": ["blockbench-studio", "capture-harness", "material-diagnostics"],
+      "skillCard": "skills/studio-pipeline.md",
+      "mayWriteProductCode": true
+    },
+    {
+      "slotId": "docs-convergence-1",
+      "codename": "SCRIBE",
+      "namePl": "Kronik",
+      "lane": "docs-convergence",
+      "skills": ["adr", "handoff", "push-instructions", "classification-docs"],
+      "skillCard": "skills/docs-convergence.md",
+      "mayWriteProductCode": false
+    },
+    {
+      "slotId": "qa-validation-1",
+      "codename": "PROOF",
+      "namePl": "Dowód",
+      "lane": "qa-validation",
+      "skills": ["validate-fast", "parity-capture", "evidence-bundles"],
+      "skillCard": "skills/qa-validation.md",
+      "mayWriteProductCode": false
+    },
+    {
+      "slotId": "planner-auditor-1",
+      "codename": "SAGE",
+      "namePl": "Strażnik planu",
+      "lane": "planner-auditor",
+      "skills": ["gate-review", "audit-crosscheck", "owner-brief", "quorum-vote"],
+      "skillCard": "skills/planner-auditor.md",
+      "mayWriteProductCode": false
+    }
+  ]
+}

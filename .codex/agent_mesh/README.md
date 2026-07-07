@@ -24,16 +24,30 @@ This folder is the live control plane for multi-agent work. One dedicated **Disp
 | `LANES.json` | Dispatcher | ALLOWED/FORBIDDEN paths per lane |
 | `assignments/` | Lane agents | Per-task evidence drops (optional) |
 
+## Team foundation (2026-07-07)
+
+| Doc | Purpose |
+|-----|---------|
+| `TEAM_ROSTER.json` | Names, skills, slots |
+| `TEAM_CHARTER.md` | Mission and values |
+| `COLLABORATION_SYSTEM.md` | Forced multi-agent collaboration |
+| `FILE_STRUCTURE.md` | Folder layout v2 |
+| `skills/*.md` | Per-lane skill cards |
+| `meetings/FOUNDATION_2026-07-07.md` | Founding meeting notes |
+
 ## Commands
 
 ```powershell
-# Dispatcher session start
-node tools/run_with_python_env.js python tools/agent_dispatch.py status
-node tools/run_with_python_env.js python tools/agent_dispatch.py next --count 3
-node tools/run_with_python_env.js python tools/agent_dispatch.py assign --lane tooling-tests --task m0-004
-node tools/run_with_python_env.js python tools/agent_dispatch.py prompt --task m4l-101
-node tools/run_with_python_env.js python tools/agent_dispatch.py complete --task m0-001 --result pass --note "synthetic git init"
-node tools/run_with_python_env.js python tools/agent_dispatch.py block --task m0-002 --reason "needs remote URL from owner"
+# Session start — parallel spawn pack
+npm run agent:cycle
+npm run agent:spawn-pack
+npm run agent:fatigue
+
+# Dispatcher ops
+npm run agent:status
+npm run agent:next
+node tools/run_with_python_env.js python tools/agent_dispatch.py assign --lane docs-convergence --task m4l-108
+node tools/run_with_python_env.js python tools/agent_dispatch.py complete --task m4l-108 --result pass
 ```
 
 ## Session loop

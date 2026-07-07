@@ -1,0 +1,15 @@
+{
+  "spawnPack": [
+    {
+      "taskId": "m4l-108",
+      "lane": "docs-convergence",
+      "codename": "SCRIBE",
+      "slotId": "docs-convergence-1",
+      "title": "M4L milestone closure",
+      "priority": 40,
+      "prompt": "You are SCRIBE (docs-convergence) on the VAW agent team.\n\nTASK m4l-108: M4L milestone closure\n\nRepo: C:\\Pliki_Joza\\Gamo_devovo\\VAW\\VAW\\voxel-aeronautics-workshop-current_work-GRok\nLane: docs-convergence\nPhase: M4L\nSkill card: .codex/agent_mesh/skills/docs-convergence.md\nNO PUSH unless owner explicitly approves after DEC-REMEDIATION-COMPLETE.\n\nALLOWED_PATHS:\n  - docs/**\n  - *.md\n  - .codex/handoff/**\n\nFORBIDDEN_PATHS:\n  - src/**\n  - assets/visual_packs/local_working_visuals/**\n\nCompleted dependencies: m4l-106a, m4l-107\n\nRead first:\n  - README_FOR_AGENTS.md\n  - .codex/agent_mesh/COLLABORATION_SYSTEM.md\n  - .codex/agent_mesh/skills/docs-convergence.md\n\nDeliverable:\n  ROADMAP_NEXT M4L closed; handoff written; full M4L validation ladder green\n\nValidation:\n  - npm run probe:vector-thruster\n  - npm run visual:test\n  - npm run validate:fast\n  - node tools/run_with_python_env.js python tests/test_documentation_contract.py\n\nNotes:\n  None\n\nWhen finished:\n1. Run all validation commands on current HEAD\n2. python tools/agent_dispatch.py complete --task m4l-108 --result <pass|fail|blocked> --note \"...\"\n3. npm run agent:next — if your lane has another ready task, report idle; do NOT self-assign\n"
+    }
+  ],
+  "count": 1,
+  "assign": false
+}

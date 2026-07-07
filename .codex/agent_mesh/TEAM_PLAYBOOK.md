@@ -1,6 +1,18 @@
 # VAW Agent Team Playbook
 
-Read after `DISPATCHER_ROLE.md`.
+Read after `TEAM_CHARTER.md`, `COLLABORATION_SYSTEM.md`, and your lane `skills/<lane>.md`.
+
+## Team
+
+See `TEAM_ROSTER.json`. Codenames: **KAI** (dispatch), **MIRA**, **TOOL**, **PIXEL**, **FORGE**, **SCRIBE**, **PROOF**, **SAGE**.
+
+## Parallel session (mandatory pattern)
+
+```powershell
+npm run agent:cycle
+```
+
+Parent orchestrator launches every item in `sessions/active_spawn_pack.json` **in one parallel wave** (max 6 lane agents). Serial single-agent work is a collaboration failure unless DAG or path conflict forces it.
 
 ## Roles
 
