@@ -12,33 +12,24 @@
   "worktreeNote": "Published origin/VAW_GRoK @ 142d834; M5 next",
   "openDecisionBlocks": [],
   "lastCycle": {
-    "timestamp": "2026-07-07T03:55:51Z",
+    "timestamp": "2026-07-07T03:56:01Z",
     "dispatcher": "dispatcher-1",
     "event": "cycle",
-    "assigned": [],
-    "parallelCount": 0
+    "assigned": [
+      "m5-001",
+      "m6-000"
+    ],
+    "parallelCount": 2
   },
   "openBlockers": [],
   "metrics": {
-    "cyclesCompleted": 6,
-    "tasksCompleted": 27,
+    "cyclesCompleted": 7,
+    "tasksCompleted": 29,
     "tasksFailed": 0,
     "tasksBlocked": 3,
     "remediationTasksTotal": 18
   },
   "history": [
-    {
-      "at": "2026-07-07T02:32:24Z",
-      "event": "task_pass",
-      "taskId": "m0-005",
-      "note": "doc drift fixed; test_documentation_contract PASS"
-    },
-    {
-      "at": "2026-07-07T02:32:25Z",
-      "event": "task_pass",
-      "taskId": "m0-006",
-      "note": "evidence/ENV_BASELINE_2026-07-07.md"
-    },
     {
       "at": "2026-07-07T02:36:56Z",
       "event": "task_pass",
@@ -146,6 +137,18 @@
       "event": "task_pass",
       "taskId": "m4lc-203",
       "note": "validate:fast 6/6; probe 192/192 runtime-integrated; evidence archived"
+    },
+    {
+      "at": "2026-07-07T03:57:22Z",
+      "event": "task_pass",
+      "taskId": "m5-001",
+      "note": "MODULE_VISUAL_CELL_SCALE exported; visual:test PASS"
+    },
+    {
+      "at": "2026-07-07T03:57:22Z",
+      "event": "task_pass",
+      "taskId": "m6-000",
+      "note": "ADR 0047 draft"
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-07T03:55:55Z",
+  "updatedAt": "2026-07-07T03:57:22Z",
   "phases": [
     {
       "id": "REMEDIATION",
@@ -605,7 +605,7 @@
       "phase": "M5",
       "priority": 61,
       "lane": "visual-renderer",
-      "status": "ready",
+      "status": "done",
       "title": "Named MODULE_VISUAL_CELL_SCALE constant at 0.96 (no visual change)",
       "dependsOn": [
         "m5-000"
@@ -615,14 +615,18 @@
         "npm run test",
         "npm run visual:test"
       ],
-      "notes": "Requires LANES.json allowlist for module_visual_factory.js"
+      "notes": "Requires LANES.json allowlist for module_visual_factory.js",
+      "assignedAt": "2026-07-07T03:56:01Z",
+      "assignedSlot": "visual-renderer-1",
+      "completedAt": "2026-07-07T03:57:22Z",
+      "lastNote": "MODULE_VISUAL_CELL_SCALE exported; visual:test PASS"
     },
     {
       "id": "m5-002",
       "phase": "M5",
       "priority": 62,
       "lane": "tooling-tests",
-      "status": "pending",
+      "status": "ready",
       "title": "Hit-proxy and ghost placement regression tests at current scale",
       "dependsOn": [
         "m5-001"
@@ -654,7 +658,7 @@
       "phase": "M6",
       "priority": 70,
       "lane": "docs-convergence",
-      "status": "ready",
+      "status": "done",
       "title": "Mechanical V2 ADR design spike outline",
       "dependsOn": [
         "m5-000"
@@ -662,7 +666,11 @@
       "acceptance": "docs/adr draft for joint frames, limits, motor modes; no schema edits",
       "validation": [
         "node tools/run_with_python_env.js python tests/test_documentation_contract.py"
-      ]
+      ],
+      "assignedAt": "2026-07-07T03:56:01Z",
+      "assignedSlot": "docs-convergence-1",
+      "completedAt": "2026-07-07T03:57:22Z",
+      "lastNote": "ADR 0047 draft"
     }
   ]
 }
