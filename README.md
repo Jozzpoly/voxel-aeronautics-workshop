@@ -64,7 +64,7 @@ Agents should start with [`README_FOR_AGENTS.md`](README_FOR_AGENTS.md), then re
 
 **Transport branch:** `VAW_GRoK` (`origin/VAW_GRoK`)  
 **Previous remote HEAD:** `80c0ae4` — *Refine VAW visual asset onboarding and runtime integration* (2026-07-01 area)  
-**This publication HEAD:** `142d834` — 30 commits (incl. README + mesh sync), 85+ files, +9456 / −89 lines  
+**This publication HEAD:** see `git rev-parse origin/VAW_GRoK` (base delta from `80c0ae4`: ~30 commits, 85+ files, +9456 / −89 lines)  
 **Published:** 2026-07-07 (owner-approved push after remediation R0–R4)
 
 ### Executive summary
