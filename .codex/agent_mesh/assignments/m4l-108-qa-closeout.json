@@ -1,0 +1,139 @@
+{
+  "taskId": "m4l-108-qa-closeout",
+  "phase": "M4L",
+  "lane": "qa-validation",
+  "slot": "qa-validation-1",
+  "codename": "PROOF",
+  "contextTask": "m4l-108",
+  "parallelWave": "SCRIBE m4l-108",
+  "result": "pass",
+  "completedAt": "2026-07-07T03:34:30Z",
+  "headSha": "319eeb7b58cd01112eec8eac5b4793824b3b3966",
+  "headShort": "319eeb7",
+  "branch": "local/agent-mesh-bootstrap",
+  "worktreeAtCloseout": "dirty-mesh-only",
+  "worktreeDirtyPaths": [
+    ".codex/agent_mesh/QUEUE.json",
+    ".codex/agent_mesh/REGISTRY.json",
+    ".codex/agent_mesh/STATE.json",
+    ".codex/agent_mesh/sessions/active_spawn_pack.json",
+    ".codex/agent_mesh/cycles/CYCLE-20260707T033215Z.json"
+  ],
+  "toolchain": {
+    "node": "v24.16.0",
+    "python": "3.14.5",
+    "os": "windows 10.0.26200.8655"
+  },
+  "validation": {
+    "check:css": {
+      "command": "npm run check:css",
+      "result": "pass",
+      "exitCode": 0,
+      "durationSeconds": 1.6,
+      "candidates": 18568,
+      "hashPrefix": "ef0dc9fb",
+      "note": "tailwind.generated.css current; no regeneration required"
+    },
+    "probe:vector-thruster:summary": {
+      "command": "npm run probe:vector-thruster:summary",
+      "result": "pass",
+      "exitCode": 0,
+      "durationSeconds": 1.7,
+      "vectorThrusterDirectionProbe": "ok",
+      "profiles": [
+        {
+          "source": "runtime-default",
+          "checked": 192,
+          "toleranceDegrees": 2,
+          "ok": true,
+          "mismatchCount": 0,
+          "worstAngleErrorDegrees": 0
+        },
+        {
+          "source": "assets\\visual_packs\\local_working_visuals\\VAW_VISUAL_ASSET_PACK_V1.json:local_vector_thruster_visual",
+          "checked": 192,
+          "toleranceDegrees": 2,
+          "ok": true,
+          "mismatchCount": 0,
+          "worstAngleErrorDegrees": 0
+        }
+      ],
+      "artifact": "stdout (report-only; no persisted JSON path)"
+    },
+    "visual:test": {
+      "command": "npm run visual:test",
+      "result": "pass",
+      "exitCode": 0,
+      "durationSeconds": 7.4,
+      "note": "manifest, registry, runtime adapter, loader, dev controls, composition, blockbench studio integration, local pack install, pack audit, studio:test all ok"
+    },
+    "parity:capture": {
+      "command": "npm run parity:capture",
+      "result": "pass",
+      "exitCode": 0,
+      "durationSeconds": 11.3,
+      "capturedAt": "2026-07-07T03:33:05.444Z",
+      "artifact": ".agent-validation/m4l-capture/visual_parity_render_report.json",
+      "captureDir": ".agent-validation/m4l-capture",
+      "blocksRequested": 5,
+      "blocksCaptured": 5,
+      "blocksWithinThresholds": 5,
+      "thresholds": {
+        "ssimMin": 0.92,
+        "luminanceDeltaMax": 0.08
+      },
+      "allBlocks": {
+        "Balloon": { "ssim": 0.963, "luminanceDelta": -0.0102, "withinThresholds": true },
+        "Hull": { "ssim": 0.964, "luminanceDelta": -0.0031, "withinThresholds": true },
+        "Fuel": { "ssim": 0.9641, "luminanceDelta": -0.0042, "withinThresholds": true },
+        "Thruster": { "ssim": 0.9786, "luminanceDelta": 0.0025, "withinThresholds": true },
+        "VectorThruster": { "ssim": 0.9765, "luminanceDelta": 0.0028, "withinThresholds": true }
+      }
+    },
+    "validate:fast": {
+      "command": "npm run validate:fast",
+      "result": "pass",
+      "exitCode": 0,
+      "durationSeconds": 62.8,
+      "stagesPass": 6,
+      "stagesFail": 0,
+      "outcome": "pass",
+      "artifact": ".agent-validation/fast-20260707T033309.668837Z-23520/summary.json",
+      "runDirectory": ".agent-validation/fast-20260707T033309.668837Z-23520",
+      "repositoryHead": "319eeb7b58cd01112eec8eac5b4793824b3b3966",
+      "stages": [
+        { "name": "static-check", "status": "pass", "durationSeconds": 2.859 },
+        { "name": "foundation", "status": "pass", "durationSeconds": 0.093 },
+        { "name": "gate-b-compilers", "status": "pass", "durationSeconds": 1.047 },
+        { "name": "gate-c-hardening", "status": "pass", "durationSeconds": 1.203 },
+        { "name": "audit-regressions", "status": "pass", "durationSeconds": 0.375 },
+        { "name": "validation-runner", "status": "pass", "durationSeconds": 51.985 }
+      ]
+    }
+  },
+  "ladderSummary": {
+    "totalSteps": 5,
+    "passed": 5,
+    "failed": 0,
+    "validateFastStages": "6/6 PASS"
+  },
+  "decisionMesh": {
+    "decisionId": "DEC-REMEDIATION-COMPLETE",
+    "qaValidationVote": "ready",
+    "note": "validate:fast 6/6 PASS on HEAD 319eeb7 — qa-validation lane ready to vote YES for DEC-REMEDIATION-COMPLETE quorum (pending planner-auditor + dispatcher votes and remaining G8/G10 gates per remediation-gate-review)"
+  },
+  "unlocks": [
+    "m4lc-201 VectorThruster probe wiring (tooling-tests)",
+    "DEC-REMEDIATION-COMPLETE quorum input from qa-validation lane"
+  ],
+  "classifications": [],
+  "productEdits": false,
+  "evidencePaths": [
+    ".codex/agent_mesh/assignments/m4l-108-qa-closeout.json",
+    ".agent-validation/fast-20260707T033309.668837Z-23520/summary.json",
+    ".agent-validation/m4l-capture/visual_parity_render_report.json",
+    ".agent-validation/m4l-capture/studio/",
+    ".agent-validation/m4l-capture/game/",
+    ".agent-validation/m4l-capture/metrics/"
+  ]
+}

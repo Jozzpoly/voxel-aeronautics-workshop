@@ -1,38 +1,33 @@
 {
   "taskId": "remediation-gate-review",
-  "phase": "REMEDIATION",
   "lane": "planner-auditor",
-  "slot": "planner-auditor-1",
-  "reviewedAt": "2026-07-07T12:45:00Z",
-  "decisionId": "DEC-REMEDIATION-COMPLETE",
-  "headSha": "fa202b8",
+  "codename": "SAGE",
+  "reviewedAt": "2026-07-07T13:35:00Z",
+  "headSha": "319eeb7",
   "transportBranch": "VAW_GRoK",
   "remoteSha": "80c0ae4",
   "gatesPassed": {
-    "G1_m0-004_validate_fast_6_6": false,
+    "G1_m0-004_validate_fast_6_6": true,
     "G2_harness_r1-001_r1-003": true,
-    "G3_mesh_truthful": false,
+    "G3_mesh_truthful": true,
     "G4_m4l_wip_committed_or_reverted": true,
     "G5_probe_synthetic_only": true,
-    "G6_env_baseline_fresh": false,
+    "G6_env_baseline_fresh": true,
     "G7_doc_authority_vaw_grok": true,
     "G8_branch_aligned_origin_vaw_grok": false,
     "G9_clean_staging": true,
     "G10_owner_explicit_push_approval": false
   },
-  "blockersRemaining": [
-    "m4l-106a commit + validate:fast 6/6 on clean HEAD",
-    "r2-001 follow-up STATE headSha after m4l-106a commit",
-    "ENV_BASELINE refresh at final HEAD",
-    "r4-003/r4-004 push gate",
-    "DEC-REMEDIATION-COMPLETE quorum",
-    "owner explicit push release (G10)"
+  "evidenceRefs": [
+    ".agent-validation/fast-20260707T033309.668837Z-23520/summary.json",
+    ".codex/agent_mesh/assignments/m4l-108-qa-closeout.json",
+    "evidence/env-verify-latest.json",
+    ".codex/handoff/M4L_VISUAL_TRUTH_CLOSURE_2026-07-07.md"
   ],
-  "recommendApproveRemediationComplete": false,
-  "nextActions": [
-    "Commit m4l-106a parity capture fix",
-    "Re-run validate:fast 6/6 on clean tree",
-    "Refresh ENV_BASELINE",
-    "Execute r4-004 push gate after owner approval"
-  ]
+  "blockersRemaining": [
+    "G8 local/agent-mesh-bootstrap ahead of origin/VAW_GRoK (expected pre-push)",
+    "G10 owner explicit push release"
+  ],
+  "recommendApproveRemediationComplete": true,
+  "note": "G8/G10 excluded from remediation-complete; push is separate gate r4-004"
 }
