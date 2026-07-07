@@ -28,6 +28,7 @@ def main() -> None:
     run('node', 'tests/test_visual_asset_registry.js')
     run('node', 'tests/test_visual_runtime_adapter.js')
     run('node', 'tests/test_vector_thruster_runtime_probe.js')
+    run('node', 'tests/test_module_visual_cell_scale.js')
     run('node', 'tests/test_visual_asset_loader.js')
     run('node', 'tests/test_visual_asset_dev_controls.js')
     run('node', 'tests/test_visual_asset_composition.js')
