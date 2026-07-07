@@ -60,7 +60,7 @@ def test_r0_tasks_assignable_when_unblocked() -> None:
 def test_decisions_approved_requires_all_approved() -> None:
     decisions = decision_index(load_decisions())
     assert decisions_approved(["DEC-TRANSPORT-BRANCH"], decisions) is True
-    assert decisions_approved(["DEC-M0-GATE"], decisions) is False
+    assert decisions_approved(["DEC-REMEDIATION-COMPLETE"], decisions) is False
 
 
 def test_registry_slots_have_unique_ids() -> None:
