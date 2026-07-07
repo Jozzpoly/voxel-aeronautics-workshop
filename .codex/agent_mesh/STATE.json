@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "meshPhase": "remediation",
-  "milestone": "M4L-env-fix",
+  "meshPhase": "team-foundation",
+  "milestone": "TEAM-FOUNDATION-v2",
   "activeBranch": "local/agent-mesh-bootstrap",
   "transportBranch": "VAW_GRoK",
   "transportNote": "VAW_GRoK == current_work @ 80c0ae4 (owner 2026-07-07)",

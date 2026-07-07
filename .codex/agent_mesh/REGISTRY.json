@@ -1,70 +1,79 @@
 {
-  "version": 1,
-  "updatedAt": "2026-07-07T03:23:53Z",
+  "version": 2,
+  "updatedAt": "2026-07-07T13:00:00Z",
+  "rosterRef": "TEAM_ROSTER.json",
   "slots": [
     {
       "id": "dispatcher-1",
+      "codename": "KAI",
       "lane": "dispatcher",
       "status": "idle",
       "role": "Dispatcher — assignment and STATE owner",
       "currentTaskId": null,
-      "notes": "Primary dispatcher slot; always reserved"
+      "skillCard": "skills/dispatcher.md"
     },
     {
       "id": "env-infra-1",
+      "codename": "MIRA",
       "lane": "env-infra",
       "status": "idle",
       "role": "Git, CI, CSS, validation runner environment",
       "currentTaskId": null,
-      "notes": null
+      "skillCard": "skills/env-infra.md"
     },
     {
       "id": "tooling-tests-1",
+      "codename": "TOOL",
       "lane": "tooling-tests",
       "status": "idle",
       "role": "tools/, tests/, agent_dispatch, probe wiring",
       "currentTaskId": null,
-      "notes": null
+      "skillCard": "skills/tooling-tests.md"
     },
     {
       "id": "visual-renderer-1",
+      "codename": "PIXEL",
       "lane": "visual-renderer",
       "status": "idle",
       "role": "scene_environment, diagnostic render mode, renderer profiles",
       "currentTaskId": null,
-      "notes": "Reconciled r0-004: ghost busy cleared"
+      "skillCard": "skills/visual-renderer.md"
     },
     {
       "id": "studio-pipeline-1",
+      "codename": "FORGE",
       "lane": "studio-pipeline",
       "status": "idle",
       "role": "Blockbench Studio, capture harness, parity metrics",
       "currentTaskId": null,
-      "notes": "Reconciled r0-004: ghost busy cleared"
+      "skillCard": "skills/studio-pipeline.md"
     },
     {
       "id": "docs-convergence-1",
+      "codename": "SCRIBE",
       "lane": "docs-convergence",
       "status": "idle",
       "role": "Roadmap/doc drift fixes, handoffs, M4L classification docs",
       "currentTaskId": null,
-      "notes": null
+      "skillCard": "skills/docs-convergence.md"
     },
     {
       "id": "qa-validation-1",
+      "codename": "PROOF",
       "lane": "qa-validation",
       "status": "idle",
       "role": "Run validation ladders, record evidence, no product edits",
       "currentTaskId": null,
-      "notes": null
+      "skillCard": "skills/qa-validation.md"
     },
     {
       "id": "planner-auditor-1",
+      "codename": "SAGE",
       "lane": "planner-auditor",
       "status": "idle",
       "role": "Read-only critique, acceptance review, scope guard",
       "currentTaskId": null,
-      "notes": null
+      "skillCard": "skills/planner-auditor.md"
     }
   ]
 }
