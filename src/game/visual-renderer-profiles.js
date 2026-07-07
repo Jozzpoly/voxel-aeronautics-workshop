@@ -19,7 +19,7 @@ function freezeLight(light) {
 function createVisualRendererProfiles() {
   const STUDIO_PREVIEW_PROFILE = Object.freeze({
     id: 'studio-preview',
-    source: 'tools/blockbench_import_studio/src/minimal_gltf_viewer.js',
+    source: 'studio-preview:minimal-gltf-viewer',
     scene: Object.freeze({
       background: 0x07111f,
       fog: null

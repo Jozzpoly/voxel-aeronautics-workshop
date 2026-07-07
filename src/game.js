@@ -28,6 +28,34 @@
       window.VAW.define(moduleId, [], () => factory(module, module.exports));
     })();
 
+    const VisualParityDiagnostic = window.VAW.require('game.visual-parity-diagnostic');
+    const visualParityRequest = VisualParityDiagnostic.parseRequest(window.location?.search || '');
+    if (visualParityRequest) {
+      const hideLayer = id => {
+        const element = document.getElementById(id);
+        if (element) element.style.display = 'none';
+      };
+      hideLayer('ui-layer');
+      hideLayer('desktop-required');
+      document.title = `VAW Visual Parity — ${visualParityRequest.block || visualParityRequest.assetId}`;
+      VisualParityDiagnostic.run({
+        VAW: window.VAW,
+        THREE,
+        document,
+        window,
+        request: visualParityRequest,
+        container: document.getElementById('canvas-container')
+      }).catch(error => {
+        console.error('[visual-parity-diagnostic]', error);
+        const message = error?.message || String(error);
+        const overlay = document.createElement('div');
+        overlay.setAttribute('role', 'alert');
+        overlay.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:#07111f;color:#fecaca;font:14px/1.5 ui-sans-serif,system-ui,sans-serif;z-index:60';
+        overlay.textContent = `Visual parity diagnostic failed: ${message}`;
+        document.body.appendChild(overlay);
+      });
+    } else {
+
     const SceneEnvironment = window.VAW.require('game.scene-environment');
     const CareerService = window.VAW.require('game.career-service');
     const WorkspaceController = window.VAW.require('game.workspace-controller');
@@ -2378,3 +2406,5 @@
     syncHudVisibility();
     loadDefaultsOrSave();
     animate();
+
+    }
