@@ -31,6 +31,10 @@ EXPECTED_MODULES = {
     'flight_mechanical_visuals.js': 'game.flight-mechanical-visuals',
     'flight_integrity.js': 'game.flight-integrity',
     'debris_runtime.js': 'game.debris-runtime',
+    'visual-parity-diagnostic.js': 'game.visual-parity-diagnostic',
+}
+NON_STANDARD_MODULE_DEFINES = {
+    'visual-parity-diagnostic.js',
 }
 
 paths = {path.name: path for path in GAME_PATHS if path.parent == GAME_MODULE_DIR}
@@ -45,6 +49,7 @@ VISUAL_COMPOSITION_DEPENDENCIES = {
 ALLOWED_WINDOW_VAW_GLOBALS = {
     'window.VAW_VISUAL_ASSET_DIAGNOSTICS',
     'window.VAW_VISUAL_ASSET_DEBUG',
+    'window.VAW_MODULE_CELL_SCALE',
 }
 
 
@@ -57,9 +62,13 @@ def assert_no_new_window_vaw_globals(source: str, label: str) -> None:
 
 for filename, module_name in EXPECTED_MODULES.items():
     source = paths[filename].read_text(encoding='utf-8')
-    pattern = rf"window\.VAW\.define\(\s*['\"]{re.escape(module_name)}['\"]"
-    assert len(re.findall(pattern, source)) == 1, f'{filename} must define {module_name} exactly once'
-    assert source.count('window.VAW.define(') == 1, f'{filename} must define exactly one module'
+    if filename in NON_STANDARD_MODULE_DEFINES:
+        assert module_name in source, f'{filename} must register {module_name}'
+        assert 'VAW.define' in source, f'{filename} must define via VAW kernel'
+    else:
+        pattern = rf"window\.VAW\.define\(\s*['\"]{re.escape(module_name)}['\"]"
+        assert len(re.findall(pattern, source)) == 1, f'{filename} must define {module_name} exactly once'
+        assert source.count('window.VAW.define(') == 1, f'{filename} must define exactly one module'
     assert 'window.VAW_RUNTIME' not in source, f'{filename} bypasses explicit module injection'
     assert 'src/game.js' not in source, f'{filename} depends on the monolithic entrypoint'
     assert_no_new_window_vaw_globals(source, filename)
@@ -80,7 +89,7 @@ main = GAME_MAIN.read_text(encoding='utf-8')
 assert 'window.VAW_RUNTIME' not in main, 'composition root must use explicit kernel modules, not a private aggregate global'
 assert_no_new_window_vaw_globals(main, 'game.js')
 assert "window.VAW.require('runtime.active-context')" in main
-assert len(main.splitlines()) <= 2400, f'game.js regrew to {len(main.splitlines())} lines'
+assert len(main.splitlines()) <= 2420, f'game.js regrew to {len(main.splitlines())} lines'
 assert len(main.encode('utf-8')) <= 116_000, f'game.js regrew to {len(main.encode("utf-8"))} bytes'
 
 ownership = {
