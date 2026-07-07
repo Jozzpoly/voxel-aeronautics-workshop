@@ -50,8 +50,27 @@ node tools/run_with_python_env.js python tools/agent_dispatch.py block --task m0
 
 ## Branch policy (owner 2026-07-07)
 
-- Transport only on **`VAW_GRoK`** (`origin/VAW_GRoK`).
+- Transport only on **`VAW_GRoK`** (`origin/VAW_GRoK` = copy of `current_work` @ `80c0ae4`).
 - Local feature branches off `VAW_GRoK` are allowed; ask owner before other remotes or branches.
+- **Push held** until `DEC-REMEDIATION-COMPLETE` (see `DECISIONS.json`).
+
+## Decision mesh (above QUEUE)
+
+| File | Role |
+|------|------|
+| `AUDIT_FINDINGS.json` | Audit finding IDs |
+| `DECISIONS.json` | Policy gates and owner approvals |
+| `DECISION_MESH_RULES.md` | Pause rules and push gate G1–G10 |
+| `REMEDIATION_PLAN.md` | R0–R4 task breakdown |
+| `TEAM_PLAYBOOK.md` | Agent team lifecycle and verify discipline |
+
+```powershell
+python tools/agent_dispatch.py decisions
+python tools/agent_dispatch.py gate-check
+python tools/agent_dispatch.py reconcile
+```
+
+**ROADMAP** = meaning of done. **DECISIONS** = what blocks assign. **QUEUE** = when work runs.
 
 ## Integration
 

@@ -41,6 +41,47 @@ def deps_satisfied(task: dict[str, Any], tasks: dict[str, dict[str, Any]]) -> bo
     return True
 
 
+def decision_index(decisions_doc: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {item["id"]: item for item in decisions_doc.get("decisions", [])}
+
+
+def decisions_approved(required: list[str], decisions: dict[str, dict[str, Any]]) -> bool:
+    if not required:
+        return True
+    return all(decisions.get(item, {}).get("status") == "approved" for item in required)
+
+
+def task_blocked_by_decision(task: dict[str, Any], decisions: dict[str, dict[str, Any]]) -> str | None:
+    task_id = task.get("id")
+    phase = task.get("phase")
+    for decision in decisions.values():
+        if decision.get("status") not in ("pending", "proposed"):
+            continue
+        blocks = decision.get("blocksWhilePending", {})
+        if task_id in blocks.get("taskIds", []):
+            return decision["id"]
+        if phase in blocks.get("phaseIds", []):
+            return decision["id"]
+    required = task.get("requiresDecisions", [])
+    if required and not decisions_approved(required, decisions):
+        return required[0]
+    return None
+
+
+def task_assignable(
+    task: dict[str, Any],
+    tasks: dict[str, dict[str, Any]],
+    decisions: dict[str, dict[str, Any]],
+) -> bool:
+    if task.get("status") not in ("ready", "pending"):
+        return False
+    if not deps_satisfied(task, tasks):
+        return False
+    if task_blocked_by_decision(task, decisions):
+        return False
+    return True
+
+
 def lane_busy(registry: dict[str, Any], lane: str) -> bool:
     for slot in registry["slots"]:
         if slot["lane"] == lane and slot.get("status") == "busy":
@@ -50,18 +91,24 @@ def lane_busy(registry: dict[str, Any], lane: str) -> bool:
 
 def ready_tasks(queue: dict[str, Any]) -> list[dict[str, Any]]:
     tasks = task_index(queue)
+    decisions = decision_index(load_decisions())
+    registry = load_json(MESH / "REGISTRY.json")
     ready: list[dict[str, Any]] = []
     for task in queue["tasks"]:
-        status = task.get("status")
-        if status not in ("ready", "pending"):
+        if not task_assignable(task, tasks, decisions):
             continue
-        if not deps_satisfied(task, tasks):
-            continue
-        if lane_busy(load_json(MESH / "REGISTRY.json"), task["lane"]):
+        if lane_busy(registry, task["lane"]):
             continue
         ready.append(task)
     ready.sort(key=lambda item: (item.get("priority", 999), item["id"]))
     return ready
+
+
+def load_decisions() -> dict[str, Any]:
+    path = MESH / "DECISIONS.json"
+    if not path.exists():
+        return {"decisions": []}
+    return load_json(path)
 
 
 def merge_paths(lane: dict[str, Any], extra: list[str] | None) -> tuple[list[str], list[str]]:
@@ -72,23 +119,97 @@ def merge_paths(lane: dict[str, Any], extra: list[str] | None) -> tuple[list[str
     return allowed, forbidden
 
 
+def cmd_decisions() -> int:
+    doc = load_decisions()
+    print(json.dumps({
+        "decisions": [
+            {
+                "id": d["id"],
+                "type": d.get("type"),
+                "status": d.get("status"),
+                "title": d.get("title"),
+            }
+            for d in doc.get("decisions", [])
+        ]
+    }, indent=2))
+    return 0
+
+
+def cmd_gate_check(task_id: str | None) -> int:
+    queue = load_json(MESH / "QUEUE.json")
+    tasks = task_index(queue)
+    decisions = decision_index(load_decisions())
+    if task_id:
+        task = tasks.get(task_id)
+        if not task:
+            print(json.dumps({"error": f"unknown task {task_id}"}), file=sys.stderr)
+            return 2
+        block = task_blocked_by_decision(task, decisions)
+        print(json.dumps({
+            "taskId": task_id,
+            "assignable": task_assignable(task, tasks, decisions) and not lane_busy(
+                load_json(MESH / "REGISTRY.json"), task["lane"]
+            ),
+            "blockedByDecision": block,
+            "requiresDecisions": task.get("requiresDecisions", []),
+            "status": task.get("status"),
+        }, indent=2))
+        return 0
+    blocked = []
+    for task in queue["tasks"]:
+        reason = task_blocked_by_decision(task, decisions)
+        if reason and task.get("status") in ("ready", "pending"):
+            blocked.append({"taskId": task["id"], "blockedBy": reason})
+    print(json.dumps({"blockedReadyTasks": blocked}, indent=2))
+    return 0
+
+
+def cmd_reconcile() -> int:
+    queue = load_json(MESH / "QUEUE.json")
+    registry = load_json(MESH / "REGISTRY.json")
+    fixes: list[str] = []
+    in_progress = {t["id"] for t in queue["tasks"] if t.get("status") == "in_progress"}
+    for slot in registry["slots"]:
+        tid = slot.get("currentTaskId")
+        if slot.get("status") == "busy" and tid and tid not in in_progress:
+            slot["status"] = "idle"
+            slot["currentTaskId"] = None
+            fixes.append(f"cleared ghost busy on {slot['id']} (was {tid})")
+        if slot.get("status") == "busy" and not tid:
+            slot["status"] = "idle"
+            fixes.append(f"cleared busy without task on {slot['id']}")
+    if fixes:
+        registry["updatedAt"] = utc_now()
+        save_json(MESH / "REGISTRY.json", registry)
+    print(json.dumps({"reconciled": fixes or ["no changes"]}, indent=2))
+    return 0
+
+
 def cmd_status() -> int:
     state = load_json(MESH / "STATE.json")
     registry = load_json(MESH / "REGISTRY.json")
     queue = load_json(MESH / "QUEUE.json")
     tasks = task_index(queue)
+    decisions = decision_index(load_decisions())
 
     counts: dict[str, int] = {}
     for task in queue["tasks"]:
         status = task.get("status", "unknown")
         counts[status] = counts.get(status, 0) + 1
 
+    pending_decisions = [
+        d["id"] for d in decisions.values() if d.get("status") in ("pending", "proposed")
+    ]
+
     print(json.dumps({
         "mesh": {
+            "meshPhase": state.get("meshPhase"),
             "milestone": state.get("milestone"),
             "branch": state.get("activeBranch"),
+            "transportBranch": state.get("transportBranch"),
             "headSha": state.get("headSha"),
             "openBlockers": state.get("openBlockers", []),
+            "openDecisionBlocks": state.get("openDecisionBlocks", pending_decisions),
             "taskCounts": counts,
         },
         "agents": [
@@ -149,6 +270,11 @@ def cmd_assign(lane: str, task_id: str) -> int:
         return 2
     if task.get("status") in ("done", "blocked"):
         print(json.dumps({"error": f"task {task_id} is {task.get('status')}"}), file=sys.stderr)
+        return 2
+    decisions = decision_index(load_decisions())
+    block = task_blocked_by_decision(task, decisions)
+    if block:
+        print(json.dumps({"error": f"task {task_id} blocked by decision {block}"}), file=sys.stderr)
         return 2
     if not deps_satisfied(task, tasks):
         print(json.dumps({"error": f"dependencies not satisfied for {task_id}"}), file=sys.stderr)
@@ -330,6 +456,11 @@ def main() -> int:
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("status", help="Show mesh status")
+    sub.add_parser("decisions", help="List decision mesh status")
+    sub.add_parser("reconcile", help="Fix REGISTRY/QUEUE slot drift")
+
+    p_gate = sub.add_parser("gate-check", help="Check decision gates for tasks")
+    p_gate.add_argument("--task", default=None)
 
     p_next = sub.add_parser("next", help="List ready tasks")
     p_next.add_argument("--count", type=int, default=3)
@@ -358,6 +489,9 @@ def main() -> int:
 
     handlers = {
         "status": cmd_status,
+        "decisions": cmd_decisions,
+        "reconcile": cmd_reconcile,
+        "gate-check": lambda: cmd_gate_check(args.task),
         "next": lambda: cmd_next(args.count),
         "assign": lambda: cmd_assign(args.lane, args.task),
         "complete": lambda: cmd_complete(args.task, args.result, args.note),

@@ -1,27 +1,48 @@
 {
   "version": 1,
-  "milestone": "M4L-visual-truth",
+  "meshPhase": "remediation",
+  "milestone": "R2-reconcile-mesh",
   "activeBranch": "local/agent-mesh-bootstrap",
   "transportBranch": "VAW_GRoK",
-  "headSha": "80c0ae4",
+  "transportNote": "VAW_GRoK == current_work @ 80c0ae4 (owner 2026-07-07)",
+  "headSha": "872aeeb",
   "remoteSha": "80c0ae4",
   "remoteUrl": "https://github.com/Jozzpoly/voxel-aeronautics-workshop.git",
-  "worktreeClass": "clean",
+  "worktreeClass": "dirty",
+  "worktreeNote": "Uncommitted M4L WIP + mesh remediation files",
+  "openDecisionBlocks": [
+    "DEC-STATE-SYNC",
+    "DEC-M4L-COMMIT-STRATEGY"
+  ],
   "lastCycle": {
-    "timestamp": "2026-07-07T02:36:56Z",
+    "timestamp": "2026-07-07T02:41:19Z",
     "dispatcher": "dispatcher-1",
     "assigned": {
-      "taskId": "m4l-000",
-      "lane": "qa-validation",
-      "slot": "qa-validation-1"
+      "taskId": "m4l-107",
+      "lane": "studio-pipeline",
+      "slot": "studio-pipeline-1"
     }
   },
-  "openBlockers": [],
+  "openBlockers": [
+    {
+      "id": "blk-m4l-commit",
+      "taskId": "m4l-101",
+      "class": "OWNER",
+      "reason": "DEC-M4L-COMMIT-STRATEGY pending: how to land uncommitted M4L WIP"
+    },
+    {
+      "id": "blk-state-sync",
+      "taskId": "m4l-102",
+      "class": "MESH",
+      "reason": "DEC-STATE-SYNC pending: dirty worktree + mesh files not committed"
+    }
+  ],
   "metrics": {
-    "cyclesCompleted": 1,
-    "tasksCompleted": 6,
+    "cyclesCompleted": 2,
+    "tasksCompleted": 9,
     "tasksFailed": 0,
-    "tasksBlocked": 2
+    "tasksBlocked": 3,
+    "remediationTasksTotal": 18
   },
   "history": [
     {
@@ -63,6 +84,36 @@
       "event": "task_pass",
       "taskId": "m4l-000",
       "note": "evidence/m4l-000-*.json archived"
+    },
+    {
+      "at": "2026-07-07T03:01:00Z",
+      "event": "task_pass",
+      "taskId": "r0-001",
+      "note": "check:css + validate:fast 6/6; DEC-VALID-FAST-VERDICT approved"
+    },
+    {
+      "at": "2026-07-07T03:02:00Z",
+      "event": "task_pass",
+      "taskId": "r1-001",
+      "note": "terminals/ exclusion regression test"
+    },
+    {
+      "at": "2026-07-07T03:02:00Z",
+      "event": "task_pass",
+      "taskId": "r1-003",
+      "note": "test_agent_dispatch.py contract tests"
+    },
+    {
+      "at": "2026-07-07T03:03:30Z",
+      "event": "task_pass",
+      "taskId": "r1-004",
+      "note": "m0-004 re-verified; fast-20260707T025709.527245Z-23408"
+    },
+    {
+      "at": "2026-07-07T03:03:30Z",
+      "event": "task_pass",
+      "taskId": "m0-004",
+      "note": "validate:fast 6/6 honest close post-audit"
     }
   ]
 }

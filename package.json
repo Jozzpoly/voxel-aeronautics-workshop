@@ -23,7 +23,10 @@
     "mission:validate": "node tools/validate_mission_map.js",
     "browser:smoke": "node tests/run_browser_smoke.mjs",
     "agent:status": "node tools/run_with_python_env.js python tools/agent_dispatch.py status",
-    "agent:next": "node tools/run_with_python_env.js python tools/agent_dispatch.py next --count 5"
+    "agent:next": "node tools/run_with_python_env.js python tools/agent_dispatch.py next --count 5",
+    "agent:decisions": "node tools/run_with_python_env.js python tools/agent_dispatch.py decisions",
+    "agent:gate-check": "node tools/run_with_python_env.js python tools/agent_dispatch.py gate-check",
+    "agent:reconcile": "node tools/run_with_python_env.js python tools/agent_dispatch.py reconcile"
   },
   "engines": {
     "node": ">=18",

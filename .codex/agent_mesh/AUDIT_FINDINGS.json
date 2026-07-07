@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "auditDate": "2026-07-07",
+  "scope": "Session from conversation start through VAW_GRoK alignment",
+  "ownerClarification": {
+    "date": "2026-07-07",
+    "note": "VAW_GRoK is a copy of current_work; origin/VAW_GRoK and origin/current_work both at 80c0ae4"
+  },
+  "findings": [
+    {
+      "id": "AUD-001",
+      "severity": "high",
+      "title": "Premature M0 closure",
+      "summary": "m0-004 marked done while validate:fast and check:css fail on current HEAD after M4L WIP edits."
+    },
+    {
+      "id": "AUD-002",
+      "severity": "high",
+      "title": "Validation trust weakened",
+      "summary": "terminals/ exclusion closed m0-004 without regression tests; PASS not reproducible with artifacts on disk."
+    },
+    {
+      "id": "AUD-003",
+      "severity": "high",
+      "title": "STATE/QUEUE/REGISTRY drift",
+      "summary": "in_progress tasks without live agents; metrics wrong; openBlockers cleared while CSS red."
+    },
+    {
+      "id": "AUD-004",
+      "severity": "medium",
+      "title": "Split doc authority",
+      "summary": "PUSH_INSTRUCTIONS, handoff, ADR 0044 vs VAW_GRoK transport policy disagree."
+    },
+    {
+      "id": "AUD-005",
+      "severity": "medium",
+      "title": "Uncommitted M4L partial work",
+      "summary": "visual-renderer-profiles, scene_environment, Studio duplicate-material changes not committed or verified."
+    },
+    {
+      "id": "AUD-006",
+      "severity": "medium",
+      "title": "Probe overstated",
+      "summary": "192/192 is shadow-model math, not runtime integration via computeVectorThrusterForceCannon/setGimbal."
+    },
+    {
+      "id": "AUD-007",
+      "severity": "high",
+      "title": "Push deferred correctly",
+      "summary": "Owner required remediation before push; no push performed during session."
+    },
+    {
+      "id": "AUD-008",
+      "severity": "low",
+      "title": "Branch baseline resolved",
+      "summary": "VAW_GRoK == current_work at 80c0ae4; synthetic init 75a3762 was wrong transport base."
+    }
+  ]
+}

@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "updatedAt": "2026-07-07T12:00:00Z",
+  "authority": {
+    "order": [
+      "owner explicit decision",
+      "DECISIONS.json",
+      "ROADMAP_NEXT.md + docs/ROADMAP_REBASE_2026-07-01.md",
+      "QUEUE.json",
+      ".codex/handoff/** (evidence only)"
+    ]
+  },
+  "decisions": [
+    {
+      "id": "DEC-TRANSPORT-BRANCH",
+      "type": "policy",
+      "title": "Transport branch VAW_GRoK (copy of current_work @ 80c0ae4)",
+      "status": "approved",
+      "actor": "owner",
+      "findingIds": ["AUD-008"],
+      "recordedAt": "2026-07-07",
+      "recordedBy": "owner",
+      "ownerNote": "Use only VAW_GRoK; local branches allowed; ask before other remotes."
+    },
+    {
+      "id": "DEC-PUSH-HOLD",
+      "type": "owner_approval",
+      "title": "Hold push until remediation complete",
+      "status": "approved",
+      "actor": "owner",
+      "findingIds": ["AUD-007"],
+      "recordedAt": "2026-07-07",
+      "recordedBy": "owner",
+      "ownerNote": "Push dopiero po etapie remediacji.",
+      "blocksWhilePending": { "transportPush": true }
+    },
+    {
+      "id": "DEC-DOC-AUTHORITY",
+      "type": "policy",
+      "title": "ROADMAP meaning; QUEUE dispatch; DECISIONS gates",
+      "status": "approved",
+      "actor": "dispatcher",
+      "findingIds": ["AUD-004"],
+      "recordedAt": "2026-07-07",
+      "recordedBy": "dispatcher"
+    },
+    {
+      "id": "DEC-M4L-PARALLEL-GUARD",
+      "type": "policy",
+      "title": "No new M4L product assigns until DEC-M0-GATE approved",
+      "status": "approved",
+      "actor": "dispatcher",
+      "findingIds": ["AUD-001", "AUD-003"],
+      "recordedAt": "2026-07-07",
+      "recordedBy": "dispatcher"
+    },
+    {
+      "id": "DEC-STATE-SYNC",
+      "type": "gate",
+      "title": "Mesh reconciled to git HEAD and REGISTRY slots",
+      "status": "pending",
+      "actor": "quorum",
+      "quorum": { "lanes": ["planner-auditor", "dispatcher"], "rule": "all" },
+      "findingIds": ["AUD-003"],
+      "dependsOnDecisions": ["DEC-DOC-AUTHORITY"],
+      "blocksWhilePending": { "taskIds": ["m4l-101", "m4l-107", "m4l-102", "m4l-103"] }
+    },
+    {
+      "id": "DEC-VALID-FAST-VERDICT",
+      "type": "technical_verdict",
+      "title": "validate:fast trustworthy at current HEAD",
+      "status": "approved",
+      "actor": "quorum",
+      "quorum": { "lanes": ["qa-validation", "planner-auditor"], "rule": "all" },
+      "findingIds": ["AUD-002"],
+      "dependsOnDecisions": ["DEC-STATE-SYNC"],
+      "blocksWhilePending": { "phaseIds": ["M4L"] },
+      "approvedAt": "2026-07-07T03:01:00Z",
+      "approvedBy": ["qa-validation-1", "planner-auditor-1", "dispatcher-1"],
+      "evidence": ".agent-validation/fast-20260707T025709.527245Z-23408/summary.json",
+      "note": "r0-001: check:css + validate:fast 6/6 on dirty tree @ 872aeeb; r1-001 terminals regression added"
+    },
+    {
+      "id": "DEC-M0-GATE",
+      "type": "gate",
+      "title": "M0 environment gate honestly closed",
+      "status": "approved",
+      "actor": "quorum",
+      "quorum": { "lanes": ["qa-validation", "env-infra", "planner-auditor"], "rule": "all" },
+      "findingIds": ["AUD-001"],
+      "dependsOnDecisions": ["DEC-VALID-FAST-VERDICT"],
+      "blocksWhilePending": { "phaseIds": ["M4L"] },
+      "unlocks": { "phaseIds": ["M4L"] },
+      "approvedAt": "2026-07-07T03:04:00Z",
+      "approvedBy": ["qa-validation-1", "env-infra-1", "planner-auditor-1"],
+      "evidence": ".agent-validation/fast-20260707T025709.527245Z-23408/summary.json",
+      "note": "m0-004 honestly closed via r0-001 + r1-001 + r1-003 + r1-004"
+    },
+    {
+      "id": "DEC-PROBE-SCOPE",
+      "type": "technical_verdict",
+      "title": "Probe 192/192 is synthetic only until m4lc-201",
+      "status": "approved",
+      "actor": "quorum",
+      "quorum": { "lanes": ["tooling-tests", "planner-auditor"], "rule": "all" },
+      "findingIds": ["AUD-006"],
+      "dependsOnDecisions": ["DEC-DOC-AUTHORITY"],
+      "blocksWhilePending": { "taskIds": ["m4l-108"] },
+      "approvedAt": "2026-07-07T03:03:00Z",
+      "approvedBy": ["tooling-tests-1", "planner-auditor-1"],
+      "note": "Shadow-model math in Node; real runtime wiring deferred to m4lc-201"
+    },
+    {
+      "id": "DEC-M4L-COMMIT-STRATEGY",
+      "type": "owner_approval",
+      "title": "How to land uncommitted M4L WIP",
+      "status": "approved",
+      "actor": "owner",
+      "findingIds": ["AUD-005"],
+      "dependsOnDecisions": ["DEC-M0-GATE"],
+      "ownerNote": "A — per-task commits (owner 2026-07-07)",
+      "strategy": "per-task",
+      "approvedAt": "2026-07-07T12:30:00Z",
+      "recordedBy": "owner",
+      "commitPlan": ["C1-harness", "C2-agent-mesh", "C3-m4l-101-profiles", "C4-m4l-107-studio-diagnostics", "C5-css-regen"],
+      "blocksWhilePending": { "taskIds": ["m4l-108"], "transportPush": true }
+    },
+    {
+      "id": "DEC-REMEDIATION-COMPLETE",
+      "type": "gate",
+      "title": "Remediation R0-R4 complete",
+      "status": "proposed",
+      "actor": "quorum",
+      "quorum": { "lanes": ["planner-auditor", "qa-validation", "dispatcher"], "rule": "all" },
+      "findingIds": ["AUD-001", "AUD-002", "AUD-003", "AUD-004", "AUD-005", "AUD-006"],
+      "dependsOnDecisions": [
+        "DEC-M0-GATE",
+        "DEC-PROBE-SCOPE",
+        "DEC-M4L-COMMIT-STRATEGY",
+        "DEC-STATE-SYNC",
+        "DEC-VALID-FAST-VERDICT"
+      ],
+      "unlocks": { "transport": true }
+    }
+  ]
+}

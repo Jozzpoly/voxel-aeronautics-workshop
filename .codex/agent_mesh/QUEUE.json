@@ -1,7 +1,12 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-07T02:37:02Z",
+  "updatedAt": "2026-07-07T03:03:30Z",
   "phases": [
+    {
+      "id": "REMEDIATION",
+      "label": "Audit remediation R0-R4",
+      "milestone": "remediation"
+    },
     {
       "id": "M0",
       "label": "Environment baseline",
@@ -19,6 +24,108 @@
     }
   ],
   "tasks": [
+    {
+      "id": "r0-001",
+      "phase": "REMEDIATION",
+      "priority": 1,
+      "lane": "qa-validation",
+      "status": "done",
+      "title": "Re-verify check:css and validate:fast on current HEAD",
+      "dependsOn": [],
+      "requiresDecisions": [],
+      "roadmapRef": "REMEDIATION_PLAN.md#R0",
+      "minimumTier": "T3",
+      "acceptance": "check:css exit 0; validate:fast 6/6; evidence in .agent-validation/",
+      "validation": [
+        "npm run check:css",
+        "npm run validate:fast"
+      ],
+      "completedAt": "2026-07-07T03:01:00Z",
+      "lastNote": "check:css green after generate:css; validate:fast 6/6 pass; artifacts fast-20260707T025709.527245Z-23408"
+    },
+    {
+      "id": "r0-002",
+      "phase": "REMEDIATION",
+      "priority": 2,
+      "lane": "env-infra",
+      "status": "done",
+      "title": "Regenerate CSS if stale",
+      "dependsOn": [],
+      "acceptance": "npm run check:css exit 0",
+      "validation": [
+        "npm run generate:css",
+        "npm run check:css"
+      ],
+      "completedAt": "2026-07-07T02:58:00Z",
+      "lastNote": "tailwind.generated.css hash 107d94a7... current"
+    },
+    {
+      "id": "r1-001",
+      "phase": "REMEDIATION",
+      "priority": 4,
+      "lane": "tooling-tests",
+      "status": "done",
+      "title": "Test terminals/ exclusion in test_validation_runner.py",
+      "dependsOn": [],
+      "roadmapRef": "REMEDIATION_PLAN.md#R1",
+      "acceptance": "test_terminals_directory_excluded_from_side_effects passes",
+      "validation": [
+        "node tools/run_with_python_env.js python -c \"from test_validation_runner import test_terminals_directory_excluded_from_side_effects; test_terminals_directory_excluded_from_side_effects()\""
+      ],
+      "completedAt": "2026-07-07T03:02:00Z",
+      "lastNote": "Regression test added; isolated run ok"
+    },
+    {
+      "id": "r0-004",
+      "phase": "REMEDIATION",
+      "priority": 2,
+      "lane": "dispatcher",
+      "status": "done",
+      "title": "Freeze M4L assigns; reconcile ghost busy slots",
+      "dependsOn": [],
+      "acceptance": "m4l-101/m4l-107 blocked; REGISTRY slots idle",
+      "completedAt": "2026-07-07T12:00:00Z",
+      "lastNote": "Applied during decision mesh bootstrap"
+    },
+    {
+      "id": "r1-003",
+      "phase": "REMEDIATION",
+      "priority": 5,
+      "lane": "tooling-tests",
+      "status": "done",
+      "title": "Add tests/test_agent_dispatch.py",
+      "dependsOn": [],
+      "roadmapRef": "REMEDIATION_PLAN.md#R1",
+      "acceptance": "Dispatcher contract tests pass in npm run test",
+      "validation": [
+        "node tools/run_with_python_env.js python tests/test_agent_dispatch.py"
+      ],
+      "completedAt": "2026-07-07T03:02:00Z",
+      "lastNote": "7 contract tests; wired into run_all.py"
+    },
+    {
+      "id": "r1-004",
+      "phase": "REMEDIATION",
+      "priority": 6,
+      "lane": "qa-validation",
+      "status": "done",
+      "title": "Re-run m0-004 after harness tests; archive validation summary",
+      "dependsOn": [
+        "r0-001",
+        "r1-001",
+        "r1-003"
+      ],
+      "requiresDecisions": [
+        "DEC-VALID-FAST-VERDICT"
+      ],
+      "roadmapRef": "REMEDIATION_PLAN.md#R1",
+      "acceptance": "m0-004 marked done with fresh .agent-validation artifact",
+      "validation": [
+        "npm run validate:fast"
+      ],
+      "completedAt": "2026-07-07T03:03:30Z",
+      "lastNote": "m0-004 re-verified; fast-20260707T025709.527245Z-23408"
+    },
     {
       "id": "m0-001",
       "phase": "M0",
@@ -81,6 +188,10 @@
       "priority": 13,
       "lane": "qa-validation",
       "status": "done",
+      "requiresDecisions": [
+        "DEC-VALID-FAST-VERDICT",
+        "DEC-M0-GATE"
+      ],
       "title": "validate:fast full green on current tree",
       "dependsOn": [
         "m0-003"
@@ -92,8 +203,9 @@
       "notes": "Currently fails gate-c-hardening via test_runtime_dependency_contract CSS check",
       "assignedAt": "2026-07-07T02:34:04Z",
       "assignedSlot": "qa-validation-1",
-      "completedAt": "2026-07-07T02:36:56Z",
-      "lastNote": "validate:fast 6/6 PASS after terminals exclusion fix"
+      "completedAt": "2026-07-07T03:03:30Z",
+      "lastNote": "validate:fast 6/6 honest close post-audit",
+      "blockReason": "DEC-M0-GATE pending"
     },
     {
       "id": "m0-005",
@@ -166,7 +278,12 @@
       "phase": "M4L",
       "priority": 31,
       "lane": "visual-renderer",
-      "status": "ready",
+      "status": "blocked",
+      "requiresDecisions": [
+        "DEC-M0-GATE",
+        "DEC-STATE-SYNC",
+        "DEC-M4L-COMMIT-STRATEGY"
+      ],
       "title": "Extract shared renderer profile contract",
       "dependsOn": [
         "m4l-000",
@@ -180,7 +297,9 @@
       "allowedPathsExtra": [
         "src/game/visual-renderer-profiles.js",
         "tests/test_visual_renderer_profiles.js"
-      ]
+      ],
+      "assignedAt": "2026-07-07T02:41:18Z",
+      "assignedSlot": "visual-renderer-1"
     },
     {
       "id": "m4l-102",
@@ -281,7 +400,12 @@
       "phase": "M4L",
       "priority": 36,
       "lane": "studio-pipeline",
-      "status": "ready",
+      "status": "blocked",
+      "requiresDecisions": [
+        "DEC-M0-GATE",
+        "DEC-STATE-SYNC",
+        "DEC-M4L-COMMIT-STRATEGY"
+      ],
       "title": "Duplicate material Studio diagnostics",
       "dependsOn": [
         "m4l-000"
@@ -290,7 +414,9 @@
       "validation": [
         "npm run studio:test",
         "npm run visual:test"
-      ]
+      ],
+      "assignedAt": "2026-07-07T02:41:19Z",
+      "assignedSlot": "studio-pipeline-1"
     },
     {
       "id": "m4l-108",

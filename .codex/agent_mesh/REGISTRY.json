@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-07T02:37:02Z",
+  "updatedAt": "2026-07-07T03:03:30Z",
   "slots": [
     {
       "id": "dispatcher-1",
@@ -32,7 +32,7 @@
       "status": "idle",
       "role": "scene_environment, diagnostic render mode, renderer profiles",
       "currentTaskId": null,
-      "notes": null
+      "notes": "Reconciled r0-004: ghost busy cleared"
     },
     {
       "id": "studio-pipeline-1",
@@ -40,7 +40,7 @@
       "status": "idle",
       "role": "Blockbench Studio, capture harness, parity metrics",
       "currentTaskId": null,
-      "notes": null
+      "notes": "Reconciled r0-004: ghost busy cleared"
     },
     {
       "id": "docs-convergence-1",
