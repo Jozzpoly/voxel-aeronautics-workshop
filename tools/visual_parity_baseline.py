@@ -232,11 +232,100 @@ def classify(assets: list[dict], renderer: dict) -> dict:
     }
 
 
+def summarize_render_comparison(comparison: dict) -> dict:
+    metrics = comparison.get('metrics') or {}
+    average_luminance = metrics.get('averageLuminance') or {}
+    return {
+        'blockType': comparison.get('blockType'),
+        'assetId': comparison.get('assetId'),
+        'ssim': metrics.get('ssim'),
+        'averageLuminance': {
+            'studio': average_luminance.get('studio'),
+            'game': average_luminance.get('game'),
+            'delta': average_luminance.get('delta'),
+        },
+        'withinThresholds': metrics.get('withinThresholds'),
+    }
+
+
+def classify_render(render_report: dict, static_classification: dict) -> dict:
+    comparisons = render_report.get('comparisons') or []
+    thresholds = render_report.get('thresholds') or {}
+    luminance_delta_max = float(thresholds.get('luminanceDeltaMax', 0.08))
+    render_by_block = {
+        item.get('blockType'): summarize_render_comparison(item)
+        for item in comparisons
+        if item.get('blockType')
+    }
+    balloon_render = render_by_block.get('Balloon') or {}
+    balloon_metrics = {
+        'ssim': balloon_render.get('ssim'),
+        'averageLuminanceDelta': (balloon_render.get('averageLuminance') or {}).get('delta'),
+        'withinThresholds': balloon_render.get('withinThresholds'),
+    }
+
+    deltas = [
+        abs((item.get('averageLuminance') or {}).get('delta') or 0)
+        for item in render_by_block.values()
+        if isinstance((item.get('averageLuminance') or {}).get('delta'), (int, float))
+    ]
+    average_delta = round(sum(deltas) / len(deltas), 4) if deltas else None
+    blocks_within = sum(1 for item in render_by_block.values() if item.get('withinThresholds'))
+    blocks_captured = len(render_by_block)
+
+    hint = (render_report.get('summary') or {}).get('classificationHint')
+    if hint in {'environment-policy', 'material-policy', 'asset-data'}:
+        root_cause = hint
+    elif average_delta is not None and average_delta > luminance_delta_max:
+        root_cause = 'environment-policy'
+    elif blocks_within == blocks_captured and blocks_captured:
+        root_cause = 'unclassified'
+    else:
+        root_cause = 'material-policy'
+
+    ruled_out = list(static_classification.get('ruledOutForNow') or [])
+    if root_cause != 'asset-data' and 'obvious Balloon texture luminance outlier' in ruled_out:
+        ruled_out.append('asset-data: Balloon texture luminance is not an outlier versus pack peers')
+    if root_cause == 'environment-policy':
+        ruled_out.append('material-policy as primary root cause: cross-block luminance delta exceeds threshold under matched framing')
+    if root_cause != 'material-policy':
+        ruled_out.append('material-policy as sole root cause: Balloon shares plain imported materialPolicy with Hull/Fuel')
+
+    primary_causes = list(static_classification.get('primaryCauses') or [])
+    if root_cause == 'environment-policy' and 'lighting/fog/shadow/preview mismatch' not in primary_causes:
+        primary_causes.insert(0, 'lighting/fog/shadow/preview mismatch')
+    if root_cause == 'material-policy' and 'per-material render policy mismatch' not in primary_causes:
+        primary_causes.insert(0, 'per-material render policy mismatch')
+    if root_cause == 'asset-data' and 'asset texture luminance outlier' not in primary_causes:
+        primary_causes.insert(0, 'asset texture luminance outlier')
+
+    return {
+        **static_classification,
+        'rootCausePolicy': root_cause,
+        'renderEvidence': {
+            'taskId': render_report.get('taskId'),
+            'capturedAt': render_report.get('capturedAt'),
+            'profileId': render_report.get('profileId'),
+            'thresholds': thresholds,
+            'blocksCaptured': blocks_captured,
+            'blocksWithinThresholds': blocks_within,
+            'averageAbsoluteLuminanceDelta': average_delta,
+            'classificationHint': hint,
+            'metricsByBlock': render_by_block,
+            'balloon': balloon_metrics,
+        },
+        'primaryCauses': primary_causes,
+        'ruledOutForNow': sorted(set(ruled_out)),
+        'requiresRenderCaptureForFinalWeighting': False,
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description='Build a read-only Studio-vs-game visual parity baseline for Visual Asset Pack V1 assets.')
     parser.add_argument('pack_root', type=Path)
     parser.add_argument('--manifest', default=DEFAULT_MANIFEST)
     parser.add_argument('--blocks', default=','.join(DEFAULT_BLOCKS), help='Comma-separated block types to compare.')
+    parser.add_argument('--render-report', type=Path, help='Optional m4l-104 render report JSON to merge static and rendered evidence.')
     args = parser.parse_args()
 
     pack_root = args.pack_root.resolve()
@@ -249,6 +338,13 @@ def main() -> None:
         if set(asset.get('bindings', {}).get('blockTypes') or []).intersection(requested_blocks)
     ]
     renderer = source_flags()
+    static_classification = classify(assets, renderer)
+    classification = static_classification
+    render_report = None
+    if args.render_report:
+        render_report_path = args.render_report.resolve()
+        render_report = read_json(render_report_path)
+        classification = classify_render(render_report, static_classification)
     report = {
         'visualParityBaseline': 'M4L',
         'packRoot': str(pack_root),
@@ -256,8 +352,10 @@ def main() -> None:
         'blocks': requested_blocks,
         'assets': assets,
         'renderer': renderer,
-        'classification': classify(assets, renderer),
+        'classification': classification,
     }
+    if render_report is not None:
+        report['renderReport'] = str(args.render_report.resolve())
     print(json.dumps(report, indent=2))
 
 
