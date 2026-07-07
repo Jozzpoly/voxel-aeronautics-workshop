@@ -15,6 +15,7 @@ def main() -> None:
 
     build_release = (ROOT / 'tools' / 'build_release.py').read_text(encoding='utf-8')
     assert "'.agent-validation'" in build_release, 'release archive must ignore clean-candidate validation worktrees'
+    assert "'terminals'" in build_release, 'release archive must ignore ephemeral shell session logs'
     assert 'def visual_pack_sources(root: Path = ROOT)' in build_release
     assert 'def studio_tool_sources(root: Path = ROOT)' in build_release
     assert 'def manifest_inputs(root: Path = ROOT)' in build_release

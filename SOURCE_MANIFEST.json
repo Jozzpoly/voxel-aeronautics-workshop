@@ -209,7 +209,7 @@
     "tools/blockbench_import_studio/vendor/GLTFLoader.js": "5c15967ba830918a9caea6338712c994c354bccd4edc4569bde411c3ec06a3e6",
     "tools/blockbench_import_studio/vendor/three.min.js": "9274bbcec8d96168626c732b5d31c775aa8cfb7eaa0599bec0c175908a2c1ce2",
     "tools/blockbench_import_studio/visual_parity_capture.html": "d703141b89928a237786df29a56a2fce62f28c8c2a66e3ce17ae4938f1bf75e2",
-    "tools/build_release.py": "2b0575e9c30ecd094cfb340d15003cac9f63653b4170d1532ab263d70884e4f7",
+    "tools/build_release.py": "c82cd798e8feaddd8e5dddbe61032b2d214c747faa357020c6524849d9c80010",
     "tools/generate_tailwind_css.js": "6603b3e542e41c1cb94bcd8026226a73fc103ee7093d6a8aa72f3cd75f21364b",
     "tools/verify_release.py": "97c48e6d9233c36cc7837c5fad84cf9b89edbbd815384605519ee012b603f417",
     "vendor/cannon-0.6.2/cannon.min.js": "54e8b646e97daef2cff3c7af99fcd0fe768dc74e7d46498f68a869c7dc9dc906",

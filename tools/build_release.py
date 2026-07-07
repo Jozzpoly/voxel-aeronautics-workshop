@@ -14,7 +14,16 @@ SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Workbench_Foundation.html'
 ZIP_NAME = 'Voxel_Aeronautics_Workshop_Workbench_Foundation.zip'
 MANIFEST_NAME = 'SOURCE_MANIFEST.json'
 ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_WORKBENCH_FOUNDATION_READY_TO_PUSH'
-IGNORED_ARCHIVE_PARTS = {'dist', 'release', '.agent-validation', '__pycache__', '.pytest_cache', '.git', 'node_modules'}
+IGNORED_ARCHIVE_PARTS = {
+    'dist',
+    'release',
+    '.agent-validation',
+    'terminals',
+    '__pycache__',
+    '.pytest_cache',
+    '.git',
+    'node_modules',
+}
 ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 CANONICAL_TEXT_SUFFIXES = {
     '.css',

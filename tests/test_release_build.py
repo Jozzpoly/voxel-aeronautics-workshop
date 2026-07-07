@@ -24,6 +24,7 @@ def embedded_source(single_text: str, relative: Path) -> str:
 
 
 assert '.agent-validation' in module.IGNORED_ARCHIVE_PARTS
+assert 'terminals' in module.IGNORED_ARCHIVE_PARTS
 
 manifest_path = ROOT / module.MANIFEST_NAME
 expected_manifest_text = module.manifest_text(ROOT)
