@@ -92,8 +92,8 @@ function createVisualRendererProfiles() {
     }),
     renderer: Object.freeze({
       antialias: STUDIO_PREVIEW_PROFILE.renderer.antialias,
-      alpha: null,
-      preserveDrawingBuffer: null,
+      alpha: STUDIO_PREVIEW_PROFILE.renderer.alpha,
+      preserveDrawingBuffer: STUDIO_PREVIEW_PROFILE.renderer.preserveDrawingBuffer,
       powerPreference: null,
       pixelRatioCap: STUDIO_PREVIEW_PROFILE.renderer.pixelRatioCap,
       outputColorSpace: 'srgb',

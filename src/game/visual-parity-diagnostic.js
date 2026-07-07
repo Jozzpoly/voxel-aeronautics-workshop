@@ -107,6 +107,23 @@ function createVisualParityDiagnostic(Profiles) {
     else Profiles.applySceneBackground(scene, THREE, profile);
   }
 
+  function hideCaptureObstructions(documentRef) {
+    if (!documentRef?.getElementById) return;
+    const hiddenLayers = ['ui-layer', 'desktop-required', 'help-modal', 'debrief-modal', 'fatal-error'];
+    for (const layerId of hiddenLayers) {
+      const element = documentRef.getElementById(layerId);
+      if (element) element.style.display = 'none';
+    }
+    const container = documentRef.getElementById('canvas-container');
+    if (container) {
+      container.style.display = 'block';
+      container.style.visibility = 'visible';
+      container.style.opacity = '1';
+      container.style.pointerEvents = 'auto';
+    }
+    if (documentRef.body?.style) documentRef.body.style.overflow = 'hidden';
+  }
+
   function createStatusOverlay(document, request, profile) {
     const overlay = document.createElement('div');
     overlay.id = 'visual-parity-diagnostic-status';
@@ -178,6 +195,8 @@ function createVisualParityDiagnostic(Profiles) {
     if (!container?.appendChild) throw new TypeError('Canvas container is required for visual parity diagnostic mode.');
     if (!request) throw new TypeError('Visual parity diagnostic request is required.');
     if (!documentRef?.createElement) throw new TypeError('document is required for visual parity diagnostic mode.');
+
+    hideCaptureObstructions(documentRef);
 
     const profile = resolveProfile(request.profile);
     const VisualAssetRegistry = VAW.require('game.visual-asset-registry');

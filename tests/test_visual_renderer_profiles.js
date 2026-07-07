@@ -144,6 +144,8 @@ function assertLightLine(line, expectedSnippet) {
   const { STUDIO_PREVIEW_PROFILE, GAME_STUDIO_PARITY_PROFILE } = Profiles;
   assert.strictEqual(GAME_STUDIO_PARITY_PROFILE.scene.background, STUDIO_PREVIEW_PROFILE.scene.background);
   assert.strictEqual(GAME_STUDIO_PARITY_PROFILE.scene.fog, null);
+  assert.strictEqual(GAME_STUDIO_PARITY_PROFILE.renderer.alpha, STUDIO_PREVIEW_PROFILE.renderer.alpha);
+  assert.strictEqual(GAME_STUDIO_PARITY_PROFILE.renderer.preserveDrawingBuffer, STUDIO_PREVIEW_PROFILE.renderer.preserveDrawingBuffer);
   assert.strictEqual(GAME_STUDIO_PARITY_PROFILE.renderer.outputColorSpace, 'srgb');
   assert.strictEqual(GAME_STUDIO_PARITY_PROFILE.renderer.shadowMap.enabled, false);
   assert.strictEqual(GAME_STUDIO_PARITY_PROFILE.lights, STUDIO_PREVIEW_PROFILE.lights);
