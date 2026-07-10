@@ -1,0 +1,61 @@
+name: Regenerate Mobile Playable Adapter Provenance
+
+on:
+  push:
+    branches:
+      - mobile/playable-mvp
+  pull_request:
+    branches:
+      - VAW_GRoK
+
+permissions:
+  contents: write
+
+concurrency:
+  group: regenerate-mobile-playable-adapter-provenance
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, '[adapter provenance generated]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: mobile/playable-mvp
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install exact Tailwind regeneration dependency
+        run: npm install --no-save --package-lock=false --ignore-scripts tailwindcss@4.1.10
+
+      - name: Regenerate official artifacts
+        run: |
+          node tools/generate_tailwind_css.js
+          python tools/build_release.py
+
+      - name: Verify generated mutation scope
+        run: |
+          changed="$(git diff --name-only | sort)"
+          expected="$(printf '%s\n' SOURCE_MANIFEST.json tailwind.generated.css | sort)"
+          printf 'Changed files:\n%s\n' "$changed"
+          if [ "$changed" != "$expected" ]; then
+            echo "Unexpected generated-file scope." >&2
+            exit 1
+          fi
+
+      - name: Remove one-time workflow and commit provenance
+        run: |
+          rm .github/workflows/regenerate-mobile-playable-adapter-provenance.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SOURCE_MANIFEST.json tailwind.generated.css .github/workflows/regenerate-mobile-playable-adapter-provenance.yml
+          git commit -m "Regenerate command adapter provenance [adapter provenance generated]"
+          git push origin HEAD:mobile/playable-mvp
