@@ -152,9 +152,52 @@ function runDelayedSurfaceCase() {
   assert.equal(runtime.records[0].destroys, 1);
 }
 
+function runFailureRecoveryCase() {
+  const camera = cameraModuleHarness();
+  const mobile = mobileContextHarness();
+  const surface = { id: 'canvas' };
+  const documentLike = { documentElement: {}, querySelector() { return surface; } };
+  const errors = [];
+  let attempts = 0;
+  const successful = { binds: 0, destroys: 0, refreshes: 0 };
+  const runtimeModule = {
+    create() {
+      attempts += 1;
+      if (attempts === 1) throw new Error('runtime create failed');
+      return {
+        bind() { successful.binds += 1; return true; },
+        destroy() { successful.destroys += 1; return true; },
+        refreshEnabled() { successful.refreshes += 1; return true; }
+      };
+    }
+  };
+  const binder = Autobind.create({
+    document: documentLike,
+    window: {},
+    mobileContext: mobile.context,
+    cameraControllerModule: camera.module,
+    runtimeModule,
+    onError(error, context) { errors.push({ error, context }); }
+  });
+
+  binder.start();
+  assert.doesNotThrow(() => camera.emit({ id: 'broken-first' }));
+  assert.equal(binder.bound(), false);
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0].context.phase, 'runtime-bind');
+  assert.match(errors[0].error.message, /runtime create failed/);
+
+  assert.doesNotThrow(() => camera.emit({ id: 'working-second' }));
+  assert.equal(binder.bound(), true);
+  assert.equal(successful.binds, 1);
+  binder.destroy();
+  assert.equal(successful.destroys, 1);
+}
+
 function run() {
   runImmediateSurfaceCase();
   runDelayedSurfaceCase();
+  runFailureRecoveryCase();
   assert.throws(() => Autobind.create({}), /document/);
   assert.throws(() => Autobind.create({ document: {}, mobileContext: {} }), /currentProfile/);
   console.log('OK mobile camera autobind');
