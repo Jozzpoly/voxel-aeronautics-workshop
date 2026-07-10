@@ -1,116 +1,164 @@
 # Mobile / Touch Foundation Plan — 2026-07-10
 
-Branch: `mobile/touch-foundation`
-Base: `VAW_GRoK`
-Status: planning and architecture checkpoint
+Branch: `mobile/touch-foundation`  
+Base: `VAW_GRoK`  
+Status: implementation active — MT0A
 
 ## Goal
 
-Prepare Voxel Aeronautics Workshop for practical play on a phone-sized screen using touch input, without forking gameplay authority or weakening the desktop build.
+Prepare Voxel Aeronautics Workshop for practical phone-sized touch play without forking gameplay authority. Mobile remains an alternate presentation and input layer over the same CraftModel, compiler, runtime assembly, physics, save schema and gameplay systems.
 
-The mobile implementation must remain an alternate presentation and input layer over the same CraftModel, compiler, runtime assembly, physics, save schema and gameplay systems.
+## Critical revalidation
 
-## Critical findings
+The original direction was correct, but its first checkpoint was too broad: it combined device detection, workspace replacement, camera gestures, build mutation and flight controls. That would make regressions difficult to isolate and would encourage unsafe growth of `src/game.js`.
 
-1. `index.html` currently displays an explicit `desktop-required` blocker and states that touch-only play is outside project scope.
-2. The current build workspace is dense and optimized for floating/docked desktop panels.
-3. Build interaction documentation and runtime assumptions are mouse/keyboard-centric: left click place, right click remove, middle/Alt orbit and keyboard shortcuts.
-4. Flight input already converges through named control actions and `recomputePilotAxes()`. Mobile controls should feed that existing action/profile boundary rather than mutate physics or flight systems directly.
-5. Camera behavior is already isolated behind `game.camera-controller`; touch orbit, pan and pinch zoom should adapt to this controller rather than create a second camera implementation.
-6. Mobile work must not enter Blueprint saves. Layout and touch preferences belong to UI preference state only.
+The corrected plan uses strict gates. A gate must be validated before work enters its dependent subsystem.
 
-## Architecture decision
+1. **MT0A — device profile:** pure classification and manual presentation override; no gameplay behavior.
+2. **MT0B — lifecycle shell:** bootstrap wiring, safe fallback, viewport/safe-area updates and teardown.
+3. **MT1 — workspace:** compact toolbar, one active bottom sheet and horizontal parts tray.
+4. **MT2A — camera gestures:** pointer ownership, orbit, pan and pinch; no craft mutation.
+5. **MT2B — build actions:** tap placement and explicit remove mode through existing build targeting.
+6. **MT3 — flight controls:** virtual controls through named control actions with mandatory cancellation.
+7. **MT4 — validation/performance:** mobile browser smoke, desktop regression and viewport matrix.
 
-Create a mobile presentation/input adapter rather than a separate mobile game:
+## Confirmed architectural facts
 
-- `game.mobile-device-profile`: capability and viewport classification.
-- `game.mobile-touch-controller`: pointer ownership, virtual sticks, hold buttons and gesture state.
-- `game.mobile-workspace-controller`: compact panel policy, bottom sheet behavior and mobile mode transitions.
-- Existing `game.camera-controller`: remains the sole camera authority.
-- Existing control-action / input-profile boundary: remains the sole flight input authority.
-- Existing build targeting and craft mutation paths: remain the sole build authority.
+- `index.html` contains an explicit desktop-only blocker.
+- `src/game.js` deliberately rejects `pointerType === "touch"`; mobile support cannot be achieved through CSS alone.
+- `performBuildAction(button)` and the existing raycast path are the authoritative build boundary. Mobile code must call that path rather than reproduce placement/removal logic.
+- Flight input converges through named control actions and `recomputePilotAxes()`. Mobile controls must feed this boundary rather than mutate pilot or physics state directly.
+- Camera state is owned by `game.camera-controller`; touch code may emit deltas but cannot become a second camera authority.
+- Mobile presentation state must never enter Blueprint saves.
+- Touch capability and mobile presentation are separate decisions. A hybrid touch laptop must remain desktop in automatic mode.
 
-No mobile module may write gameplay data directly to physics, Blueprint, CraftModel or runtime assembly internals.
+## Module boundaries
 
-## Delivery stages
+- `game.mobile-device-profile`: capability/viewport classification, DOM profile attributes and manual override.
+- `game.mobile-touch-controller`: pointer ownership, gesture state, virtual controls and cancellation.
+- `game.mobile-workspace-controller`: compact panel policy and mobile mode transitions.
+- Existing camera controller: sole camera authority.
+- Existing input-profile/control-action boundary: sole flight-input authority.
+- Existing build targeting/CraftModel mutation paths: sole build authority.
 
-### MT0 — Safe foundation
+No mobile module may write directly to physics, Blueprint, CraftModel or runtime assembly internals.
 
-- Remove the hard phone blocker only when the mobile adapter initializes successfully.
-- Add touch capability detection and a manual desktop/mobile override.
-- Add safe-area and dynamic viewport-height CSS.
-- Prevent browser scrolling, text selection and accidental zoom only inside the game interaction surface.
-- Preserve keyboard/mouse behavior unchanged.
+## Device-profile policy
 
-### MT1 — Small-screen workspace
+Automatic mobile presentation requires touch/coarse-pointer capability plus a compact viewport or lack of hover. Touch support alone is insufficient.
 
-- Introduce a compact mobile toolbar.
-- Convert large workspace panels to one-at-a-time bottom sheets.
-- Keep parts as a horizontal thumb-accessible tray.
-- Ensure all interactive targets meet a practical touch size.
-- Keep critical canvas area visible in portrait and landscape.
+Presentation override values:
 
-### MT2 — Build touch controls
+- `auto`
+- `mobile`
+- `desktop`
 
-- One-finger canvas drag: orbit camera.
-- Two-finger drag: pan camera target.
-- Pinch: zoom.
-- Tap: select/place through the existing target and mutation path.
-- Explicit remove-mode button instead of emulating right click ambiguously.
-- Long press is reserved until tested; it must not become a hidden destructive gesture.
-- Add visible buttons for roll, undo, redo, launch/build mode and panel access.
+The override is UI-local and never serialized into a craft.
 
-### MT3 — Flight controls
+## Gesture contract
 
-- Left virtual stick: configurable primary translation/attitude pair.
-- Right virtual stick or touchpad: configurable attitude/camera mode.
-- Hold buttons for lift up/down and other binary actions.
-- Feed existing named control actions and input profile semantics.
-- Release all active actions on pointer cancellation, visibility loss, mode switch and focus loss.
+- Every active pointer has exactly one owner.
+- UI-owned pointers never reach canvas gestures.
+- One-finger movement becomes orbit only after a deterministic threshold.
+- A stationary short tap may become a build action only in BUILD mode.
+- Two canvas pointers promote the gesture to pan/pinch and permanently cancel tap eligibility for that gesture.
+- Remove is an explicit visible mode; no destructive long press and no hidden right-click emulation.
+- `pointercancel`, `lostpointercapture`, `blur`, `visibilitychange`, mode switch and controller destruction clear all transient state and held actions.
 
-### MT4 — Validation and performance
+## Layout contract
 
-- Add pure tests for gesture interpretation and pointer ownership.
-- Extend browser smoke coverage with a mobile viewport and synthetic pointer events.
-- Validate portrait, landscape, narrow tablet and desktop regression.
-- Cap renderer pixel ratio on constrained devices through a documented renderer policy.
-- Profile UI layout, draw calls, memory pressure and sustained physics performance.
+- Use dynamic viewport height and a `visualViewport` fallback.
+- Respect all safe-area insets.
+- Disable browser gestures only on the game interaction surface, never globally.
+- Primary touch targets: minimum 44 CSS px; gameplay controls preferably 48–56 CSS px.
+- Phone viewport: one large workspace panel at a time.
+- Portrait prioritizes camera visibility and the parts tray.
+- Landscape reserves thumb zones and keeps destructive controls away from virtual sticks.
 
-## First implementation checkpoint acceptance criteria
+## Validation matrix
 
-- The game opens on a touch-capable phone viewport without the desktop-required blocker.
-- Desktop keyboard and mouse controls remain operational.
-- Mobile UI does not require horizontal page scrolling.
-- A player can orbit, pan and zoom the workshop camera using touch.
-- A player can open the parts tray, choose a part, place it, switch to remove mode and remove it.
-- A player can launch and use at least the essential flight axes through visible touch controls.
-- Pointer cancellation cannot leave a flight command latched.
-- Blueprint and runtime schemas remain unchanged.
+Viewport coverage:
 
-## Non-goals for the foundation checkpoint
+- 360×800, 390×844 and 412×915 portrait phones;
+- 844×390 and 915×412 landscape phones;
+- 768×1024 tablet;
+- 1366×768 and 1920×1080 desktop regression.
+
+Input coverage:
+
+- touch-only phone;
+- coarse pointer with touch;
+- hybrid touch laptop with hover;
+- mouse/keyboard desktop;
+- forced mobile on desktop;
+- forced desktop on phone viewport.
+
+## Gate acceptance
+
+### MT0A — Device profile
+
+- deterministic pure classifier;
+- hybrid touch laptop remains desktop in auto mode;
+- manual mobile/desktop override;
+- DOM dataset/class projection;
+- resize/orientation/visualViewport observer;
+- unit tests.
+
+### MT0B — Lifecycle shell
+
+- module loaded through bootstrap and release source manifest;
+- blocker removed only after successful adapter initialization;
+- useful fallback remains on initialization failure;
+- safe-area and viewport variables update without reload;
+- desktop behavior unchanged.
+
+### MT1 — Workspace
+
+- no page-level horizontal scrolling;
+- one large panel at a time;
+- horizontal parts tray;
+- minimum touch targets;
+- portrait/landscape policies;
+- advanced features remain reachable.
+
+### MT2A — Camera
+
+- orbit, pan and pinch zoom;
+- no placement after camera movement;
+- cancellation always clears gesture state.
+
+### MT2B — Build
+
+- visible PLACE/REMOVE mode;
+- tap uses existing build action path;
+- hinge authoring remains authoritative;
+- undo, redo and roll remain accessible;
+- no duplicate mutation logic.
+
+### MT3 — Flight
+
+- essential axes available;
+- existing named actions are used;
+- no latched action after cancellation/backgrounding/mode switch;
+- controls do not hide critical telemetry.
+
+### MT4 — Evidence
+
+- pure gesture tests;
+- mobile Pointer Event browser smoke;
+- desktop browser smoke regression;
+- sustained render/physics profile;
+- renderer pixel-ratio policy based on measurements, not user-agent guessing.
+
+## Non-goals
 
 - Native Android/iOS packaging.
-- Separate mobile physics tuning.
-- Simplified mobile-only craft schema.
-- Automatic destructive long-press actions.
-- Full parity for every advanced desktop authoring panel in the first checkpoint.
+- Separate mobile physics.
+- Mobile-only craft schema.
+- Destructive long-press actions.
+- Permanent removal of advanced desktop functionality.
+- User-agent sniffing as the source of truth.
 
-## Risk controls
+## Current implementation
 
-- Prefer Pointer Events over parallel touch/mouse implementations.
-- Assign each pointer to exactly one owner: UI, camera gesture, build gesture or flight control.
-- Never synthesize right-click as the primary remove interaction.
-- Keep gesture thresholds deterministic and testable.
-- Use feature modules and tests; do not expand `src/game.js` into another monolith.
-- Treat browser UI occlusion and safe-area insets as runtime layout inputs.
-
-## Immediate implementation order
-
-1. Add device profile and touch-controller modules with tests.
-2. Wire modules through the existing bootstrap source list.
-3. Replace the hard blocker with adapter-init fallback behavior.
-4. Add mobile layout CSS and compact workspace policy.
-5. Implement camera gestures through `game.camera-controller`.
-6. Implement explicit build/place/remove touch interaction.
-7. Implement flight virtual controls through existing control actions.
-8. Run fast, full and browser mobile smoke validation before opening a PR.
+MT0A has started with `src/game/mobile-device-profile.js` and `tests/test_mobile_device_profile.js`. Next is source-manifest/test-runner wiring, followed by the MT0B lifecycle shell.
