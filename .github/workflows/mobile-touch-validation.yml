@@ -46,15 +46,15 @@ jobs:
           set -o pipefail
           python -m compileall . 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/compileall.log"
 
+      - name: Build release artifacts and regenerate provenance
+        run: |
+          set -o pipefail
+          python tools/build_release.py 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/build_release.log"
+
       - name: Run full core suite
         run: |
           set -o pipefail
           python -u tests/run_all.py 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/run_all.log"
-
-      - name: Build release artifacts
-        run: |
-          set -o pipefail
-          python tools/build_release.py 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/build_release.log"
 
       - name: Verify release artifacts
         run: |
