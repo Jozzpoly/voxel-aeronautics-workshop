@@ -63,13 +63,27 @@ function run() {
   assert.strictEqual(published[0], controller);
   assert.strictEqual(CameraController.current(), controller);
 
+  const initialSnapshot = controller.snapshot();
+  assert(Object.isFrozen(initialSnapshot));
+  assert.deepEqual(initialSnapshot, {
+    yaw: 1,
+    pitch: 0.5,
+    distance: 20,
+    mode: 'follow-position',
+    followStrength: 0.08
+  });
+
   assert.equal(controller.orbitCameraByPixels(10, -5), true);
   assert.equal(state.camera.yaw, 0.92);
   assert.equal(state.camera.pitch, 0.54);
   assert.equal(controller.orbitCameraByPixels(0, 0), false);
+  const orbitSnapshot = controller.snapshot();
+  assert.equal(orbitSnapshot.yaw, 0.92);
+  assert.equal(orbitSnapshot.pitch, 0.54);
 
   assert.equal(controller.zoomCameraByPixels(100), true);
   assert.equal(state.camera.distance, 18);
+  assert.equal(controller.snapshot().distance, 18);
   controller.zoomCameraByPixels(-10000);
   assert.equal(state.camera.distance, 55);
   controller.zoomCameraByPixels(10000);
