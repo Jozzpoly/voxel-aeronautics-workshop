@@ -1,0 +1,85 @@
+name: Temporary Mobile Smoke Neutral Crossing Transport
+
+on:
+  pull_request:
+    branches:
+      - mobile/compatibility-validation
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mobile-smoke-neutral-crossing-transport
+  cancel-in-progress: true
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'automation/mobile-smoke-neutral-trigger' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: mobile/compatibility-validation
+          fetch-depth: 0
+
+      - name: Reconstruct clean one-file change
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch --detach 6c118461f6f8e7b240370c058bc3ed1147897bad
+          git switch -c mobile-smoke-neutral-clean
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('tests/run_mobile_browser_smoke.mjs')
+          source = path.read_text(encoding='utf-8')
+          old = """  await dispatchTouch('touchMove', [
+            touchPoint(leftCenter.x - leftOffsetX, leftCenter.y + leftOffsetY, leftPointerId),
+            touchPoint(rightCenter.x - rightOffsetX, rightCenter.y + rightOffsetY, rightPointerId)
+          ]);
+          const horizontalReverse = await waitFor(cdp, 'dual-stick reverse input', async () => {
+          """
+          new = """  await dispatchTouch('touchMove', [
+            touchPoint(leftCenter.x, leftCenter.y, leftPointerId),
+            touchPoint(rightCenter.x, rightCenter.y, rightPointerId)
+          ]);
+          const horizontalCenter = await waitFor(cdp, 'dual-stick neutral crossing', async () => {
+            const snapshot = await mobileSnapshot();
+            return snapshot?.activeActions?.length === 0 && snapshot;
+          });
+          if (horizontalCenter.activeActions.length !== 0) {
+            throw new Error(`Dual-stick neutral crossing retained actions: ${horizontalCenter.activeActions.join(',')}`);
+          }
+
+          await dispatchTouch('touchMove', [
+            touchPoint(leftCenter.x - leftOffsetX, leftCenter.y + leftOffsetY, leftPointerId),
+            touchPoint(rightCenter.x - rightOffsetX, rightCenter.y + rightOffsetY, rightPointerId)
+          ]);
+          const horizontalReverse = await waitFor(cdp, 'dual-stick reverse input', async () => {
+          """
+          if source.count(old) != 1:
+              raise SystemExit(f'expected one reverse-input block, found {source.count(old)}')
+          path.write_text(source.replace(old, new), encoding='utf-8', newline='\n')
+          PY
+          node --check tests/run_mobile_browser_smoke.mjs
+          node tests/test_mobile_flight_controls.js
+          python tests/test_mobile_release_wiring.py
+          git diff --check
+          test "$(git diff --name-only)" = 'tests/run_mobile_browser_smoke.mjs'
+          git add tests/run_mobile_browser_smoke.mjs
+          git commit -m 'test(mobile): cross stick neutral before reversal'
+          test "$(git rev-list --count 6c118461f6f8e7b240370c058bc3ed1147897bad..HEAD)" -eq 1
+
+      - name: Publish clean result branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          result_branch="automation/mobile-smoke-neutral-result-${GITHUB_RUN_ID}"
+          echo "Publishing ${result_branch} at $(git rev-parse HEAD)"
+          git push origin "HEAD:refs/heads/${result_branch}"
