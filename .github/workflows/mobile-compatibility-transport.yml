@@ -15,7 +15,7 @@ concurrency:
 jobs:
   apply-series:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,7 +29,7 @@ jobs:
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "Transport workflow staged; waiting for all payload chunks."
+            echo "Transport workflow staged; waiting for verified payload activation."
           fi
 
       - name: Apply validated commit series
@@ -37,13 +37,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat .github/transport/mobile-compatibility-series.patch.gz.b64.part-* > /tmp/mobile-compatibility-series.patch.gz.b64
+          staged_head=$(git rev-parse HEAD)
+          {
+            cat .github/transport/probe-3000
+            for number in $(seq -w 1 17); do
+              cat ".github/transport/chunk-${number}"
+            done
+          } > /tmp/mobile-compatibility-series.patch.gz.b64
           echo "adb04822b462fc2a70f6327f790c1df371c45d513f83dc8e1e6d3b5672219995  /tmp/mobile-compatibility-series.patch.gz.b64" | sha256sum --check --strict
           base64 --decode /tmp/mobile-compatibility-series.patch.gz.b64 | gzip --decompress > /tmp/mobile-compatibility-series.patch
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch --detach c1c8f8fdf101f2c846b1c072451526673ee7acf7
+          git switch -c mobile-compatibility-clean
           git am --3way /tmp/mobile-compatibility-series.patch
-          rm -rf .github/transport .github/workflows/mobile-compatibility-transport.yml
-          git add -A
-          git commit -m "ci(mobile): remove temporary compatibility transport"
-          git push origin HEAD:refs/heads/mobile/compatibility-validation
+
+          test "$(git rev-list --count c1c8f8fdf101f2c846b1c072451526673ee7acf7..HEAD)" -eq 9
+          git diff --check c1c8f8fdf101f2c846b1c072451526673ee7acf7..HEAD
+          python tools/build_release.py
+          python tools/verify_release.py
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+          git push --force-with-lease=refs/heads/mobile/compatibility-validation:${staged_head} origin HEAD:refs/heads/mobile/compatibility-validation
