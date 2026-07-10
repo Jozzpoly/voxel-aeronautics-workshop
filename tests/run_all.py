@@ -80,6 +80,7 @@ def main() -> None:
     run('node', 'tests/test_input_focus_policy.js')
     run('node', '--check', 'tests/run_browser_smoke.mjs')
     run('node', '--check', 'tests/run_mobile_browser_smoke.mjs')
+    run('node', '--check', 'tests/run_mobile_offline_release_smoke.mjs')
     run('node', '--check', 'tests/run_browser_recovery.mjs')
     run(sys.executable, 'tests/test_game_architecture.py')
     run(sys.executable, 'tests/test_algorithms.py')

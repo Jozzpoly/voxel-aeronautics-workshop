@@ -23,6 +23,7 @@
     "mission:validate": "node tools/validate_mission_map.js",
     "browser:smoke": "node tests/run_browser_smoke.mjs",
     "browser:smoke:mobile": "node tests/run_mobile_browser_smoke.mjs",
+    "browser:smoke:mobile:offline": "npm run build && node tests/run_mobile_offline_release_smoke.mjs",
     "parity:capture": "node tools/visual_parity_render_capture.mjs",
     "agent:status": "node tools/run_with_python_env.js python tools/agent_dispatch.py status",
     "agent:next": "node tools/run_with_python_env.js python tools/agent_dispatch.py next --count 5",
