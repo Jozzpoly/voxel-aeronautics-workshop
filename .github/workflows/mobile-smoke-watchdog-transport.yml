@@ -1,0 +1,57 @@
+name: Temporary Mobile Smoke Watchdog Transport
+
+on:
+  pull_request:
+    branches:
+      - mobile/compatibility-validation
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mobile-smoke-watchdog-transport
+  cancel-in-progress: true
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'automation/mobile-smoke-watchdog-trigger' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: mobile/compatibility-validation
+          fetch-depth: 0
+
+      - name: Verify patch payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "e45a87b57608bb824e223e79597cbbef910b814da6382ce1a3b07a318d5a68b1  .github/transport/mobile-smoke-watchdog.patch" | sha256sum --check --strict
+
+      - name: Build clean result commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch --detach 9bb4d0ac26fd0c1460255aa2ea8d6feda35c3df0
+          git switch -c mobile-smoke-watchdog-clean
+          git am --3way "$GITHUB_WORKSPACE/.github/transport/mobile-smoke-watchdog.patch"
+          node --check tests/run_mobile_browser_smoke.mjs
+          node tests/test_mobile_flight_controls.js
+          python tests/test_mobile_release_wiring.py
+          git diff --check 9bb4d0ac26fd0c1460255aa2ea8d6feda35c3df0..HEAD
+          test "$(git rev-list --count 9bb4d0ac26fd0c1460255aa2ea8d6feda35c3df0..HEAD)" -eq 1
+
+      - name: Publish clean result branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          result_branch="automation/mobile-smoke-watchdog-result-${GITHUB_RUN_ID}"
+          echo "Publishing ${result_branch} at $(git rev-parse HEAD)"
+          git push origin "HEAD:refs/heads/${result_branch}"
