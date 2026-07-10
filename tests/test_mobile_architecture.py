@@ -57,18 +57,25 @@ def main() -> None:
 
     runtime = text(Path('src/game/mobile-camera-input-runtime.js'))
     assert 'options.state' not in runtime
-    assert "cameraController: controller" in text(Path('src/game/mobile-camera-autobind.js'))
-    assert 'tapEnabled: () => false' in text(Path('src/game/mobile-camera-autobind.js'))
+
+    autobind = text(Path('src/game/mobile-camera-autobind.js'))
+    assert 'cameraController: controller' in autobind
+    assert "const tapEnabled = typeof options.tapEnabled === 'function' ? options.tapEnabled : () => false;" in autobind
+    assert "const onTap = typeof options.onTap === 'function' ? options.onTap : () => {};" in autobind
+    assert 'tapEnabled,' in autobind
+    assert 'onTap,' in autobind
 
     camera_controller = text(Path('src/game/camera_controller.js'))
     for method in ('orbitCameraByPixels', 'zoomCameraByPixels', 'onCreated', 'current'):
         assert re.search(rf'\b{re.escape(method)}\b', camera_controller), f'camera controller missing {method}'
 
     game = text(Path('src/game.js'))
-    assert game.count("event.pointerType === 'touch'") >= 3, 'desktop handlers must keep rejecting touch until build-tap integration is validated'
+    assert game.count("event.pointerType === 'touch'") >= 3, 'desktop handlers must keep rejecting touch so the validated mobile pointer runtime remains the sole touch owner'
 
     bootstrap = text(Path('src/foundation/bootstrap.js'))
     assert "window.VAW.require('game.mobile-camera-autobind')" in bootstrap
+    assert 'tapEnabled: () => Boolean(mobilePlayableShell?.tapEnabled?.())' in bootstrap
+    assert 'onTap: sample => mobilePlayableShell?.handleCanvasTap?.(sample)' in bootstrap
     assert 'mobileCameraBinder.start()' in bootstrap
     assert 'performBuildAction' not in bootstrap
 
