@@ -85,7 +85,7 @@
       headlessHarness: 'deterministic-free-flight-v1',
       missionEvaluation: 'phase-1d2b-multi-pad-ground-state',
       aerostatics: 'altitude-lift-damped-settling-v2',
-      platform: 'adaptive-desktop-touch-foundation-v1',
+      platform: 'desktop-keyboard-mouse-v1',
       mobilePresentationAvailable: MobileContext.available,
       mobileCameraGestures: mobileModulesReady ? 'autobind-v1' : 'unavailable',
       initialPresentation: profile?.mobilePresentation ? 'mobile' : 'desktop',
