@@ -4,8 +4,14 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 import zipfile
 from pathlib import Path
+
+TOOLS_DIR = Path(__file__).resolve().parent
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
+from release_source_contract import validate_application_source_contract
 
 ROOT = Path(__file__).resolve().parents[1]
 RELEASE_ID = 'foundation-workbench-foundation'
@@ -140,6 +146,9 @@ EMBEDDED_APPLICATION_SOURCES = (
     *BOOTSTRAP_AUXILIARY_SOURCES,
     *APP_SOURCES[BOOTSTRAP_INDEX:],
 )
+SOURCE_CONTRACT = validate_application_source_contract(
+    ROOT, APP_SOURCES, BOOTSTRAP_AUXILIARY_SOURCES, EMBEDDED_APPLICATION_SOURCES, BOOTSTRAP_PATH
+)
 MANIFEST_PREFIX_INPUTS = (
     Path('index.html'),
     Path('tailwind.generated.css'),
@@ -152,6 +161,7 @@ MANIFEST_SUFFIX_INPUTS = (
     Path('tools/generate_tailwind_css.js'),
     Path('package.json'),
     Path('tools/build_release.py'),
+    Path('tools/release_source_contract.py'),
     Path('tools/verify_release.py'),
     *EMBEDDED_APPLICATION_SOURCES,
 )

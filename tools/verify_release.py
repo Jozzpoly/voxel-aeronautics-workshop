@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
 import build_release  # noqa: E402
+from release_source_contract import validate_application_source_contract  # noqa: E402
 
 
 def embedded_source(single_text: str, relative: Path) -> str:
@@ -28,6 +29,14 @@ def verify_artifacts(
 ) -> dict[str, str | int]:
     if (zip_path is None) != (hashes_path is None):
         raise SystemExit('--zip and --hashes must be supplied together.')
+
+    validate_application_source_contract(
+        root,
+        build_release.APP_SOURCES,
+        build_release.BOOTSTRAP_AUXILIARY_SOURCES,
+        build_release.EMBEDDED_APPLICATION_SOURCES,
+        build_release.BOOTSTRAP_PATH,
+    )
 
     manifest_path = root / build_release.MANIFEST_NAME
     if not manifest_path.exists():
