@@ -65,6 +65,17 @@
         return STATE.camera;
       }
 
+      function snapshot() {
+        normalizeCameraState();
+        return Object.freeze({
+          yaw: Number(STATE.camera.yaw) || 0,
+          pitch: Number(STATE.camera.pitch) || 0,
+          distance: Number(STATE.camera.distance) || 0,
+          mode: STATE.camera.mode,
+          followStrength: STATE.camera.followStrength
+        });
+      }
+
       function applyCameraOrbit() {
         normalizeCameraState();
         const pitch = STATE.camera.pitch;
@@ -188,6 +199,7 @@
         normalizeCameraFollowStrength,
         clampCameraPitch,
         normalizeCameraState,
+        snapshot,
         applyCameraOrbit,
         syncCameraControls,
         setCameraMode,
