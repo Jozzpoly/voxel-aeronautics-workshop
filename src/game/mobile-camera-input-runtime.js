@@ -16,17 +16,11 @@
     factory
   );
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createMobileCameraInputRuntimeModule(TouchController, PointerAdapter, CameraBridge) {
-  function requireFunction(value, name) {
-    if (typeof value !== 'function') throw new TypeError(`${name} must be a function.`);
-    return value;
-  }
-
   function create(options = {}) {
     const surface = options.surface;
     if (!surface) throw new TypeError('Mobile camera input runtime requires a surface.');
     const mobileContext = options.mobileContext;
     const cameraController = options.cameraController;
-    const state = options.state;
     if (!mobileContext || typeof mobileContext.currentProfile !== 'function') {
       throw new TypeError('Mobile camera input runtime requires mobileContext.currentProfile().');
     }
@@ -38,9 +32,7 @@
     let enabled = Boolean(mobileContext.currentProfile()?.mobilePresentation);
 
     const bridge = CameraBridge.create({
-      state,
-      clampPitch: requireFunction(cameraController.clampCameraPitch, 'cameraController.clampCameraPitch'),
-      panByPixels: requireFunction(cameraController.panCameraTargetByPixels, 'cameraController.panCameraTargetByPixels'),
+      cameraController,
       orbitSensitivity: options.orbitSensitivity,
       zoomSensitivity: options.zoomSensitivity,
       minDistance: options.minDistance,
@@ -67,7 +59,8 @@
       document: options.document,
       controller,
       enabled: () => enabled,
-      resolveOwner: options.resolveOwner || (() => 'canvas')
+      resolveOwner: options.resolveOwner || (() => 'canvas'),
+      manageTouchAction: options.manageTouchAction !== false
     });
 
     function refreshEnabled() {
@@ -81,14 +74,9 @@
       return controller.cancelAll(reason);
     }
 
-    function destroy() {
-      controller.cancelAll('runtime-destroy');
-      return adapter.destroy();
-    }
-
     return Object.freeze({
       bind: adapter.bind,
-      destroy,
+      destroy: adapter.destroy,
       cancel,
       refreshEnabled,
       enabled: () => enabled,
