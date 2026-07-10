@@ -16,6 +16,8 @@ jobs:
   vertical-slice:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      PLAYABLE_SMOKE_DIR: /tmp/vaw-mobile-playable
     steps:
       - uses: actions/checkout@v4
 
@@ -48,7 +50,19 @@ jobs:
           node tests/test_mobile_camera_autobind.js
 
       - name: Run mobile browser smoke
-        run: npm run browser:smoke:mobile
+        run: |
+          mkdir -p "$PLAYABLE_SMOKE_DIR"
+          set -o pipefail
+          npm run browser:smoke:mobile 2>&1 | tee "$PLAYABLE_SMOKE_DIR/mobile-playable-smoke.log"
 
       - name: Check patch integrity
         run: git diff --check
+
+      - name: Upload playable smoke diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-playable-smoke-${{ github.sha }}
+          path: /tmp/vaw-mobile-playable
+          if-no-files-found: warn
+          retention-days: 7
