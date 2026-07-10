@@ -4,7 +4,7 @@
   window.VAW.define('game.visual-asset-dev-controls', [], () => {
     const MODULE_CELL_SCALE_STORAGE_KEY = 'vaw.moduleVisualCellScale';
 
-    function create({ visualAssetLoader, visualAssetRegistry, blockTypes = null, showStatus = () => {}, logger = console, document = null, window = null, buttonId = 'btn-reload-visual-assets', debugButtonId = 'btn-visual-debug-toggle' } = {}) {
+    function create({ visualAssetLoader, visualAssetRegistry, blockTypes = null, showStatus = () => {}, logger = console, document = null, window = null, storage = null, buttonId = 'btn-reload-visual-assets', debugButtonId = 'btn-visual-debug-toggle' } = {}) {
       if (!visualAssetLoader?.reloadInstalledPacks) throw new TypeError('Visual asset dev controls require a visual asset loader.');
       const types = Array.isArray(blockTypes) ? Object.freeze(Array.from(blockTypes)) : undefined;
       let debugVisualsVisible = Boolean(visualAssetLoader.debugVisualsVisible?.());
@@ -59,7 +59,7 @@
       }
       function moduleCellScaleFlushEnabled() {
         try {
-          const stored = window?.localStorage?.getItem?.(MODULE_CELL_SCALE_STORAGE_KEY);
+          const stored = storage?.getItem?.(MODULE_CELL_SCALE_STORAGE_KEY);
           return stored === '1' || stored === '1.0' || stored === 'flush';
         } catch (_) {
           return false;
@@ -68,7 +68,7 @@
       function setModuleCellScaleFlush(enabled) {
         if (disposed) return moduleCellScaleFlushEnabled();
         try {
-          window?.localStorage?.setItem?.(MODULE_CELL_SCALE_STORAGE_KEY, enabled ? '1' : '0.96');
+          storage?.setItem?.(MODULE_CELL_SCALE_STORAGE_KEY, enabled ? '1' : '0.96');
         } catch (error) {
           logger?.warn?.('Module cell scale preference could not be stored.', error);
         }

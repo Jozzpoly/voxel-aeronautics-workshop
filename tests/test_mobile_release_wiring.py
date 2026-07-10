@@ -40,6 +40,11 @@ def main() -> None:
     assert len(EMBEDDED_APPLICATION_SOURCES) == len(APP_SOURCES) + len(expected_auxiliary)
     camera_controller_path = Path('src/game/camera_controller.js')
     assert EMBEDDED_APPLICATION_SOURCES.index(camera_controller_path) < auxiliary_start
+    storage_capability_path = Path('src/game/storage_capability.js')
+    renderer_profiles_path = Path('src/game/visual-renderer-profiles.js')
+    scene_environment_path = Path('src/game/scene_environment.js')
+    assert EMBEDDED_APPLICATION_SOURCES.index(storage_capability_path) < EMBEDDED_APPLICATION_SOURCES.index(renderer_profiles_path)
+    assert EMBEDDED_APPLICATION_SOURCES.index(renderer_profiles_path) < EMBEDDED_APPLICATION_SOURCES.index(scene_environment_path)
 
     manifest = source_manifest(ROOT)
     assert manifest['embeddedApplicationSources'] == [path.as_posix() for path in EMBEDDED_APPLICATION_SOURCES]

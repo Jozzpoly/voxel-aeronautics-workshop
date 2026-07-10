@@ -122,6 +122,7 @@ function createHarness({ rejectBootstrap = false, exposeBroadcastChannel = false
   `, context, { filename: 'visual-composition-harness.js' });
 
   load(context, 'src/game/orientation_service.js');
+  load(context, 'src/game/storage_capability.js');
   load(context, 'src/game/visual_asset_dev_controls.js');
   load(context, 'src/game/visual_runtime_adapter.js');
   load(context, 'src/game/module_visual_factory.js');

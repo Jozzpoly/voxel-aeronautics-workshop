@@ -1,12 +1,12 @@
 (() => {
   'use strict';
 
-  window.VAW.define('game.blueprint-controller', ['foundation.config', 'foundation.blueprint'], (Config, Blueprint) => {
+  window.VAW.define('game.blueprint-controller', ['foundation.config', 'foundation.blueprint', 'game.storage-capability'], (Config, Blueprint, StorageCapability) => {
     const { SAVE_VERSION, SAVE_KEY, SAVE_BACKUP_KEY, LEGACY_SAVE_KEYS, IMPORT_POLICY } = Config;
 
     function create({
       state: STATE, craft: CRAFT, document: documentRef = window.document,
-      storage = window.localStorage, defaultOrientation,
+      storage = null, defaultOrientation,
       markers = {}, callbacks = {}
     } = {}) {
       if (!STATE?.history || !CRAFT?.toDocument) throw new TypeError('Blueprint controller requires state and CraftModel.');
@@ -17,7 +17,9 @@
         syncHudVisibility, resetToEmptyCraft, updateHUD, showStatus, setMechanicalAuthoring = () => {}
       } = callbacks;
       const DEFAULT_ORIENTATION = defaultOrientation;
-      const localStorage = storage;
+      const localStorage = storage
+        ? StorageCapability.from(storage, { persistent: true })
+        : StorageCapability.forWindow(typeof window === 'object' ? window : null);
 
       function collectBlueprint() {
         return CRAFT.toDocument({

@@ -8,6 +8,8 @@ from source_inventory import GAME_PATHS, ROOT, SOURCE_PATHS, function_source
 GAME_MAIN = ROOT / 'src/game.js'
 GAME_MODULE_DIR = ROOT / 'src/game'
 EXPECTED_MODULES = {
+    'storage_capability.js': 'game.storage-capability',
+    'visual-renderer-profiles.js': 'game.visual-renderer-profiles',
     'scene_environment.js': 'game.scene-environment',
     'career_service.js': 'game.career-service',
     'workspace_controller.js': 'game.workspace-controller',
@@ -34,6 +36,8 @@ EXPECTED_MODULES = {
     'visual-parity-diagnostic.js': 'game.visual-parity-diagnostic',
 }
 NON_STANDARD_MODULE_DEFINES = {
+    'storage_capability.js',
+    'visual-renderer-profiles.js',
     'visual-parity-diagnostic.js',
 }
 
@@ -45,6 +49,7 @@ VISUAL_COMPOSITION_DEPENDENCIES = {
     'game.visual-asset-dev-controls',
     'game.visual-runtime-adapter',
     'game.module-visual-factory',
+    'game.storage-capability',
 }
 ALLOWED_WINDOW_VAW_GLOBALS = {
     'window.VAW_VISUAL_ASSET_DIAGNOSTICS',

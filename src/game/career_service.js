@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  window.VAW.define('game.career-service', ['foundation.config', 'foundation.catalog'], (Config, Catalog) => {
+  window.VAW.define('game.career-service', ['foundation.config', 'foundation.catalog', 'game.storage-capability'], (Config, Catalog, StorageCapability) => {
     const { CAREER_SAVE_KEY, CAREER_SAVE_VERSION } = Config;
     const { CONTRACTS } = Catalog;
 
@@ -9,8 +9,11 @@
       return Math.min(maximum, Math.max(minimum, value));
     }
 
-    function create({ state, storage = window.localStorage } = {}) {
+    function create({ state, storage = null } = {}) {
       if (!state?.career) throw new TypeError('Career service requires application state.');
+      const activeStorage = storage
+        ? StorageCapability.from(storage, { persistent: true })
+        : StorageCapability.forWindow(typeof window === 'object' ? window : null);
 
       function getContractById(id) { return Catalog.getContractById(id); }
       function knownContractIds() { return Catalog.knownContractIds(); }
@@ -69,7 +72,7 @@
       }
       function loadCareer() {
         try {
-          const raw = storage.getItem(CAREER_SAVE_KEY);
+          const raw = activeStorage.getItem(CAREER_SAVE_KEY);
           if (!raw) return;
           Object.assign(state.career, normalizeCareerData(JSON.parse(raw)));
         } catch (error) {
@@ -80,7 +83,7 @@
       function saveCareer() {
         try {
           Object.assign(state.career, normalizeCareerData(state.career));
-          storage.setItem(CAREER_SAVE_KEY, JSON.stringify({
+          activeStorage.setItem(CAREER_SAVE_KEY, JSON.stringify({
             version: CAREER_SAVE_VERSION,
             credits: state.career.credits,
             selectedContractId: state.career.selectedContractId,

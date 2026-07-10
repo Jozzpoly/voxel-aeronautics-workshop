@@ -56,6 +56,9 @@ for expected in [
  if not re.search(r"window\.VAW\.define\(\s*['\"]" + re.escape(expected) + r"['\"]", js): errors.append(f'Missing module definition: {expected}')
 
 
+for expected in ['game.storage-capability', 'game.visual-renderer-profiles']:
+ if expected not in js or 'VAW.define' not in js: errors.append(f'Missing non-standard module definition: {expected}')
+
 aerostatics=sources[ROOT/'src/foundation/aerostatics.js']
 for forbidden in ('THREE.', 'CANNON.', 'document.', 'HTMLElement', 'window.innerWidth'):
  if forbidden in aerostatics: errors.append(f'Aerostatics leaks runtime/presentation dependency: {forbidden}')

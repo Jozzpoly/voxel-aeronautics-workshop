@@ -2,12 +2,12 @@
 
 (function registerMobileRuntimeShell(root, factory) {
   if (typeof module === 'object' && module.exports) {
-    module.exports = factory(require('./mobile-device-profile.js'));
+    module.exports = factory(require('./mobile-device-profile.js'), require('./storage_capability.js'));
     return;
   }
   if (!root?.VAW) throw new Error('Foundation kernel was not initialized before mobile-runtime-shell.js.');
-  root.VAW.define('game.mobile-runtime-shell', ['game.mobile-device-profile'], factory);
-})(typeof globalThis !== 'undefined' ? globalThis : this, function createMobileRuntimeShellModule(DeviceProfile) {
+  root.VAW.define('game.mobile-runtime-shell', ['game.mobile-device-profile', 'game.storage-capability'], factory);
+})(typeof globalThis !== 'undefined' ? globalThis : this, function createMobileRuntimeShellModule(DeviceProfile, StorageCapability) {
   function setViewportVariables(profile, documentLike) {
     const root = documentLike?.documentElement;
     if (!root?.style) return;
@@ -58,10 +58,13 @@
     function initialize() {
       if (initialized) return observer?.current?.() || null;
       try {
+        const storage = Object.prototype.hasOwnProperty.call(options, 'storage')
+          ? StorageCapability.from(options.storage, { persistent: true })
+          : StorageCapability.forWindow(windowLike);
         observer = DeviceProfile.createObserver({
           window: windowLike,
           document: documentLike,
-          storage: options.storage || windowLike?.localStorage || null
+          storage
         });
         unsubscribeObserver = observer.subscribe(apply);
         const profile = apply(observer.current());

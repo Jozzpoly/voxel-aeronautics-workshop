@@ -91,6 +91,7 @@ APP_SOURCES = (
     Path('src/runtime/cannon_physics_backend.js'),
     Path('src/runtime/headless_physics_backend.js'),
     Path('src/runtime/assembly_builder.js'),
+    Path('src/game/storage_capability.js'),
     Path('src/game/visual-renderer-profiles.js'),
     Path('src/game/scene_environment.js'),
     Path('src/game/career_service.js'),

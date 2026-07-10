@@ -1,6 +1,6 @@
 'use strict';
 
-function createVisualParityDiagnostic(Profiles) {
+function createVisualParityDiagnostic(Profiles, StorageCapability) {
   const PROFILE_BY_ID = Object.freeze({
     'studio-preview': Profiles.STUDIO_PREVIEW_PROFILE,
     'game-studio-parity': Profiles.GAME_STUDIO_PARITY_PROFILE,
@@ -243,7 +243,7 @@ function createVisualParityDiagnostic(Profiles) {
     const ModuleVisualFactory = VAW.require('game.module-visual-factory');
     const cellScale = ModuleVisualFactory.parseModuleVisualCellScaleDevFlag({
       search: windowRef?.location?.search || '',
-      storage: windowRef?.localStorage
+      storage: StorageCapability.forWindow(windowRef)
     });
     modelRoot.scale.set(cellScale, cellScale, cellScale);
     modelRoot.userData.moduleVisualCellScale = cellScale;
@@ -344,8 +344,8 @@ function ensureVawModule(VAW) {
   const profiles = ensureRendererProfilesModule(VAW);
   const moduleId = 'game.visual-parity-diagnostic';
   if (!VAW.inspect().defined.includes(moduleId)) {
-    VAW.define(moduleId, ['game.visual-renderer-profiles'], loadedProfiles => {
-      return createVisualParityDiagnostic(loadedProfiles);
+    VAW.define(moduleId, ['game.visual-renderer-profiles', 'game.storage-capability'], (loadedProfiles, StorageCapability) => {
+      return createVisualParityDiagnostic(loadedProfiles, StorageCapability);
     });
   }
   return VAW.require(moduleId);
@@ -357,8 +357,9 @@ if (typeof window === 'object' && window.VAW && typeof window.VAW.define === 'fu
 
 if (typeof module === 'object' && module.exports) {
   const Profiles = require('./visual-renderer-profiles.js');
+  const StorageCapability = require('./storage_capability.js');
   module.exports = Object.freeze({
-    ...createVisualParityDiagnostic(Profiles),
+    ...createVisualParityDiagnostic(Profiles, StorageCapability),
     ensureRendererProfilesModule,
     ensureVawModule
   });

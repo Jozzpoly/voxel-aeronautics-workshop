@@ -6,6 +6,7 @@
     if (!window.VAW.inspect().defined.includes(rendererProfilesModuleId)) {
       throw new Error(`${rendererProfilesModuleId} must be registered before game.js.`);
     }
+    window.VAW.require('game.visual-renderer-profiles');
 
     const VisualParityDiagnostic = window.VAW.require('game.visual-parity-diagnostic');
     const visualParityRequest = VisualParityDiagnostic.parseRequest(window.location?.search || '');
@@ -35,6 +36,7 @@
       });
     } else {
 
+    const StorageCapability = window.VAW.require('game.storage-capability');
     const SceneEnvironment = window.VAW.require('game.scene-environment');
     const CareerService = window.VAW.require('game.career-service');
     const WorkspaceController = window.VAW.require('game.workspace-controller');
@@ -98,6 +100,7 @@
       findOrientationId
     } = Orientation;
     const STATE = State.createInitialState();
+    const storageCapability = StorageCapability.forWindow(window);
     const CRAFT = STATE.craft;
     const WORKSHOP = STATE.workshop;
     let assemblySpaceController = null;
@@ -120,14 +123,14 @@
     function snapInt(v) { return Math.round(v); }
     function isOverUI(target) { return !!(target && target.closest && (target.closest('#ui-layer') || target.closest('#help-modal') || target.closest('#debrief-modal'))); }
 
-    const careerService = CareerService.create({ state: STATE, storage: localStorage });
+    const careerService = CareerService.create({ state: STATE, storage: storageCapability });
     const {
       getContractById, isContractUnlocked, getSelectedContract, knownContractIds,
       normalizeCareerData, careerRank, recalculateCareerStars, loadCareer, saveCareer
     } = careerService;
 
     const workspaceController = WorkspaceController.create({
-      state: STATE, document, window, storage: localStorage, showStatus
+      state: STATE, document, window, storage: storageCapability, showStatus
     });
     const {
       readFirstStoredJSON, loadUIPreferences, saveUIPreferences, scheduleWorkspaceSave, flushPendingSave,
@@ -481,6 +484,7 @@
       showStatus,
       document,
       window,
+      storage: storageCapability,
       logger: console
     });
 
@@ -1619,7 +1623,7 @@
     }
 
     const blueprintController = BlueprintController.create({
-      state: STATE, craft: CRAFT, document, storage: localStorage,
+      state: STATE, craft: CRAFT, document, storage: storageCapability,
       defaultOrientation: DEFAULT_ORIENTATION,
       markers: { comSphere, axesHelper },
       callbacks: {

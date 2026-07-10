@@ -245,7 +245,9 @@ async function main() {
     browser = spawn(browserProbe.executable, [
       '--headless=new',
       '--no-sandbox',
-      '--disable-gpu',
+      '--use-gl=angle',
+      '--use-angle=swiftshader',
+      '--enable-unsafe-swiftshader',
       '--allow-file-access-from-files',
       '--disable-dev-shm-usage',
       '--disable-background-networking',

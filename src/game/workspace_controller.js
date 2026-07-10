@@ -1,19 +1,22 @@
 (() => {
   'use strict';
 
-  window.VAW.define('game.workspace-controller', ['foundation.config', 'foundation.input-profile', 'foundation.ui-workspace'], (Config, InputProfile, UIWorkspace) => {
+  window.VAW.define('game.workspace-controller', ['foundation.config', 'foundation.input-profile', 'foundation.ui-workspace', 'game.storage-capability'], (Config, InputProfile, UIWorkspace, StorageCapability) => {
     const { UI_SAVE_VERSION, UI_SAVE_KEY, LEGACY_UI_SAVE_KEYS } = Config;
 
-    function create({ state: STATE, document: documentRef = window.document, window: windowRef = window, storage = window.localStorage, showStatus = () => {} } = {}) {
+    function create({ state: STATE, document: documentRef = window.document, window: windowRef = window, storage = null, showStatus = () => {} } = {}) {
       if (!STATE?.uiWorkspace || !STATE?.input) throw new TypeError('Workspace controller requires application state.');
       const document = documentRef;
       const hostWindow = windowRef;
+      const activeStorage = storage
+        ? StorageCapability.from(storage, { persistent: true })
+        : StorageCapability.forWindow(hostWindow);
       let workspaceSaveTimer = null;
 
       function readFirstStoredJSON(primaryKey, legacyKeys = []) {
         for (const key of [primaryKey, ...legacyKeys]) {
           try {
-            const raw = storage.getItem(key);
+            const raw = activeStorage.getItem(key);
             if (raw) return JSON.parse(raw);
           } catch (error) {
             console.warn(`Stored preferences ${key} could not be read:`, error);
@@ -70,7 +73,7 @@
             workspace: STATE.uiWorkspace
           };
           if (STATE.camera) payload.camera = normalizeCameraPreferences(STATE.camera);
-          storage.setItem(UI_SAVE_KEY, JSON.stringify(payload));
+          activeStorage.setItem(UI_SAVE_KEY, JSON.stringify(payload));
         } catch (error) {
           console.warn('UI preferences could not be written:', error);
         }

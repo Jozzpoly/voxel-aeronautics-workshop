@@ -6,13 +6,15 @@
     'game.visual-asset-loader',
     'game.visual-asset-dev-controls',
     'game.visual-runtime-adapter',
-    'game.module-visual-factory'
+    'game.module-visual-factory',
+    'game.storage-capability'
   ], (
     VisualAssetRegistry,
     VisualAssetLoader,
     VisualAssetDevControls,
     VisualRuntimeAdapter,
-    ModuleVisualFactory
+    ModuleVisualFactory,
+    StorageCapability
   ) => {
     function create(options = {}) {
       const {
@@ -25,6 +27,9 @@
         window = null,
         logger = console
       } = options;
+      const storage = Object.prototype.hasOwnProperty.call(options, 'storage')
+        ? StorageCapability.from(options.storage, { persistent: true })
+        : StorageCapability.forWindow(window);
       const visualAssetRegistry = VisualAssetRegistry.create();
       const visualAssetLoader = VisualAssetLoader.create({
         THREE,
@@ -39,7 +44,7 @@
       const visualRuntimeAdapter = VisualRuntimeAdapter.create();
       const cellScale = ModuleVisualFactory.parseModuleVisualCellScaleDevFlag({
         search: window?.location?.search || '',
-        storage: window?.localStorage
+        storage
       });
       const moduleVisualFactory = ModuleVisualFactory.create({
         THREE,
@@ -52,7 +57,8 @@
         visualAssetLoader,
         showStatus,
         document,
-        window
+        window,
+        storage
       });
 
       return Object.freeze({

@@ -23,6 +23,7 @@ load('src/foundation/config.js');
 load('src/foundation/catalog.js');
 load('src/foundation/input_profile.js');
 load('src/foundation/ui_workspace.js');
+load('src/game/storage_capability.js');
 load('src/game/career_service.js');
 load('src/game/workspace_controller.js');
 

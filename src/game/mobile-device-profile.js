@@ -2,12 +2,12 @@
 
 (function registerMobileDeviceProfile(root, factory) {
   if (typeof module === 'object' && module.exports) {
-    module.exports = factory();
+    module.exports = factory(require('./storage_capability.js'));
     return;
   }
   if (!root?.VAW) throw new Error('Foundation kernel was not initialized before mobile-device-profile.js.');
-  root.VAW.define('game.mobile-device-profile', [], factory);
-})(typeof globalThis !== 'undefined' ? globalThis : this, function createMobileDeviceProfileModule() {
+  root.VAW.define('game.mobile-device-profile', ['game.storage-capability'], factory);
+})(typeof globalThis !== 'undefined' ? globalThis : this, function createMobileDeviceProfileModule(StorageCapability) {
   const OVERRIDE_KEY = 'vaw.mobile.presentationOverride';
   const VALID_OVERRIDES = new Set(['auto', 'mobile', 'desktop']);
 
@@ -59,7 +59,9 @@
   function detect(environment = {}) {
     const windowLike = environment.window || (typeof window !== 'undefined' ? window : null);
     const navigatorLike = environment.navigator || windowLike?.navigator || null;
-    const storage = environment.storage || windowLike?.localStorage || null;
+    const storage = Object.prototype.hasOwnProperty.call(environment, 'storage')
+      ? StorageCapability.from(environment.storage, { persistent: true })
+      : StorageCapability.forWindow(windowLike);
     const matchMedia = environment.matchMedia || windowLike?.matchMedia?.bind(windowLike);
     const viewport = windowLike?.visualViewport;
     const mediaMatches = query => {
@@ -90,7 +92,9 @@
   function createObserver(options = {}) {
     const windowLike = options.window || (typeof window !== 'undefined' ? window : null);
     const documentLike = options.document || windowLike?.document || null;
-    const storage = options.storage || windowLike?.localStorage || null;
+    const storage = Object.prototype.hasOwnProperty.call(options, 'storage')
+      ? StorageCapability.from(options.storage, { persistent: true })
+      : StorageCapability.forWindow(windowLike);
     const listeners = new Set();
     let profile = applyDocumentProfile(detect({ window: windowLike, storage }), documentLike);
     let scheduled = false;
