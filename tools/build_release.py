@@ -115,10 +115,19 @@ APP_SOURCES = (
     Path('src/game/flight_mechanical_visuals.js'),
     Path('src/game/flight_integrity.js'),
     Path('src/game/debris_runtime.js'),
-    Path('src/game/mobile-device-profile.js'),
-    Path('src/game/mobile-runtime-shell.js'),
     Path('src/foundation/bootstrap.js'),
     Path('src/game.js'),
+)
+BOOTSTRAP_AUXILIARY_SOURCES = (
+    Path('src/game/mobile-device-profile.js'),
+    Path('src/game/mobile-runtime-shell.js'),
+)
+BOOTSTRAP_PATH = Path('src/foundation/bootstrap.js')
+BOOTSTRAP_INDEX = APP_SOURCES.index(BOOTSTRAP_PATH)
+EMBEDDED_APPLICATION_SOURCES = (
+    *APP_SOURCES[:BOOTSTRAP_INDEX],
+    *BOOTSTRAP_AUXILIARY_SOURCES,
+    *APP_SOURCES[BOOTSTRAP_INDEX:],
 )
 MANIFEST_PREFIX_INPUTS = (
     Path('index.html'),
@@ -133,7 +142,7 @@ MANIFEST_SUFFIX_INPUTS = (
     Path('package.json'),
     Path('tools/build_release.py'),
     Path('tools/verify_release.py'),
-    *APP_SOURCES,
+    *EMBEDDED_APPLICATION_SOURCES,
 )
 
 
@@ -204,7 +213,7 @@ def source_manifest(root: Path = ROOT) -> dict:
         'releaseId': RELEASE_ID,
         'appVersion': APP_VERSION,
         'entrypoint': 'index.html',
-        'embeddedApplicationSources': [path.as_posix() for path in APP_SOURCES],
+        'embeddedApplicationSources': [path.as_posix() for path in EMBEDDED_APPLICATION_SOURCES],
         'studioToolSources': [path.as_posix() for path in studio_tool_sources(root)],
         'files': files,
     }
@@ -224,7 +233,7 @@ def ensure_source_manifest(root: Path = ROOT) -> Path:
 
 def source_bundle(root: Path = ROOT) -> str:
     chunks: list[str] = []
-    for relative in APP_SOURCES:
+    for relative in EMBEDDED_APPLICATION_SOURCES:
         source = (root / relative).read_text(encoding='utf-8').rstrip()
         chunks.append(f'/* BEGIN {relative.as_posix()} */\n{source}\n/* END {relative.as_posix()} */')
     return '\n\n'.join(chunks)
