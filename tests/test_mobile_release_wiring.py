@@ -20,14 +20,22 @@ def main() -> None:
     expected_auxiliary = (
         Path('src/game/mobile-device-profile.js'),
         Path('src/game/mobile-runtime-shell.js'),
+        Path('src/game/mobile-touch-controller.js'),
+        Path('src/game/mobile-pointer-adapter.js'),
+        Path('src/game/mobile-camera-gesture-bridge.js'),
+        Path('src/game/mobile-camera-input-runtime.js'),
+        Path('src/game/mobile-camera-autobind.js'),
     )
     assert BOOTSTRAP_AUXILIARY_SOURCES == expected_auxiliary
     assert all(path not in APP_SOURCES for path in expected_auxiliary)
 
     bootstrap_index = EMBEDDED_APPLICATION_SOURCES.index(BOOTSTRAP_PATH)
-    assert EMBEDDED_APPLICATION_SOURCES[bootstrap_index - 2:bootstrap_index] == expected_auxiliary
+    auxiliary_start = bootstrap_index - len(expected_auxiliary)
+    assert EMBEDDED_APPLICATION_SOURCES[auxiliary_start:bootstrap_index] == expected_auxiliary
     assert EMBEDDED_APPLICATION_SOURCES.count(BOOTSTRAP_PATH) == 1
     assert len(EMBEDDED_APPLICATION_SOURCES) == len(APP_SOURCES) + len(expected_auxiliary)
+    camera_controller_path = Path('src/game/camera_controller.js')
+    assert EMBEDDED_APPLICATION_SOURCES.index(camera_controller_path) < auxiliary_start
 
     manifest = source_manifest(ROOT)
     assert manifest['embeddedApplicationSources'] == [path.as_posix() for path in EMBEDDED_APPLICATION_SOURCES]
@@ -35,9 +43,14 @@ def main() -> None:
         assert path.as_posix() in manifest['files']
 
     bootstrap = (ROOT / BOOTSTRAP_PATH).read_text(encoding='utf-8')
-    assert "tryEnsureBrowserModule('game.mobile-device-profile'" in bootstrap
-    assert "tryEnsureBrowserModule('game.mobile-runtime-shell'" in bootstrap
+    for path in expected_auxiliary:
+        module_stem = path.stem
+        assert path.as_posix() in bootstrap, f'{path} missing from adaptive bootstrap source list'
+        assert module_stem in bootstrap
     assert "window.VAW.define('runtime.mobile-context'" in bootstrap
+    assert 'subscribe: listener =>' in bootstrap
+    assert "window.VAW.require('game.mobile-camera-autobind')" in bootstrap
+    assert 'mobileCameraBinder.start()' in bootstrap
 
     print('OK mobile release wiring')
 
