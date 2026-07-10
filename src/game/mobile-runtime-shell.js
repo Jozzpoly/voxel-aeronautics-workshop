@@ -15,24 +15,21 @@
     root.style.setProperty('--vaw-viewport-height', `${Math.max(0, profile.height)}px`);
   }
 
-  function syncBlocker(profile, blocker) {
+  function setBlockerVisibility(blocker, visible, state) {
     if (!blocker) return;
-    if (profile.mobilePresentation) {
-      blocker.hidden = true;
-      blocker.setAttribute?.('aria-hidden', 'true');
-      blocker.dataset.mobileAdapter = 'ready';
-    } else {
-      blocker.hidden = true;
-      blocker.setAttribute?.('aria-hidden', 'true');
-      blocker.dataset.mobileAdapter = 'desktop';
-    }
+    blocker.hidden = !visible;
+    blocker.style?.setProperty?.('display', visible ? 'flex' : 'none');
+    blocker.setAttribute?.('aria-hidden', visible ? 'false' : 'true');
+    blocker.dataset.mobileAdapter = state;
+  }
+
+  function syncBlocker(profile, blocker) {
+    setBlockerVisibility(blocker, false, profile.mobilePresentation ? 'ready' : 'desktop');
   }
 
   function showFailure(blocker, error) {
     if (!blocker) return;
-    blocker.hidden = false;
-    blocker.setAttribute?.('aria-hidden', 'false');
-    blocker.dataset.mobileAdapter = 'failed';
+    setBlockerVisibility(blocker, true, 'failed');
     const strong = blocker.querySelector?.('strong');
     const span = blocker.querySelector?.('span');
     if (strong) strong.textContent = 'Touch controls failed to initialize';
@@ -48,6 +45,7 @@
     let initialized = false;
 
     function apply(profile) {
+      if (!profile) throw new Error('Mobile runtime shell received an empty device profile.');
       DeviceProfile.applyDocumentProfile(profile, documentLike);
       setViewportVariables(profile, documentLike);
       syncBlocker(profile, blocker);
@@ -64,9 +62,15 @@
           storage: options.storage || windowLike?.localStorage || null
         });
         unsubscribe = observer.subscribe(apply);
+        const profile = apply(observer.current());
         initialized = true;
-        return apply(observer.current());
+        return profile;
       } catch (error) {
+        unsubscribe?.();
+        unsubscribe = null;
+        observer?.destroy?.();
+        observer = null;
+        initialized = false;
         showFailure(blocker, error);
         options.onError?.(error);
         return null;
@@ -91,5 +95,5 @@
     });
   }
 
-  return Object.freeze({ setViewportVariables, syncBlocker, showFailure, create });
+  return Object.freeze({ setViewportVariables, setBlockerVisibility, syncBlocker, showFailure, create });
 });
