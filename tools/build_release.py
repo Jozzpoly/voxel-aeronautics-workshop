@@ -124,6 +124,7 @@ BOOTSTRAP_AUXILIARY_SOURCES = (
     Path('src/game/mobile-command-port.js'),
     Path('src/game/mobile-game-command-adapter.js'),
     Path('src/game/mobile-playable-shell.js'),
+    Path('src/game/mobile-flight-controls.js'),
     Path('src/game/mobile-touch-controller.js'),
     Path('src/game/mobile-pointer-adapter.js'),
     Path('src/game/mobile-camera-gesture-bridge.js'),
