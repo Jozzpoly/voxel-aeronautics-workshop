@@ -1,0 +1,78 @@
+From 07a3d14d7172d69bd6784fc8f4b63088c04748dd Mon Sep 17 00:00:00 2001
+From: OpenAI <noreply@openai.com>
+Date: Fri, 10 Jul 2026 15:55:37 +0000
+Subject: [PATCH] test(mobile): bound browser smoke cleanup
+
+---
+ tests/run_mobile_browser_smoke.mjs | 34 +++++++++++++++++++++++++-----
+ 1 file changed, 29 insertions(+), 5 deletions(-)
+
+diff --git a/tests/run_mobile_browser_smoke.mjs b/tests/run_mobile_browser_smoke.mjs
+index 330ba5b..dc8ef22 100644
+--- a/tests/run_mobile_browser_smoke.mjs
++++ b/tests/run_mobile_browser_smoke.mjs
+@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
+ 
+ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+ const sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
++const SMOKE_TIMEOUT_MS = Math.max(30000, Number(process.env.VAW_MOBILE_SMOKE_TIMEOUT_MS) || 180000);
+ const MIME = new Map([
+   ['.css', 'text/css; charset=utf-8'],
+   ['.gltf', 'model/gltf+json'],
+@@ -140,9 +141,25 @@ async function browserCandidates() {
+   return { executable: null, candidates: unique };
+ }
+ 
+-function killBrowser(child) {
+-  if (!child || child.killed) return;
++function withTimeout(promise, timeoutMs, describe) {
++  let timer = null;
++  return Promise.race([
++    promise,
++    new Promise((_, reject) => {
++      timer = setTimeout(() => reject(new Error(`${describe()} timed out after ${timeoutMs} ms.`)), timeoutMs);
++    })
++  ]).finally(() => clearTimeout(timer));
++}
++
++async function terminateBrowser(child) {
++  if (!child || child.exitCode !== null || child.signalCode) return;
++  const exited = new Promise(resolve => child.once('exit', resolve));
+   try { child.kill('SIGTERM'); } catch (_) {}
++  await Promise.race([exited, sleep(3000)]);
++  if (child.exitCode === null && !child.signalCode) {
++    try { child.kill('SIGKILL'); } catch (_) {}
++    await Promise.race([exited, sleep(3000)]);
++  }
+ }
+ 
+ class CdpClient {
+@@ -803,7 +820,11 @@ async function main() {
+       }
+     });
+ 
+-    const result = await runSmoke(cdp, baseUrl, browserMessages, setStage);
++    const result = await withTimeout(
++      runSmoke(cdp, baseUrl, browserMessages, setStage),
++      SMOKE_TIMEOUT_MS,
++      () => `Mobile browser smoke at stage ${stage}`
++    );
+     report('PASS', { stage: 'complete', baseUrl, diagnostics: await snapshotDiagnostics(), result });
+   } catch (error) {
+     diagnostics.browserMessages = browserMessages;
+@@ -834,8 +855,11 @@ ${JSON.stringify(diagnostics.pageState || {})}`;
+     }, isEnvironment ? 2 : 1);
+   } finally {
+     cdp?.close();
+-    killBrowser(browser);
+-    await new Promise(resolve => server?.close(() => resolve()) || resolve());
++    await terminateBrowser(browser);
++    if (server) {
++      try { server.closeAllConnections?.(); } catch (_) {}
++      await new Promise(resolve => server.close(() => resolve()));
++    }
+     try { await fs.rm(profile, { recursive: true, force: true }); } catch (_) {}
+   }
+ }
+-- 
+2.47.3
