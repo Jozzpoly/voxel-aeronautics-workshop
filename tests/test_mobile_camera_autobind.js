@@ -88,7 +88,7 @@ function runImmediateSurfaceCase() {
   assert.equal(binder.bound(), true);
 
   mobile.emit({ mobilePresentation: false });
-  assert.equal(runtime.records[0].refreshes, 2, 'initial profile emission and explicit change both refresh runtime');
+  assert.equal(runtime.records[0].refreshes, 1, 'only profile changes emitted after runtime creation can refresh it');
 
   const secondController = { id: 'second' };
   camera.emit(secondController);
