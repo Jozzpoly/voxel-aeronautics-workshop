@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: mobile-playable-mvp-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   vertical-slice:
     runs-on: ubuntu-latest
