@@ -8,6 +8,7 @@ PORT = (ROOT / 'src/game/mobile-command-port.js').read_text(encoding='utf-8')
 SHELL = (ROOT / 'src/game/mobile-playable-shell.js').read_text(encoding='utf-8')
 BOOTSTRAP = (ROOT / 'src/foundation/bootstrap.js').read_text(encoding='utf-8')
 GAME = (ROOT / 'src/game.js').read_text(encoding='utf-8')
+SMOKE = (ROOT / 'tests/run_mobile_browser_smoke.mjs').read_text(encoding='utf-8')
 
 
 def main() -> None:
@@ -59,6 +60,12 @@ def main() -> None:
     assert 'performBuildAction(2)' in composition
     assert '.click(' not in composition
     assert 'dispatchEvent(' not in composition
+
+    assert "button.scrollIntoView({ block: 'nearest', inline: 'center' });" in SMOKE
+    assert "await dispatchTouch(cdp, 'touchStart'" in SMOKE
+    assert "await dispatchTouch(cdp, 'touchEnd', [])" in SMOKE
+    assert "window.VAW.require('game.mobile-command-port').session.snapshot()" in SMOKE
+    assert "candidate.textContent.trim() === ${JSON.stringify(label)}" in SMOKE
 
     print('OK mobile playable architecture')
 
