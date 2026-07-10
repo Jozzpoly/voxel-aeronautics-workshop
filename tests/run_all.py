@@ -64,6 +64,7 @@ def main() -> None:
     run('node', 'tests/test_mobile_device_profile.js')
     run('node', 'tests/test_mobile_runtime_shell.js')
     run('node', 'tests/test_mobile_command_port.js')
+    run(sys.executable, 'tests/test_mobile_command_composition.py')
     run('node', 'tests/test_mobile_touch_controller.js')
     run('node', 'tests/test_mobile_pointer_adapter.js')
     run('node', 'tests/test_mobile_camera_gesture_bridge.js')
