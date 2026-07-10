@@ -248,7 +248,8 @@ async function shellButtonPoint(cdp, label) {
     const rect = button.getBoundingClientRect();
     const x = Math.round(rect.left + rect.width / 2);
     const y = Math.round(rect.top + rect.height / 2);
-    return document.elementFromPoint(x, y) === button ? { x, y } : null;
+    const hit = document.elementFromPoint(x, y);
+    return hit && (hit === button || button.contains(hit)) ? { x, y } : null;
   })()`);
 }
 
