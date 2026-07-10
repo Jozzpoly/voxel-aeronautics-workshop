@@ -44,8 +44,21 @@
     let unsubscribeProfile = null;
     let surfaceObserver = null;
 
+    function reportError(error, phase) {
+      try {
+        if (typeof options.onError === 'function') options.onError(error, { phase });
+        else console.error(`[mobile-camera-autobind] ${phase} failed.`, error);
+      } catch (reportingError) {
+        console.error('[mobile-camera-autobind] error reporter failed.', reportingError, error);
+      }
+    }
+
     function stopSurfaceObserver() {
-      surfaceObserver?.disconnect?.();
+      try {
+        surfaceObserver?.disconnect?.();
+      } catch (error) {
+        reportError(error, 'surface-observer-disconnect');
+      }
       surfaceObserver = null;
     }
 
@@ -53,63 +66,118 @@
       if (!currentRuntime) return false;
       const runtime = currentRuntime;
       currentRuntime = null;
-      runtime.destroy?.();
+      try {
+        runtime.destroy?.();
+      } catch (error) {
+        reportError(error, 'runtime-destroy');
+      }
       return true;
+    }
+
+    function observeSurface() {
+      if (surfaceObserver || !MutationObserverClass) return false;
+      try {
+        surfaceObserver = new MutationObserverClass(() => {
+          let available = false;
+          try { available = Boolean(resolveSurface()); }
+          catch (error) { reportError(error, 'surface-resolve'); }
+          if (available) {
+            stopSurfaceObserver();
+            bindController(currentController);
+          }
+        });
+        surfaceObserver.observe(documentLike.documentElement || documentLike.body, { childList: true, subtree: true });
+        return true;
+      } catch (error) {
+        surfaceObserver = null;
+        reportError(error, 'surface-observer-start');
+        return false;
+      }
     }
 
     function bindController(controller) {
       if (!started || destroyed || !controller) return false;
       currentController = controller;
-      const surface = resolveSurface();
+      let surface = null;
+      try {
+        surface = resolveSurface();
+      } catch (error) {
+        reportError(error, 'surface-resolve');
+        return false;
+      }
       if (!surface) {
-        if (!surfaceObserver && MutationObserverClass) {
-          surfaceObserver = new MutationObserverClass(() => {
-            if (resolveSurface()) {
-              stopSurfaceObserver();
-              bindController(currentController);
-            }
-          });
-          surfaceObserver.observe(documentLike.documentElement || documentLike.body, { childList: true, subtree: true });
-        }
+        observeSurface();
         return false;
       }
 
       stopSurfaceObserver();
       destroyRuntime();
-      currentRuntime = runtimeModule.create({
-        surface,
-        window: windowLike,
-        document: documentLike,
-        mobileContext,
-        cameraController: controller,
-        movementThreshold: options.movementThreshold,
-        orbitSensitivity: options.orbitSensitivity,
-        zoomSensitivity: options.zoomSensitivity,
-        minDistance: options.minDistance,
-        maxDistance: options.maxDistance,
-        tapEnabled: () => false,
-        onCameraChanged: options.onCameraChanged,
-        onCancel: options.onCancel,
-        onStateChanged: options.onStateChanged,
-        manageTouchAction: true
-      });
-      currentRuntime.bind();
-      options.onBound?.({ controller, runtime: currentRuntime, surface });
+      let candidateRuntime = null;
+      try {
+        candidateRuntime = runtimeModule.create({
+          surface,
+          window: windowLike,
+          document: documentLike,
+          mobileContext,
+          cameraController: controller,
+          movementThreshold: options.movementThreshold,
+          orbitSensitivity: options.orbitSensitivity,
+          zoomSensitivity: options.zoomSensitivity,
+          minDistance: options.minDistance,
+          maxDistance: options.maxDistance,
+          tapEnabled: () => false,
+          onCameraChanged: options.onCameraChanged,
+          onCancel: options.onCancel,
+          onStateChanged: options.onStateChanged,
+          manageTouchAction: true
+        });
+        if (!candidateRuntime || typeof candidateRuntime.bind !== 'function') {
+          throw new TypeError('Mobile camera runtime factory returned an invalid runtime.');
+        }
+        if (candidateRuntime.bind() === false) {
+          throw new Error('Mobile camera runtime refused its initial bind.');
+        }
+        currentRuntime = candidateRuntime;
+      } catch (error) {
+        try { candidateRuntime?.destroy?.(); }
+        catch (cleanupError) { reportError(cleanupError, 'failed-runtime-cleanup'); }
+        currentRuntime = null;
+        reportError(error, 'runtime-bind');
+        return false;
+      }
+
+      try {
+        options.onBound?.({ controller, runtime: currentRuntime, surface });
+      } catch (error) {
+        reportError(error, 'on-bound-callback');
+      }
       return true;
     }
 
     function refreshProfile(profile) {
-      currentRuntime?.refreshEnabled?.();
-      options.onProfileChanged?.(profile || mobileContext.currentProfile());
+      try {
+        currentRuntime?.refreshEnabled?.();
+      } catch (error) {
+        reportError(error, 'profile-refresh');
+      }
+      try {
+        options.onProfileChanged?.(profile || mobileContext.currentProfile());
+      } catch (error) {
+        reportError(error, 'profile-callback');
+      }
     }
 
     function start() {
       if (destroyed) throw new Error('Destroyed mobile camera autobind cannot be restarted.');
       if (started) return false;
       started = true;
-      unsubscribeCamera = cameraControllerModule.onCreated(bindController);
-      if (typeof mobileContext.subscribe === 'function') {
-        unsubscribeProfile = mobileContext.subscribe(refreshProfile);
+      try {
+        unsubscribeCamera = cameraControllerModule.onCreated(bindController);
+        if (typeof mobileContext.subscribe === 'function') {
+          unsubscribeProfile = mobileContext.subscribe(refreshProfile);
+        }
+      } catch (error) {
+        reportError(error, 'subscription-start');
       }
       return true;
     }
@@ -118,9 +186,9 @@
       if (destroyed) return false;
       destroyed = true;
       started = false;
-      unsubscribeCamera?.();
+      try { unsubscribeCamera?.(); } catch (error) { reportError(error, 'camera-unsubscribe'); }
       unsubscribeCamera = null;
-      unsubscribeProfile?.();
+      try { unsubscribeProfile?.(); } catch (error) { reportError(error, 'profile-unsubscribe'); }
       unsubscribeProfile = null;
       stopSurfaceObserver();
       destroyRuntime();
