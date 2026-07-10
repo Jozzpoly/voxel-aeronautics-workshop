@@ -26,6 +26,7 @@
   const mobileModuleSources = [
     ['game.mobile-device-profile', 'src/game/mobile-device-profile.js'],
     ['game.mobile-runtime-shell', 'src/game/mobile-runtime-shell.js'],
+    ['game.mobile-command-port', 'src/game/mobile-command-port.js'],
     ['game.mobile-touch-controller', 'src/game/mobile-touch-controller.js'],
     ['game.mobile-pointer-adapter', 'src/game/mobile-pointer-adapter.js'],
     ['game.mobile-camera-gesture-bridge', 'src/game/mobile-camera-gesture-bridge.js'],
