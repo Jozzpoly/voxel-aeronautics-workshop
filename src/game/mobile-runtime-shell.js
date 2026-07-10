@@ -40,8 +40,9 @@
     const windowLike = options.window || (typeof window !== 'undefined' ? window : null);
     const documentLike = options.document || windowLike?.document || null;
     const blocker = options.blocker || documentLike?.getElementById?.('desktop-required') || null;
+    const profileListeners = new Set();
     let observer = null;
-    let unsubscribe = null;
+    let unsubscribeObserver = null;
     let initialized = false;
 
     function apply(profile) {
@@ -50,6 +51,7 @@
       setViewportVariables(profile, documentLike);
       syncBlocker(profile, blocker);
       options.onProfileChanged?.(profile);
+      for (const listener of [...profileListeners]) listener(profile);
       return profile;
     }
 
@@ -61,13 +63,13 @@
           document: documentLike,
           storage: options.storage || windowLike?.localStorage || null
         });
-        unsubscribe = observer.subscribe(apply);
+        unsubscribeObserver = observer.subscribe(apply);
         const profile = apply(observer.current());
         initialized = true;
         return profile;
       } catch (error) {
-        unsubscribe?.();
-        unsubscribe = null;
+        unsubscribeObserver?.();
+        unsubscribeObserver = null;
         observer?.destroy?.();
         observer = null;
         initialized = false;
@@ -77,17 +79,27 @@
       }
     }
 
+    function subscribe(listener, subscribeOptions = {}) {
+      if (typeof listener !== 'function') return () => {};
+      profileListeners.add(listener);
+      const profile = observer?.current?.() || null;
+      if (subscribeOptions.emitCurrent !== false && profile) listener(profile);
+      return () => profileListeners.delete(listener);
+    }
+
     function destroy() {
-      unsubscribe?.();
-      unsubscribe = null;
+      unsubscribeObserver?.();
+      unsubscribeObserver = null;
       observer?.destroy?.();
       observer = null;
+      profileListeners.clear();
       initialized = false;
     }
 
     return Object.freeze({
       initialize,
       destroy,
+      subscribe,
       current: () => observer?.current?.() || null,
       refresh: () => observer?.refresh?.(),
       setOverride: value => observer?.setOverride?.(value) || null,
