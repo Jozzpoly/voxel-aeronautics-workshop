@@ -27,6 +27,7 @@
     ['game.mobile-device-profile', 'src/game/mobile-device-profile.js'],
     ['game.mobile-runtime-shell', 'src/game/mobile-runtime-shell.js'],
     ['game.mobile-command-port', 'src/game/mobile-command-port.js'],
+    ['game.mobile-game-command-adapter', 'src/game/mobile-game-command-adapter.js'],
     ['game.mobile-playable-shell', 'src/game/mobile-playable-shell.js'],
     ['game.mobile-touch-controller', 'src/game/mobile-touch-controller.js'],
     ['game.mobile-pointer-adapter', 'src/game/mobile-pointer-adapter.js'],
