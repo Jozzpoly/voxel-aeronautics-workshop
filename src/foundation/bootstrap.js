@@ -29,6 +29,7 @@
     ['game.mobile-command-port', 'src/game/mobile-command-port.js'],
     ['game.mobile-game-command-adapter', 'src/game/mobile-game-command-adapter.js'],
     ['game.mobile-playable-shell', 'src/game/mobile-playable-shell.js'],
+    ['game.mobile-flight-controls', 'src/game/mobile-flight-controls.js'],
     ['game.mobile-touch-controller', 'src/game/mobile-touch-controller.js'],
     ['game.mobile-pointer-adapter', 'src/game/mobile-pointer-adapter.js'],
     ['game.mobile-camera-gesture-bridge', 'src/game/mobile-camera-gesture-bridge.js'],
@@ -40,6 +41,7 @@
   let mobileShell = null;
   let initialMobileProfile = null;
   let mobilePlayableShell = null;
+  let mobileFlightControls = null;
   let mobileCameraBinder = null;
   if (mobileModulesReady) {
     const MobileRuntimeShell = window.VAW.require('game.mobile-runtime-shell');
@@ -57,6 +59,7 @@
     currentProfile: () => mobileShell?.current?.() || null,
     subscribe: listener => mobileShell?.subscribe?.(listener) || (() => {}),
     playableShell: () => mobilePlayableShell,
+    flightControls: () => mobileFlightControls,
     cameraInputBinder: () => mobileCameraBinder
   }));
 
@@ -94,6 +97,7 @@
       mobilePresentationAvailable: MobileContext.available,
       mobileCameraGestures: mobileModulesReady ? 'autobind-v1' : 'unavailable',
       mobilePlayableShell: mobileModulesReady ? 'command-port-v1' : 'unavailable',
+      mobileFlightControls: mobileModulesReady ? 'named-actions-v1' : 'unavailable',
       initialPresentation: profile?.mobilePresentation ? 'mobile' : 'desktop',
       workspaceState: 'version-4-dockable-workbench',
       gameShell: 'mechanical-platform-convergence-v1'
@@ -104,9 +108,9 @@
   // Eager resolution validates the selected browser backend and adaptive shell before game composition.
   const activeContext = window.VAW.require('runtime.active-context');
   if (mobileModulesReady && initialMobileProfile) {
+    const MobileCommandPort = window.VAW.require('game.mobile-command-port');
     try {
       const MobilePlayableShell = window.VAW.require('game.mobile-playable-shell');
-      const MobileCommandPort = window.VAW.require('game.mobile-command-port');
       mobilePlayableShell = MobilePlayableShell.create({
         window,
         document,
@@ -118,6 +122,21 @@
     } catch (error) {
       mobilePlayableShell = null;
       console.error('[mobile-playable-shell] startup failed.', error);
+    }
+
+    try {
+      const MobileFlightControls = window.VAW.require('game.mobile-flight-controls');
+      mobileFlightControls = MobileFlightControls.create({
+        window,
+        document,
+        mobileContext: activeContext.MobileContext,
+        commandPort: MobileCommandPort,
+        onError(error, context) { console.error(`[mobile-flight-controls] ${context?.phase || 'unknown'} failed.`, error); }
+      });
+      mobileFlightControls.start();
+    } catch (error) {
+      mobileFlightControls = null;
+      console.error('[mobile-flight-controls] startup failed.', error);
     }
 
     const MobileCameraAutobind = window.VAW.require('game.mobile-camera-autobind');
