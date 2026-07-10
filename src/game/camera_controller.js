@@ -15,16 +15,24 @@
       return latestController;
     }
 
+    function notifyCreatedListener(listener, controller) {
+      try {
+        listener(controller);
+      } catch (error) {
+        console.error('[camera-controller] creation listener failed.', error);
+      }
+    }
+
     function onCreated(listener, options = {}) {
       if (typeof listener !== 'function') throw new TypeError('Camera controller creation listener must be a function.');
       createdListeners.add(listener);
-      if (options.emitCurrent !== false && latestController) listener(latestController);
+      if (options.emitCurrent !== false && latestController) notifyCreatedListener(listener, latestController);
       return () => createdListeners.delete(listener);
     }
 
     function publish(controller) {
       latestController = controller;
-      for (const listener of [...createdListeners]) listener(controller);
+      for (const listener of [...createdListeners]) notifyCreatedListener(listener, controller);
       return controller;
     }
 
