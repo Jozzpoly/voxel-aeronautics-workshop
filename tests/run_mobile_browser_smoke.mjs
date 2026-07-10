@@ -263,6 +263,26 @@ async function touchShellButton(cdp, label, pointerId) {
   return point;
 }
 
+async function flightControlGeometry(cdp, attribute, value) {
+  return await evaluate(cdp, `(() => {
+    const root = document.getElementById('vaw-mobile-flight-input');
+    const selector = '[' + ${JSON.stringify(attribute)} + '=' + JSON.stringify(${JSON.stringify(value)}) + ']';
+    const element = root?.querySelector?.(selector);
+    if (!element || root.hidden || getComputedStyle(element).display === 'none') return null;
+    const rect = element.getBoundingClientRect();
+    const x = Math.round(rect.left + rect.width / 2);
+    const y = Math.round(rect.top + rect.height / 2);
+    const hit = document.elementFromPoint(x, y);
+    if (!hit || (hit !== element && !element.contains(hit))) return null;
+    return {
+      x, y,
+      left: rect.left, top: rect.top,
+      width: rect.width, height: rect.height,
+      radius: Math.min(rect.width, rect.height) / 2
+    };
+  })()`);
+}
+
 async function canvasTapCandidates(cdp) {
   return await evaluate(cdp, `(() => {
     const canvas = document.querySelector('#canvas-container canvas');
@@ -306,9 +326,11 @@ async function mobileState(cdp) {
     const camera = window.VAW?.require?.('game.camera-controller')?.current?.();
     const commandPort = window.VAW?.require?.('game.mobile-command-port');
     const playableShell = context?.playableShell?.();
+    const flightControls = context?.flightControls?.();
     const canvas = document.querySelector('#canvas-container canvas');
     const blocker = document.getElementById('desktop-required');
     const playableRoot = document.getElementById('vaw-mobile-playable-shell');
+    const flightRoot = document.getElementById('vaw-mobile-flight-input');
     const uiLayer = document.getElementById('ui-layer');
     return {
       presentation: document.documentElement.dataset.vawPresentation || null,
@@ -324,6 +346,8 @@ async function mobileState(cdp) {
       commandRegistered: Boolean(commandPort?.current?.()),
       playable: playableShell?.snapshot?.() || null,
       playableRootVisible: Boolean(playableRoot && !playableRoot.hidden && getComputedStyle(playableRoot).display !== 'none'),
+      flightControls: flightControls?.snapshot?.() || null,
+      flightRootVisible: Boolean(flightRoot && !flightRoot.hidden && getComputedStyle(flightRoot).display !== 'none'),
       desktopUiDisplay: uiLayer ? getComputedStyle(uiLayer).display : null,
       partButtonCount: playableRoot?.querySelectorAll?.('[data-part-id]')?.length || 0,
       trace: window.__VAW_MOBILE_SMOKE_TRACE__ || []
@@ -464,9 +488,119 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   const flightShell = await mobileState(cdp);
   assert(flightShell.playable?.session?.mode === 'FLIGHT', `Playable shell did not enter FLIGHT: ${JSON.stringify(flightShell)}`);
   assert(!flightShell.playable?.interactionMode || flightShell.playable.session.mode === 'FLIGHT', `Invalid flight shell state: ${JSON.stringify(flightShell)}`);
+
+  setStage('playable-flight-controls');
+  await waitFor(cdp, `(() => {
+    const controls = window.VAW.require('runtime.mobile-context').flightControls?.();
+    const root = document.getElementById('vaw-mobile-flight-input');
+    return controls?.snapshot?.().active && root && !root.hidden ? true : false;
+  })()`, 'mobile flight controls activation');
+
+  const leftStick = await flightControlGeometry(cdp, 'data-control', 'left-stick');
+  const rightStick = await flightControlGeometry(cdp, 'data-control', 'right-stick');
+  assert(leftStick && rightStick, `Flight sticks are not visible and hit-testable: ${JSON.stringify({ leftStick, rightStick })}`);
+  const leftId = pointerId++;
+  const rightId = pointerId++;
+  const leftStart = touchPoint(leftStick.x, leftStick.y, leftId);
+  const rightStart = touchPoint(rightStick.x, rightStick.y, rightId);
+  await dispatchTouch(cdp, 'touchStart', [leftStart, rightStart]);
+  const ownedPointers = await waitFor(cdp, `(() => {
+    const snapshot = window.VAW.require('runtime.mobile-context').flightControls().snapshot();
+    return snapshot.leftPointerId !== null && snapshot.rightPointerId !== null ? snapshot : null;
+  })()`, 'dual flight-stick pointer ownership');
+
+  const leftDelta = leftStick.radius * 0.72;
+  const rightDelta = rightStick.radius * 0.72;
+  const leftPositive = touchPoint(leftStick.x + leftDelta, leftStick.y - leftDelta, leftId);
+  const rightPositive = touchPoint(rightStick.x - rightDelta, rightStick.y - rightDelta, rightId);
+  await dispatchTouch(cdp, 'touchMove', [leftPositive, rightPositive]);
+  const positiveAxisEvidence = await waitFor(cdp, `(() => {
+    const snapshot = window.VAW.require('runtime.mobile-context').flightControls().snapshot();
+    return snapshot.activeActions.join(',') === 'pitch+,surge+,sway+,yaw+' ? snapshot : null;
+  })()`, 'positive dual-stick named flight actions');
+
+  const leftNegative = touchPoint(leftStick.x - leftDelta, leftStick.y + leftDelta, leftId);
+  const rightNegative = touchPoint(rightStick.x + rightDelta, rightStick.y + rightDelta, rightId);
+  await dispatchTouch(cdp, 'touchMove', [leftNegative, rightNegative]);
+  const negativeAxisEvidence = await waitFor(cdp, `(() => {
+    const snapshot = window.VAW.require('runtime.mobile-context').flightControls().snapshot();
+    return snapshot.activeActions.join(',') === 'pitch-,surge-,sway-,yaw-' ? snapshot : null;
+  })()`, 'rapid dual-stick reversal');
+
+  const partialRelease = await evaluate(cdp, `(() => {
+    const controls = window.VAW.require('runtime.mobile-context').flightControls();
+    const snapshot = controls.snapshot();
+    const left = document.querySelector('#vaw-mobile-flight-input [data-control="left-stick"]');
+    const pointerId = snapshot.leftPointerId;
+    if (!left || pointerId === null || !left.hasPointerCapture?.(pointerId)) return { released: false, pointerId };
+    left.releasePointerCapture(pointerId);
+    return { released: true, pointerId };
+  })()`);
+  assert(partialRelease?.released, `Left stick pointer capture could not be released independently: ${JSON.stringify({ partialRelease, ownedPointers })}`);
+  const partialReleaseEvidence = await waitFor(cdp, `(() => {
+    const snapshot = window.VAW.require('runtime.mobile-context').flightControls().snapshot();
+    return snapshot.leftPointerId === null && snapshot.rightPointerId !== null && snapshot.activeActions.join(',') === 'pitch-,yaw-'
+      ? snapshot : null;
+  })()`, 'independent left-stick release');
+  await dispatchTouch(cdp, 'touchEnd', []);
+  await waitFor(cdp, `window.VAW.require('runtime.mobile-context').flightControls().snapshot().activeActions.length === 0`, 'remaining stick neutral release');
+
+  const liftButton = await flightControlGeometry(cdp, 'data-action', 'heave+');
+  const rollLeftButton = await flightControlGeometry(cdp, 'data-action', 'roll-');
+  assert(liftButton && rollLeftButton, `Lift/roll controls are not visible and hit-testable: ${JSON.stringify({ liftButton, rollLeftButton })}`);
+  await dispatchTouch(cdp, 'touchStart', [
+    touchPoint(liftButton.x, liftButton.y, pointerId++),
+    touchPoint(rollLeftButton.x, rollLeftButton.y, pointerId++)
+  ]);
+  const positiveHoldEvidence = await waitFor(cdp, `(() => {
+    const snapshot = window.VAW.require('runtime.mobile-context').flightControls().snapshot();
+    return snapshot.activeActions.join(',') === 'heave+,roll-' ? snapshot : null;
+  })()`, 'simultaneous lift and roll-left actions');
+  await dispatchTouch(cdp, 'touchCancel', []);
+  await waitFor(cdp, `window.VAW.require('runtime.mobile-context').flightControls().snapshot().activeActions.length === 0`, 'hold pointer cancellation');
+
+  const descendButton = await flightControlGeometry(cdp, 'data-action', 'heave-');
+  const rollRightButton = await flightControlGeometry(cdp, 'data-action', 'roll+');
+  assert(descendButton && rollRightButton, `Descend/roll-right controls are not visible and hit-testable: ${JSON.stringify({ descendButton, rollRightButton })}`);
+  await dispatchTouch(cdp, 'touchStart', [
+    touchPoint(descendButton.x, descendButton.y, pointerId++),
+    touchPoint(rollRightButton.x, rollRightButton.y, pointerId++)
+  ]);
+  const negativeHoldEvidence = await waitFor(cdp, `(() => {
+    const snapshot = window.VAW.require('runtime.mobile-context').flightControls().snapshot();
+    return snapshot.activeActions.join(',') === 'heave-,roll+' ? snapshot : null;
+  })()`, 'simultaneous descend and roll-right actions');
+  await dispatchTouch(cdp, 'touchEnd', []);
+  await waitFor(cdp, `window.VAW.require('runtime.mobile-context').flightControls().snapshot().activeActions.length === 0`, 'negative hold neutral release');
+
+  const orientationPointerId = pointerId++;
+  await dispatchTouch(cdp, 'touchStart', [touchPoint(leftStick.x + leftDelta, leftStick.y - leftDelta, orientationPointerId)]);
+  await waitFor(cdp, `window.VAW.require('runtime.mobile-context').flightControls().snapshot().activeActions.length > 0`, 'orientation safety input');
+  await evaluate(cdp, `window.dispatchEvent(new Event('orientationchange'))`);
+  await waitFor(cdp, `window.VAW.require('runtime.mobile-context').flightControls().snapshot().activeActions.length === 0`, 'orientation-change neutralization');
+  await dispatchTouch(cdp, 'touchCancel', []);
+
+  await cdp.call('Emulation.setDeviceMetricsOverride', {
+    width: 844, height: 390, screenWidth: 844, screenHeight: 390,
+    deviceScaleFactor: 2, mobile: true
+  });
+  await waitFor(cdp, `document.documentElement.dataset.vawPresentation === 'mobile' && window.VAW.require('runtime.mobile-context').flightControls().snapshot().active`, 'landscape mobile controls');
+  const landscapeLeft = await flightControlGeometry(cdp, 'data-control', 'left-stick');
+  const landscapeRight = await flightControlGeometry(cdp, 'data-control', 'right-stick');
+  assert(landscapeLeft && landscapeRight, `Flight controls became inaccessible in landscape: ${JSON.stringify({ landscapeLeft, landscapeRight })}`);
+  await cdp.call('Emulation.setDeviceMetricsOverride', {
+    width: 390, height: 844, screenWidth: 390, screenHeight: 844,
+    deviceScaleFactor: 2, mobile: true
+  });
+  await waitFor(cdp, `window.innerWidth <= 390 && window.VAW.require('runtime.mobile-context').flightControls().snapshot().active`, 'portrait mobile controls restore');
+
   await touchShellButton(cdp, 'RETURN TO WORKSHOP', pointerId++);
   await waitFor(cdp, `window.VAW.require('game.mobile-command-port').session.snapshot().mode === 'BUILD'`, 'return to workshop command');
   await waitFor(cdp, `window.VAW.require('runtime.mobile-context').playableShell().tapEnabled() === true`, 'build tap reactivation after return');
+  await waitFor(cdp, `(() => {
+    const snapshot = window.VAW.require('runtime.mobile-context').flightControls().snapshot();
+    return !snapshot.active && snapshot.activeActions.length === 0 ? true : false;
+  })()`, 'flight controls deactivation after workshop return');
 
   const plan = await findGesturePlan(cdp);
   assert(plan, 'No unobscured canvas region supported the complete orbit and pinch gesture plan.');
@@ -550,6 +684,16 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
       launchedCore: corePlacement.snapshot.craftSize,
       returnedToWorkshop: finalDiagnostics.playable?.session?.mode === 'BUILD'
     },
+    flightControls: {
+      positiveAxisActions: positiveAxisEvidence.activeActions,
+      negativeAxisActions: negativeAxisEvidence.activeActions,
+      partialReleaseActions: partialReleaseEvidence.activeActions,
+      positiveHoldActions: positiveHoldEvidence.activeActions,
+      negativeHoldActions: negativeHoldEvidence.activeActions,
+      neutralAfterRelease: finalDiagnostics.flightControls?.activeActions?.length === 0,
+      inactiveAfterReturn: finalDiagnostics.flightControls?.active === false,
+      landscapeHitTestable: Boolean(landscapeLeft && landscapeRight)
+    },
     consoleErrors: pageErrors.length
   };
 }
@@ -573,6 +717,7 @@ async function main() {
   let server = null;
   let browser = null;
   let cdp = null;
+  const browserMessages = [];
 
   function setStage(nextStage) {
     stage = nextStage;
@@ -641,7 +786,6 @@ async function main() {
     }
     diagnostics.cdpTarget = { id: page.id || null, title: page.title || null, type: page.type || null, url: page.url || null };
 
-    const browserMessages = [];
     cdp = new CdpClient(page.webSocketDebuggerUrl);
     await cdp.connect();
     await cdp.call('Page.enable');
@@ -662,9 +806,26 @@ async function main() {
     const result = await runSmoke(cdp, baseUrl, browserMessages, setStage);
     report('PASS', { stage: 'complete', baseUrl, diagnostics: await snapshotDiagnostics(), result });
   } catch (error) {
+    diagnostics.browserMessages = browserMessages;
+    if (cdp) {
+      try {
+        diagnostics.pageState = await evaluate(cdp, `(() => ({
+          href: location.href,
+          readyState: document.readyState,
+          title: document.title,
+          hasVAW: Boolean(window.VAW),
+          fatalText: document.getElementById('fatal-error')?.textContent?.trim?.() || '',
+          bodyExcerpt: document.body?.innerText?.slice?.(0, 1200) || ''
+        }))()`);
+      } catch (diagnosticError) {
+        diagnostics.pageStateError = String(diagnosticError?.message || diagnosticError);
+      }
+    }
     const text = String(error?.message || error);
-    const environmentPattern = /browser-not-found|chromium|chrome\.exe|msedge|cdp|websocket|ECONNREFUSED|Timed out waiting for http:\/\/127\.0\.0\.1/i;
-    const isEnvironment = environmentPattern.test(text);
+    const environmentEvidence = `${text}
+${JSON.stringify(diagnostics.pageState || {})}`;
+    const environmentPattern = /browser-not-found|chromium|chrome\.exe|msedge|cdp|websocket|ECONNREFUSED|Timed out waiting for http:\/\/127\.0\.0\.1|ERR_BLOCKED_BY_ADMINISTRATOR|chrome-error:\/\/|organization doesn.t allow|127\.0\.0\.1 is blocked/i;
+    const isEnvironment = environmentPattern.test(environmentEvidence);
     report(isEnvironment ? 'ENVIRONMENT' : 'PRODUCT', {
       stage,
       reason: text,
