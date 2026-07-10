@@ -13,6 +13,61 @@ permissions:
   contents: read
 
 jobs:
+  mobile-delayed-smoke-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Patch diagnostic copy with paced touch dispatch
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('tests/run_mobile_browser_smoke.mjs')
+          source = path.read_text(encoding='utf-8')
+          old = """async function touch(cdp, type, touchPoints) {
+            await cdp.call('Input.dispatchTouchEvent', {
+              type,
+              touchPoints,
+              modifiers: 0
+            });
+          }
+          """
+          new = """async function touch(cdp, type, touchPoints) {
+            await cdp.call('Input.dispatchTouchEvent', {
+              type,
+              touchPoints,
+              modifiers: 0
+            });
+            await new Promise(resolve => setTimeout(resolve, 150));
+          }
+          """
+          if source.count(old) != 1:
+              raise SystemExit('Expected mobile touch helper was not found exactly once.')
+          path.write_text(source.replace(old, new), encoding='utf-8', newline='\n')
+          PY
+
+      - name: Run paced mobile smoke diagnostic
+        run: |
+          set -o pipefail
+          mkdir -p /tmp/vaw-mobile-delayed-smoke
+          npm run browser:smoke:mobile 2>&1 | tee /tmp/vaw-mobile-delayed-smoke/result.log
+
+      - name: Upload paced mobile smoke log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vaw-mobile-delayed-smoke-${{ github.sha }}
+          path: /tmp/vaw-mobile-delayed-smoke
+          if-no-files-found: error
+          retention-days: 7
+
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
