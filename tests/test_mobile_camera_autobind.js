@@ -89,7 +89,6 @@ function runImmediateSurfaceCase() {
   assert.strictEqual(runtime.records[0].options.surface, surface);
   assert.strictEqual(runtime.records[0].options.cameraController, firstController);
   assert.equal(runtime.records[0].options.tapEnabled(), false);
-  assert.strictEqual(runtime.records[0].options.onTap, binder.currentRuntime ? runtime.records[0].options.onTap : runtime.records[0].options.onTap);
   tapActive = true;
   assert.equal(runtime.records[0].options.tapEnabled(), true, 'tap policy must remain live after binding');
   runtime.records[0].options.onTap({ x: 12, y: 34 });
