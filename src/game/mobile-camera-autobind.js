@@ -35,6 +35,8 @@
     const resolveSurface = typeof options.resolveSurface === 'function'
       ? options.resolveSurface
       : () => documentLike.querySelector?.('#canvas-container canvas') || null;
+    const tapEnabled = typeof options.tapEnabled === 'function' ? options.tapEnabled : () => false;
+    const onTap = typeof options.onTap === 'function' ? options.onTap : () => {};
     const MutationObserverClass = options.MutationObserver || windowLike?.MutationObserver || null;
     let started = false;
     let destroyed = false;
@@ -125,7 +127,8 @@
           zoomSensitivity: options.zoomSensitivity,
           minDistance: options.minDistance,
           maxDistance: options.maxDistance,
-          tapEnabled: () => false,
+          tapEnabled,
+          onTap,
           onCameraChanged: options.onCameraChanged,
           onCancel: options.onCancel,
           onStateChanged: options.onStateChanged,
