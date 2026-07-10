@@ -36,6 +36,10 @@ def verify_artifacts(
     if manifest.get('releaseId') != build_release.RELEASE_ID:
         raise SystemExit('Release ID mismatch.')
 
+    expected_embedded_sources = [path.as_posix() for path in build_release.EMBEDDED_APPLICATION_SOURCES]
+    if manifest.get('embeddedApplicationSources') != expected_embedded_sources:
+        raise SystemExit('Embedded application source inventory mismatch.')
+
     for relative in build_release.manifest_inputs(root):
         expected = manifest['files'].get(relative.as_posix())
         actual = build_release.sha256_bytes(build_release.canonical_source_bytes(root, relative))
@@ -47,7 +51,7 @@ def verify_artifacts(
     text = single.read_text(encoding='utf-8')
     if f'RELEASE_ID: {build_release.RELEASE_ID}' not in text:
         raise SystemExit(f'Wrong release marker in {single.name}.')
-    for relative in build_release.APP_SOURCES:
+    for relative in build_release.EMBEDDED_APPLICATION_SOURCES:
         expected = (root / relative).read_text(encoding='utf-8').rstrip()
         if embedded_source(text, relative) != expected:
             raise SystemExit(f'Embedded source mismatch: {relative}')
@@ -96,7 +100,7 @@ def verify_artifacts(
     return {
         'releaseId': build_release.RELEASE_ID,
         'manifestFiles': len(manifest['files']),
-        'embeddedSources': len(build_release.APP_SOURCES),
+        'embeddedSources': len(build_release.EMBEDDED_APPLICATION_SOURCES),
         'singleFile': single.name,
         'sourceParity': 'ok',
         'artifactSet': artifact_set,
@@ -122,7 +126,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description='Verify release identity, source parity and exact artifacts.')
     parser.add_argument('--single', type=Path, help='explicit single-file artifact to verify')
     parser.add_argument('--zip', dest='zip_path', type=Path, help='explicit ZIP artifact to verify')
-    parser.add_argument('--hashes', type=Path, help='explicit checksum file to verify')
+    parser.add_argument('--hashes', type=Path, help='explicit checksum file')
     args = parser.parse_args()
 
     print(verify_artifacts(ROOT, resolve_single(args.single), args.zip_path, args.hashes))
