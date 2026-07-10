@@ -4,10 +4,13 @@ const assert = require('assert');
 const RuntimeShell = require('../src/game/mobile-runtime-shell.js');
 
 function makeElement() {
+  const styleValues = new Map();
   return {
     hidden: false,
     dataset: {},
     attrs: {},
+    styleValues,
+    style: { setProperty(name, value) { styleValues.set(name, value); } },
     setAttribute(name, value) { this.attrs[name] = value; },
     querySelector() { return null; }
   };
@@ -50,6 +53,8 @@ function run() {
   assert.equal(profile.mobilePresentation, true);
   assert.equal(shell.initialized(), true);
   assert.equal(blocker.hidden, true);
+  assert.equal(blocker.styleValues.get('display'), 'none');
+  assert.equal(blocker.attrs['aria-hidden'], 'true');
   assert.equal(blocker.dataset.mobileAdapter, 'ready');
   assert.equal(root.dataset.vawPresentation, 'mobile');
   assert.equal(styleValues.get('--vaw-viewport-width'), '390px');
@@ -66,6 +71,8 @@ function run() {
     : { set textContent(value) { failureBlocker.span = value; } };
   RuntimeShell.showFailure(failureBlocker, new Error('boom'));
   assert.equal(failureBlocker.hidden, false);
+  assert.equal(failureBlocker.styleValues.get('display'), 'flex');
+  assert.equal(failureBlocker.attrs['aria-hidden'], 'false');
   assert.equal(failureBlocker.dataset.mobileAdapter, 'failed');
   assert.equal(failureBlocker.strong, 'Touch controls failed to initialize');
   assert(failureBlocker.span.includes('boom'));
