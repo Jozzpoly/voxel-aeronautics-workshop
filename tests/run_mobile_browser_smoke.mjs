@@ -536,13 +536,21 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
     return snapshot.activeActions.join(',') === 'pitch+,surge+,sway+,yaw+' ? snapshot : null;
   })()`, 'positive dual-stick named flight actions');
 
+  const leftCenterPoint = touchPoint(leftStick.x, leftStick.y, leftId);
+  const rightCenterPoint = touchPoint(rightStick.x, rightStick.y, rightId);
+  await dispatchTouch(cdp, 'touchMove', [leftCenterPoint, rightCenterPoint]);
+  const neutralCrossingEvidence = await waitFor(cdp, `(() => {
+    const snapshot = window.VAW.require('runtime.mobile-context').flightControls().snapshot();
+    return snapshot.activeActions.length === 0 ? snapshot : null;
+  })()`, 'dual-stick neutral crossing');
+
   const leftNegative = touchPoint(leftStick.x - leftDelta, leftStick.y + leftDelta, leftId);
   const rightNegative = touchPoint(rightStick.x + rightDelta, rightStick.y + rightDelta, rightId);
   await dispatchTouch(cdp, 'touchMove', [leftNegative, rightNegative]);
   const negativeAxisEvidence = await waitFor(cdp, `(() => {
     const snapshot = window.VAW.require('runtime.mobile-context').flightControls().snapshot();
     return snapshot.activeActions.join(',') === 'pitch-,surge-,sway-,yaw-' ? snapshot : null;
-  })()`, 'rapid dual-stick reversal');
+  })()`, 'rapid dual-stick reversal after neutral crossing');
 
   const partialRelease = await evaluate(cdp, `(() => {
     const controls = window.VAW.require('runtime.mobile-context').flightControls();
