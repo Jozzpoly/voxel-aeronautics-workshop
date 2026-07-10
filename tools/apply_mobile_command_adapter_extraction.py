@@ -49,21 +49,28 @@ def patch_game() -> None:
 
 
 def patch_inventory() -> None:
-    old = """    Path('src/game/mobile-command-port.js'),
+    release_old = """    Path('src/game/mobile-command-port.js'),
     Path('src/game/mobile-playable-shell.js'),
 """
-    new = """    Path('src/game/mobile-command-port.js'),
+    release_new = """    Path('src/game/mobile-command-port.js'),
     Path('src/game/mobile-game-command-adapter.js'),
     Path('src/game/mobile-playable-shell.js'),
 """
     source = BUILD_RELEASE.read_text(encoding='utf-8')
     if "Path('src/game/mobile-game-command-adapter.js')," not in source:
-        source = replace_once(source, old, new, 'release adapter source')
+        source = replace_once(source, release_old, release_new, 'release adapter source')
     BUILD_RELEASE.write_text(source, encoding='utf-8', newline='\n')
 
+    test_old = """        Path('src/game/mobile-command-port.js'),
+        Path('src/game/mobile-playable-shell.js'),
+"""
+    test_new = """        Path('src/game/mobile-command-port.js'),
+        Path('src/game/mobile-game-command-adapter.js'),
+        Path('src/game/mobile-playable-shell.js'),
+"""
     source = RELEASE_TEST.read_text(encoding='utf-8')
     if "Path('src/game/mobile-game-command-adapter.js')," not in source:
-        source = replace_once(source, old, new, 'release test adapter source')
+        source = replace_once(source, test_old, test_new, 'release test adapter source')
     RELEASE_TEST.write_text(source, encoding='utf-8', newline='\n')
 
 
