@@ -1,4 +1,4 @@
 Trigger guarded mobile smoke watchdog transport.
 Base clean head: 9bb4d0ac26fd0c1460255aa2ea8d6feda35c3df0
-Staging head: 8a2b2c0414760d23d023d9df046c822748726a37
-Expose each apply and validation gate.
+Staging head: cfa11d261a39205056b2fa228052c22e998001cd
+Validate the one-file diff semantically and publish.
