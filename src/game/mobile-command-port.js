@@ -30,6 +30,7 @@
       'clearActions'
     ])
   });
+  const READ_ONLY_CALLS = new Set(['build.catalog', 'session.snapshot']);
 
   let implementation = null;
   const listeners = new Set();
@@ -107,13 +108,15 @@
 
   function call(section, method, ...args) {
     const result = requireCurrent()[section][method](...args);
-    const activity = Object.freeze({
-      section,
-      method,
-      args: Object.freeze([...args]),
-      result
-    });
-    notifyListeners(activityListeners, activity, 'activity');
+    if (!READ_ONLY_CALLS.has(`${section}.${method}`)) {
+      const activity = Object.freeze({
+        section,
+        method,
+        args: Object.freeze([...args]),
+        result
+      });
+      notifyListeners(activityListeners, activity, 'activity');
+    }
     return result;
   }
 
