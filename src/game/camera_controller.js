@@ -8,6 +8,25 @@
       'follow-position': 'FOLLOW POS',
       'follow-body': 'FOLLOW BODY'
     });
+    const createdListeners = new Set();
+    let latestController = null;
+
+    function current() {
+      return latestController;
+    }
+
+    function onCreated(listener, options = {}) {
+      if (typeof listener !== 'function') throw new TypeError('Camera controller creation listener must be a function.');
+      createdListeners.add(listener);
+      if (options.emitCurrent !== false && latestController) listener(latestController);
+      return () => createdListeners.delete(listener);
+    }
+
+    function publish(controller) {
+      latestController = controller;
+      for (const listener of [...createdListeners]) listener(controller);
+      return controller;
+    }
 
     function create({
       state: STATE,
@@ -119,6 +138,34 @@
         if (STATE.mode === 'FLIGHT' && STATE.camera.mode !== 'static') STATE.camera.targetOffset.add(delta);
       }
 
+      function orbitCameraByPixels(dx, dy, sensitivity = 0.008) {
+        const deltaX = Number(dx);
+        const deltaY = Number(dy);
+        const scale = Number(sensitivity);
+        if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY) || !Number.isFinite(scale) || scale < 0) {
+          throw new TypeError('Camera orbit deltas and sensitivity must be finite; sensitivity must be non-negative.');
+        }
+        if (deltaX === 0 && deltaY === 0) return false;
+        normalizeCameraState();
+        STATE.camera.yaw -= deltaX * scale;
+        STATE.camera.pitch = clampCameraPitch(STATE.camera.pitch - deltaY * scale);
+        return true;
+      }
+
+      function zoomCameraByPixels(delta, sensitivity = 0.02, minDistance = 6, maxDistance = 55) {
+        const amount = Number(delta);
+        const scale = Number(sensitivity);
+        const minimum = Number(minDistance);
+        const maximum = Number(maxDistance);
+        if (![amount, scale, minimum, maximum].every(Number.isFinite) || scale < 0 || minimum <= 0 || maximum < minimum) {
+          throw new TypeError('Camera zoom arguments must define a finite, non-negative sensitivity and valid distance range.');
+        }
+        if (amount === 0) return false;
+        normalizeCameraState();
+        STATE.camera.distance = THREE.MathUtils.clamp(STATE.camera.distance - amount * scale, minimum, maximum);
+        return true;
+      }
+
       function fitCameraToFlightTarget() {
         normalizeCameraState();
         if (STATE.mode !== 'FLIGHT' || !primaryFlightBodyId() || STATE.camera.mode === 'static') return;
@@ -127,7 +174,7 @@
         STATE.camera.target.lerp(target, STATE.camera.followStrength);
       }
 
-      return Object.freeze({
+      return publish(Object.freeze({
         CAMERA_MODES,
         normalizeCameraMode,
         normalizeCameraFollowStrength,
@@ -139,10 +186,12 @@
         setCameraFollowStrength,
         resetCamera,
         panCameraTargetByPixels,
+        orbitCameraByPixels,
+        zoomCameraByPixels,
         fitCameraToFlightTarget
-      });
+      }));
     }
 
-    return Object.freeze({ create, CAMERA_MODES });
+    return Object.freeze({ create, current, onCreated, CAMERA_MODES });
   });
 })();
