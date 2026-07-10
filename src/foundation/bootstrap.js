@@ -23,12 +23,20 @@
     }
   }
 
-  const mobileModulesReady =
-    tryEnsureBrowserModule('game.mobile-device-profile', 'src/game/mobile-device-profile.js') &&
-    tryEnsureBrowserModule('game.mobile-runtime-shell', 'src/game/mobile-runtime-shell.js');
+  const mobileModuleSources = [
+    ['game.mobile-device-profile', 'src/game/mobile-device-profile.js'],
+    ['game.mobile-runtime-shell', 'src/game/mobile-runtime-shell.js'],
+    ['game.mobile-touch-controller', 'src/game/mobile-touch-controller.js'],
+    ['game.mobile-pointer-adapter', 'src/game/mobile-pointer-adapter.js'],
+    ['game.mobile-camera-gesture-bridge', 'src/game/mobile-camera-gesture-bridge.js'],
+    ['game.mobile-camera-input-runtime', 'src/game/mobile-camera-input-runtime.js'],
+    ['game.mobile-camera-autobind', 'src/game/mobile-camera-autobind.js']
+  ];
+  const mobileModulesReady = mobileModuleSources.every(([moduleId, sourcePath]) => tryEnsureBrowserModule(moduleId, sourcePath));
 
   let mobileShell = null;
   let initialMobileProfile = null;
+  let mobileCameraBinder = null;
   if (mobileModulesReady) {
     const MobileRuntimeShell = window.VAW.require('game.mobile-runtime-shell');
     mobileShell = MobileRuntimeShell.create({
@@ -42,7 +50,9 @@
   window.VAW.define('runtime.mobile-context', [], () => Object.freeze({
     shell: mobileShell,
     available: Boolean(initialMobileProfile),
-    currentProfile: () => mobileShell?.current?.() || null
+    currentProfile: () => mobileShell?.current?.() || null,
+    subscribe: listener => mobileShell?.subscribe?.(listener) || (() => {}),
+    cameraInputBinder: () => mobileCameraBinder
   }));
 
   const requiredCapabilities = [
@@ -77,6 +87,7 @@
       aerostatics: 'altitude-lift-damped-settling-v2',
       platform: 'adaptive-desktop-touch-foundation-v1',
       mobilePresentationAvailable: MobileContext.available,
+      mobileCameraGestures: mobileModulesReady ? 'autobind-v1' : 'unavailable',
       initialPresentation: profile?.mobilePresentation ? 'mobile' : 'desktop',
       workspaceState: 'version-4-dockable-workbench',
       gameShell: 'mechanical-platform-convergence-v1'
@@ -85,5 +96,17 @@
   });
 
   // Eager resolution validates the selected browser backend and adaptive shell before game composition.
-  window.VAW.require('runtime.active-context');
+  const activeContext = window.VAW.require('runtime.active-context');
+  if (mobileModulesReady && initialMobileProfile) {
+    const MobileCameraAutobind = window.VAW.require('game.mobile-camera-autobind');
+    mobileCameraBinder = MobileCameraAutobind.create({
+      window,
+      document,
+      mobileContext: activeContext.MobileContext,
+      onCancel(event) {
+        if (event?.reason && event.reason !== 'destroy') console.debug('[mobile-camera-input] cancelled', event.reason);
+      }
+    });
+    mobileCameraBinder.start();
+  }
 })();
