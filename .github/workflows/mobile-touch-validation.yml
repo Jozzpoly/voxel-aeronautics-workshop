@@ -59,20 +59,24 @@ jobs:
           node tools/generate_tailwind_css.js 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/generate_css.log"
           python tools/build_release.py 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/build_release.log"
 
-      - name: Commit generated provenance on mobile branch
+      - name: Publish generated provenance branch
         if: >-
-          (github.event_name == 'push' && github.ref == 'refs/heads/mobile/touch-foundation') ||
-          (github.event_name == 'pull_request' && github.head_ref == 'mobile/touch-foundation' && github.event.pull_request.head.repo.full_name == github.repository)
+          github.event_name == 'pull_request' &&
+          github.head_ref == 'mobile/touch-foundation' &&
+          github.event.pull_request.head.repo.full_name == github.repository
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- tailwind.generated.css SOURCE_MANIFEST.json
-          if git diff --cached --quiet; then
-            echo "Generated provenance is already current."
-          else
-            git commit -m "Regenerate mobile touch CSS and source manifest"
-            git push origin HEAD:mobile/touch-foundation
-          fi
+          set -o pipefail
+          {
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -- tailwind.generated.css SOURCE_MANIFEST.json
+            if git diff --cached --quiet; then
+              echo "Generated provenance is already current."
+            else
+              git commit -m "Regenerate mobile touch CSS and source manifest"
+              git push --force origin HEAD:automation/mobile-touch-provenance
+            fi
+          } 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/publish_generated.log"
 
       - name: Run full core suite
         run: |
