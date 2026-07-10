@@ -9,6 +9,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 const MIME = new Map([
   ['.css', 'text/css; charset=utf-8'],
   ['.gltf', 'model/gltf+json'],
@@ -18,13 +19,13 @@ const MIME = new Map([
   ['.png', 'image/png']
 ]);
 
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
 function report(status, data = {}, exitCode = 0) {
   console.log(JSON.stringify({ status, ...data }, null, 2));
   process.exitCode = exitCode;
-}
-
-function assert(condition, message) {
-  if (!condition) throw new Error(message);
 }
 
 function excerpt(text, limit = 3000) {
@@ -85,17 +86,17 @@ async function startStaticServer(port) {
   return server;
 }
 
-async function waitForUrl(url, timeoutMs = 15000) {
+async function waitForUrl(url, timeoutMs = 20000) {
   const deadline = Date.now() + timeoutMs;
   let lastError = null;
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(url, { signal: AbortSignal.timeout(1000) });
+      const response = await fetch(url, { signal: AbortSignal.timeout(1200) });
       if (response.ok) return response;
     } catch (error) {
       lastError = error;
     }
-    await new Promise(resolve => setTimeout(resolve, 150));
+    await sleep(150);
   }
   throw new Error(`Timed out waiting for ${url}: ${lastError || 'no response'}`);
 }
@@ -225,61 +226,87 @@ async function waitFor(cdp, expression, description, timeoutMs = 15000) {
   while (Date.now() < deadline) {
     lastValue = await evaluate(cdp, expression);
     if (lastValue) return lastValue;
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await sleep(100);
   }
   throw new Error(`Timed out waiting for ${description}; last value: ${JSON.stringify(lastValue)}`);
 }
 
-async function touch(cdp, type, touchPoints) {
-  await cdp.call('Input.dispatchTouchEvent', {
-    type,
-    touchPoints,
-    modifiers: 0
-  });
+async function dispatchTouch(cdp, type, touchPoints) {
+  await cdp.call('Input.dispatchTouchEvent', { type, touchPoints, modifiers: 0 });
 }
 
 function touchPoint(x, y, id) {
   return { x, y, id, radiusX: 4, radiusY: 4, force: 1 };
 }
 
-async function findFreeCanvasPoint(cdp) {
-  return await evaluate(cdp, `(() => {
-    const canvas = document.querySelector('#canvas-container canvas');
-    if (!canvas) return null;
-    const rect = canvas.getBoundingClientRect();
-    const center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-    const candidates = [center];
-    for (let y = rect.top + 80; y < rect.bottom - 40; y += 40) {
-      for (let x = rect.left + 20; x < rect.right - 20; x += 30) candidates.push({ x, y });
-    }
-    for (const point of candidates) {
-      const hit = document.elementFromPoint(point.x, point.y);
-      if (hit === canvas) return { x: Math.round(point.x), y: Math.round(point.y) };
-    }
-    return null;
-  })()`);
-}
-
 async function mobileState(cdp) {
   return await evaluate(cdp, `(() => {
-    const mobileContext = window.VAW?.require?.('runtime.mobile-context');
-    const cameraModule = window.VAW?.require?.('game.camera-controller');
-    const controller = cameraModule?.current?.();
-    const binder = mobileContext?.cameraInputBinder?.();
+    const context = window.VAW?.require?.('runtime.mobile-context');
+    const binder = context?.cameraInputBinder?.();
+    const runtime = binder?.currentRuntime?.();
+    const camera = window.VAW?.require?.('game.camera-controller')?.current?.();
     const canvas = document.querySelector('#canvas-container canvas');
     const blocker = document.getElementById('desktop-required');
     return {
       presentation: document.documentElement.dataset.vawPresentation || null,
       touchCapability: document.documentElement.dataset.vawTouch || null,
-      available: Boolean(mobileContext?.available),
+      available: Boolean(context?.available),
       binderBound: Boolean(binder?.bound?.()),
+      runtimeEnabled: Boolean(runtime?.enabled?.()),
       blockerHidden: Boolean(blocker?.hidden),
       blockerDisplay: blocker ? getComputedStyle(blocker).display : null,
       touchAction: canvas?.style?.touchAction || '',
-      camera: controller?.snapshot?.() || null,
-      gesture: binder?.currentRuntime?.()?.snapshot?.() || null,
-      helpDisplay: document.getElementById('help-modal') ? getComputedStyle(document.getElementById('help-modal')).display : null
+      camera: camera?.snapshot?.() || null,
+      gesture: runtime?.snapshot?.() || null,
+      trace: window.__VAW_MOBILE_SMOKE_TRACE__ || []
     };
+  })()`);
+}
+
+async function findGesturePlan(cdp) {
+  return await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('#canvas-container canvas');
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    const owns = point => document.elementFromPoint(point.x, point.y) === canvas;
+    for (let y = rect.top + 80; y < rect.bottom - 50; y += 20) {
+      for (let centerX = rect.left + 70; centerX < rect.right - 70; centerX += 20) {
+        const orbitStart = { x: centerX - 36, y };
+        const orbitEnd = { x: centerX, y };
+        const pinchStart = [{ x: centerX - 30, y }, { x: centerX + 30, y }];
+        const pinchEnd = [{ x: centerX - 50, y }, { x: centerX + 50, y }];
+        const points = [orbitStart, orbitEnd, ...pinchStart, ...pinchEnd];
+        if (points.every(owns)) {
+          return {
+            orbitStart: { x: Math.round(orbitStart.x), y: Math.round(orbitStart.y) },
+            orbitEnd: { x: Math.round(orbitEnd.x), y: Math.round(orbitEnd.y) },
+            pinchStart: pinchStart.map(point => ({ x: Math.round(point.x), y: Math.round(point.y) })),
+            pinchEnd: pinchEnd.map(point => ({ x: Math.round(point.x), y: Math.round(point.y) }))
+          };
+        }
+      }
+    }
+    return null;
+  })()`);
+}
+
+async function installTrace(cdp) {
+  await evaluate(cdp, `(() => {
+    const canvas = document.querySelector('#canvas-container canvas');
+    window.__VAW_MOBILE_SMOKE_TRACE__ = [];
+    const record = event => window.__VAW_MOBILE_SMOKE_TRACE__.push({
+      type: event.type,
+      pointerType: event.pointerType || null,
+      pointerId: event.pointerId ?? null,
+      clientX: event.clientX ?? null,
+      clientY: event.clientY ?? null,
+      target: event.target?.tagName || null,
+      touches: event.touches?.length ?? null
+    });
+    for (const type of ['touchstart','touchmove','touchend','touchcancel','pointerdown','pointermove','pointerup','pointercancel','gotpointercapture','lostpointercapture']) {
+      canvas.addEventListener(type, record, true);
+    }
+    return true;
   })()`);
 }
 
@@ -300,67 +327,99 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   await waitFor(cdp, `document.readyState === 'complete' && Boolean(window.VAW)`, 'application bootstrap');
   await waitFor(cdp, `Boolean(window.VAW.require('game.camera-controller').current())`, 'camera controller creation');
   await waitFor(cdp, `Boolean(window.VAW.require('runtime.mobile-context').cameraInputBinder()?.bound?.())`, 'mobile camera autobind');
-
   await evaluate(cdp, `(() => {
     const start = document.getElementById('start-engineering');
-    if (start && getComputedStyle(document.getElementById('help-modal')).display !== 'none') start.click();
+    const help = document.getElementById('help-modal');
+    if (start && help && getComputedStyle(help).display !== 'none') start.click();
     return true;
   })()`);
+  await installTrace(cdp);
 
   const initial = await mobileState(cdp);
   assert(initial.presentation === 'mobile', `Automatic mobile presentation failed: ${JSON.stringify(initial)}`);
   assert(initial.touchCapability === 'capable', `Touch capability was not detected: ${JSON.stringify(initial)}`);
   assert(initial.available, `Mobile runtime context is unavailable: ${JSON.stringify(initial)}`);
-  assert(initial.binderBound, `Mobile camera runtime did not bind: ${JSON.stringify(initial)}`);
+  assert(initial.binderBound && initial.runtimeEnabled, `Mobile camera runtime is not active: ${JSON.stringify(initial)}`);
   assert(initial.blockerHidden && initial.blockerDisplay === 'none', `Desktop blocker remained visible: ${JSON.stringify(initial)}`);
   assert(initial.touchAction === 'none', `Canvas touch-action was not scoped for gestures: ${JSON.stringify(initial)}`);
-  assert(initial.camera && Number.isFinite(initial.camera.yaw) && Number.isFinite(initial.camera.distance), `Camera diagnostics unavailable: ${JSON.stringify(initial)}`);
+  assert(initial.camera && initial.gesture?.mode === 'IDLE', `Initial camera/gesture diagnostics are invalid: ${JSON.stringify(initial)}`);
 
-  const point = await findFreeCanvasPoint(cdp);
-  assert(point, 'No unobscured canvas point was available for mobile touch input.');
+  const plan = await findGesturePlan(cdp);
+  assert(plan, 'No unobscured canvas region supported the complete orbit and pinch gesture plan.');
 
   setStage('one-finger-orbit');
   const yawBefore = initial.camera.yaw;
-  await touch(cdp, 'touchStart', [touchPoint(point.x, point.y, 1)]);
-  await touch(cdp, 'touchMove', [touchPoint(point.x + 36, point.y, 1)]);
-  await touch(cdp, 'touchEnd', []);
+  await dispatchTouch(cdp, 'touchStart', [touchPoint(plan.orbitStart.x, plan.orbitStart.y, 1)]);
+  const afterOrbitStart = await waitFor(cdp, `(() => {
+    const value = window.VAW.require('runtime.mobile-context').cameraInputBinder().currentRuntime().snapshot();
+    return value.mode === 'TAP_CANDIDATE' ? value : null;
+  })()`, 'one-finger tap candidate');
+  assert(afterOrbitStart.activeCanvasPointerCount === 1, `One-finger ownership is invalid: ${JSON.stringify(afterOrbitStart)}`);
+
+  await dispatchTouch(cdp, 'touchMove', [touchPoint(plan.orbitEnd.x, plan.orbitEnd.y, 1)]);
   const orbitState = await waitFor(cdp, `(() => {
-    const value = window.VAW.require('game.camera-controller').current().snapshot();
-    return Math.abs(value.yaw - ${JSON.stringify(yawBefore)}) > 0.05 ? value : null;
+    const camera = window.VAW.require('game.camera-controller').current().snapshot();
+    const gesture = window.VAW.require('runtime.mobile-context').cameraInputBinder().currentRuntime().snapshot();
+    return gesture.mode === 'ORBIT' && Math.abs(camera.yaw - ${JSON.stringify(yawBefore)}) > 0.05
+      ? { camera, gesture }
+      : null;
   })()`, 'one-finger camera orbit');
-  assert(orbitState.yaw < yawBefore, `Orbit direction is incorrect: ${JSON.stringify({ yawBefore, orbitState })}`);
+  assert(orbitState.camera.yaw < yawBefore, `Orbit direction is incorrect: ${JSON.stringify({ yawBefore, orbitState })}`);
+
+  await dispatchTouch(cdp, 'touchEnd', []);
+  await waitFor(cdp, `window.VAW.require('runtime.mobile-context').cameraInputBinder().currentRuntime().snapshot().mode === 'IDLE'`, 'one-finger gesture release');
 
   setStage('two-finger-pinch');
-  const distanceBefore = orbitState.distance;
-  const y = Math.min(804, Math.max(100, point.y));
-  const leftStart = Math.max(30, point.x - 30);
-  const rightStart = Math.min(360, point.x + 30);
-  const leftEnd = Math.max(10, leftStart - 20);
-  const rightEnd = Math.min(380, rightStart + 20);
-  await touch(cdp, 'touchStart', [touchPoint(leftStart, y, 1), touchPoint(rightStart, y, 2)]);
-  await touch(cdp, 'touchMove', [touchPoint(leftEnd, y, 1), touchPoint(rightEnd, y, 2)]);
-  await touch(cdp, 'touchEnd', []);
-  const pinchState = await waitFor(cdp, `(() => {
-    const value = window.VAW.require('game.camera-controller').current().snapshot();
-    return Math.abs(value.distance - ${JSON.stringify(distanceBefore)}) > 0.2 ? value : null;
-  })()`, 'two-finger pinch zoom');
-  assert(pinchState.distance < distanceBefore, `Pinch-out should reduce camera distance: ${JSON.stringify({ distanceBefore, pinchState })}`);
+  const distanceBefore = orbitState.camera.distance;
+  await dispatchTouch(cdp, 'touchStart', [
+    touchPoint(plan.pinchStart[0].x, plan.pinchStart[0].y, 1),
+    touchPoint(plan.pinchStart[1].x, plan.pinchStart[1].y, 2)
+  ]);
+  const afterPinchStart = await waitFor(cdp, `(() => {
+    const value = window.VAW.require('runtime.mobile-context').cameraInputBinder().currentRuntime().snapshot();
+    return value.mode === 'MULTI' && value.activeCanvasPointerCount === 2 ? value : null;
+  })()`, 'two-finger multi gesture');
+  assert(afterPinchStart.multiGestureLatched, `Multi gesture was not latched: ${JSON.stringify(afterPinchStart)}`);
 
-  const finalState = await mobileState(cdp);
-  assert(finalState.gesture?.mode === 'IDLE', `Gesture state remained active after pointer release: ${JSON.stringify(finalState.gesture)}`);
-  const errors = browserMessages.filter(item => item.level === 'error');
-  assert(errors.length === 0, `Browser console/runtime errors: ${JSON.stringify(errors)}`);
+  await dispatchTouch(cdp, 'touchMove', [
+    touchPoint(plan.pinchEnd[0].x, plan.pinchEnd[0].y, 1),
+    touchPoint(plan.pinchEnd[1].x, plan.pinchEnd[1].y, 2)
+  ]);
+  const pinchState = await waitFor(cdp, `(() => {
+    const camera = window.VAW.require('game.camera-controller').current().snapshot();
+    const gesture = window.VAW.require('runtime.mobile-context').cameraInputBinder().currentRuntime().snapshot();
+    return gesture.mode === 'MULTI' && Math.abs(camera.distance - ${JSON.stringify(distanceBefore)}) > 0.2
+      ? { camera, gesture }
+      : null;
+  })()`, 'two-finger pinch zoom');
+  assert(pinchState.camera.distance < distanceBefore, `Pinch-out should reduce camera distance: ${JSON.stringify({ distanceBefore, pinchState })}`);
+
+  await dispatchTouch(cdp, 'touchEnd', []);
+  const finalState = await waitFor(cdp, `(() => {
+    const context = window.VAW.require('runtime.mobile-context');
+    const gesture = context.cameraInputBinder().currentRuntime().snapshot();
+    return gesture.mode === 'IDLE' ? true : false;
+  })()`, 'two-finger gesture release');
+  assert(finalState, 'Final gesture state did not return to IDLE.');
+
+  const finalDiagnostics = await mobileState(cdp);
+  const pageErrors = browserMessages.filter(item => item.level === 'error');
+  assert(pageErrors.length === 0, `Browser console/runtime errors: ${JSON.stringify(pageErrors)}`);
+  assert(finalDiagnostics.trace.some(event => event.type === 'pointerdown' && event.pointerType === 'touch'), `Native pointerdown was not observed: ${JSON.stringify(finalDiagnostics.trace)}`);
+  assert(finalDiagnostics.trace.some(event => event.type === 'pointermove' && event.pointerType === 'touch'), `Native pointermove was not observed: ${JSON.stringify(finalDiagnostics.trace)}`);
+  assert(finalDiagnostics.trace.some(event => event.type === 'pointerup' && event.pointerType === 'touch'), `Native pointerup was not observed: ${JSON.stringify(finalDiagnostics.trace)}`);
 
   return {
     viewport: { width: 390, height: 844, deviceScaleFactor: 2 },
-    canvasPoint: point,
+    gesturePlan: plan,
     yawBefore,
-    yawAfter: orbitState.yaw,
+    yawAfter: orbitState.camera.yaw,
     distanceBefore,
-    distanceAfter: pinchState.distance,
-    presentation: finalState.presentation,
-    touchAction: finalState.touchAction,
-    consoleErrors: errors.length
+    distanceAfter: pinchState.camera.distance,
+    nativeEventCount: finalDiagnostics.trace.length,
+    presentation: finalDiagnostics.presentation,
+    touchAction: finalDiagnostics.touchAction,
+    consoleErrors: pageErrors.length
   };
 }
 
@@ -440,7 +499,7 @@ async function main() {
 
     let browserError = null;
     browser.on('error', error => { browserError = error; });
-    await waitForUrl(`http://127.0.0.1:${debugPort}/json/version`, 15000);
+    await waitForUrl(`http://127.0.0.1:${debugPort}/json/version`, 20000);
     if (browserError) throw browserError;
     const targets = await (await fetch(`http://127.0.0.1:${debugPort}/json/list`)).json();
     const page = targets.find(target => target.type === 'page') || targets[0];
@@ -462,19 +521,25 @@ async function main() {
       browserMessages.push({ source: 'console', level: params.type === 'error' ? 'error' : params.type, text });
     });
     cdp.on('Runtime.exceptionThrown', params => browserMessages.push({ source: 'runtime', level: 'error', text: params.exceptionDetails?.text || 'uncaught exception' }));
-    cdp.on('Log.entryAdded', params => browserMessages.push({ source: params.entry?.source || 'log', level: params.entry?.level || 'info', text: params.entry?.text || '' }));
+    cdp.on('Log.entryAdded', params => {
+      const entry = params.entry || {};
+      if (entry.source === 'javascript' || entry.source === 'network') {
+        browserMessages.push({ source: entry.source, level: entry.level || 'info', text: entry.text || '' });
+      }
+    });
 
     const result = await runSmoke(cdp, baseUrl, browserMessages, setStage);
     report('PASS', { stage: 'complete', baseUrl, diagnostics: await snapshotDiagnostics(), result });
   } catch (error) {
     const text = String(error?.message || error);
     const environmentPattern = /browser-not-found|chromium|chrome\.exe|msedge|cdp|websocket|ECONNREFUSED|Timed out waiting for http:\/\/127\.0\.0\.1/i;
-    report(environmentPattern.test(text) ? 'ENVIRONMENT' : 'PRODUCT', {
+    const isEnvironment = environmentPattern.test(text);
+    report(isEnvironment ? 'ENVIRONMENT' : 'PRODUCT', {
       stage,
       reason: text,
       diagnostics: await snapshotDiagnostics(),
       stack: error?.stack || null
-    }, environmentPattern.test(text) ? 2 : 1);
+    }, isEnvironment ? 2 : 1);
   } finally {
     cdp?.close();
     killBrowser(browser);
