@@ -21,6 +21,7 @@ def main() -> None:
         Path('src/game/mobile-device-profile.js'),
         Path('src/game/mobile-runtime-shell.js'),
         Path('src/game/mobile-command-port.js'),
+        Path('src/game/mobile-playable-shell.js'),
         Path('src/game/mobile-touch-controller.js'),
         Path('src/game/mobile-pointer-adapter.js'),
         Path('src/game/mobile-camera-gesture-bridge.js'),
@@ -50,6 +51,10 @@ def main() -> None:
         assert module_stem in bootstrap
     assert "window.VAW.define('runtime.mobile-context'" in bootstrap
     assert 'subscribe: listener =>' in bootstrap
+    assert "window.VAW.require('game.mobile-playable-shell')" in bootstrap
+    assert 'mobilePlayableShell.start()' in bootstrap
+    assert 'tapEnabled: () => Boolean(mobilePlayableShell?.tapEnabled?.())' in bootstrap
+    assert 'onTap: sample => mobilePlayableShell?.handleCanvasTap?.(sample)' in bootstrap
     assert "window.VAW.require('game.mobile-camera-autobind')" in bootstrap
     assert 'mobileCameraBinder.start()' in bootstrap
 
