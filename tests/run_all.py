@@ -69,6 +69,7 @@ def main() -> None:
     run('node', 'tests/test_mobile_camera_input_runtime.js')
     run('node', 'tests/test_mobile_camera_autobind.js')
     run(sys.executable, 'tests/test_mobile_release_wiring.py')
+    run(sys.executable, 'tests/test_mobile_architecture.py')
     run('node', 'tests/test_game_services.js')
     run('node', 'tests/test_input_focus_policy.js')
     run('node', '--check', 'tests/run_browser_smoke.mjs')
