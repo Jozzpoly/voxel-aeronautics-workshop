@@ -36,13 +36,16 @@ jobs:
       - name: Validate explicit mobile command boundary
         run: |
           node --check src/game/mobile-command-port.js
+          node --check src/game/mobile-game-command-adapter.js
           node --check src/game/mobile-playable-shell.js
           node --check src/game.js
           node tests/test_mobile_command_port.js
+          node tests/test_mobile_game_command_adapter.js
           node tests/test_mobile_playable_shell.js
           python tests/test_mobile_command_composition.py
           python tests/test_mobile_playable_architecture.py
           python tests/test_mobile_release_wiring.py
+          python tests/test_game_architecture.py
 
       - name: Revalidate retained touch camera foundation
         run: |
