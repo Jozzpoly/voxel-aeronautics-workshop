@@ -13,7 +13,7 @@ permissions:
   contents: write
 
 jobs:
-  promote-mobile-smoke:
+  publish-mobile-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -30,10 +30,10 @@ jobs:
           rm tests/run_mobile_pointer_probe.mjs
           node --check tests/run_mobile_browser_smoke.mjs
 
-      - name: Commit canonical mobile smoke
+      - name: Publish reviewed smoke branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- tests/run_mobile_browser_smoke.mjs tests/run_mobile_browser_smoke_candidate.mjs tests/run_mobile_pointer_probe.mjs
           git commit -m "Promote deterministic mobile browser smoke"
-          git push origin HEAD:mobile/touch-foundation
+          git push --force origin HEAD:automation/mobile-touch-smoke
