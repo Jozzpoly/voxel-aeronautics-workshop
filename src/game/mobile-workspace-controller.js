@@ -49,7 +49,12 @@
     }
 
     const originals = {
-      uiWorkspace: uiLayer.dataset?.vawMobileWorkspace,
+      uiLayer: {
+        workspace: uiLayer.dataset?.vawMobileWorkspace,
+        mode: uiLayer.dataset?.vawMobileMode,
+        activePanel: uiLayer.dataset?.vawMobileActivePanel,
+        partsOpen: uiLayer.dataset?.vawMobilePartsOpen
+      },
       panels: new Map(),
       buttons: new Map()
     };
@@ -113,9 +118,16 @@
       if (element?.dataset) delete element.dataset[key];
     }
 
+    function restoreDataset(element, key, value) {
+      if (value == null) deleteDataset(element, key);
+      else element.dataset[key] = value;
+    }
+
     function restorePresentation() {
-      if (originals.uiWorkspace == null) deleteDataset(uiLayer, 'vawMobileWorkspace');
-      else uiLayer.dataset.vawMobileWorkspace = originals.uiWorkspace;
+      restoreDataset(uiLayer, 'vawMobileWorkspace', originals.uiLayer.workspace);
+      restoreDataset(uiLayer, 'vawMobileMode', originals.uiLayer.mode);
+      restoreDataset(uiLayer, 'vawMobileActivePanel', originals.uiLayer.activePanel);
+      restoreDataset(uiLayer, 'vawMobilePartsOpen', originals.uiLayer.partsOpen);
 
       for (const [name, panel] of panels) {
         deleteDataset(panel, 'vawMobileSheet');
@@ -145,7 +157,11 @@
       }
 
       const available = new Set(availablePanelsForMode(mode));
+      const effectivePartsOpen = available.has('parts') && partsOpen;
       uiLayer.dataset.vawMobileWorkspace = 'active';
+      uiLayer.dataset.vawMobileMode = mode.toLowerCase();
+      uiLayer.dataset.vawMobileActivePanel = activePanel || 'none';
+      uiLayer.dataset.vawMobilePartsOpen = String(effectivePartsOpen);
 
       for (const name of LARGE_PANELS) {
         const panel = panels.get(name);
