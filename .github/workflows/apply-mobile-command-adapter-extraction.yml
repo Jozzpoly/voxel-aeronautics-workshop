@@ -1,0 +1,53 @@
+name: Apply Mobile Command Adapter Extraction
+
+on:
+  push:
+    branches:
+      - mobile/playable-mvp
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ !contains(github.event.head_commit.message, '[command adapter extracted]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: mobile/playable-mvp
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply command adapter extraction
+        run: python tools/apply_mobile_command_adapter_extraction.py
+
+      - name: Validate compact composition
+        run: |
+          node --check src/game.js
+          node --check src/game/mobile-game-command-adapter.js
+          node tests/test_mobile_game_command_adapter.js
+          python tests/test_mobile_command_composition.py
+          python tests/test_mobile_playable_architecture.py
+          python tests/test_mobile_release_wiring.py
+          python tests/test_game_architecture.py
+
+      - name: Remove one-time extraction machinery
+        run: |
+          rm tools/apply_mobile_command_adapter_extraction.py
+          rm .github/workflows/apply-mobile-command-adapter-extraction.yml
+
+      - name: Commit extracted command adapter
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/game.js tools/build_release.py tests/test_mobile_release_wiring.py tests/run_all.py tools/apply_mobile_command_adapter_extraction.py .github/workflows/apply-mobile-command-adapter-extraction.yml
+          git commit -m "Extract compact mobile command adapter [command adapter extracted]"
+          git push origin HEAD:mobile/playable-mvp
