@@ -176,11 +176,31 @@ async function main() {
 
   const registry = Registry.create();
   const loader = Loader.create({ THREE, visualAssetRegistry: registry, logger: { warn() {}, error() {} } });
-  global.fetch = async () => ({
-    ok: true,
-    status: 200,
-    json: async () => JSON.parse(JSON.stringify(studioSampleManifest))
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return {
+      ok: true,
+      status: 200,
+      json: async () => JSON.parse(JSON.stringify(studioSampleManifest))
+    };
+  };
+
+  const disabledRegistry = Registry.create();
+  const disabledLoader = Loader.create({
+    THREE,
+    visualAssetRegistry: disabledRegistry,
+    packResourceLoadingEnabled: false,
+    logger: { info() {}, warn() {}, error() {} }
   });
+  const fetchCallsBeforeDisabled = fetchCalls;
+  const disabledBootstrap = await disabledLoader.bootstrapInstalledPacks();
+  const disabledReload = await disabledLoader.reloadInstalledPacks();
+  assert.strictEqual(fetchCalls, fetchCallsBeforeDisabled, 'Disabled release policy must not call fetch.');
+  assert.strictEqual(disabledBootstrap.skipped, 'release-policy');
+  assert.strictEqual(disabledReload.skipped, 'release-policy');
+  assert.strictEqual(disabledLoader.packResourceLoadingEnabled(), false);
+  assert(disabledLoader.diagnostics().some(item => item.code === 'visualAssetLoader.packResourcesDisabled'));
 
   const factory = createFactory(registry);
   const parent = new THREE.Group();

@@ -15,7 +15,8 @@
       THREE = window.THREE,
       visualAssetRegistry,
       disposeObjectTree = () => {},
-      logger = console
+      logger = console,
+      packResourceLoadingEnabled = true
     } = {}) {
       if (!visualAssetRegistry?.registerManifest || !visualAssetRegistry?.assetForBlockType) {
         throw new TypeError('Visual asset loader requires a visual asset registry.');
@@ -47,7 +48,20 @@
       }
 
       function canFetchPackResources() {
-        return typeof fetch === 'function' && typeof URL === 'function';
+        return packResourceLoadingEnabled && typeof fetch === 'function' && typeof URL === 'function';
+      }
+
+      function unavailablePackResult(source, scope) {
+        const disabled = !packResourceLoadingEnabled;
+        record({
+          severity: 'info',
+          code: disabled ? 'visualAssetLoader.packResourcesDisabled' : 'visualAssetLoader.fetchUnavailable',
+          source,
+          message: disabled
+            ? `External visual asset ${scope} loading is disabled for this release.`
+            : `fetch()/URL is unavailable; visual asset ${scope} skipped.`
+        });
+        return Object.freeze({ ok: false, registered: 0, source, packs: Object.freeze([]), skipped: disabled ? 'release-policy' : 'fetch-unavailable' });
       }
 
       function resolveUrl(path, base = documentBaseUrl()) {
@@ -125,10 +139,7 @@
           record({ severity: 'warning', code: 'visualAssetLoader.manifestUrlMissing', source, message: 'Visual asset pack entry has no manifestUrl.' });
           return Object.freeze({ ok: false, registered: 0, source });
         }
-        if (!canFetchPackResources()) {
-          record({ severity: 'info', code: 'visualAssetLoader.fetchUnavailable', source, message: 'fetch()/URL is unavailable; visual asset pack skipped.' });
-          return Object.freeze({ ok: false, registered: 0, source });
-        }
+        if (!canFetchPackResources()) return unavailablePackResult(source, 'pack');
 
         try {
           const response = await fetch(manifestUrl, { cache: 'no-store' });
@@ -166,10 +177,7 @@
 
       async function bootstrapInstalledPacks(indexUrl = DEFAULT_PACK_INDEX_URL) {
         const source = String(indexUrl || DEFAULT_PACK_INDEX_URL);
-        if (!canFetchPackResources()) {
-          record({ severity: 'info', code: 'visualAssetLoader.fetchUnavailable', source, message: 'fetch()/URL is unavailable; visual asset pack index skipped.' });
-          return Object.freeze({ ok: false, registered: 0, source, packs: Object.freeze([]) });
-        }
+        if (!canFetchPackResources()) return unavailablePackResult(source, 'pack index');
 
         try {
           const resolvedIndexUrl = resolveUrl(source);
@@ -865,6 +873,10 @@
       }
 
       async function reloadInstalledPacks(indexUrl = DEFAULT_PACK_INDEX_URL) {
+        if (!packResourceLoadingEnabled) {
+          const result = await bootstrapInstalledPacks(indexUrl);
+          return Object.freeze({ ...result, detached: 0, roots: 0, upgraded: 0 });
+        }
         const roots = Array.from(trackedRoots).filter(root => root?.userData?.isVoxelRoot);
         let detached = 0;
         for (const root of roots) detached += detachImportedVisual(root);
@@ -906,6 +918,7 @@
         clearModelCache,
         setDebugVisualsVisible,
         debugVisualsVisible: () => debugVisualsVisible,
+        packResourceLoadingEnabled: () => Boolean(packResourceLoadingEnabled),
         coverage,
         diagnostics: () => Object.freeze(diagnostics.map(item => Object.freeze({ ...item })))
       });

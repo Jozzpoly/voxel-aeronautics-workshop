@@ -30,17 +30,22 @@
       const storage = Object.prototype.hasOwnProperty.call(options, 'storage')
         ? StorageCapability.from(options.storage, { persistent: true })
         : StorageCapability.forWindow(window);
+      const releaseMode = String(document?.documentElement?.dataset?.vawReleaseMode || '');
+      const packResourceLoadingEnabled = Object.prototype.hasOwnProperty.call(options, 'packResourceLoadingEnabled')
+        ? Boolean(options.packResourceLoadingEnabled)
+        : releaseMode !== 'single-file';
       const visualAssetRegistry = VisualAssetRegistry.create();
       const visualAssetLoader = VisualAssetLoader.create({
         THREE,
         visualAssetRegistry,
         disposeObjectTree,
-        logger
+        logger,
+        packResourceLoadingEnabled
       });
       const warn = typeof logger?.warn === 'function'
         ? logger.warn.bind(logger)
         : console.warn.bind(console);
-      visualAssetLoader.bootstrapInstalledPacks().catch(warn);
+      if (packResourceLoadingEnabled) visualAssetLoader.bootstrapInstalledPacks().catch(warn);
       const visualRuntimeAdapter = VisualRuntimeAdapter.create();
       const cellScale = ModuleVisualFactory.parseModuleVisualCellScaleDevFlag({
         search: window?.location?.search || '',
@@ -68,7 +73,8 @@
         moduleVisualFactory,
         visualAssetDevControls,
         createModuleVisual: moduleVisualFactory.createModuleVisual,
-        moduleVisualCellScale: moduleVisualFactory.activeCellScale
+        moduleVisualCellScale: moduleVisualFactory.activeCellScale,
+        packResourceLoadingEnabled
       });
     }
 

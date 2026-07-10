@@ -13,7 +13,7 @@ function load(context, relative) {
   );
 }
 
-function createHarness({ rejectBootstrap = false, exposeBroadcastChannel = false } = {}) {
+function createHarness({ rejectBootstrap = false, exposeBroadcastChannel = false, releaseMode = null } = {}) {
   const captures = {
     attachedRoot: null,
     activeBroadcastChannels: 0,
@@ -44,6 +44,7 @@ function createHarness({ rejectBootstrap = false, exposeBroadcastChannel = false
   context.globalThis = context;
   context.document = {
     baseURI: 'http://127.0.0.1:8765/index.html',
+    documentElement: { dataset: releaseMode ? { vawReleaseMode: releaseMode } : {} },
     createElement: () => ({}),
     getElementById: () => null
   };
@@ -144,6 +145,7 @@ async function exerciseComposition(options = {}) {
     loggerOverride,
     omitDocumentWindow = false,
     allowBroadcastChannel = false,
+    expectedBootstrapCalls = 1,
     ...harnessOptions
   } = options;
   const { context, captures } = createHarness(harnessOptions);
@@ -173,9 +175,10 @@ async function exerciseComposition(options = {}) {
   });
   await flushPromises();
 
-  assert.strictEqual(captures.bootstrapCalls, 1, 'Composition must bootstrap installed packs exactly once.');
+  assert.strictEqual(captures.bootstrapCalls, expectedBootstrapCalls, 'Composition bootstrap policy mismatch.');
   assert.strictEqual(captures.loaderOptions.visualAssetRegistry, result.visualAssetRegistry);
   assert.strictEqual(captures.loaderOptions.disposeObjectTree, disposeObjectTree);
+  assert.strictEqual(captures.loaderOptions.packResourceLoadingEnabled, expectedBootstrapCalls === 1);
   assert.strictEqual(captures.loader, result.visualAssetLoader);
   assert.strictEqual(result.moduleVisualFactory.createModuleVisual, result.createModuleVisual);
 
@@ -210,6 +213,9 @@ async function exerciseComposition(options = {}) {
   assert.strictEqual(sparseLogger.warnings.length, 0, 'Sparse logger without warn must not receive warnings.');
   assert.strictEqual(sparseLogger.captures.consoleWarns.length, 1, 'Sparse logger must fall back to console.warn.');
   assert(String(sparseLogger.captures.consoleWarns[0][0]).includes('bootstrap failed'));
+
+  const offlineRelease = await exerciseComposition({ releaseMode: 'single-file', expectedBootstrapCalls: 0 });
+  assert.strictEqual(offlineRelease.captures.loaderOptions.packResourceLoadingEnabled, false, 'Single-file release must disable external visual pack requests.');
 
   const noDom = await exerciseComposition({ omitDocumentWindow: true });
   assert.strictEqual(noDom.captures.broadcastConstructed, 0, 'Composition without window must not allocate BroadcastChannel.');
