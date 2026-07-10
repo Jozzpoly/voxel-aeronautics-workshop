@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - mobile/touch-foundation
+  pull_request:
+    branches:
+      - VAW_GRoK
   workflow_dispatch:
 
 permissions:
