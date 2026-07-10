@@ -3,9 +3,11 @@ name: Mobile Touch Validation
 on:
   push:
     branches:
-      - mobile/touch-foundation
+      - mobile/playable-mvp
+      - mobile/compatibility-validation
   pull_request:
     branches:
+      - mobile/playable-mvp
       - VAW_GRoK
   workflow_dispatch:
 
@@ -111,6 +113,11 @@ jobs:
           done
           exit 2
 
+      - name: Run no-origin single-file mobile smoke
+        run: |
+          set -o pipefail
+          npm run browser:smoke:mobile:offline 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/browser_smoke_mobile_offline.log"
+
       - name: Check whitespace and patch integrity
         run: |
           set -o pipefail
@@ -122,6 +129,9 @@ jobs:
           mkdir -p "$MOBILE_VALIDATION_ARTIFACT_DIR/generated"
           if [ -d dist ]; then cp -a dist "$MOBILE_VALIDATION_ARTIFACT_DIR/generated/"; fi
           if [ -f SOURCE_MANIFEST.json ]; then cp SOURCE_MANIFEST.json "$MOBILE_VALIDATION_ARTIFACT_DIR/generated/"; fi
+          if [ -d .agent-validation/mobile-offline-release-smoke ]; then
+            cp -a .agent-validation/mobile-offline-release-smoke "$MOBILE_VALIDATION_ARTIFACT_DIR/generated/"
+          fi
           git status --short --branch > "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/final_git_status.txt"
 
       - name: Upload mobile validation logs
