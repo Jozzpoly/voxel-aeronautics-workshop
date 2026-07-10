@@ -10,30 +10,85 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  publish-mobile-smoke:
+  validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
+    env:
+      MOBILE_VALIDATION_ARTIFACT_DIR: /tmp/vaw-mobile-validation
 
     steps:
-      - name: Checkout mobile branch
+      - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          ref: mobile/touch-foundation
+          python-version: '3.13'
 
-      - name: Promote validated smoke and remove diagnostics
-        run: |
-          cp tests/run_mobile_browser_smoke_candidate.mjs tests/run_mobile_browser_smoke.mjs
-          rm tests/run_mobile_browser_smoke_candidate.mjs
-          rm tests/run_mobile_pointer_probe.mjs
-          node --check tests/run_mobile_browser_smoke.mjs
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
-      - name: Publish reviewed smoke branch
+      - name: Record environment
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- tests/run_mobile_browser_smoke.mjs tests/run_mobile_browser_smoke_candidate.mjs tests/run_mobile_pointer_probe.mjs
-          git commit -m "Promote deterministic mobile browser smoke"
-          git push --force origin HEAD:automation/mobile-touch-smoke
+          mkdir -p "$MOBILE_VALIDATION_ARTIFACT_DIR/logs"
+          python --version | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/environment.txt"
+          node --version | tee -a "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/environment.txt"
+          git rev-parse HEAD | tee -a "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/environment.txt"
+          git status --short --branch | tee -a "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/environment.txt"
+
+      - name: Compile Python sources
+        run: |
+          set -o pipefail
+          python -m compileall . 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/compileall.log"
+
+      - name: Run full core suite
+        run: |
+          set -o pipefail
+          python -u tests/run_all.py 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/run_all.log"
+
+      - name: Build release artifacts
+        run: |
+          set -o pipefail
+          python tools/build_release.py 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/build_release.log"
+
+      - name: Verify release artifacts
+        run: |
+          set -o pipefail
+          python tools/verify_release.py 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/verify_release.log"
+
+      - name: Run desktop browser smoke
+        run: |
+          set -o pipefail
+          npm run browser:smoke 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/browser_smoke_desktop.log"
+
+      - name: Run mobile touch browser smoke
+        run: |
+          set -o pipefail
+          npm run browser:smoke:mobile 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/browser_smoke_mobile.log"
+
+      - name: Check whitespace and patch integrity
+        run: |
+          set -o pipefail
+          git diff --check 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/git_diff_check.log"
+
+      - name: Capture generated validation outputs
+        if: always()
+        run: |
+          mkdir -p "$MOBILE_VALIDATION_ARTIFACT_DIR/generated"
+          if [ -d dist ]; then cp -a dist "$MOBILE_VALIDATION_ARTIFACT_DIR/generated/"; fi
+          if [ -f SOURCE_MANIFEST.json ]; then cp SOURCE_MANIFEST.json "$MOBILE_VALIDATION_ARTIFACT_DIR/generated/"; fi
+          git status --short --branch > "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/final_git_status.txt"
+
+      - name: Upload mobile validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vaw-mobile-touch-validation-${{ github.sha }}
+          path: /tmp/vaw-mobile-validation
+          if-no-files-found: error
+          retention-days: 7
