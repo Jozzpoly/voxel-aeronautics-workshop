@@ -62,6 +62,7 @@ def main() -> None:
     run('node', 'tests/test_power_control_readouts.js')
     run('node', 'tests/test_mobile_device_profile.js')
     run('node', 'tests/test_mobile_runtime_shell.js')
+    run('node', 'tests/test_mobile_touch_controller.js')
     run(sys.executable, 'tests/test_mobile_release_wiring.py')
     run('node', 'tests/test_game_services.js')
     run('node', 'tests/test_input_focus_policy.js')
