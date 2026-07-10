@@ -26,6 +26,7 @@ function run() {
   const blocker = makeElement();
   const listeners = new Map();
   const visualViewportListeners = new Map();
+  const storageValues = new Map();
   const windowLike = {
     innerWidth: 390,
     innerHeight: 844,
@@ -40,7 +41,10 @@ function run() {
       addEventListener(name, callback) { visualViewportListeners.set(name, callback); },
       removeEventListener(name) { visualViewportListeners.delete(name); }
     },
-    localStorage: { getItem() { return null; }, setItem() {} }
+    localStorage: {
+      getItem(key) { return storageValues.get(key) || null; },
+      setItem(key, value) { storageValues.set(key, value); }
+    }
   };
   const documentLike = {
     documentElement: root,
@@ -59,6 +63,17 @@ function run() {
   assert.equal(root.dataset.vawPresentation, 'mobile');
   assert.equal(styleValues.get('--vaw-viewport-width'), '390px');
   assert.equal(styleValues.get('--vaw-viewport-height'), '844px');
+
+  const observed = [];
+  const unsubscribe = shell.subscribe(next => observed.push(next.mobilePresentation));
+  assert.deepEqual(observed, [true]);
+  const desktopProfile = shell.setOverride('desktop');
+  assert.equal(desktopProfile.mobilePresentation, false);
+  assert.deepEqual(observed, [true, false]);
+  unsubscribe();
+  shell.setOverride('mobile');
+  assert.deepEqual(observed, [true, false], 'unsubscribed profile listener must not receive updates');
+  assert.equal(shell.subscribe(null)() , undefined);
 
   shell.destroy();
   assert.equal(shell.initialized(), false);
