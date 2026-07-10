@@ -7,7 +7,6 @@ ROOT = Path(__file__).resolve().parents[1]
 BUILD_RELEASE = ROOT / 'tools/build_release.py'
 RELEASE_TEST = ROOT / 'tests/test_mobile_release_wiring.py'
 RUN_ALL = ROOT / 'tests/run_all.py'
-FOCUSED_WORKFLOW = ROOT / '.github/workflows/mobile-playable-mvp-validation.yml'
 
 
 def replace_once(source: str, old: str, new: str, label: str) -> str:
@@ -61,31 +60,7 @@ def main() -> None:
         "tests/test_mobile_flight_controls.js",
         'core runner flight controls test',
     )
-    patch_file(
-        FOCUSED_WORKFLOW,
-        """          node --check src/game/mobile-playable-shell.js
-          node --check src/game.js
-""",
-        """          node --check src/game/mobile-playable-shell.js
-          node --check src/game/mobile-flight-controls.js
-          node --check src/game.js
-""",
-        "node --check src/game/mobile-flight-controls.js",
-        'focused syntax flight controls',
-    )
-    patch_file(
-        FOCUSED_WORKFLOW,
-        """          node tests/test_mobile_playable_shell.js
-          python tests/test_mobile_command_composition.py
-""",
-        """          node tests/test_mobile_playable_shell.js
-          node tests/test_mobile_flight_controls.js
-          python tests/test_mobile_command_composition.py
-""",
-        "node tests/test_mobile_flight_controls.js",
-        'focused flight controls test',
-    )
-    print('Applied mobile flight controls release and validation wiring.')
+    print('Applied mobile flight controls release and core-test wiring.')
 
 
 if __name__ == '__main__':
