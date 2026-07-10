@@ -1,9 +1,13 @@
 name: Temporary Mobile Compatibility Transport
 
 on:
-  push:
+  pull_request:
     branches:
       - mobile/compatibility-validation
+    types:
+      - opened
+      - reopened
+      - synchronize
 
 permissions:
   contents: write
@@ -14,26 +18,25 @@ concurrency:
 
 jobs:
   apply-series:
+    if: github.event.pull_request.head.ref == 'automation/mobile-compatibility-transport-trigger' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: mobile/compatibility-validation
           fetch-depth: 0
 
-      - name: Detect complete transport payload
-        id: payload
+      - name: Validate complete transport payload
         shell: bash
         run: |
-          if [ -f .github/transport/READY ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "Transport workflow staged; waiting for verified payload activation."
-          fi
+          set -euo pipefail
+          test -f .github/transport/READY
+          grep -Fx 'sha256=adb04822b462fc2a70f6327f790c1df371c45d513f83dc8e1e6d3b5672219995' .github/transport/READY
+          grep -Fx 'base=c1c8f8fdf101f2c846b1c072451526673ee7acf7' .github/transport/READY
+          grep -Fx 'commits=9' .github/transport/READY
 
       - name: Apply validated commit series
-        if: steps.payload.outputs.present == 'true'
         shell: bash
         run: |
           set -euo pipefail
