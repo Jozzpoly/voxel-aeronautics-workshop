@@ -7,6 +7,7 @@ function createHarness(options = {}) {
   const events = [];
   const controller = TouchController.create({
     movementThreshold: options.movementThreshold ?? 8,
+    maxCanvasPointers: options.maxCanvasPointers ?? 2,
     onOrbit: event => events.push(['orbit', event]),
     onPan: event => events.push(['pan', event]),
     onZoom: event => events.push(['zoom', event]),
@@ -76,6 +77,16 @@ function run() {
   }
 
   {
+    const { controller } = createHarness();
+    assert.equal(controller.pointerDown({ pointerId: 1, x: 0, y: 0, owner: 'canvas' }), true);
+    assert.equal(controller.pointerDown({ pointerId: 2, x: 10, y: 0, owner: 'canvas' }), true);
+    assert.equal(controller.pointerDown({ pointerId: 3, x: 20, y: 0, owner: 'canvas' }), false, 'third canvas pointer must be rejected deterministically');
+    const snapshot = controller.snapshot();
+    assert.deepEqual(snapshot.canvasPointerIds, [1, 2]);
+    assert.equal(snapshot.activeCanvasPointerCount, 2);
+  }
+
+  {
     const { controller, events } = createHarness();
     controller.pointerDown({ pointerId: 1, x: 0, y: 0, owner: 'canvas' });
     controller.pointerDown({ pointerId: 2, x: 100, y: 100, owner: 'ui' });
@@ -117,11 +128,15 @@ function run() {
     const snapshot = controller.snapshot();
     assert(Object.isFrozen(snapshot));
     assert(Object.isFrozen(snapshot.pointerIds));
+    assert(Object.isFrozen(snapshot.canvasPointerIds));
     assert.throws(() => snapshot.pointerIds.push(2));
+    assert.throws(() => snapshot.canvasPointerIds.push(2));
   }
 
   assert.throws(() => TouchController.create({ movementThreshold: -1 }), /movementThreshold/);
   assert.throws(() => TouchController.create({ movementThreshold: Number.NaN }), /movementThreshold/);
+  assert.throws(() => TouchController.create({ maxCanvasPointers: 0 }), /maxCanvasPointers/);
+  assert.throws(() => TouchController.create({ maxCanvasPointers: 1.5 }), /maxCanvasPointers/);
   assert.throws(() => TouchController.create().pointerDown({ pointerId: 1, x: 0, y: 0, owner: 'other' }), /owner/);
 
   console.log('OK mobile touch controller');
