@@ -16,12 +16,6 @@ jobs:
   mobile-smoke-diagnostic:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        variant:
-          - evaluate-barrier
-          - evaluate-barrier-stable-point
 
     steps:
       - name: Checkout repository
@@ -32,61 +26,84 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Patch diagnostic smoke copy
-        env:
-          DIAGNOSTIC_VARIANT: ${{ matrix.variant }}
+      - name: Patch diagnostic smoke copy with gesture milestones
         run: |
           python3 - <<'PY'
-          import os
           from pathlib import Path
 
           path = Path('tests/run_mobile_browser_smoke.mjs')
           source = path.read_text(encoding='utf-8')
-          old_touch = """async function touch(cdp, type, touchPoints) {
-            await cdp.call('Input.dispatchTouchEvent', {
-              type,
-              touchPoints,
-              modifiers: 0
-            });
-          }
-          """
-          new_touch = """async function touch(cdp, type, touchPoints) {
-            await cdp.call('Input.dispatchTouchEvent', {
-              type,
-              touchPoints,
-              modifiers: 0
-            });
-            await evaluate(cdp, 'true');
-          }
-          """
-          if source.count(old_touch) != 1:
-              raise SystemExit('Expected mobile touch helper was not found exactly once.')
-          source = source.replace(old_touch, new_touch)
 
-          if os.environ['DIAGNOSTIC_VARIANT'] == 'evaluate-barrier-stable-point':
-              old_candidates = """    const center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+          old_candidates = """    const center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
               const candidates = [center];
           """
-              new_candidates = """    const candidates = [];
+          new_candidates = """    const candidates = [];
           """
-              if source.count(old_candidates) != 1:
-                  raise SystemExit('Expected center-first canvas candidate block was not found exactly once.')
-              source = source.replace(old_candidates, new_candidates)
+          if source.count(old_candidates) != 1:
+              raise SystemExit('Expected center-first canvas candidate block was not found exactly once.')
+          source = source.replace(old_candidates, new_candidates)
+
+          old_orbit = """  await touch(cdp, 'touchStart', [touchPoint(point.x, point.y, 1)]);
+            await touch(cdp, 'touchMove', [touchPoint(point.x + 36, point.y, 1)]);
+            await touch(cdp, 'touchEnd', []);
+            const orbitState = await waitFor(cdp, `(() => {
+              const value = window.VAW.require('game.camera-controller').current().snapshot();
+              return Math.abs(value.yaw - ${JSON.stringify(yawBefore)}) > 0.05 ? value : null;
+            })()`, 'one-finger camera orbit');
+          """
+          new_orbit = """  await touch(cdp, 'touchStart', [touchPoint(point.x, point.y, 1)]);
+            await waitFor(cdp, `window.VAW.require('runtime.mobile-context').cameraInputBinder().currentRuntime().snapshot().mode === 'TAP_CANDIDATE'`, 'one-finger tap candidate');
+            await touch(cdp, 'touchMove', [touchPoint(point.x + 36, point.y, 1)]);
+            const orbitState = await waitFor(cdp, `(() => {
+              const value = window.VAW.require('game.camera-controller').current().snapshot();
+              return Math.abs(value.yaw - ${JSON.stringify(yawBefore)}) > 0.05 ? value : null;
+            })()`, 'one-finger camera orbit');
+            await touch(cdp, 'touchEnd', []);
+            await waitFor(cdp, `window.VAW.require('runtime.mobile-context').cameraInputBinder().currentRuntime().snapshot().mode === 'IDLE'`, 'one-finger gesture release');
+          """
+          if source.count(old_orbit) != 1:
+              raise SystemExit('Expected one-finger smoke sequence was not found exactly once.')
+          source = source.replace(old_orbit, new_orbit)
+
+          old_pinch = """  await touch(cdp, 'touchStart', [touchPoint(leftStart, y, 1), touchPoint(rightStart, y, 2)]);
+            await touch(cdp, 'touchMove', [touchPoint(leftEnd, y, 1), touchPoint(rightEnd, y, 2)]);
+            await touch(cdp, 'touchEnd', []);
+            const pinchState = await waitFor(cdp, `(() => {
+              const value = window.VAW.require('game.camera-controller').current().snapshot();
+              return Math.abs(value.distance - ${JSON.stringify(distanceBefore)}) > 0.2 ? value : null;
+            })()`, 'two-finger pinch zoom');
+          """
+          new_pinch = """  await touch(cdp, 'touchStart', [touchPoint(leftStart, y, 1), touchPoint(rightStart, y, 2)]);
+            await waitFor(cdp, `(() => {
+              const value = window.VAW.require('runtime.mobile-context').cameraInputBinder().currentRuntime().snapshot();
+              return value.mode === 'MULTI' && value.activeCanvasPointerCount === 2;
+            })()`, 'two-finger multi gesture');
+            await touch(cdp, 'touchMove', [touchPoint(leftEnd, y, 1), touchPoint(rightEnd, y, 2)]);
+            const pinchState = await waitFor(cdp, `(() => {
+              const value = window.VAW.require('game.camera-controller').current().snapshot();
+              return Math.abs(value.distance - ${JSON.stringify(distanceBefore)}) > 0.2 ? value : null;
+            })()`, 'two-finger pinch zoom');
+            await touch(cdp, 'touchEnd', []);
+            await waitFor(cdp, `window.VAW.require('runtime.mobile-context').cameraInputBinder().currentRuntime().snapshot().mode === 'IDLE'`, 'two-finger gesture release');
+          """
+          if source.count(old_pinch) != 1:
+              raise SystemExit('Expected two-finger smoke sequence was not found exactly once.')
+          source = source.replace(old_pinch, new_pinch)
 
           path.write_text(source, encoding='utf-8', newline='\n')
           PY
 
-      - name: Run mobile smoke diagnostic
+      - name: Run milestone mobile smoke diagnostic
         run: |
           set -o pipefail
           mkdir -p /tmp/vaw-mobile-smoke-diagnostic
           npm run browser:smoke:mobile 2>&1 | tee /tmp/vaw-mobile-smoke-diagnostic/result.log
 
-      - name: Upload mobile smoke diagnostic log
+      - name: Upload milestone mobile smoke log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: vaw-mobile-smoke-${{ matrix.variant }}-${{ github.sha }}
+          name: vaw-mobile-smoke-milestones-${{ github.sha }}
           path: /tmp/vaw-mobile-smoke-diagnostic
           if-no-files-found: error
           retention-days: 7
