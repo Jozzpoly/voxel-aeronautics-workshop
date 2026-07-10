@@ -1,0 +1,86 @@
+name: Apply Single File Offline Fix
+
+on:
+  push:
+    branches:
+      - mobile/playable-mvp
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-single-file-offline-fix
+  cancel-in-progress: true
+
+jobs:
+  build-offline-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: mobile/playable-mvp
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply offline single-file fix
+        run: python tools/apply_single_file_offline_fix.py
+
+      - name: Install exact Tailwind dependency
+        run: npm install --no-save --package-lock=false --ignore-scripts tailwindcss@4.1.10
+
+      - name: Regenerate official artifacts
+        run: |
+          node tools/generate_tailwind_css.js
+          python tools/build_release.py
+
+      - name: Validate offline release contract
+        run: |
+          node --check src/game/visual-renderer-profiles.js
+          node --check src/game/mobile-runtime-shell.js
+          python tests/static_check.py
+          python tests/test_single_file_offline_contract.py
+          python tests/test_release_build.py
+          python tools/verify_release.py
+
+      - name: Capture release hashes
+        run: |
+          sha256sum dist/Voxel_Aeronautics_Workshop_Workbench_Foundation.html | tee dist/OFFLINE_SHA256.txt
+          sha256sum dist/Voxel_Aeronautics_Workshop_Workbench_Foundation.zip >> dist/OFFLINE_SHA256.txt
+
+      - name: Upload fixed phone release
+        uses: actions/upload-artifact@v4
+        with:
+          name: VAW-Mobile-Offline-Hotfix-${{ github.sha }}
+          path: |
+            dist/Voxel_Aeronautics_Workshop_Workbench_Foundation.html
+            dist/Voxel_Aeronautics_Workshop_Workbench_Foundation.zip
+            dist/OFFLINE_SHA256.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Remove one-time patch script
+        run: rm tools/apply_single_file_offline_fix.py
+
+      - name: Commit validated source fix to review branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/game/visual-renderer-profiles.js \
+            src/game/mobile-runtime-shell.js \
+            tools/build_release.py \
+            index.html \
+            tests/test_single_file_offline_contract.py \
+            SOURCE_MANIFEST.json \
+            tailwind.generated.css \
+            tools/apply_single_file_offline_fix.py
+          git commit -m "Fix offline single-file mobile startup [offline hotfix]"
+          git push --force origin HEAD:refs/heads/automation/mobile-single-file-offline-fix
