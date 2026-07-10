@@ -15,6 +15,7 @@ MOBILE_INPUT_FILES = (
     Path('src/game/mobile-pointer-adapter.js'),
     Path('src/game/mobile-camera-input-runtime.js'),
     Path('src/game/mobile-camera-autobind.js'),
+    Path('src/game/mobile-flight-controls.js'),
 )
 
 
@@ -65,6 +66,14 @@ def main() -> None:
     assert 'tapEnabled,' in autobind
     assert 'onTap,' in autobind
 
+    flight_controls = text(Path('src/game/mobile-flight-controls.js'))
+    assert "root.VAW.define('game.mobile-flight-controls', ['game.mobile-command-port']" in flight_controls
+    assert 'commandPort.flight.setAction(action, activeValue)' in flight_controls
+    assert 'commandPort.flight.clearActions()' in flight_controls
+    assert 'commandPort.subscribeActivity(handleActivity)' in flight_controls
+    assert "windowLike.addEventListener('blur', handleBlur)" in flight_controls
+    assert "documentLike.addEventListener('visibilitychange', handleVisibility)" in flight_controls
+
     camera_controller = text(Path('src/game/camera_controller.js'))
     for method in ('orbitCameraByPixels', 'zoomCameraByPixels', 'onCreated', 'current'):
         assert re.search(rf'\b{re.escape(method)}\b', camera_controller), f'camera controller missing {method}'
@@ -74,6 +83,9 @@ def main() -> None:
 
     bootstrap = text(Path('src/foundation/bootstrap.js'))
     assert "window.VAW.require('game.mobile-camera-autobind')" in bootstrap
+    assert "window.VAW.require('game.mobile-flight-controls')" in bootstrap
+    assert 'flightControls: () => mobileFlightControls' in bootstrap
+    assert 'mobileFlightControls.start()' in bootstrap
     assert 'tapEnabled: () => Boolean(mobilePlayableShell?.tapEnabled?.())' in bootstrap
     assert 'onTap: sample => mobilePlayableShell?.handleCanvasTap?.(sample)' in bootstrap
     assert 'mobileCameraBinder.start()' in bootstrap
