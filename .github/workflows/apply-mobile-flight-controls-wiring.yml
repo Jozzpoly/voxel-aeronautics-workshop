@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - VAW_GRoK
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -17,7 +18,7 @@ concurrency:
 
 jobs:
   apply:
-    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, '[flight wiring applied]') }}
+    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, '[flight wiring published]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -47,10 +48,12 @@ jobs:
       - name: Remove one-time patch script
         run: rm tools/apply_mobile_flight_controls_wiring.py
 
-      - name: Commit flight controls wiring
+      - name: Commit validated wiring
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add tools/build_release.py tests/test_mobile_release_wiring.py tests/run_all.py .github/workflows/mobile-playable-mvp-validation.yml tools/apply_mobile_flight_controls_wiring.py
-          git commit -m "Wire dedicated mobile flight controls [flight wiring applied]"
-          git push origin HEAD:mobile/playable-mvp
+          git commit -m "Wire dedicated mobile flight controls [flight wiring published]"
+
+      - name: Publish review branch
+        run: git push --force origin HEAD:refs/heads/automation/mobile-flight-controls-wiring
