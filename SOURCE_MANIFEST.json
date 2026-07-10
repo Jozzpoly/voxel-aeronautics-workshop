@@ -159,7 +159,7 @@
     "src/runtime/headless_physics_backend.js": "c08a415ab2b8601392fe350cd8cd4d46536def692c2a41c8b2521d279184f2a9",
     "src/runtime/physics_port.js": "81e042adfc2c1c953fd0cfbc942229cf31722a9411eb62f29bf367f505180056",
     "styles.css": "f50dbd94991267e19e97b3edaf70f1284e8def2cf153a626429bba3a00ab494e",
-    "tailwind.generated.css": "137a771dd319abdec9bc0a6ce584db36560d4c4b6b77ce063c3ed5fb4524f279",
+    "tailwind.generated.css": "6c0da62f48b40669a3faea716e5789c72b60adefbf1b106c3440d333d13909d8",
     "tools/blockbench_import_studio/README.md": "44b40b7943aee43a471c1a82d031774e1ed7f94396e92982c6d05dcbbbec57a4",
     "tools/blockbench_import_studio/VALIDATION_LOG.txt": "af3fdbc640d57ff8ee489e2b0fe96531b96ee65fed9dfde1538a6e475f932d35",
     "tools/blockbench_import_studio/app/main.js": "5e723b94d715ab6f2c88ad0a36f30e46b55cb257f9f6ae41c0d05ba5f03e411d",
