@@ -80,9 +80,23 @@ function run() {
   const unsubscribeImmediate = CameraController.onCreated(value => immediate.push(value));
   assert.deepEqual(immediate, [controller]);
   unsubscribeImmediate();
-
   unsubscribe();
-  CameraController.create({ state: makeState(), camera, THREE, document: window.document });
+
+  const errors = [];
+  const safePublications = [];
+  const originalConsoleError = console.error;
+  console.error = (...args) => errors.push(args);
+  const unsubscribeThrowing = CameraController.onCreated(() => { throw new Error('listener boom'); }, { emitCurrent: false });
+  const unsubscribeSafe = CameraController.onCreated(value => safePublications.push(value), { emitCurrent: false });
+  const secondController = CameraController.create({ state: makeState(), camera, THREE, document: window.document });
+  console.error = originalConsoleError;
+  unsubscribeThrowing();
+  unsubscribeSafe();
+
+  assert.strictEqual(CameraController.current(), secondController);
+  assert.deepEqual(safePublications, [secondController]);
+  assert.equal(errors.length, 1);
+  assert.match(String(errors[0][0]), /creation listener failed/);
   assert.equal(published.length, 1, 'unsubscribed listener must not receive later controllers');
 
   assert.throws(() => CameraController.onCreated(null), /listener/);
