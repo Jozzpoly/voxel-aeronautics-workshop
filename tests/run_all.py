@@ -11,7 +11,7 @@ os.environ['PYTHONDONTWRITEBYTECODE'] = '1'
 os.environ['PYTHON'] = sys.executable
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(ROOT / 'tools'))
-from build_release import APP_SOURCES  # noqa: E402
+from build_release import APP_SOURCES, BOOTSTRAP_AUXILIARY_SOURCES  # noqa: E402
 
 
 def run(*command: str) -> None:
@@ -20,7 +20,7 @@ def run(*command: str) -> None:
 
 
 def main() -> None:
-    for relative in APP_SOURCES:
+    for relative in (*APP_SOURCES, *BOOTSTRAP_AUXILIARY_SOURCES):
         run('node', '--check', str(relative))
     run(sys.executable, 'tests/static_check.py')
     run('node', 'tests/test_foundation.js')
@@ -60,12 +60,14 @@ def main() -> None:
     run('node', 'tests/test_build_targeting.js')
     run('node', 'tests/test_orientation_service.js')
     run('node', 'tests/test_power_control_readouts.js')
+    run('node', 'tests/test_camera_controller_mobile_contract.js')
     run('node', 'tests/test_mobile_device_profile.js')
     run('node', 'tests/test_mobile_runtime_shell.js')
     run('node', 'tests/test_mobile_touch_controller.js')
     run('node', 'tests/test_mobile_pointer_adapter.js')
     run('node', 'tests/test_mobile_camera_gesture_bridge.js')
     run('node', 'tests/test_mobile_camera_input_runtime.js')
+    run('node', 'tests/test_mobile_camera_autobind.js')
     run(sys.executable, 'tests/test_mobile_release_wiring.py')
     run('node', 'tests/test_game_services.js')
     run('node', 'tests/test_input_focus_policy.js')
