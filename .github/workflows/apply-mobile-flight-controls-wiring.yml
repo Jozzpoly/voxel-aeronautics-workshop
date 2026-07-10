@@ -52,7 +52,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tools/build_release.py tests/test_mobile_release_wiring.py tests/run_all.py .github/workflows/mobile-playable-mvp-validation.yml tools/apply_mobile_flight_controls_wiring.py
+          git add tools/build_release.py tests/test_mobile_release_wiring.py tests/run_all.py tools/apply_mobile_flight_controls_wiring.py
           git commit -m "Wire dedicated mobile flight controls [flight wiring published]"
 
       - name: Publish review branch
