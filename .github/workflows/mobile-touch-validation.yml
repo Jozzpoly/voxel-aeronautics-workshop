@@ -20,8 +20,10 @@ jobs:
       MOBILE_VALIDATION_ARTIFACT_DIR: /tmp/vaw-mobile-validation
 
     steps:
-      - name: Checkout repository
+      - name: Checkout mobile validation branch
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -53,7 +55,9 @@ jobs:
           python tools/build_release.py 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/build_release.log"
 
       - name: Commit generated provenance on mobile branch
-        if: github.event_name == 'push' && github.ref == 'refs/heads/mobile/touch-foundation'
+        if: >-
+          (github.event_name == 'push' && github.ref == 'refs/heads/mobile/touch-foundation') ||
+          (github.event_name == 'pull_request' && github.head_ref == 'mobile/touch-foundation' && github.event.pull_request.head.repo.full_name == github.repository)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
