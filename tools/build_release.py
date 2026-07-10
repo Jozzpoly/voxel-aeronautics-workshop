@@ -115,6 +115,8 @@ APP_SOURCES = (
     Path('src/game/flight_mechanical_visuals.js'),
     Path('src/game/flight_integrity.js'),
     Path('src/game/debris_runtime.js'),
+    Path('src/game/mobile-device-profile.js'),
+    Path('src/game/mobile-runtime-shell.js'),
     Path('src/foundation/bootstrap.js'),
     Path('src/game.js'),
 )
@@ -289,7 +291,6 @@ def build_single_html(root: Path = ROOT) -> str:
         f'<script>\n/* BEGIN EMBEDDED CANNON 0.6.2 */\n{cannon}\n/* END EMBEDDED CANNON 0.6.2 */\n  </script>',
         1,
     )
-
 
     bundle = source_bundle(root)
     inline = f'''  <script>
