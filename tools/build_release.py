@@ -121,6 +121,11 @@ APP_SOURCES = (
 BOOTSTRAP_AUXILIARY_SOURCES = (
     Path('src/game/mobile-device-profile.js'),
     Path('src/game/mobile-runtime-shell.js'),
+    Path('src/game/mobile-touch-controller.js'),
+    Path('src/game/mobile-pointer-adapter.js'),
+    Path('src/game/mobile-camera-gesture-bridge.js'),
+    Path('src/game/mobile-camera-input-runtime.js'),
+    Path('src/game/mobile-camera-autobind.js'),
 )
 BOOTSTRAP_PATH = Path('src/foundation/bootstrap.js')
 BOOTSTRAP_INDEX = APP_SOURCES.index(BOOTSTRAP_PATH)
