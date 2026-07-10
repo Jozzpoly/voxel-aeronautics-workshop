@@ -11,7 +11,7 @@ os.environ['PYTHONDONTWRITEBYTECODE'] = '1'
 os.environ['PYTHON'] = sys.executable
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(ROOT / 'tools'))
-from build_release import APP_SOURCES, BOOTSTRAP_AUXILIARY_SOURCES  # noqa: E402
+from build_release import APP_SOURCES, EMBEDDED_APPLICATION_SOURCES  # noqa: E402
 
 
 def run(*command: str) -> None:
@@ -20,7 +20,7 @@ def run(*command: str) -> None:
 
 
 def main() -> None:
-    for relative in (*APP_SOURCES, *BOOTSTRAP_AUXILIARY_SOURCES):
+    for relative in EMBEDDED_APPLICATION_SOURCES:
         run('node', '--check', str(relative))
     run(sys.executable, 'tests/static_check.py')
     run('node', 'tests/test_foundation.js')
@@ -92,7 +92,7 @@ def main() -> None:
     run(sys.executable, 'tests/test_source_provenance_contract.py')
     run(sys.executable, 'tests/test_apply_agent_delivery_contract.py')
     run(sys.executable, 'tests/test_release_build.py')
-    run('node', 'tests/startup_smoke.js', 'index.html', *(str(path) for path in APP_SOURCES))
+    run('node', 'tests/startup_smoke.js', 'index.html', *(str(path) for path in EMBEDDED_APPLICATION_SOURCES))
     print('\nAll core tests passed.')
 
 
