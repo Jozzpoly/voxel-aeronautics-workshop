@@ -31,12 +31,24 @@
 
     const enabledPolicy = typeof options.enabled === 'function' ? options.enabled : () => true;
     const resolveOwner = typeof options.resolveOwner === 'function' ? options.resolveOwner : () => 'canvas';
+    const manageTouchAction = options.manageTouchAction !== false;
+    const originalTouchAction = surface.style?.touchAction ?? '';
     let manualEnabled = true;
     let bound = false;
     const listeners = [];
 
     function isEnabled() {
       return manualEnabled && Boolean(enabledPolicy());
+    }
+
+    function syncTouchAction() {
+      if (!manageTouchAction || !surface.style) return;
+      surface.style.touchAction = isEnabled() ? 'none' : originalTouchAction;
+    }
+
+    function restoreTouchAction() {
+      if (!manageTouchAction || !surface.style) return;
+      surface.style.touchAction = originalTouchAction;
     }
 
     function isTouch(event) {
@@ -134,14 +146,16 @@
       listen(windowLike, 'blur', handleWindowBlur, false);
       listen(documentLike, 'visibilitychange', handleVisibilityChange, false);
       bound = true;
+      syncTouchAction();
       return true;
     }
 
     function setEnabled(value) {
       const next = Boolean(value);
-      if (manualEnabled === next) return manualEnabled;
+      const changed = manualEnabled !== next;
       manualEnabled = next;
-      if (!manualEnabled) controller.cancelAll('disabled');
+      if (changed && !manualEnabled) controller.cancelAll('disabled');
+      syncTouchAction();
       return manualEnabled;
     }
 
@@ -151,6 +165,7 @@
       for (const [target, name, callback, optionsValue] of listeners.splice(0)) {
         target.removeEventListener(name, callback, optionsValue);
       }
+      restoreTouchAction();
       bound = false;
       return true;
     }
