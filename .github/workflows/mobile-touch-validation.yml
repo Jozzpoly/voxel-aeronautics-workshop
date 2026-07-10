@@ -15,7 +15,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     env:
       MOBILE_VALIDATION_ARTIFACT_DIR: /tmp/vaw-mobile-validation
 
@@ -63,13 +63,53 @@ jobs:
 
       - name: Run desktop browser smoke
         run: |
-          set -o pipefail
-          npm run browser:smoke 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/browser_smoke_desktop.log"
+          combined="$MOBILE_VALIDATION_ARTIFACT_DIR/logs/browser_smoke_desktop.log"
+          : > "$combined"
+          for attempt in 1 2 3; do
+            attempt_log="$MOBILE_VALIDATION_ARTIFACT_DIR/logs/browser_smoke_desktop_attempt_${attempt}.log"
+            set +e
+            npm run browser:smoke 2>&1 | tee "$attempt_log"
+            code=${PIPESTATUS[0]}
+            set -e
+            {
+              echo "=== desktop smoke attempt ${attempt}, exit ${code} ==="
+              cat "$attempt_log"
+            } >> "$combined"
+            if [ "$code" -eq 0 ]; then
+              exit 0
+            fi
+            if [ "$code" -ne 2 ]; then
+              exit "$code"
+            fi
+            echo "Desktop smoke reported an environment failure; retrying." | tee -a "$combined"
+            sleep $((attempt * 2))
+          done
+          exit 2
 
       - name: Run mobile touch browser smoke
         run: |
-          set -o pipefail
-          npm run browser:smoke:mobile 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/browser_smoke_mobile.log"
+          combined="$MOBILE_VALIDATION_ARTIFACT_DIR/logs/browser_smoke_mobile.log"
+          : > "$combined"
+          for attempt in 1 2 3; do
+            attempt_log="$MOBILE_VALIDATION_ARTIFACT_DIR/logs/browser_smoke_mobile_attempt_${attempt}.log"
+            set +e
+            npm run browser:smoke:mobile 2>&1 | tee "$attempt_log"
+            code=${PIPESTATUS[0]}
+            set -e
+            {
+              echo "=== mobile smoke attempt ${attempt}, exit ${code} ==="
+              cat "$attempt_log"
+            } >> "$combined"
+            if [ "$code" -eq 0 ]; then
+              exit 0
+            fi
+            if [ "$code" -ne 2 ]; then
+              exit "$code"
+            fi
+            echo "Mobile smoke reported an environment failure; retrying." | tee -a "$combined"
+            sleep $((attempt * 2))
+          done
+          exit 2
 
       - name: Check whitespace and patch integrity
         run: |
