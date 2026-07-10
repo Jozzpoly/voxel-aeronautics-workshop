@@ -58,17 +58,19 @@ function run() {
     controller.pointerDown({ pointerId: 1, x: 0, y: 0, owner: 'canvas' });
     controller.pointerDown({ pointerId: 2, x: 10, y: 0, owner: 'canvas' });
     assert.equal(controller.snapshot().mode, 'MULTI');
-    controller.pointerMove({ pointerId: 1, x: 2, y: 2 });
-    controller.pointerMove({ pointerId: 2, x: 14, y: 2 });
+    controller.pointerMove({ pointerId: 2, x: 12, y: 0 });
     const pans = ofType(events, 'pan');
     const zooms = ofType(events, 'zoom');
-    assert(pans.length >= 1);
-    assert(zooms.length >= 1);
-    assert.equal(zooms.at(-1).delta, 2);
-    assert.equal(zooms.at(-1).scale, 1.2);
-    controller.pointerUp({ pointerId: 2, x: 14, y: 2 });
+    assert.equal(pans.length, 1);
+    assert.deepEqual({ dx: pans[0].dx, dy: pans[0].dy }, { dx: 1, dy: 0 });
+    assert.equal(zooms.length, 1);
+    assert.equal(zooms[0].delta, 2);
+    assert.equal(zooms[0].scale, 1.2);
+    controller.pointerUp({ pointerId: 2, x: 12, y: 0 });
     assert.equal(controller.snapshot().mode, 'MULTI', 'multi gesture must not demote while one participant remains');
-    controller.pointerUp({ pointerId: 1, x: 2, y: 2 });
+    controller.pointerMove({ pointerId: 1, x: 20, y: 20 });
+    assert.equal(ofType(events, 'orbit').length, 0, 'remaining participant cannot become orbit after multi promotion');
+    controller.pointerUp({ pointerId: 1, x: 20, y: 20 });
     assert.equal(controller.snapshot().mode, 'IDLE');
     assert.equal(ofType(events, 'tap').length, 0);
   }
