@@ -66,6 +66,11 @@ jobs:
           set -o pipefail
           npm run browser:smoke 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/browser_smoke_desktop.log"
 
+      - name: Probe native mobile pointer events
+        run: |
+          set -o pipefail
+          node tests/run_mobile_pointer_probe.mjs 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/mobile_pointer_probe.log"
+
       - name: Run mobile touch browser smoke
         run: |
           set -o pipefail
