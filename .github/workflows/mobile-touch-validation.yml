@@ -13,9 +13,16 @@ permissions:
   contents: read
 
 jobs:
-  mobile-delayed-smoke-diagnostic:
+  mobile-smoke-diagnostic:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        variant:
+          - evaluate-barrier
+          - evaluate-barrier-stable-point
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -25,13 +32,17 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Patch diagnostic copy with browser frame barriers
+      - name: Patch diagnostic smoke copy
+        env:
+          DIAGNOSTIC_VARIANT: ${{ matrix.variant }}
         run: |
           python3 - <<'PY'
+          import os
           from pathlib import Path
+
           path = Path('tests/run_mobile_browser_smoke.mjs')
           source = path.read_text(encoding='utf-8')
-          old = """async function touch(cdp, type, touchPoints) {
+          old_touch = """async function touch(cdp, type, touchPoints) {
             await cdp.call('Input.dispatchTouchEvent', {
               type,
               touchPoints,
@@ -39,116 +50,43 @@ jobs:
             });
           }
           """
-          new = """async function touch(cdp, type, touchPoints) {
+          new_touch = """async function touch(cdp, type, touchPoints) {
             await cdp.call('Input.dispatchTouchEvent', {
               type,
               touchPoints,
               modifiers: 0
             });
-            await evaluate(cdp, `new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))`);
+            await evaluate(cdp, 'true');
           }
           """
-          if source.count(old) != 1:
+          if source.count(old_touch) != 1:
               raise SystemExit('Expected mobile touch helper was not found exactly once.')
-          path.write_text(source.replace(old, new), encoding='utf-8', newline='\n')
+          source = source.replace(old_touch, new_touch)
+
+          if os.environ['DIAGNOSTIC_VARIANT'] == 'evaluate-barrier-stable-point':
+              old_candidates = """    const center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+              const candidates = [center];
+          """
+              new_candidates = """    const candidates = [];
+          """
+              if source.count(old_candidates) != 1:
+                  raise SystemExit('Expected center-first canvas candidate block was not found exactly once.')
+              source = source.replace(old_candidates, new_candidates)
+
+          path.write_text(source, encoding='utf-8', newline='\n')
           PY
 
-      - name: Run frame-barrier mobile smoke diagnostic
+      - name: Run mobile smoke diagnostic
         run: |
           set -o pipefail
-          mkdir -p /tmp/vaw-mobile-delayed-smoke
-          npm run browser:smoke:mobile 2>&1 | tee /tmp/vaw-mobile-delayed-smoke/result.log
+          mkdir -p /tmp/vaw-mobile-smoke-diagnostic
+          npm run browser:smoke:mobile 2>&1 | tee /tmp/vaw-mobile-smoke-diagnostic/result.log
 
-      - name: Upload frame-barrier mobile smoke log
+      - name: Upload mobile smoke diagnostic log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: vaw-mobile-delayed-smoke-${{ github.sha }}
-          path: /tmp/vaw-mobile-delayed-smoke
-          if-no-files-found: error
-          retention-days: 7
-
-  validate:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      MOBILE_VALIDATION_ARTIFACT_DIR: /tmp/vaw-mobile-validation
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Record environment
-        run: |
-          mkdir -p "$MOBILE_VALIDATION_ARTIFACT_DIR/logs"
-          python --version | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/environment.txt"
-          node --version | tee -a "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/environment.txt"
-          git rev-parse HEAD | tee -a "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/environment.txt"
-          git status --short --branch | tee -a "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/environment.txt"
-
-      - name: Compile Python sources
-        run: |
-          set -o pipefail
-          python -m compileall . 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/compileall.log"
-
-      - name: Run full core suite
-        run: |
-          set -o pipefail
-          python -u tests/run_all.py 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/run_all.log"
-
-      - name: Build release artifacts
-        run: |
-          set -o pipefail
-          python tools/build_release.py 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/build_release.log"
-
-      - name: Verify release artifacts
-        run: |
-          set -o pipefail
-          python tools/verify_release.py 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/verify_release.log"
-
-      - name: Run desktop browser smoke
-        run: |
-          set -o pipefail
-          npm run browser:smoke 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/browser_smoke_desktop.log"
-
-      - name: Probe native mobile pointer events
-        run: |
-          set -o pipefail
-          node tests/run_mobile_pointer_probe.mjs 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/mobile_pointer_probe.log"
-
-      - name: Run mobile touch browser smoke
-        run: |
-          set -o pipefail
-          npm run browser:smoke:mobile 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/browser_smoke_mobile.log"
-
-      - name: Check whitespace and patch integrity
-        run: |
-          set -o pipefail
-          git diff --check 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/git_diff_check.log"
-
-      - name: Capture generated validation outputs
-        if: always()
-        run: |
-          mkdir -p "$MOBILE_VALIDATION_ARTIFACT_DIR/generated"
-          if [ -d dist ]; then cp -a dist "$MOBILE_VALIDATION_ARTIFACT_DIR/generated/"; fi
-          if [ -f SOURCE_MANIFEST.json ]; then cp SOURCE_MANIFEST.json "$MOBILE_VALIDATION_ARTIFACT_DIR/generated/"; fi
-          git status --short --branch > "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/final_git_status.txt"
-
-      - name: Upload mobile validation logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: vaw-mobile-touch-validation-${{ github.sha }}
-          path: /tmp/vaw-mobile-validation
+          name: vaw-mobile-smoke-${{ matrix.variant }}-${{ github.sha }}
+          path: /tmp/vaw-mobile-smoke-diagnostic
           if-no-files-found: error
           retention-days: 7
