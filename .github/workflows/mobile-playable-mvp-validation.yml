@@ -60,8 +60,28 @@ jobs:
       - name: Run mobile browser smoke
         run: |
           mkdir -p "$PLAYABLE_SMOKE_DIR"
-          set -o pipefail
-          npm run browser:smoke:mobile 2>&1 | tee "$PLAYABLE_SMOKE_DIR/mobile-playable-smoke.log"
+          combined="$PLAYABLE_SMOKE_DIR/mobile-playable-smoke.log"
+          : > "$combined"
+          for attempt in 1 2 3; do
+            attempt_log="$PLAYABLE_SMOKE_DIR/mobile-playable-smoke-attempt-${attempt}.log"
+            set +e
+            npm run browser:smoke:mobile 2>&1 | tee "$attempt_log"
+            code=${PIPESTATUS[0]}
+            set -e
+            {
+              echo "=== focused mobile smoke attempt ${attempt}, exit ${code} ==="
+              cat "$attempt_log"
+            } >> "$combined"
+            if [ "$code" -eq 0 ]; then
+              exit 0
+            fi
+            if [ "$code" -ne 2 ]; then
+              exit "$code"
+            fi
+            echo "Mobile smoke reported an environment failure; retrying." | tee -a "$combined"
+            sleep $((attempt * 2))
+          done
+          exit 2
 
       - name: Check patch integrity
         run: git diff --check
