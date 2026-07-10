@@ -42,6 +42,10 @@
   function create(options = {}) {
     const movementThreshold = finiteNumber(options.movementThreshold ?? 8, 'movementThreshold');
     if (movementThreshold < 0) throw new RangeError('movementThreshold must be non-negative.');
+    const maxCanvasPointers = finiteNumber(options.maxCanvasPointers ?? 2, 'maxCanvasPointers');
+    if (!Number.isInteger(maxCanvasPointers) || maxCanvasPointers < 1) {
+      throw new RangeError('maxCanvasPointers must be a positive integer.');
+    }
     const thresholdSq = movementThreshold * movementThreshold;
     const callbacks = {
       onOrbit: typeof options.onOrbit === 'function' ? options.onOrbit : () => {},
@@ -63,7 +67,15 @@
 
     function snapshot() {
       const pointerIds = Object.freeze([...pointers.keys()].sort((a, b) => a - b));
-      return Object.freeze({ mode, pointerIds, activePointerCount: pointers.size, multiGestureLatched });
+      const canvasPointerIds = Object.freeze(canvasPointers().map(pointer => pointer.pointerId));
+      return Object.freeze({
+        mode,
+        pointerIds,
+        canvasPointerIds,
+        activePointerCount: pointers.size,
+        activeCanvasPointerCount: canvasPointerIds.length,
+        multiGestureLatched
+      });
     }
 
     function emitState() {
@@ -71,9 +83,9 @@
     }
 
     function setMode(nextMode) {
-      if (mode === nextMode) return;
+      if (mode === nextMode) return false;
       mode = nextMode;
-      emitState();
+      return true;
     }
 
     function establishMultiBaseline() {
@@ -92,21 +104,21 @@
     function promoteToMulti() {
       multiGestureLatched = true;
       establishMultiBaseline();
-      setMode(MODES.MULTI);
+      return setMode(MODES.MULTI);
     }
 
     function pointerDown(sample) {
       const normalized = normalizeSample(sample, true);
       if (pointers.has(normalized.pointerId)) return false;
+      if (normalized.owner === 'canvas' && canvasPointers().length >= maxCanvasPointers) return false;
+
       pointers.set(normalized.pointerId, {
         pointerId: normalized.pointerId,
         owner: normalized.owner,
         startX: normalized.x,
         startY: normalized.y,
         x: normalized.x,
-        y: normalized.y,
-        previousX: normalized.x,
-        previousY: normalized.y
+        y: normalized.y
       });
 
       const activeCanvas = canvasPointers();
@@ -125,16 +137,15 @@
 
       const dx = normalized.x - pointer.x;
       const dy = normalized.y - pointer.y;
-      pointer.previousX = pointer.x;
-      pointer.previousY = pointer.y;
       pointer.x = normalized.x;
       pointer.y = normalized.y;
 
       if (pointer.owner !== 'canvas') return true;
 
       const activeCanvas = canvasPointers();
+      let stateChanged = false;
       if (multiGestureLatched || activeCanvas.length >= 2) {
-        if (!multiGestureLatched) promoteToMulti();
+        if (!multiGestureLatched) stateChanged = promoteToMulti() || stateChanged;
         if (activeCanvas.length >= 2) {
           const [first, second] = activeCanvas;
           const currentCentroid = centroid(first, second);
@@ -156,17 +167,21 @@
           }
           previousMulti = { centroid: currentCentroid, distance: currentDistance };
         }
+        if (stateChanged) emitState();
         return true;
       }
 
       if (mode === MODES.TAP_CANDIDATE) {
         const totalDx = pointer.x - pointer.startX;
         const totalDy = pointer.y - pointer.startY;
-        if (totalDx * totalDx + totalDy * totalDy > thresholdSq) setMode(MODES.ORBIT);
+        if (totalDx * totalDx + totalDy * totalDy > thresholdSq) {
+          stateChanged = setMode(MODES.ORBIT) || stateChanged;
+        }
       }
       if (mode === MODES.ORBIT && (dx !== 0 || dy !== 0)) {
         callbacks.onOrbit({ dx, dy, pointerIds: [pointer.pointerId] });
       }
+      if (stateChanged) emitState();
       return true;
     }
 
@@ -175,11 +190,8 @@
       const pointer = pointers.get(normalized.pointerId);
       if (!pointer) return false;
 
-      pointer.previousX = pointer.x;
-      pointer.previousY = pointer.y;
       pointer.x = normalized.x;
       pointer.y = normalized.y;
-
       const shouldTap = pointer.owner === 'canvas' && mode === MODES.TAP_CANDIDATE && !multiGestureLatched;
       pointers.delete(normalized.pointerId);
 
