@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Patch diagnostic copy with paced touch dispatch
+      - name: Patch diagnostic copy with browser frame barriers
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -45,7 +45,7 @@ jobs:
               touchPoints,
               modifiers: 0
             });
-            await new Promise(resolve => setTimeout(resolve, 150));
+            await evaluate(cdp, `new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))`);
           }
           """
           if source.count(old) != 1:
@@ -53,13 +53,13 @@ jobs:
           path.write_text(source.replace(old, new), encoding='utf-8', newline='\n')
           PY
 
-      - name: Run paced mobile smoke diagnostic
+      - name: Run frame-barrier mobile smoke diagnostic
         run: |
           set -o pipefail
           mkdir -p /tmp/vaw-mobile-delayed-smoke
           npm run browser:smoke:mobile 2>&1 | tee /tmp/vaw-mobile-delayed-smoke/result.log
 
-      - name: Upload paced mobile smoke log
+      - name: Upload frame-barrier mobile smoke log
         if: always()
         uses: actions/upload-artifact@v4
         with:
