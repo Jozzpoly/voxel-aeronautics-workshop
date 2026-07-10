@@ -4,13 +4,21 @@ on:
   push:
     branches:
       - mobile/playable-mvp
+  pull_request:
+    branches:
+      - VAW_GRoK
+  workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: apply-mobile-command-adapter-extraction
+  cancel-in-progress: true
+
 jobs:
   apply:
-    if: ${{ !contains(github.event.head_commit.message, '[command adapter extracted]') }}
+    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, '[command adapter extracted]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
