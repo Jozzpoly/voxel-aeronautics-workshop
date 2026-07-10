@@ -38,6 +38,7 @@ assert actual_manifest_text == expected_manifest_text, (
 manifest = json.loads(actual_manifest_text)
 assert manifest['releaseId'] == module.RELEASE_ID
 assert manifest['appVersion'] == module.APP_VERSION
+assert manifest['embeddedApplicationSources'] == [path.as_posix() for path in module.EMBEDDED_APPLICATION_SOURCES]
 assert module.MANIFEST_INPUTS == module.manifest_inputs(ROOT)
 for relative in module.manifest_inputs(ROOT):
     actual_hash = module.sha256_bytes(module.canonical_source_bytes(ROOT, relative))
@@ -62,7 +63,7 @@ with tempfile.TemporaryDirectory() as temporary:
     assert f'APP_VERSION: {module.APP_VERSION}' in text
     assert 'href="styles.css"' not in text
 
-    for relative in module.APP_SOURCES:
+    for relative in module.EMBEDDED_APPLICATION_SOURCES:
         expected = (ROOT / relative).read_text(encoding='utf-8').rstrip()
         actual = embedded_source(text, relative)
         assert actual == expected, f'single-file source mismatch: {relative}'
