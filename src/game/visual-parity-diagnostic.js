@@ -334,17 +334,7 @@ function ensureRendererProfilesModule(VAW) {
     const profilesPath = path.join(process.cwd(), 'src/game/visual-renderer-profiles.js');
     return nodeRequire(profilesPath).ensureVawModule(VAW);
   }
-  const request = new XMLHttpRequest();
-  request.open('GET', 'src/game/visual-renderer-profiles.js', false);
-  request.send();
-  if (request.status !== 200) {
-    throw new Error('Failed to load visual-renderer-profiles.js for visual parity diagnostic bootstrap.');
-  }
-  const module = { exports: {} };
-  // eslint-disable-next-line no-new-func
-  const factory = new Function('module', 'exports', `${request.responseText}\n;return module.exports;`);
-  factory(module, module.exports).ensureVawModule(VAW);
-  return VAW.require(moduleId);
+  throw new Error(`${moduleId} must be registered before visual parity diagnostics.`);
 }
 
 function ensureVawModule(VAW) {

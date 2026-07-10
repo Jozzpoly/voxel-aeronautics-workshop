@@ -238,6 +238,10 @@ function createVisualRendererProfiles() {
 
 const api = createVisualRendererProfiles();
 
+if (typeof globalThis === 'object' && globalThis.VAW && typeof globalThis.VAW.define === 'function') {
+  api.ensureVawModule(globalThis.VAW);
+}
+
 if (typeof module === 'object' && module.exports) {
   module.exports = api;
 }

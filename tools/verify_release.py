@@ -51,6 +51,8 @@ def verify_artifacts(
     text = single.read_text(encoding='utf-8')
     if f'RELEASE_ID: {build_release.RELEASE_ID}' not in text:
         raise SystemExit(f'Wrong release marker in {single.name}.')
+    if '<html data-vaw-release-mode="single-file"' not in text:
+        raise SystemExit('Single-file release mode marker is missing.')
     for relative in build_release.EMBEDDED_APPLICATION_SOURCES:
         expected = (root / relative).read_text(encoding='utf-8').rstrip()
         if embedded_source(text, relative) != expected:

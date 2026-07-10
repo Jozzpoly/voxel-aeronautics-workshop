@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
 const Profiles = require(path.join(ROOT, 'src/game/visual-renderer-profiles.js'));
@@ -9,6 +10,28 @@ const studioSource = fs.readFileSync(
   'utf8'
 );
 const sceneEnvironmentSource = fs.readFileSync(path.join(ROOT, 'src/game/scene_environment.js'), 'utf8');
+
+
+{
+  const definitions = new Map();
+  const instances = new Map();
+  const VAW = {
+    define(id, dependencies, factory) { definitions.set(id, { dependencies, factory }); },
+    inspect() { return { defined: [...definitions.keys()], initialized: [...instances.keys()] }; },
+    require(id) {
+      if (instances.has(id)) return instances.get(id);
+      const definition = definitions.get(id);
+      assert(definition, `browser module not defined: ${id}`);
+      const value = definition.factory(...definition.dependencies.map(dependency => VAW.require(dependency)));
+      instances.set(id, value);
+      return value;
+    }
+  };
+  const source = fs.readFileSync(path.join(ROOT, 'src/game/visual-renderer-profiles.js'), 'utf8');
+  vm.runInNewContext(source, { VAW, globalThis: { VAW }, Object, Number, String, Math, Set, Map });
+  assert(VAW.inspect().defined.includes('game.visual-renderer-profiles'));
+  assert.strictEqual(VAW.require('game.visual-renderer-profiles').GAME_DEFAULT_PROFILE.id, 'game-default');
+}
 
 const GAME_DEFAULT_SOURCE = Object.freeze({
   fog: { color: 0x0b1220, density: 0.0038 },
@@ -153,5 +176,6 @@ function assertLightLine(line, expectedSnippet) {
 
 console.log({
   visualRendererProfiles: 'ok',
-  profiles: ['studio-preview', 'game-default', 'game-studio-parity']
+  profiles: ['studio-preview', 'game-default', 'game-studio-parity'],
+  browserSelfRegistration: 'ok'
 });

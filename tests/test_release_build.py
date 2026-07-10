@@ -62,6 +62,13 @@ with tempfile.TemporaryDirectory() as temporary:
     assert f'RELEASE_ID: {module.RELEASE_ID}' in text
     assert f'APP_VERSION: {module.APP_VERSION}' in text
     assert 'href="styles.css"' not in text
+    assert '<html data-vaw-release-mode="single-file"' in text
+    renderer_profiles = Path('src/game/visual-renderer-profiles.js')
+    assert renderer_profiles in module.EMBEDDED_APPLICATION_SOURCES
+    assert module.EMBEDDED_APPLICATION_SOURCES.index(renderer_profiles) < module.EMBEDDED_APPLICATION_SOURCES.index(Path('src/game/scene_environment.js'))
+    assert module.EMBEDDED_APPLICATION_SOURCES.index(renderer_profiles) < module.EMBEDDED_APPLICATION_SOURCES.index(Path('src/game/visual-parity-diagnostic.js'))
+    assert module.EMBEDDED_APPLICATION_SOURCES.index(renderer_profiles) < module.EMBEDDED_APPLICATION_SOURCES.index(Path('src/game.js'))
+    assert "request.open('GET', 'src/game/visual-renderer-profiles.js'" not in text
 
     for relative in module.EMBEDDED_APPLICATION_SOURCES:
         expected = (ROOT / relative).read_text(encoding='utf-8').rstrip()

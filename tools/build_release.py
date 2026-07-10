@@ -91,6 +91,7 @@ APP_SOURCES = (
     Path('src/runtime/cannon_physics_backend.js'),
     Path('src/runtime/headless_physics_backend.js'),
     Path('src/runtime/assembly_builder.js'),
+    Path('src/game/visual-renderer-profiles.js'),
     Path('src/game/scene_environment.js'),
     Path('src/game/career_service.js'),
     Path('src/game/workspace_controller.js'),
@@ -259,6 +260,9 @@ def replace_loader(html: str, replacement: str) -> str:
 
 def build_single_html(root: Path = ROOT) -> str:
     html = (root / 'index.html').read_text(encoding='utf-8')
+    if '<html' not in html:
+        raise RuntimeError('Expected HTML root element was not found in index.html')
+    html = html.replace('<html', '<html data-vaw-release-mode="single-file"', 1)
     generated_css = (root / 'tailwind.generated.css').read_text(encoding='utf-8').rstrip()
     custom_css = (root / 'styles.css').read_text(encoding='utf-8').rstrip()
     css = generated_css + '\n\n' + custom_css
