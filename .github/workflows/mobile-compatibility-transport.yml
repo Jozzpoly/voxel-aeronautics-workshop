@@ -21,15 +21,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Detect transport payload
+      - name: Detect complete transport payload
         id: payload
         shell: bash
         run: |
-          if [ -f .github/transport/mobile-compatibility-series.patch.gz.b64 ]; then
+          if [ -f .github/transport/READY ]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "Transport workflow staged; waiting for the patch payload."
+            echo "Transport workflow staged; waiting for all payload chunks."
           fi
 
       - name: Apply validated commit series
@@ -37,14 +37,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          payload=.github/transport/mobile-compatibility-series.patch.gz.b64
-          echo "adb04822b462fc2a70f6327f790c1df371c45d513f83dc8e1e6d3b5672219995  $payload" | sha256sum --check --strict
-          base64 --decode "$payload" | gzip --decompress > /tmp/mobile-compatibility-series.patch
+          cat .github/transport/mobile-compatibility-series.patch.gz.b64.part-* > /tmp/mobile-compatibility-series.patch.gz.b64
+          echo "adb04822b462fc2a70f6327f790c1df371c45d513f83dc8e1e6d3b5672219995  /tmp/mobile-compatibility-series.patch.gz.b64" | sha256sum --check --strict
+          base64 --decode /tmp/mobile-compatibility-series.patch.gz.b64 | gzip --decompress > /tmp/mobile-compatibility-series.patch
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git am --3way /tmp/mobile-compatibility-series.patch
-          rm -f "$payload" .github/workflows/mobile-compatibility-transport.yml
-          rmdir .github/transport 2>/dev/null || true
+          rm -rf .github/transport .github/workflows/mobile-compatibility-transport.yml
           git add -A
           git commit -m "ci(mobile): remove temporary compatibility transport"
           git push origin HEAD:refs/heads/mobile/compatibility-validation
