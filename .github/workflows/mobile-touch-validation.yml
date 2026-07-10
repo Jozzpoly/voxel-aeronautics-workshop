@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   validate:
@@ -46,10 +46,24 @@ jobs:
           set -o pipefail
           python -m compileall . 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/compileall.log"
 
-      - name: Build release artifacts and regenerate provenance
+      - name: Generate CSS and release provenance
         run: |
           set -o pipefail
+          node tools/generate_tailwind_css.js 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/generate_css.log"
           python tools/build_release.py 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/build_release.log"
+
+      - name: Commit generated provenance on mobile branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/mobile/touch-foundation'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- tailwind.generated.css SOURCE_MANIFEST.json
+          if git diff --cached --quiet; then
+            echo "Generated provenance is already current."
+          else
+            git commit -m "Regenerate mobile touch CSS and source manifest"
+            git push origin HEAD:mobile/touch-foundation
+          fi
 
       - name: Run full core suite
         run: |
@@ -82,6 +96,7 @@ jobs:
           mkdir -p "$MOBILE_VALIDATION_ARTIFACT_DIR/generated"
           if [ -d dist ]; then cp -a dist "$MOBILE_VALIDATION_ARTIFACT_DIR/generated/"; fi
           if [ -f SOURCE_MANIFEST.json ]; then cp SOURCE_MANIFEST.json "$MOBILE_VALIDATION_ARTIFACT_DIR/generated/"; fi
+          if [ -f tailwind.generated.css ]; then cp tailwind.generated.css "$MOBILE_VALIDATION_ARTIFACT_DIR/generated/"; fi
           git status --short --branch > "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/final_git_status.txt"
 
       - name: Upload mobile validation logs
