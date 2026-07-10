@@ -245,6 +245,7 @@ async function shellButtonPoint(cdp, label) {
     const button = [...(root?.querySelectorAll?.('button') || [])]
       .find(candidate => candidate.textContent.trim() === ${JSON.stringify(label)} && getComputedStyle(candidate).display !== 'none' && !candidate.disabled);
     if (!button) return null;
+    button.scrollIntoView({ block: 'nearest', inline: 'center' });
     const rect = button.getBoundingClientRect();
     const x = Math.round(rect.left + rect.width / 2);
     const y = Math.round(rect.top + rect.height / 2);
