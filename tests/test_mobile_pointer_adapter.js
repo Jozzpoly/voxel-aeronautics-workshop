@@ -9,6 +9,7 @@ function makeTarget() {
   const releases = [];
   return {
     listeners, captures, releases,
+    style: { touchAction: 'pan-x' },
     addEventListener(name, callback, options) { listeners.set(name, { callback, options }); },
     removeEventListener(name, callback) {
       const current = listeners.get(name);
@@ -58,6 +59,7 @@ function run() {
     resolveOwner: event => event.owner || 'canvas'
   });
   assert.equal(adapter.bind(), true);
+  assert.equal(surface.style.touchAction, 'none');
   assert.equal(adapter.bind(), false, 'bind must be idempotent');
 
   assert.equal(dispatch(surface, 'pointerdown'), true);
@@ -86,10 +88,14 @@ function run() {
   assert.equal(calls.length, callCount, 'mouse input must remain owned by desktop handlers');
 
   adapter.setEnabled(false);
+  assert.equal(surface.style.touchAction, 'pan-x');
   dispatch(surface, 'pointerdown', { pointerId: 10 });
   assert.deepEqual(calls.at(-1), ['cancel', 'disabled']);
+  adapter.setEnabled(true);
+  assert.equal(surface.style.touchAction, 'none');
 
   assert.equal(adapter.destroy(), true);
+  assert.equal(surface.style.touchAction, 'pan-x');
   assert.equal(adapter.destroy(), false);
   assert.equal(surface.listeners.size, 0);
   assert.equal(windowLike.listeners.size, 0);
