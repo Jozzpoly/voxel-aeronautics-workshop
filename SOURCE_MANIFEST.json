@@ -135,7 +135,7 @@
     "src/game/mobile-camera-input-runtime.js": "ad54d03fb014db3511484d84a71ccce6a194dceeeabb33b7dbf11e4b2ce121ae",
     "src/game/mobile-command-port.js": "2b241d8202e4078284ebcf6e80bc297f3b04f082b6e44bcd4ade4c5b45df0fc6",
     "src/game/mobile-device-profile.js": "009e8e766dbed87a164a1a3f105b7c226b4c7f1e2edaac5a401a82a47faa4504",
-    "src/game/mobile-flight-controls.js": "895c4c0041118b208011e3cb10f5f3125496977fdfde7a3b93006c38ef499e78",
+    "src/game/mobile-flight-controls.js": "a8e76765f15200476a982e574b5e2e3a4174c9487f27d27e3228712a36b2bcce",
     "src/game/mobile-game-command-adapter.js": "a841c91655dfe5ef396b39ca1f038a42da9396adafc9b2ea6fba05643aa528f0",
     "src/game/mobile-playable-shell.js": "9310366a102b0eed984967e60c5cd515648e231ba9cbdce9093dd3b4c6e5536f",
     "src/game/mobile-pointer-adapter.js": "12f0c75a1ce98f65bfe1bc6bc19d2aacd9fc206782445528a5d4f4aa2be83448",

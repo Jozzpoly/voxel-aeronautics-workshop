@@ -429,6 +429,11 @@
       clearAll('window-blur');
     }
 
+    function handleOrientationChange() {
+      clearAll('orientation-change');
+      refresh();
+    }
+
     function handleVisibility() {
       if (documentLike.hidden) clearAll('document-hidden');
     }
@@ -454,6 +459,7 @@
       unsubscribeCommands = commandPort.subscribe(() => refresh());
       unsubscribeActivity = commandPort.subscribeActivity(handleActivity);
       windowLike.addEventListener('blur', handleBlur);
+      windowLike.addEventListener('orientationchange', handleOrientationChange);
       documentLike.addEventListener('visibilitychange', handleVisibility);
       refresh();
       return true;
@@ -471,6 +477,7 @@
       unsubscribeActivity?.();
       unsubscribeActivity = null;
       windowLike.removeEventListener('blur', handleBlur);
+      windowLike.removeEventListener('orientationchange', handleOrientationChange);
       documentLike.removeEventListener('visibilitychange', handleVisibility);
       root?.remove?.();
       root = null;

@@ -208,6 +208,16 @@ function run() {
   assert.deepEqual(controls.snapshot().activeActions, [], 'movement inside deadzone must remain neutral');
   left.dispatch('pointerup', { pointerId: 33 });
 
+  left.dispatch('pointerdown', { pointerId: 34, clientX: 60, clientY: 60 });
+  left.dispatch('pointermove', { pointerId: 34, clientX: 110, clientY: 10 });
+  left.dispatch('pointercancel', { pointerId: 34 });
+  assert.deepEqual(controls.snapshot().activeActions, [], 'pointercancel must neutralize stick actions');
+
+  right.dispatch('pointerdown', { pointerId: 35, clientX: 60, clientY: 60 });
+  right.dispatch('pointermove', { pointerId: 35, clientX: 10, clientY: 10 });
+  right.dispatch('lostpointercapture', { pointerId: 35 });
+  assert.deepEqual(controls.snapshot().activeActions, [], 'lostpointercapture must neutralize stick actions');
+
   lift.dispatch('pointerdown', { pointerId: 44 });
   assert.deepEqual(controls.snapshot().activeActions, ['heave+']);
   assert.equal(lift.dataset.active, 'true');
@@ -231,6 +241,12 @@ function run() {
   assert.deepEqual(controls.snapshot().activeActions, []);
   assert(cancellations.includes('document-hidden'));
   documentLike.hidden = false;
+
+  left.dispatch('pointerdown', { pointerId: 78, clientX: 60, clientY: 60 });
+  left.dispatch('pointermove', { pointerId: 78, clientX: 110, clientY: 10 });
+  windowLike.dispatch('orientationchange', { pointerType: undefined });
+  assert.deepEqual(controls.snapshot().activeActions, [], 'orientation changes must neutralize active flight input');
+  assert(cancellations.includes('orientation-change'));
 
   left.dispatch('pointerdown', { pointerId: 88, clientX: 60, clientY: 60 });
   left.dispatch('pointermove', { pointerId: 88, clientX: 110, clientY: 10 });
