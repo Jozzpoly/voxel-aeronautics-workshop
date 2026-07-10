@@ -10,36 +10,30 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  mobile-smoke-candidate:
+  promote-mobile-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-      - name: Checkout repository
+      - name: Checkout mobile branch
         uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          ref: mobile/touch-foundation
 
-      - name: Syntax-check deterministic mobile smoke candidate
-        run: node --check tests/run_mobile_browser_smoke_candidate.mjs
-
-      - name: Run deterministic mobile smoke candidate
+      - name: Promote validated smoke and remove diagnostics
         run: |
-          set -o pipefail
-          mkdir -p /tmp/vaw-mobile-smoke-candidate
-          node tests/run_mobile_browser_smoke_candidate.mjs 2>&1 | tee /tmp/vaw-mobile-smoke-candidate/result.log
+          cp tests/run_mobile_browser_smoke_candidate.mjs tests/run_mobile_browser_smoke.mjs
+          rm tests/run_mobile_browser_smoke_candidate.mjs
+          rm tests/run_mobile_pointer_probe.mjs
+          node --check tests/run_mobile_browser_smoke.mjs
 
-      - name: Upload deterministic mobile smoke log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: vaw-mobile-smoke-candidate-${{ github.sha }}
-          path: /tmp/vaw-mobile-smoke-candidate
-          if-no-files-found: error
-          retention-days: 7
+      - name: Commit canonical mobile smoke
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- tests/run_mobile_browser_smoke.mjs tests/run_mobile_browser_smoke_candidate.mjs tests/run_mobile_pointer_probe.mjs
+          git commit -m "Promote deterministic mobile browser smoke"
+          git push origin HEAD:mobile/touch-foundation
