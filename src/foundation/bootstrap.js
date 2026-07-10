@@ -102,10 +102,7 @@
     mobileCameraBinder = MobileCameraAutobind.create({
       window,
       document,
-      mobileContext: activeContext.MobileContext,
-      onCancel(event) {
-        if (event?.reason && event.reason !== 'destroy') console.debug('[mobile-camera-input] cancelled', event.reason);
-      }
+      mobileContext: activeContext.MobileContext
     });
     mobileCameraBinder.start();
   }
