@@ -11,7 +11,9 @@ This branch replaces the experimental approach of remapping the complete desktop
 The mobile version uses:
 
 - the existing game as the sole gameplay authority;
-- one explicit `game.mobile-command-port` registered in `src/game.js`;
+- one transport-only `game.mobile-command-port`;
+- one `game.mobile-game-command-adapter` that delegates to existing game authorities;
+- one compact registration in `src/game.js`, the accepted composition root;
 - one dedicated minimal mobile shell;
 - the previously validated native touch camera state machine;
 - small vertical slices that end in a real player action.
@@ -37,7 +39,7 @@ Canvas taps are not handled by a second event listener. They pass through the ex
 
 ## Authority boundaries
 
-The command port delegates to existing game boundaries:
+The game-command adapter delegates to existing game boundaries:
 
 - part selection → `setSelectedTool`;
 - screen targeting → `rayToNDC`;
@@ -49,19 +51,25 @@ The command port delegates to existing game boundaries:
 - launch and workshop return → `setMode`;
 - flight input → existing named `setControlAction` actions.
 
-The mobile command port and mobile shell do not mutate CraftModel, Blueprint, physics bodies or runtime assembly directly. They do not synthesize mouse or keyboard events.
+The mobile command port remains transport-only. The adapter and mobile shell do not mutate CraftModel, Blueprint, physics bodies or runtime assembly directly. They do not synthesize mouse or keyboard events.
+
+The first direct implementation made `src/game.js` exceed its architectural budget (`2508 > 2420` lines). That implementation was rejected rather than increasing the limit. Command implementation was extracted into `game.mobile-game-command-adapter`, leaving only dependency injection and registration in the composition root. `tests/test_game_architecture.py` and the product-first architecture guard both pass with the compact composition.
 
 ## Executed browser evidence
 
 Focused GitHub Actions run `29084968397` passed on commit `637f50271ede8ac12e3d25b4d4c476833f084620`.
 
-The run passed:
+After adapter extraction, focused run `29085879174` also passed the same real browser loop, confirming that the extraction changed structure without changing behavior.
+
+The focused runs passed:
 
 - command-port unit tests;
+- game-command-adapter unit tests after extraction;
 - mobile-shell unit tests;
 - explicit composition and architecture contracts;
+- `game.js` architectural budget validation;
 - release source wiring contract;
-- retained device-profile, pointer-ownership, adapter, camera bridge, runtime and autobind tests;
+- retained device-profile, pointer-ownership, pointer adapter, camera bridge, camera runtime and autobind tests;
 - real Chromium mobile browser smoke;
 - `git diff --check`.
 
@@ -82,12 +90,12 @@ The mobile browser smoke used a `390 × 844` viewport at device scale factor 2 a
 
 ## Provenance
 
-After the playable build loop passed focused validation, the repository's official tools regenerated:
+After the playable build loop and extracted command adapter passed focused validation, the repository's official tools regenerated:
 
 - `tailwind.generated.css` with Tailwind CSS `4.1.10`;
 - `SOURCE_MANIFEST.json` through `tools/build_release.py`.
 
-The generation workflow enforced a mutation scope of exactly those two generated files and removed itself after the commit.
+The generation workflows enforced a mutation scope of exactly those two generated files and removed themselves after their commits. The latest adapter-aware provenance commit is `632a45888c863aeb16ffd02ad85b244ccd38dd45`.
 
 ## Current limitation
 
