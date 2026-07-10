@@ -74,6 +74,7 @@
     const FlightMechanicalVisuals = window.VAW.require('game.flight-mechanical-visuals');
     const FlightIntegrity = window.VAW.require('game.flight-integrity');
     const DebrisRuntime = window.VAW.require('game.debris-runtime');
+    const MobileCommandPort = window.VAW.require('game.mobile-command-port');
 
     const Config = window.VAW.require('foundation.config');
     const TerrainAuthoring = window.VAW.require('foundation.terrain-authoring');
@@ -1739,6 +1740,103 @@
       btn.addEventListener('click', () => setSelectedTool(name));
       toolContainer.appendChild(btn);
       if (hotbarList) { const hotbarBtn = btn.cloneNode(true); hotbarBtn.classList.add('hotbar-tool-btn'); hotbarBtn.addEventListener('click', () => setSelectedTool(name)); hotbarList.appendChild(hotbarBtn); }
+    });
+
+    MobileCommandPort.register({
+      build: {
+        catalog() {
+          return Object.freeze(Object.entries(BLOCKS).map(([id, definition]) => Object.freeze({
+            id,
+            label: id.replace(/([a-z])([A-Z])/g, '$1 $2'),
+            description: String(definition.desc || ''),
+            color: `#${Number(definition.color || 0).toString(16).padStart(6, '0')}`
+          })));
+        },
+        selectPart(partId) {
+          const normalized = String(partId || '');
+          if (STATE.mode !== 'BUILD' || !BLOCKS[normalized]) return false;
+          setSelectedTool(normalized);
+          return STATE.selectedBlock === normalized;
+        },
+        placeAtScreen(x, y) {
+          const clientX = Number(x);
+          const clientY = Number(y);
+          if (STATE.mode !== 'BUILD' || !Number.isFinite(clientX) || !Number.isFinite(clientY)) return false;
+          const before = CRAFT.size;
+          rayToNDC(clientX, clientY);
+          performBuildAction(0);
+          return CRAFT.size !== before;
+        },
+        removeAtScreen(x, y) {
+          const clientX = Number(x);
+          const clientY = Number(y);
+          if (STATE.mode !== 'BUILD' || !Number.isFinite(clientX) || !Number.isFinite(clientY)) return false;
+          const before = CRAFT.size;
+          rayToNDC(clientX, clientY);
+          performBuildAction(2);
+          return CRAFT.size !== before;
+        },
+        rotate(direction) {
+          if (STATE.mode !== 'BUILD') return false;
+          applyBuildRotation(Number(direction) < 0 ? -1 : 1);
+          return true;
+        },
+        setDirection(direction) {
+          const index = Number(direction);
+          if (STATE.mode !== 'BUILD' || !Number.isInteger(index) || !AXES[index]) return false;
+          setOrientationByVector(AXES[index]);
+          return true;
+        },
+        undo() {
+          if (STATE.mode !== 'BUILD') return false;
+          const before = blueprintSignature(collectBlueprint());
+          undoBlueprint();
+          return blueprintSignature(collectBlueprint()) !== before;
+        },
+        redo() {
+          if (STATE.mode !== 'BUILD') return false;
+          const before = blueprintSignature(collectBlueprint());
+          redoBlueprint();
+          return blueprintSignature(collectBlueprint()) !== before;
+        }
+      },
+      session: {
+        snapshot() {
+          return Object.freeze({
+            mode: STATE.mode,
+            selectedPart: STATE.selectedBlock,
+            orientation: STATE.orientation,
+            symmetry: STATE.symmetry,
+            craftSize: CRAFT.size,
+            resetMeaning: 'return-to-workshop'
+          });
+        },
+        launch() {
+          if (STATE.mode !== 'FLIGHT') setMode('FLIGHT');
+          return STATE.mode === 'FLIGHT';
+        },
+        returnToWorkshop() {
+          if (STATE.mode !== 'BUILD') setMode('BUILD');
+          return STATE.mode === 'BUILD';
+        },
+        reset() {
+          if (STATE.mode !== 'BUILD') setMode('BUILD');
+          clearControlActions();
+          return STATE.mode === 'BUILD';
+        }
+      },
+      flight: {
+        setAction(action, active) {
+          const normalized = String(action || '');
+          if (!InputProfile.BINDABLE_ACTIONS.includes(normalized)) return false;
+          setControlAction(normalized, Boolean(active));
+          return true;
+        },
+        clearActions() {
+          clearControlActions();
+          return true;
+        }
+      }
     });
 
     renderer.domElement.addEventListener('pointerenter', () => {
