@@ -33,6 +33,14 @@
 
   let implementation = null;
   const listeners = new Set();
+  const activityListeners = new Set();
+
+  function notifyListeners(collection, value, label) {
+    for (const listener of [...collection]) {
+      try { listener(value); }
+      catch (error) { console.error(`[mobile-command-port] ${label} listener failed.`, error); }
+    }
+  }
 
   function validateSection(value, section) {
     if (!value || typeof value !== 'object') {
@@ -57,24 +65,21 @@
     });
   }
 
-  function notify() {
-    for (const listener of [...listeners]) {
-      try { listener(implementation); }
-      catch (error) { console.error('[mobile-command-port] listener failed.', error); }
-    }
+  function notifyRegistration() {
+    notifyListeners(listeners, implementation, 'registration');
   }
 
   function register(candidate) {
     if (implementation) throw new Error('Mobile command port is already registered.');
     implementation = validate(candidate);
-    notify();
+    notifyRegistration();
     return implementation;
   }
 
   function unregister(candidate) {
     if (!implementation || (candidate && candidate !== implementation)) return false;
     implementation = null;
-    notify();
+    notifyRegistration();
     return true;
   }
 
@@ -94,8 +99,22 @@
     return () => listeners.delete(listener);
   }
 
+  function subscribeActivity(listener) {
+    if (typeof listener !== 'function') throw new TypeError('Mobile command activity listener must be a function.');
+    activityListeners.add(listener);
+    return () => activityListeners.delete(listener);
+  }
+
   function call(section, method, ...args) {
-    return requireCurrent()[section][method](...args);
+    const result = requireCurrent()[section][method](...args);
+    const activity = Object.freeze({
+      section,
+      method,
+      args: Object.freeze([...args]),
+      result
+    });
+    notifyListeners(activityListeners, activity, 'activity');
+    return result;
   }
 
   const build = Object.freeze({
@@ -128,6 +147,7 @@
     current,
     requireCurrent,
     subscribe,
+    subscribeActivity,
     build,
     session,
     flight
