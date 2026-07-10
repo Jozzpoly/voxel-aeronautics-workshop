@@ -48,6 +48,11 @@ jobs:
           set -o pipefail
           python -m compileall . 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/compileall.log"
 
+      - name: Install exact Tailwind generator dependency
+        run: |
+          set -o pipefail
+          npm install --no-save --package-lock=false --ignore-scripts tailwindcss@4.1.10 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/install_tailwind.log"
+
       - name: Generate CSS and release provenance
         run: |
           set -o pipefail
