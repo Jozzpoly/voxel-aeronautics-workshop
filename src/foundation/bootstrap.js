@@ -5,37 +5,44 @@
     throw new Error('Required Three.js or Cannon.js library is unavailable.');
   }
 
-  function ensureBrowserModule(moduleId, sourcePath) {
-    if (window.VAW.inspect().defined.includes(moduleId)) return;
-    const request = new XMLHttpRequest();
-    request.open('GET', sourcePath, false);
-    request.send();
-    if (request.status !== 200) {
-      throw new Error(`Failed to load ${sourcePath} for browser bootstrap.`);
-    }
-    // The source uses a browser/CommonJS wrapper and will register itself in VAW.
-    // eslint-disable-next-line no-new-func
-    new Function(`${request.responseText}\n//# sourceURL=${sourcePath}`)();
-    if (!window.VAW.inspect().defined.includes(moduleId)) {
-      throw new Error(`${sourcePath} did not register ${moduleId}.`);
+  function tryEnsureBrowserModule(moduleId, sourcePath) {
+    if (window.VAW.inspect().defined.includes(moduleId)) return true;
+    if (typeof XMLHttpRequest !== 'function') return false;
+    try {
+      const request = new XMLHttpRequest();
+      request.open('GET', sourcePath, false);
+      request.send();
+      if (request.status !== 200) return false;
+      // The source uses a browser/CommonJS wrapper and registers itself in VAW.
+      // eslint-disable-next-line no-new-func
+      new Function(`${request.responseText}\n//# sourceURL=${sourcePath}`)();
+      return window.VAW.inspect().defined.includes(moduleId);
+    } catch (error) {
+      console.warn(`[adaptive-bootstrap] ${sourcePath} could not be loaded.`, error);
+      return false;
     }
   }
 
-  ensureBrowserModule('game.mobile-device-profile', 'src/game/mobile-device-profile.js');
-  ensureBrowserModule('game.mobile-runtime-shell', 'src/game/mobile-runtime-shell.js');
+  const mobileModulesReady =
+    tryEnsureBrowserModule('game.mobile-device-profile', 'src/game/mobile-device-profile.js') &&
+    tryEnsureBrowserModule('game.mobile-runtime-shell', 'src/game/mobile-runtime-shell.js');
 
-  const MobileRuntimeShell = window.VAW.require('game.mobile-runtime-shell');
-  const mobileShell = MobileRuntimeShell.create({
-    window,
-    document,
-    onError(error) { console.error('[mobile-runtime-shell]', error); }
-  });
-  const initialMobileProfile = mobileShell.initialize();
+  let mobileShell = null;
+  let initialMobileProfile = null;
+  if (mobileModulesReady) {
+    const MobileRuntimeShell = window.VAW.require('game.mobile-runtime-shell');
+    mobileShell = MobileRuntimeShell.create({
+      window,
+      document,
+      onError(error) { console.error('[mobile-runtime-shell]', error); }
+    });
+    initialMobileProfile = mobileShell.initialize();
+  }
 
   window.VAW.define('runtime.mobile-context', [], () => Object.freeze({
     shell: mobileShell,
     available: Boolean(initialMobileProfile),
-    currentProfile: () => mobileShell.current()
+    currentProfile: () => mobileShell?.current?.() || null
   }));
 
   const requiredCapabilities = [
