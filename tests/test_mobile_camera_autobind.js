@@ -64,12 +64,16 @@ function runImmediateSurfaceCase() {
     querySelector(selector) { return selector === '#canvas-container canvas' ? surface : null; }
   };
   const bound = [];
+  const taps = [];
+  let tapActive = false;
   const binder = Autobind.create({
     document: documentLike,
     window: {},
     mobileContext: mobile.context,
     cameraControllerModule: camera.module,
     runtimeModule: runtime.module,
+    tapEnabled: () => tapActive,
+    onTap(value) { taps.push(value); },
     onBound(value) { bound.push(value); }
   });
 
@@ -85,6 +89,11 @@ function runImmediateSurfaceCase() {
   assert.strictEqual(runtime.records[0].options.surface, surface);
   assert.strictEqual(runtime.records[0].options.cameraController, firstController);
   assert.equal(runtime.records[0].options.tapEnabled(), false);
+  assert.strictEqual(runtime.records[0].options.onTap, binder.currentRuntime ? runtime.records[0].options.onTap : runtime.records[0].options.onTap);
+  tapActive = true;
+  assert.equal(runtime.records[0].options.tapEnabled(), true, 'tap policy must remain live after binding');
+  runtime.records[0].options.onTap({ x: 12, y: 34 });
+  assert.deepEqual(taps, [{ x: 12, y: 34 }]);
   assert.equal(binder.bound(), true);
 
   mobile.emit({ mobilePresentation: false });
@@ -95,6 +104,8 @@ function runImmediateSurfaceCase() {
   assert.equal(runtime.records[0].destroys, 1);
   assert.equal(runtime.records.length, 2);
   assert.equal(runtime.records[1].binds, 1);
+  assert.strictEqual(runtime.records[1].options.onTap, runtime.records[0].options.onTap);
+  assert.strictEqual(runtime.records[1].options.tapEnabled, runtime.records[0].options.tapEnabled);
   assert.strictEqual(binder.currentController(), secondController);
   assert.equal(bound.length, 2);
 
@@ -104,6 +115,25 @@ function runImmediateSurfaceCase() {
   assert.equal(mobile.subscribed(), false);
   assert.equal(binder.destroy(), false);
   assert.throws(() => binder.start(), /cannot be restarted/);
+}
+
+function runDefaultTapSafetyCase() {
+  const camera = cameraModuleHarness();
+  const mobile = mobileContextHarness();
+  const runtime = runtimeHarness();
+  const surface = { id: 'canvas' };
+  const binder = Autobind.create({
+    document: { documentElement: {}, querySelector() { return surface; } },
+    window: {},
+    mobileContext: mobile.context,
+    cameraControllerModule: camera.module,
+    runtimeModule: runtime.module
+  });
+  binder.start();
+  camera.emit({ id: 'default-safe' });
+  assert.equal(runtime.records[0].options.tapEnabled(), false, 'tap must remain disabled unless explicitly enabled');
+  assert.doesNotThrow(() => runtime.records[0].options.onTap({ x: 1, y: 2 }));
+  binder.destroy();
 }
 
 function runDelayedSurfaceCase() {
@@ -196,6 +226,7 @@ function runFailureRecoveryCase() {
 
 function run() {
   runImmediateSurfaceCase();
+  runDefaultTapSafetyCase();
   runDelayedSurfaceCase();
   runFailureRecoveryCase();
   assert.throws(() => Autobind.create({}), /document/);
