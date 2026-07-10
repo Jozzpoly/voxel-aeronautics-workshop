@@ -60,6 +60,7 @@ def main() -> None:
     run('node', 'tests/test_build_targeting.js')
     run('node', 'tests/test_orientation_service.js')
     run('node', 'tests/test_power_control_readouts.js')
+    run('node', 'tests/test_mobile_device_profile.js')
     run('node', 'tests/test_game_services.js')
     run('node', 'tests/test_input_focus_policy.js')
     run('node', '--check', 'tests/run_browser_smoke.mjs')
