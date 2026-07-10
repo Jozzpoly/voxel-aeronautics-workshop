@@ -20,10 +20,11 @@
   }
 
   function create(options = {}) {
-    const state = options.state;
-    if (!state?.camera) throw new TypeError('Mobile camera gesture bridge requires camera state.');
-    const clampPitch = requireFunction(options.clampPitch, 'clampPitch');
-    const panByPixels = requireFunction(options.panByPixels, 'panByPixels');
+    const cameraController = options.cameraController;
+    if (!cameraController) throw new TypeError('Mobile camera gesture bridge requires a cameraController.');
+    const orbitByPixels = requireFunction(cameraController.orbitCameraByPixels, 'cameraController.orbitCameraByPixels');
+    const panByPixels = requireFunction(cameraController.panCameraTargetByPixels, 'cameraController.panCameraTargetByPixels');
+    const zoomByPixels = requireFunction(cameraController.zoomCameraByPixels, 'cameraController.zoomCameraByPixels');
     const onChanged = typeof options.onChanged === 'function' ? options.onChanged : () => {};
     const orbitSensitivity = finite(options.orbitSensitivity, 0.008, 'orbitSensitivity');
     const zoomSensitivity = finite(options.zoomSensitivity, 0.02, 'zoomSensitivity');
@@ -40,28 +41,26 @@
       const dx = finite(event.dx, 0, 'orbit dx');
       const dy = finite(event.dy, 0, 'orbit dy');
       if (dx === 0 && dy === 0) return false;
-      state.camera.yaw = finite(state.camera.yaw, 0, 'camera yaw') - dx * orbitSensitivity;
-      state.camera.pitch = clampPitch(finite(state.camera.pitch, 0, 'camera pitch') - dy * orbitSensitivity);
-      onChanged('orbit');
-      return true;
+      const changed = orbitByPixels(dx, dy, orbitSensitivity) !== false;
+      if (changed) onChanged('orbit');
+      return changed;
     }
 
     function pan(event = {}) {
       const dx = finite(event.dx, 0, 'pan dx');
       const dy = finite(event.dy, 0, 'pan dy');
       if (dx === 0 && dy === 0) return false;
-      panByPixels(dx, dy);
-      onChanged('pan');
-      return true;
+      const changed = panByPixels(dx, dy) !== false;
+      if (changed) onChanged('pan');
+      return changed;
     }
 
     function zoom(event = {}) {
       const delta = finite(event.delta, 0, 'zoom delta');
       if (delta === 0) return false;
-      const current = finite(state.camera.distance, minDistance, 'camera distance');
-      state.camera.distance = Math.max(minDistance, Math.min(maxDistance, current - delta * zoomSensitivity));
-      onChanged('zoom');
-      return true;
+      const changed = zoomByPixels(delta, zoomSensitivity, minDistance, maxDistance) !== false;
+      if (changed) onChanged('zoom');
+      return changed;
     }
 
     return Object.freeze({ orbit, pan, zoom });
