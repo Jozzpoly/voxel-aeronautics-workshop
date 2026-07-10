@@ -1,4 +1,4 @@
 Trigger guarded mobile smoke watchdog transport.
 Base clean head: 9bb4d0ac26fd0c1460255aa2ea8d6feda35c3df0
-Staging head: 8ea4f2ba94ea15a40167643a195d18999f280e89
-Preserve verified patch in /tmp before clean checkout.
+Staging head: 4e6b162f76dbc60944c190bc8d35b0fd385797c7
+Apply verified diff through the Git index.
