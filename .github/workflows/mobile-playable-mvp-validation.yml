@@ -37,6 +37,7 @@ jobs:
           node tests/test_mobile_command_port.js
           node tests/test_mobile_playable_shell.js
           python tests/test_mobile_command_composition.py
+          python tests/test_mobile_playable_architecture.py
           python tests/test_mobile_release_wiring.py
 
       - name: Revalidate retained touch camera foundation
