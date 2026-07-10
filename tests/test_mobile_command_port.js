@@ -60,6 +60,7 @@ function run() {
     assert(Object.isFrozen(registered));
 
     assert.deepEqual(Port.build.catalog(), ['Core', 'Wing']);
+    assert.equal(activities.length, 0, 'read-only catalog must not publish command activity');
     assert.equal(Port.build.selectPart('Wing'), 'Wing');
     assert.equal(Port.build.placeAtScreen(12, 34), true);
     assert.equal(Port.build.removeAtScreen(56, 78), true);
@@ -68,6 +69,7 @@ function run() {
     assert.equal(Port.build.undo(), true);
     assert.equal(Port.build.redo(), true);
     assert.deepEqual(Port.session.snapshot(), { mode: 'BUILD' });
+    assert.equal(activities.length, 7, 'read-only session snapshot must not publish command activity');
     assert.equal(Port.session.launch(), true);
     assert.equal(Port.session.returnToWorkshop(), true);
     assert.equal(Port.session.reset(), true);
@@ -79,11 +81,11 @@ function run() {
       ['rotate', -1], ['setDirection', 2], ['undo'], ['redo'], ['snapshot'], ['launch'],
       ['returnToWorkshop'], ['reset'], ['setAction', 'pitch-up', true], ['clearActions']
     ]);
-    assert.equal(activities.length, calls.length);
+    assert.equal(activities.length, 12);
     assert(Object.isFrozen(activities[0]));
     assert(Object.isFrozen(activities[0].args));
-    assert.deepEqual(activities[9], { section: 'session', method: 'launch', args: [], result: true });
-    assert.deepEqual(activities[12], { section: 'flight', method: 'setAction', args: ['pitch-up', true], result: true });
+    assert.deepEqual(activities[7], { section: 'session', method: 'launch', args: [], result: true });
+    assert.deepEqual(activities[10], { section: 'flight', method: 'setAction', args: ['pitch-up', true], result: true });
 
     assert.throws(() => Port.register(implementation([])), /already registered/);
     assert.equal(Port.unregister({}), false);
