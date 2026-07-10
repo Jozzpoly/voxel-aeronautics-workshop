@@ -52,6 +52,14 @@ def main() -> None:
     assert "window.VAW.require('game.mobile-camera-autobind')" in bootstrap
     assert 'mobileCameraBinder.start()' in bootstrap
 
+    verifier = (ROOT / 'tools/verify_release.py').read_text(encoding='utf-8')
+    assert 'build_release.EMBEDDED_APPLICATION_SOURCES' in verifier
+    assert "manifest.get('embeddedApplicationSources')" in verifier
+    assert "Embedded application source inventory mismatch." in verifier
+
+    release_test = (ROOT / 'tests/test_release_build.py').read_text(encoding='utf-8')
+    assert 'module.EMBEDDED_APPLICATION_SOURCES' in release_test
+
     print('OK mobile release wiring')
 
 
