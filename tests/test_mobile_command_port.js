@@ -41,13 +41,16 @@ function run() {
     assert.throws(() => Port.register(null), /must be an object/);
     assert.throws(() => Port.register({}), /build section/);
     assert.throws(() => Port.register({ build: {}, session: {}, flight: {} }), /build\.catalog/);
+    assert.throws(() => Port.subscribeActivity(null), /must be a function/);
   }
 
   {
     const Port = freshPort();
     const calls = [];
     const notifications = [];
+    const activities = [];
     const unsubscribe = Port.subscribe(value => notifications.push(value), { emitCurrent: true });
+    const unsubscribeActivity = Port.subscribeActivity(value => activities.push(value));
     assert.deepEqual(notifications, [null]);
 
     const registered = Port.register(implementation(calls));
@@ -72,21 +75,15 @@ function run() {
     assert.equal(Port.flight.clearActions(), true);
 
     assert.deepEqual(calls, [
-      ['catalog'],
-      ['selectPart', 'Wing'],
-      ['placeAtScreen', 12, 34],
-      ['removeAtScreen', 56, 78],
-      ['rotate', -1],
-      ['setDirection', 2],
-      ['undo'],
-      ['redo'],
-      ['snapshot'],
-      ['launch'],
-      ['returnToWorkshop'],
-      ['reset'],
-      ['setAction', 'pitch-up', true],
-      ['clearActions']
+      ['catalog'], ['selectPart', 'Wing'], ['placeAtScreen', 12, 34], ['removeAtScreen', 56, 78],
+      ['rotate', -1], ['setDirection', 2], ['undo'], ['redo'], ['snapshot'], ['launch'],
+      ['returnToWorkshop'], ['reset'], ['setAction', 'pitch-up', true], ['clearActions']
     ]);
+    assert.equal(activities.length, calls.length);
+    assert(Object.isFrozen(activities[0]));
+    assert(Object.isFrozen(activities[0].args));
+    assert.deepEqual(activities[9], { section: 'session', method: 'launch', args: [], result: true });
+    assert.deepEqual(activities[12], { section: 'flight', method: 'setAction', args: ['pitch-up', true], result: true });
 
     assert.throws(() => Port.register(implementation([])), /already registered/);
     assert.equal(Port.unregister({}), false);
@@ -95,19 +92,28 @@ function run() {
     assert.equal(notifications.length, 3);
     assert.equal(notifications[2], null);
     unsubscribe();
+    unsubscribeActivity();
   }
 
   {
     const Port = freshPort();
     const calls = [];
-    let secondListenerCalled = false;
+    let secondRegistrationListenerCalled = false;
+    let secondActivityListenerCalled = false;
     Port.subscribe(() => { throw new Error('listener failure'); }, { emitCurrent: false });
-    Port.subscribe(() => { secondListenerCalled = true; }, { emitCurrent: false });
+    Port.subscribe(() => { secondRegistrationListenerCalled = true; }, { emitCurrent: false });
+    Port.subscribeActivity(() => { throw new Error('activity listener failure'); });
+    Port.subscribeActivity(() => { secondActivityListenerCalled = true; });
     const originalError = console.error;
     console.error = () => {};
-    try { Port.register(implementation(calls)); }
-    finally { console.error = originalError; }
-    assert.equal(secondListenerCalled, true, 'one listener failure must not block other listeners');
+    try {
+      Port.register(implementation(calls));
+      Port.session.launch();
+    } finally {
+      console.error = originalError;
+    }
+    assert.equal(secondRegistrationListenerCalled, true, 'one registration listener failure must not block other listeners');
+    assert.equal(secondActivityListenerCalled, true, 'one activity listener failure must not block other listeners');
   }
 
   console.log('OK mobile command port');
