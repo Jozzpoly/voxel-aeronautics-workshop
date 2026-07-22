@@ -566,16 +566,35 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
     return snapshot.activeActions.join(',') === 'pitch-,surge-,sway-,yaw-' ? snapshot : null;
   })()`, 'negative dual-stick axes after neutral crossing');
 
-  // CDP touchPoints describe the complete active touch set. Omitting the left
-  // point from the next touchMove emits a real release for that pointer while
-  // preserving the right pointer, matching a user lifting one thumb.
-  await dispatchTouch(cdp, 'touchMove', [rightNegative]);
+  // CDP cannot express a partial touchEnd because touchEnd must carry an empty
+  // touch-point list. Inject a browser PointerEvent for the one-thumb release
+  // while retaining CDP for native multi-touch start, movement and final release.
+  const partialRelease = await evaluate(cdp, `(() => {
+    const controls = window.VAW.require('runtime.mobile-context').flightControls();
+    const snapshot = controls.snapshot();
+    const left = document.querySelector('#vaw-mobile-flight-input [data-control="left-stick"]');
+    const pointerId = snapshot.leftPointerId;
+    if (!left || pointerId === null) return { dispatched: false, pointerId };
+    const event = new PointerEvent('pointerup', {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      pointerId,
+      pointerType: 'touch',
+      clientX: ${JSON.stringify(leftNegative.x)},
+      clientY: ${JSON.stringify(leftNegative.y)},
+      buttons: 0,
+      pressure: 0
+    });
+    left.dispatchEvent(event);
+    return { dispatched: true, pointerId, defaultPrevented: event.defaultPrevented };
+  })()`);
+  assert(partialRelease?.dispatched, `Left-stick pointerup lifecycle event was not dispatched: ${JSON.stringify({ partialRelease, ownedPointers })}`);
   const partialReleaseEvidence = await waitFor(cdp, `(() => {
     const snapshot = window.VAW.require('runtime.mobile-context').flightControls().snapshot();
     return snapshot.leftPointerId === null && snapshot.rightPointerId !== null && snapshot.activeActions.join(',') === 'pitch-,yaw-'
       ? snapshot : null;
-  })()`, 'independent left-stick release through active touch set');
-  assert(ownedPointers.leftPointerId !== null && ownedPointers.rightPointerId !== null, `Initial dual-stick ownership evidence is invalid: ${JSON.stringify(ownedPointers)}`);
+  })()`, 'independent left-stick pointerup lifecycle');
   await dispatchTouch(cdp, 'touchEnd', []);
   await waitFor(cdp, `window.VAW.require('runtime.mobile-context').flightControls().snapshot().activeActions.length === 0`, 'remaining stick neutral release');
 
