@@ -245,7 +245,14 @@ async function waitFor(cdp, expression, description, timeoutMs = 15000) {
     if (lastValue) return lastValue;
     await sleep(100);
   }
-  throw new Error(`Timed out waiting for ${description}; last value: ${JSON.stringify(lastValue)}`);
+  let flightControls = null;
+  try {
+    flightControls = await evaluate(cdp, `(() => {
+      try { return window.VAW?.require?.('runtime.mobile-context')?.flightControls?.()?.snapshot?.() || null; }
+      catch (_) { return null; }
+    })()`);
+  } catch (_) {}
+  throw new Error(`Timed out waiting for ${description}; last value: ${JSON.stringify(lastValue)}; flight controls: ${JSON.stringify(flightControls)}`);
 }
 
 async function dispatchTouch(cdp, type, touchPoints) {
@@ -401,19 +408,26 @@ async function findGesturePlan(cdp) {
 
 async function installTrace(cdp) {
   await evaluate(cdp, `(() => {
-    const canvas = document.querySelector('#canvas-container canvas');
     window.__VAW_MOBILE_SMOKE_TRACE__ = [];
-    const record = event => window.__VAW_MOBILE_SMOKE_TRACE__.push({
-      type: event.type,
-      pointerType: event.pointerType || null,
-      pointerId: event.pointerId ?? null,
-      clientX: event.clientX ?? null,
-      clientY: event.clientY ?? null,
-      target: event.target?.tagName || null,
-      touches: event.touches?.length ?? null
-    });
+    const record = event => {
+      let flightControls = null;
+      try { flightControls = window.VAW?.require?.('runtime.mobile-context')?.flightControls?.()?.snapshot?.() || null; }
+      catch (_) {}
+      window.__VAW_MOBILE_SMOKE_TRACE__.push({
+        type: event.type,
+        pointerType: event.pointerType || null,
+        pointerId: event.pointerId ?? null,
+        clientX: event.clientX ?? null,
+        clientY: event.clientY ?? null,
+        target: event.target?.id || event.target?.dataset?.control || event.target?.dataset?.action || event.target?.tagName || null,
+        touches: event.touches?.length ?? null,
+        activeActions: flightControls?.activeActions || [],
+        leftPointerId: flightControls?.leftPointerId ?? null,
+        rightPointerId: flightControls?.rightPointerId ?? null
+      });
+    };
     for (const type of ['touchstart','touchmove','touchend','touchcancel','pointerdown','pointermove','pointerup','pointercancel','gotpointercapture','lostpointercapture']) {
-      canvas.addEventListener(type, record, true);
+      document.addEventListener(type, record, true);
     }
     return true;
   })()`);
@@ -550,23 +564,18 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   const negativeAxisEvidence = await waitFor(cdp, `(() => {
     const snapshot = window.VAW.require('runtime.mobile-context').flightControls().snapshot();
     return snapshot.activeActions.join(',') === 'pitch-,surge-,sway-,yaw-' ? snapshot : null;
-  })()`, 'rapid dual-stick reversal after neutral crossing');
+  })()`, 'negative dual-stick axes after neutral crossing');
 
-  const partialRelease = await evaluate(cdp, `(() => {
-    const controls = window.VAW.require('runtime.mobile-context').flightControls();
-    const snapshot = controls.snapshot();
-    const left = document.querySelector('#vaw-mobile-flight-input [data-control="left-stick"]');
-    const pointerId = snapshot.leftPointerId;
-    if (!left || pointerId === null || !left.hasPointerCapture?.(pointerId)) return { released: false, pointerId };
-    left.releasePointerCapture(pointerId);
-    return { released: true, pointerId };
-  })()`);
-  assert(partialRelease?.released, `Left stick pointer capture could not be released independently: ${JSON.stringify({ partialRelease, ownedPointers })}`);
+  // CDP touchPoints describe the complete active touch set. Omitting the left
+  // point from the next touchMove emits a real release for that pointer while
+  // preserving the right pointer, matching a user lifting one thumb.
+  await dispatchTouch(cdp, 'touchMove', [rightNegative]);
   const partialReleaseEvidence = await waitFor(cdp, `(() => {
     const snapshot = window.VAW.require('runtime.mobile-context').flightControls().snapshot();
     return snapshot.leftPointerId === null && snapshot.rightPointerId !== null && snapshot.activeActions.join(',') === 'pitch-,yaw-'
       ? snapshot : null;
-  })()`, 'independent left-stick release');
+  })()`, 'independent left-stick release through active touch set');
+  assert(ownedPointers.leftPointerId !== null && ownedPointers.rightPointerId !== null, `Initial dual-stick ownership evidence is invalid: ${JSON.stringify(ownedPointers)}`);
   await dispatchTouch(cdp, 'touchEnd', []);
   await waitFor(cdp, `window.VAW.require('runtime.mobile-context').flightControls().snapshot().activeActions.length === 0`, 'remaining stick neutral release');
 
@@ -711,6 +720,7 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
     },
     flightControls: {
       positiveAxisActions: positiveAxisEvidence.activeActions,
+      neutralCrossingActions: neutralCrossingEvidence.activeActions,
       negativeAxisActions: negativeAxisEvidence.activeActions,
       partialReleaseActions: partialReleaseEvidence.activeActions,
       positiveHoldActions: positiveHoldEvidence.activeActions,
