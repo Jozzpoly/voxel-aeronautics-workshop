@@ -14,6 +14,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: mobile-touch-validation-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -114,11 +118,13 @@ jobs:
           exit 2
 
       - name: Run no-origin single-file mobile smoke
+        if: ${{ always() }}
         run: |
           set -o pipefail
           npm run browser:smoke:mobile:offline 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/browser_smoke_mobile_offline.log"
 
       - name: Check whitespace and patch integrity
+        if: ${{ always() }}
         run: |
           set -o pipefail
           git diff --check 2>&1 | tee "$MOBILE_VALIDATION_ARTIFACT_DIR/logs/git_diff_check.log"
@@ -141,4 +147,4 @@ jobs:
           name: vaw-mobile-touch-validation-${{ github.sha }}
           path: /tmp/vaw-mobile-validation
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 14
