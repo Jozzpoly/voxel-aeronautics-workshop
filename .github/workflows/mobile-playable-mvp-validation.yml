@@ -90,6 +90,7 @@ jobs:
       - name: Run no-origin single-file mobile smoke
         if: ${{ always() }}
         run: |
+          set -o pipefail
           mkdir -p "$PLAYABLE_SMOKE_DIR"
           npm run browser:smoke:mobile:offline 2>&1 | tee "$PLAYABLE_SMOKE_DIR/mobile-offline-release-smoke.log"
 
