@@ -627,7 +627,9 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   await waitFor(cdp, `window.VAW.require('runtime.mobile-context').flightControls().snapshot().activeActions.length === 0`, 'negative hold neutral release');
 
   const orientationPointerId = pointerId++;
-  await dispatchTouch(cdp, 'touchStart', [touchPoint(leftStick.x + leftDelta, leftStick.y - leftDelta, orientationPointerId)]);
+  await dispatchTouch(cdp, 'touchStart', [touchPoint(leftStick.x, leftStick.y, orientationPointerId)]);
+  await waitFor(cdp, `window.VAW.require('runtime.mobile-context').flightControls().snapshot().leftPointerId !== null`, 'orientation-test stick ownership');
+  await dispatchTouch(cdp, 'touchMove', [touchPoint(leftStick.x + leftDelta, leftStick.y - leftDelta, orientationPointerId)]);
   await waitFor(cdp, `window.VAW.require('runtime.mobile-context').flightControls().snapshot().activeActions.length > 0`, 'orientation safety input');
   await evaluate(cdp, `window.dispatchEvent(new Event('orientationchange'))`);
   await waitFor(cdp, `window.VAW.require('runtime.mobile-context').flightControls().snapshot().activeActions.length === 0`, 'orientation-change neutralization');
