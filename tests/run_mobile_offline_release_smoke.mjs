@@ -352,6 +352,8 @@ async function main() {
       const storageCapability = safeRequire('game.storage-capability');
       const playableShell = context?.playableShell?.();
       const flightControls = context?.flightControls?.();
+      const flightSnapshot = flightControls?.snapshot?.() || null;
+      const flightRoot = flightControls?.root?.() || null;
       const fatal = document.getElementById('fatal-error');
       const fatalVisible = Boolean(fatal && !fatal.hidden && getComputedStyle(fatal).display !== 'none');
       return {
@@ -367,7 +369,9 @@ async function main() {
         commandPortDefined: Boolean(commandPort),
         commandPortRegistered: Boolean(commandPort?.current?.()),
         playableShellReady: Boolean(playableShell?.snapshot?.().ready),
-        flightControlsReady: Boolean(flightControls?.snapshot?.().ready),
+        flightControlsStarted: Boolean(flightSnapshot?.started),
+        flightControlsDestroyed: flightSnapshot?.destroyed ?? null,
+        flightControlsRootPresent: Boolean(flightRoot),
         storageCapabilityDefined: Boolean(storageCapability),
         storageKind: storageCapability?.forWindow?.(window)?.kind || null,
         storagePersistent: storageCapability?.forWindow?.(window)?.persistent ?? null,
@@ -391,7 +395,7 @@ async function main() {
     if (state.releaseMode !== 'single-file') throw new Error(`Release mode marker is missing: ${JSON.stringify(state)}`);
     if (!state.mobileContextDefined || !state.commandPortDefined) throw new Error(`Required mobile modules are unavailable: ${JSON.stringify(state)}`);
     if (!state.mobileAvailable) throw new Error(`Mobile runtime is unavailable under throwing localStorage: ${JSON.stringify(state)}`);
-    if (!state.commandPortRegistered || !state.playableShellReady || !state.flightControlsReady) {
+    if (!state.commandPortRegistered || !state.playableShellReady || !state.flightControlsStarted || state.flightControlsDestroyed !== false || !state.flightControlsRootPresent) {
       throw new Error(`Mobile product composition did not complete: ${JSON.stringify(state)}`);
     }
     if (!state.storageCapabilityDefined || state.storageKind !== 'memory' || state.storagePersistent !== false) {
