@@ -88,11 +88,13 @@ jobs:
           exit 2
 
       - name: Run no-origin single-file mobile smoke
+        if: ${{ always() }}
         run: |
           mkdir -p "$PLAYABLE_SMOKE_DIR"
           npm run browser:smoke:mobile:offline 2>&1 | tee "$PLAYABLE_SMOKE_DIR/mobile-offline-release-smoke.log"
 
       - name: Check patch integrity
+        if: ${{ always() }}
         run: git diff --check
 
       - name: Upload playable smoke diagnostics
@@ -102,4 +104,4 @@ jobs:
           name: mobile-playable-smoke-${{ github.sha }}
           path: /tmp/vaw-mobile-playable
           if-no-files-found: warn
-          retention-days: 7
+          retention-days: 14
