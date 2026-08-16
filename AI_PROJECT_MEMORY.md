@@ -45,8 +45,8 @@ The `80c0ae4` foundation passed broad local recovery validation across core doma
 
 Known recovery caveats:
 
-- one validation-runner process-family test hangs in the current Linux/container environment; sibling timeout/resume/side-effect tests pass;
-- tracked `SOURCE_MANIFEST.json` has a generated ordering/provenance mismatch; source hashes were not the problem and the existing builder normalizes it;
+- validation-runner timeout/process-family tests are environment-sensitive in the current Linux/container: the process-family case hung during H0 and a later `resume-after-timeout` run was timing-flaky; classify this as `HARNESS/ENVIRONMENT` until target-environment evidence says otherwise;
+- the historical tracked-manifest ordering problem was removed during recovery: `SOURCE_MANIFEST.json` is now generated in `dist/` and embedded in release ZIPs rather than tracked as authored source;
 - browser automation in the recovery environment could not provide product proof because localhost and later WebGL/EGL were blocked by environment policy.
 
 These caveats must remain separate from actual product failures.

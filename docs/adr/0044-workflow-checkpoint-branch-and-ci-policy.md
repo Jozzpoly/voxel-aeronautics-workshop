@@ -44,4 +44,4 @@ Release artifact retention remains a separate owner decision.
 
 ## Supersession
 
-The `current_work` checkpoint policy is no longer active. Recovery authority is defined by the live repository state and root `AGENTS.md`; historical branch names in this ADR describe the 2026-07-01 checkpoint only. CI branch policy will be re-grounded as repository hygiene before promotion to `main`.
+The `current_work` checkpoint policy is no longer active. Recovery authority is defined by the live repository state and root `AGENTS.md`; historical branch names in this ADR describe the 2026-07-01 checkpoint only. CI branch policy was re-grounded during recovery: active validation workflows no longer target `current_work`.

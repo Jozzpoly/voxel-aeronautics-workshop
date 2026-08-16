@@ -43,10 +43,12 @@ def main() -> None:
     )
 
     release_test = (ROOT / 'tests' / 'test_release_build.py').read_text(encoding='utf-8')
-    assert 'ensure_source_manifest(ROOT)' not in release_test, 'release-build test must not mutate root provenance'
-    assert 'SOURCE_MANIFEST.json is stale' in release_test
+    assert not (ROOT / 'SOURCE_MANIFEST.json').exists(), 'generated source manifest must not be tracked at repository root'
+    assert "must be generated, not tracked at repository root" in release_test
     assert 'def expected_archive_names(' not in release_test
     assert 'module.expected_archive_names(ROOT, single.name)' in release_test
+    assert 'write_source_manifest' in build_release
+    assert 'ensure_source_manifest' not in build_release
 
     agent_rules = (ROOT / 'AGENTS.md').read_text(encoding='utf-8')
     assert 'Generated release/provenance output is not authored product truth' in agent_rules

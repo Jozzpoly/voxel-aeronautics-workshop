@@ -25,16 +25,8 @@ def embedded_source(single_text: str, relative: Path) -> str:
 
 assert '.agent-validation' in module.IGNORED_ARCHIVE_PARTS
 
-manifest_path = ROOT / module.MANIFEST_NAME
-expected_manifest_text = module.manifest_text(ROOT)
-actual_manifest_text = manifest_path.read_text(encoding='utf-8')
-assert actual_manifest_text == expected_manifest_text, (
-    'SOURCE_MANIFEST.json is stale. Regenerate it from a clean candidate; '
-    'if protected local visual work is dirty, validate release evidence with '
-    'tools/validate_clean_candidate.py instead of root npm test. The release-build '
-    'test must not update tracked provenance as a side effect.'
-)
-manifest = json.loads(actual_manifest_text)
+manifest = module.source_manifest(ROOT)
+assert not (ROOT / module.MANIFEST_NAME).exists(), 'SOURCE_MANIFEST.json must be generated, not tracked at repository root'
 assert manifest['releaseId'] == module.RELEASE_ID
 assert manifest['appVersion'] == module.APP_VERSION
 assert module.MANIFEST_INPUTS == module.manifest_inputs(ROOT)
@@ -82,6 +74,8 @@ with tempfile.TemporaryDirectory() as temporary:
             'unexpected': sorted(set(inventory) - set(expected_inventory)),
         }
         names = set(inventory)
+        packaged_manifest = zipped.read(prefix + module.MANIFEST_NAME).decode('utf-8')
+        assert packaged_manifest == module.manifest_text(ROOT)
 
         required_docs = {
             prefix + 'README.md',

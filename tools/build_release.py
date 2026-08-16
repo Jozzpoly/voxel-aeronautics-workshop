@@ -13,6 +13,7 @@ APP_VERSION = '0.8.2-foundation.workbench-foundation'
 SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Workbench_Foundation.html'
 ZIP_NAME = 'Voxel_Aeronautics_Workshop_Workbench_Foundation.zip'
 MANIFEST_NAME = 'SOURCE_MANIFEST.json'
+GENERATED_MANIFEST_DIR = 'dist'
 ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_WORKBENCH_FOUNDATION_READY_TO_PUSH'
 IGNORED_ARCHIVE_PARTS = {'dist', 'release', '.agent-validation', '__pycache__', '.pytest_cache', '.git', 'node_modules'}
 ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
@@ -202,11 +203,10 @@ def manifest_text(root: Path = ROOT) -> str:
     return json.dumps(source_manifest(root), ensure_ascii=False, sort_keys=True, indent=2) + '\n'
 
 
-def ensure_source_manifest(root: Path = ROOT) -> Path:
-    destination = root / MANIFEST_NAME
-    content = manifest_text(root)
-    if not destination.exists() or destination.read_text(encoding='utf-8') != content:
-        destination.write_text(content, encoding='utf-8', newline='\n')
+def write_source_manifest(root: Path = ROOT, destination: Path | None = None) -> Path:
+    destination = destination or (root / GENERATED_MANIFEST_DIR / MANIFEST_NAME)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(manifest_text(root), encoding='utf-8', newline='\n')
     return destination
 
 
@@ -316,9 +316,12 @@ def expected_archive_names(root: Path = ROOT, single_name: str | None = None, *,
         relative = path.relative_to(root)
         if not path.is_file() or any(part in IGNORED_ARCHIVE_PARTS for part in relative.parts):
             continue
+        if relative == Path(MANIFEST_NAME):
+            continue
         if path.resolve() in excluded:
             continue
         names.append((Path(ARCHIVE_ROOT) / relative).as_posix())
+    names.append((Path(ARCHIVE_ROOT) / MANIFEST_NAME).as_posix())
     if single_name is not None:
         names.append((Path(ARCHIVE_ROOT) / 'release' / single_name).as_posix())
         names.append((Path(ARCHIVE_ROOT) / 'release' / 'SHA256.txt').as_posix())
@@ -342,17 +345,20 @@ def _write_archive_bytes(archive: zipfile.ZipFile, name: str, data: bytes, *, mo
 
 
 def write_zip(root: Path, destination: Path, single_file: Path | None = None) -> None:
-    ensure_source_manifest(root)
     destination.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(destination, 'w', compression=zipfile.ZIP_STORED) as archive:
         for path in sorted(root.rglob('*')):
             relative = path.relative_to(root)
             if not path.is_file() or any(part in IGNORED_ARCHIVE_PARTS for part in relative.parts):
                 continue
+            if relative == Path(MANIFEST_NAME):
+                continue
             if path.resolve() == destination.resolve():
                 continue
             archive_name = (Path(ARCHIVE_ROOT) / relative).as_posix()
             _write_archive_bytes(archive, archive_name, canonical_source_bytes(root, relative), mode=_archive_mode(relative))
+        manifest_path = (Path(ARCHIVE_ROOT) / MANIFEST_NAME).as_posix()
+        _write_archive_bytes(archive, manifest_path, manifest_text(root).encode('utf-8'))
         if single_file is not None:
             release_path = (Path(ARCHIVE_ROOT) / 'release' / single_file.name).as_posix()
             _write_archive_bytes(archive, release_path, single_file.read_bytes())
@@ -368,7 +374,7 @@ def main() -> None:
     parser.add_argument('--hashes', type=Path, default=ROOT / 'dist' / 'SHA256.txt')
     args = parser.parse_args()
 
-    ensure_source_manifest(ROOT)
+    write_source_manifest(ROOT)
     args.single.parent.mkdir(parents=True, exist_ok=True)
     args.single.write_text(build_single_html(ROOT), encoding='utf-8', newline='\n')
     write_zip(ROOT, args.zip_path, args.single)

@@ -1,4 +1,6 @@
 dist/
+release/
+SOURCE_MANIFEST.json
 __pycache__/
 .pytest_cache/
 node_modules/
@@ -6,5 +8,3 @@ node_modules/
 .DS_Store
 recovery-artifacts/
 .agent-validation/
-
-tests/windows/matrix-results/

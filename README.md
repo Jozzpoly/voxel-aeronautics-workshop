@@ -26,8 +26,8 @@ Na bazowym `80c0ae4` szeroka walidacja foundation/runtime przeszła dla m.in. Cr
 
 Znane wyjątki z recovery:
 
-- jeden test process-family validation runnera wiesza się w obecnym Linux/container environment — klasyfikacja `HARNESS/ENVIRONMENT`;
-- tracked `SOURCE_MANIFEST.json` ma historyczny problem generated-provenance ordering; nie jest to dowód regresji runtime;
+- testy timeout/process-family `validation_runner` są środowiskowo niestabilne w obecnym Linux/container: jeden process-family zawisł w H0, a późniejszy `resume-after-timeout` wykazał timingową flakiness — klasyfikacja `HARNESS/ENVIRONMENT`;
+- `SOURCE_MANIFEST.json` jest generowany podczas buildu i pakowany do source ZIP; nie jest już wersjonowaną, ręcznie utrzymywaną prawdą repo;
 - automatyczny browser proof nie był możliwy w środowisku recovery z powodu blokady localhost/WebGL.
 
 Testy są dowodem technicznym, **nie dowodem jakości gry**.

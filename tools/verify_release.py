@@ -29,10 +29,8 @@ def verify_artifacts(
     if (zip_path is None) != (hashes_path is None):
         raise SystemExit('--zip and --hashes must be supplied together.')
 
-    manifest_path = root / build_release.MANIFEST_NAME
-    if not manifest_path.exists():
-        raise SystemExit(f'Missing {manifest_path.name}; run npm run build first.')
-    manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+    manifest_text = build_release.manifest_text(root)
+    manifest = json.loads(manifest_text)
     if manifest.get('releaseId') != build_release.RELEASE_ID:
         raise SystemExit('Release ID mismatch.')
 
@@ -79,6 +77,9 @@ def verify_artifacts(
             corrupt = archive.testzip()
             if corrupt is not None:
                 raise SystemExit(f'Corrupt ZIP member: {corrupt}')
+            packaged_manifest = archive.read(prefix + build_release.MANIFEST_NAME).decode('utf-8')
+            if packaged_manifest != manifest_text:
+                raise SystemExit('ZIP source manifest differs from the verified source tree.')
             for relative in build_release.manifest_inputs(root):
                 archived = archive.read(prefix + relative.as_posix())
                 current = build_release.canonical_source_bytes(root, relative)
@@ -110,11 +111,10 @@ def resolve_single(explicit: Path | None) -> Path:
     expected_name = build_release.SINGLE_NAME
     candidates = [explicit] if explicit is not None else [
         ROOT / 'dist' / expected_name,
-        ROOT / 'release' / expected_name,
     ]
     single = next((candidate for candidate in candidates if candidate is not None and candidate.exists()), None)
     if single is None:
-        raise SystemExit(f'No packaged {expected_name} found in dist/ or release/.')
+        raise SystemExit(f'No packaged {expected_name} found in dist/. Run npm run build first.')
     return single
 
 

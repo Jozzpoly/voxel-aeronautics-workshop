@@ -65,7 +65,7 @@ node tools/run_with_python_env.js python tools/audit_visual_asset_pack.py assets
 
 The JSON report keeps the original `diagnostics` list and also includes `assetReports` entries with `assetId`, `blockTypes`, model status, per-asset diagnostics and dry-run `cleanupSuggestions`. The top-level `suggestedManifestCleanup` object is always advisory; it never writes files.
 
-When the local working pack is dirty, root release validation may see protected art and update `SOURCE_MANIFEST.json` for that local state. For a clean candidate, stage only the intended code/docs/tooling changes and run:
+`SOURCE_MANIFEST.json` is generated into `dist/` during release builds and embedded in the source ZIP; it is not authored repository state. If the local working pack contains protected art that is not part of the candidate, validate the staged candidate in isolation with:
 
 ```bash
 node tools/run_with_python_env.js python tools/validate_clean_candidate.py
