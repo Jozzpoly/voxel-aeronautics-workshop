@@ -18,17 +18,21 @@ Właściciel uruchomił exact single-file build z `80c0ae4` 2026-08-16. Potwierd
 - scena testowa/fizyczna startuje;
 - telemetry aktualizuje stan podczas testu.
 
-To **nie jest akceptacja jakości produktu**. Aktualny UI, czytelność, zachowanie i ogólny poziom dopracowania zostały ocenione jako wyraźnie niewystarczające i wymagające późniejszego, osobnego audytu. Nie zakładamy, że funkcja opisana w starym roadmapie działa dobrze tylko dlatego, że istnieje kod albo test.
+To **nie jest akceptacja jakości produktu**. Aktualny UI, czytelność, zachowanie i ogólny poziom dopracowania zostały ocenione jako wyraźnie niewystarczające. Nie zakładamy, że funkcja opisana w starym roadmapie działa dobrze tylko dlatego, że istnieje kod albo test.
 
 ### Co zostało potwierdzone maszynowo
 
-Na bazowym `80c0ae4` szeroka walidacja foundation/runtime przeszła dla m.in. CraftModel/CraftCompiler, RuntimeAssemblyPlan, Cannon, articulated/multi-space runtime, flight lifecycle, missions, damage/debris, Visual Asset Pack, Blockbench Studio oraz VectorThruster probe.
+Bazowy produkt ma szeroko testowany foundation/runtime: CraftModel/CraftCompiler, RuntimeAssemblyPlan, Cannon, articulated/multi-space runtime, flight lifecycle, missions, damage/debris, Visual Asset Pack i Blockbench Studio.
 
-Znane wyjątki z recovery:
+P1 code-reality audit jest zapisany w [`docs/CODE_REALITY_AUDIT.md`](docs/CODE_REALITY_AUDIT.md). P2-A naprawił pierwszy potwierdzony błąd prawdy produktu: Engineering Analysis korzysta teraz z compiled rigid adjacency dla weak links, a procenty sterowności są jawnie ograniczone do **primary-body local authority** zamiast udawać whole-craft prediction dla maszyn przegubowych. Mission readiness sygnalizuje to ograniczenie zamiast podawać pozornie dokładny wynik.
 
-- testy timeout/process-family `validation_runner` są środowiskowo niestabilne w obecnym Linux/container: jeden process-family zawisł w H0, a późniejszy `resume-after-timeout` wykazał timingową flakiness — klasyfikacja `HARNESS/ENVIRONMENT`;
-- `SOURCE_MANIFEST.json` jest generowany podczas buildu i pakowany do source ZIP; nie jest już wersjonowaną, ręcznie utrzymywaną prawdą repo;
-- automatyczny browser proof nie był możliwy w środowisku recovery z powodu blokady localhost/WebGL.
+P2-A przeszedł nowy wykonywalny test multi-space/multi-body oraz szeroki core suite w disposable kandydacie. Jedynym świadomie wyłączonym elementem był wcześniej zidentyfikowany nondeterministyczny harness `test_validation_runner.py`.
+
+Znane wyjątki:
+
+- timeout/process-family `validation_runner` jest niestabilny także między Windows/Ubuntu CI — klasyfikacja `HARNESS/ENVIRONMENT`;
+- `SOURCE_MANIFEST.json` jest generowany podczas buildu i pakowany do source ZIP; nie jest wersjonowaną, ręcznie utrzymywaną prawdą repo;
+- obecne środowisko recovery nadal nie dostarcza wiarygodnego browser/rendered proof: Chromium/CDP nie dochodzi do bootstrapu aplikacji. Nie jest z tego deklarowany browser PASS.
 
 Testy są dowodem technicznym, **nie dowodem jakości gry**.
 
@@ -41,9 +45,9 @@ Bieżącą prawdę projektu tworzą tylko:
 3. [`ARCHITECTURE.md`](ARCHITECTURE.md) — aktualne granice architektury zaobserwowane w kodzie;
 4. [`ROADMAP.md`](ROADMAP.md) — obecna kolejność pracy;
 5. [`AGENTS.md`](AGENTS.md) — zasady pracy agentów z repozytorium;
-6. [`docs/README.md`](docs/README.md) — indeks kontraktów, researchu i historii.
+6. [`docs/README.md`](docs/README.md) — indeks bieżących dowodów, kontraktów, researchu i historii.
 
-Wszystko pod `docs/history/` jest **wyłącznie historią**. Stare milestone'y, Gate'y, readiness review, handoffy i workflowy nie są aktywnym planem, nawet jeśli kiedyś były opisane jako `current`, `stable`, `ready` albo `complete`.
+Wszystko pod `docs/history/` jest **wyłącznie historią**. Stare milestone'y, Gate'y, readiness review, handoffy i workflowy nie są aktywnym planem.
 
 ## Uruchomienie lokalne
 
@@ -61,9 +65,10 @@ Nie używaj wyniku testów jako substytutu ręcznej oceny produktu.
 
 ## Najbliższy kierunek
 
-Recovery dokumentacji i aktywnego process/generated clutter jest zakończone na `recovery/playable-truth`. Następny etap to **krytyczny audyt kodu i długu technicznego**, bez rozpoczynania szerokiej naprawy produktu.
+P0 repo recovery, P1 code-reality audit i P2-A Engineering Analysis Truth są zakończone na recovery lane.
 
-1. sklasyfikować każdą ważną funkcję jako `PROVEN`, `PARTIAL`, `ROUGH`, `STUB/CLAIM` albo `ABSENT`;
-2. wykryć miejsca, w których testy/dokumentacja obiecują więcej niż realny kod;
-3. wskazać dług techniczny i sprzężenia utrudniające dalszy rozwój;
-4. dopiero potem wybrać najmniejszy sensowny zestaw napraw prowadzący do rzeczywiście przyjemnego loopu `build -> test -> understand -> rebuild`.
+**Aktualnym milestone'em jest P2-B — Test → Workshop Feedback Continuity.**
+
+Cel: po powrocie z sandboxowego testu nie wyrzucać informacji potrzebnych do zrozumienia awarii. Zachować jeden ograniczony, strukturalny wynik ostatniego testu — m.in. pierwszą istotną awarię, utracone części i najważniejsze impact/load/fuel-loss evidence — bez zapisywania transient damage do Blueprintu.
+
+Dopiero potem przechodzimy do P2-C Workshop Editing Fundamentals i późniejszego uproszczenia UI/visual polish.

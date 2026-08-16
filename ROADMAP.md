@@ -48,14 +48,19 @@ Repair order:
 
 ### P2-A — Engineering Analysis Truth
 
-1. make topology/weak-link analysis Assembly-Space-correct;
-2. align multi-body control-authority prediction with actual runtime thruster routing, or explicitly narrow/label the metric if exact prediction is not defensible yet;
-3. add executable multi-space/multi-body analysis tests;
-4. reduce duplicated prediction/runtime math only where the repair exposes a clean pure boundary.
+**Complete** on the recovery lane.
 
-Exit condition: engineering readouts do not knowingly contradict compiled topology or runtime control semantics for supported craft.
+- weak-link and exposed-fuel topology now uses compiled `rigidNeighborBlockIds` instead of reconstructing cross-space adjacency from positions;
+- control percentages are explicitly `primary-body-local`; secondary-body Gyro no longer inflates them;
+- articulated craft report the estimator boundary, including runtime pilot-routed secondary thrusters whose joint-coupled effect is not modeled;
+- mission readiness no longer presents that partial articulated estimate as a whole-craft percentage;
+- executable multi-space/multi-body tests cover the reproduced regression and control-scope behavior.
+
+Exit result: the known topology contradiction is removed and the remaining articulated-control limitation is stated instead of guessed.
 
 ### P2-B — Test → Workshop Feedback Continuity
+
+**Current milestone.**
 
 Preserve one bounded structured last-test result across flight cleanup, including sandbox. It should retain the first meaningful failure and enough block/load/impact/fuel-loss evidence to support the next rebuild without writing transient damage into Blueprint data.
 

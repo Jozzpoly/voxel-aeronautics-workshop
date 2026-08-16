@@ -1,6 +1,6 @@
 # VAW Code Reality Audit
 
-Status: **current recovery evidence**  
+Status: **current recovery evidence — P1 baseline with P2 resolution ledger**  
 Audit date: **2026-08-16**  
 Product source audited: `80c0ae4aced1dd695af217cdeadea9025c6305c8`  
 Recovery lane at audit start: `recovery/playable-truth` @ `38a9fd7752b120d9146b1703a3e6e6c649dfbd6c`
@@ -237,4 +237,21 @@ Use manual screenshots/tests to simplify the workspace around the now-trustworth
 
 P1 is complete when this audit is committed, current docs point to it, and no product code is changed in the audit commit.
 
-The next product-code milestone is **P2-A Engineering Analysis Truth**.
+At P1 close, the next product-code milestone was **P2-A Engineering Analysis Truth**. The resolution ledger below records its current recovery status.
+
+## P2 resolution ledger
+
+### P2-A — Engineering Analysis Truth: resolved in recovery
+
+P2-A addressed findings 1 and 2 without pretending to solve articulated dynamics that the estimator does not model.
+
+- `weakLinks` and exposed-fuel neighbor counts now use compiler-owned `rigidNeighborBlockIds`; the reproduced transformed-child-space fixture reports the compiled value (`3`) rather than the old reconstructed value (`4`).
+- Engineering control percentages are explicitly scoped as `primary-body-local`.
+- Manual gyro authority counts only Gyro on the primary body, matching current runtime pilot-control ownership.
+- Secondary-body Thruster/VectorThruster remain runtime pilot-routed, but their joint-coupled effect is not folded into a fake whole-craft percentage; articulated analysis reports this limitation.
+- Mission readiness does not use the partial articulated percentage as if it were a complete craft-control score.
+- A new executable multi-space/multi-body test protects topology, control scope and mission-readiness wording/semantics.
+
+Validation: targeted engineering, missions, architecture, thruster-routing and Gate C tests passed; a broad disposable core suite passed with only the already-known nondeterministic validation-runner harness excluded. Browser smoke in the recovery container still fails before application bootstrap and therefore provides no rendered PASS.
+
+The next unresolved high-value finding is #3: sandbox return destroys failure evidence needed for `test -> understand -> rebuild`. This drives P2-B.

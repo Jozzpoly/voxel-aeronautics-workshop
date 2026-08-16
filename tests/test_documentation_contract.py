@@ -117,8 +117,12 @@ assert '## P1 — Code reality and technical-debt audit' in roadmap
 assert '**Complete**' in roadmap[roadmap.index('## P1 — Code reality and technical-debt audit'):]
 assert '## P2 — Recover the smallest truthful VAW loop' in roadmap
 assert '**Current phase.**' in roadmap[roadmap.index('## P2 — Recover the smallest truthful VAW loop'):]
-assert 'P2-A — Engineering Analysis Truth' in roadmap
-assert 'P2-B — Test → Workshop Feedback Continuity' in roadmap
+assert '### P2-A — Engineering Analysis Truth' in roadmap
+p2a = roadmap[roadmap.index('### P2-A — Engineering Analysis Truth'):roadmap.index('### P2-B — Test → Workshop Feedback Continuity')]
+assert '**Complete**' in p2a
+assert '### P2-B — Test → Workshop Feedback Continuity' in roadmap
+p2b = roadmap[roadmap.index('### P2-B — Test → Workshop Feedback Continuity'):roadmap.index('### P2-C — Workshop Editing Fundamentals')]
+assert '**Current milestone.**' in p2b
 
 assert 'docs/history/' in agents
 assert 'passing test does not prove' in agents.lower()
@@ -131,13 +135,16 @@ assert 'non-authoritative history' in history
 assert 'not an implementation claim' in programming
 assert '{blockId, portId}' in programming
 assert 'ControlRuntime' in programming
+assert 'P2-B — Test → Workshop Feedback Continuity' in readme
+assert 'P2-A Engineering Analysis Truth' in readme
 
 # Current memory must distinguish owner evidence, machine evidence and audit outcome.
 for heading in ('Manual product truth', 'Machine evidence', 'P1 code-reality result', 'Current priority', 'Documentation authority'):
     assert heading in memory, f'AI_PROJECT_MEMORY misses current-truth section: {heading}'
 assert 'did not accept the current quality' in memory
 assert 'P1 is complete' in memory
-assert 'P2 is active' in memory
+assert 'P2-A Engineering Analysis Truth is complete' in memory
+assert 'P2-B is active' in memory
 assert 'CODE_REALITY_AUDIT.md' in memory
 assert 'no active M4/M5/M6/Gate-D feature roadmap' in memory
 
@@ -148,6 +155,8 @@ for phrase in (
     'Failure -> diagnosis -> rebuild',
     'Device tuning / direct device binding',
     'Signal graph / ControlRuntime',
+    'P2-A — Engineering Analysis Truth: resolved in recovery',
+    'compiler-owned `rigidNeighborBlockIds`',
 ):
     assert phrase in audit, f'Code reality audit misses current evidence: {phrase}'
 
@@ -159,4 +168,6 @@ print({
     'historyAnchors': len(HISTORY_ANCHORS),
     'authorityBoundary': 'current-vs-history-ok',
     'p1Audit': 'classified-and-linked',
+    'p2A': 'complete',
+    'p2B': 'current',
 })

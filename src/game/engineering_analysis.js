@@ -10,14 +10,13 @@
 
     function create({
       THREE = window.THREE, state: STATE, craft: CRAFT, document: documentRef = window.document,
-      aerostaticPolicy: AEROSTATIC_POLICY, makeKey, getModuleBasis, controlAxisVector,
-      markers = {}
+      aerostaticPolicy: AEROSTATIC_POLICY, controlAxisVector, markers = {}
     } = {}) {
       if (!THREE?.Vector3 || !STATE || !CRAFT || !AEROSTATIC_POLICY) {
         throw new TypeError('Engineering analysis requires THREE, application state, CraftModel, and aerostatic policy.');
       }
-      if (typeof makeKey !== 'function' || typeof getModuleBasis !== 'function' || typeof controlAxisVector !== 'function') {
-        throw new TypeError('Engineering analysis requires key and orientation helpers.');
+      if (typeof controlAxisVector !== 'function') {
+        throw new TypeError('Engineering analysis requires a control-axis helper.');
       }
       const document = documentRef;
       const { comSphere, thrustSphere, liftSphere, thrustVectorArrow, liftVectorArrow } = markers;
@@ -316,6 +315,13 @@
 
 
       function computeControlMetrics(snapshot) {
+        const bodyIds = new Set(snapshot.parts.map(part => part.bodyId).filter(Boolean));
+        const bodyCount = bodyIds.size;
+        const articulated = bodyCount > 1;
+        const secondaryPilotThrusterCount = snapshot.parts.filter(part =>
+          part.bodyId !== snapshot.rootBodyId && (part.type === 'Thruster' || part.type === 'VectorThruster')
+        ).length;
+        const primaryGyroCount = snapshot.parts.filter(part => part.bodyId === snapshot.rootBodyId && part.type === 'Gyro').length;
         const torqueMax = computeSnapshotTorqueMax(snapshot);
         const baselineTorque = computeThrusterTorqueForPilot(snapshot, { roll: 0, yaw: 0, pitch: 0 }, torqueMax);
         const controlTorque = new THREE.Vector3();
@@ -326,7 +332,7 @@
           { control: 'yaw', component: 'y', inertia: snapshot.rootBodyInertia.y },
           { control: 'pitch', component: 'z', inertia: snapshot.rootBodyInertia.z }
         ];
-        const gyroAuthority = snapshot.counts.Gyro * PHYSICS.gyroManualTorque;
+        const gyroAuthority = primaryGyroCount * PHYSICS.gyroManualTorque;
         for (const axis of axisDefinitions) {
           const positivePilot = { roll: 0, yaw: 0, pitch: 0, [axis.control]: 1 };
           const negativePilot = { roll: 0, yaw: 0, pitch: 0, [axis.control]: -1 };
@@ -346,7 +352,11 @@
           const primary = positiveAuthority + negativeAuthority + 0.001;
           controlCoupling[axis.control] = THREE.MathUtils.clamp(offAxis / primary, 0, 4);
         }
-        return { torqueMax, baselineTorque, controlTorque, controlRating, controlCoupling };
+        return {
+          torqueMax, baselineTorque, controlTorque, controlRating, controlCoupling,
+          controlScope: 'primary-body-local', bodyCount, articulated,
+          secondaryPilotThrusterCount, primaryGyroCount
+        };
       }
 
       function computeCraftAnalysis() {
@@ -372,6 +382,11 @@
           controlTorque: new THREE.Vector3(),
           controlRating: { pitch: 0, yaw: 0, roll: 0 },
           controlCoupling: { pitch: 0, yaw: 0, roll: 0 },
+          controlScope: 'primary-body-local',
+          controlBodyCount: 0,
+          controlArticulated: false,
+          secondaryPilotThrusterCount: 0,
+          primaryGyroCount: 0,
           enduranceSeconds: 0,
           totalDurability: 0,
           structuralReserve: 0,
@@ -396,11 +411,9 @@
           return analysis;
         }
 
-        const craftKeys = new Set(snapshot.parts.map(part => part.key));
-        const neighborDirs = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
         for (const part of snapshot.parts) {
           analysis.totalDurability += part.def.durability || 0;
-          const neighbors = neighborDirs.reduce((count, [dx,dy,dz]) => count + (craftKeys.has(makeKey(part.assemblyPosition.x+dx, part.assemblyPosition.y+dy, part.assemblyPosition.z+dz)) ? 1 : 0), 0);
+          const neighbors = part.rigidNeighborBlockIds.length;
           if (part.type !== 'Core' && neighbors <= 1) analysis.weakLinks += 1;
           if (part.type === 'Fuel' && neighbors <= 2) analysis.exposedFuel += 1;
         }
@@ -463,6 +476,11 @@
         analysis.controlTorque.copy(controls.controlTorque);
         analysis.controlRating = controls.controlRating;
         analysis.controlCoupling = controls.controlCoupling;
+        analysis.controlScope = controls.controlScope;
+        analysis.controlBodyCount = controls.bodyCount;
+        analysis.controlArticulated = controls.articulated;
+        analysis.secondaryPilotThrusterCount = controls.secondaryPilotThrusterCount;
+        analysis.primaryGyroCount = controls.primaryGyroCount;
 
         analysis.enduranceSeconds = nominalFuelRate > 0 ? analysis.fuelCapacity / nominalFuelRate : Infinity;
         if (snapshot.parts.length === 1) warn('info', 'The craft currently contains a single module.');
@@ -471,13 +489,18 @@
         if (snapshot.counts.Wing + snapshot.counts.ControlSurface === 0 && analysis.staticLiftRatio < 0.95) warn('warn', 'Current power cannot support a vertical take-off.');
         if (snapshot.counts.Wing + snapshot.counts.ControlSurface > 0 && analysis.cruiseLiftRatio < 0.9) warn('warn', `Estimated lift at ${PHYSICS.cruiseReferenceSpeed} m/s is below craft weight.`);
         if (snapshot.counts.Wing + snapshot.counts.ControlSurface > 0 && analysis.cruiseLift <= analysis.staticLift + 0.1) warn('warn', 'Installed wings do not create useful upward lift in the +X cruise test.');
-        if (analysis.controlRating.pitch < 0.12) warn('warn', 'Almost no bidirectional pitch authority.');
-        if (analysis.controlRating.yaw < 0.12) warn('warn', 'Almost no bidirectional yaw authority.');
-        if (analysis.controlRating.roll < 0.12) warn('warn', 'Almost no bidirectional roll authority.');
+        if (analysis.controlRating.pitch < 0.12) warn('warn', 'Primary body has almost no bidirectional pitch authority.');
+        if (analysis.controlRating.yaw < 0.12) warn('warn', 'Primary body has almost no bidirectional yaw authority.');
+        if (analysis.controlRating.roll < 0.12) warn('warn', 'Primary body has almost no bidirectional roll authority.');
+        if (analysis.controlArticulated) warn('info', 'Control authority percentages model primary-body local actuators only; joint-coupled articulated response is not estimated.');
+        if (analysis.secondaryPilotThrusterCount > 0) warn('info', `${analysis.secondaryPilotThrusterCount} thruster${analysis.secondaryPilotThrusterCount === 1 ? '' : 's'} on secondary bodies ${analysis.secondaryPilotThrusterCount === 1 ? 'is' : 'are'} pilot-routed at runtime but excluded from the primary-body authority percentages.`);
         if (analysis.controlCoupling.pitch > 1.1 || analysis.controlCoupling.yaw > 1.1 || analysis.controlCoupling.roll > 1.1) warn('info', 'Engine steering has strong cross-axis coupling.');
         const controlMagnitude = analysis.controlTorque.length();
         if (analysis.trimTorqueMagnitude > Math.max(5, controlMagnitude * 1.2)) warn('warn', 'Current power creates a strong unbalanced turning moment.');
-        if (snapshot.counts.Gyro === 0) warn('info', 'No gyro: stabilization depends entirely on engine layout and aerodynamic surfaces.');
+        if (analysis.primaryGyroCount === 0) {
+          if (snapshot.counts.Gyro > 0) warn('info', 'No pilot-controlled gyro is installed on the primary body; secondary-body gyros are not pilot-controlled by the current runtime.');
+          else warn('info', 'No gyro: stabilization depends entirely on engine layout and aerodynamic surfaces.');
+        }
         if (snapshot.counts.ControlSurface > 0) warn('info', 'Control surfaces require airflow; authority fades during hover and stall.');
         if (analysis.fuelCapacity > 0 && analysis.enduranceSeconds < 20) warn('info', 'Estimated fuel endurance at current power is very short.');
         if (analysis.weakLinks > 0) warn(analysis.weakLinks > 4 ? 'warn' : 'info', `${analysis.weakLinks} part${analysis.weakLinks === 1 ? '' : 's'} depend on a single structural connection.`);

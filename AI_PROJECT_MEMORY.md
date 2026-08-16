@@ -49,6 +49,19 @@ Key conclusions:
 - Device tuning/direct binding is absent beyond global input settings and placement-time ControlSurface axis/sign; `portId`, device runtime, signal graph, sensors/PID and `ControlRuntime` are absent from current `src/**`.
 - Visual/Blockbench tooling is technically extensive but should not lead recovery while core product truth/feedback remains weak.
 
+## P2-A result
+
+P2-A Engineering Analysis Truth is complete on the recovery lane.
+
+- weak-link/fuel-exposure analysis uses compiler-owned `rigidNeighborBlockIds`, fixing the reproduced transformed-Assembly-Space error;
+- control metrics are explicitly scoped to `primary-body-local` authority;
+- secondary-body Gyro no longer inflates manual authority;
+- articulated analysis reports runtime pilot-routed secondary thrusters but does not invent joint-coupled whole-craft authority;
+- mission readiness uses the same scope and stops presenting the partial articulated estimate as exact whole-craft control;
+- the new executable engineering-analysis test reproduces the old boundary and protects the corrected behavior.
+
+A broad disposable core-suite run passed after the repair with only the known nondeterministic `test_validation_runner.py` harness excluded. Current browser smoke still cannot provide rendered proof in this environment because app bootstrap does not complete through its Chromium/CDP path.
+
 ## Architectural boundaries currently worth preserving
 
 - `CraftModel` is workshop authoring authority.
@@ -63,14 +76,16 @@ Key conclusions:
 
 ## Current priority
 
-P2 is active. Work in this order:
+P2-B is active: **Test -> Workshop Feedback Continuity**.
 
-1. **P2-A Engineering Analysis Truth** — repair Assembly-Space topology analysis and multi-body control-authority truth with executable tests.
-2. **P2-B Test -> Workshop Feedback Continuity** — preserve a structured last-test result across sandbox/contract return without mutating Blueprint damage state.
-3. **P2-C Workshop Editing Fundamentals** — selected-part/edit flow and selective exposure of existing useful domain capabilities.
-4. **P2-D Information architecture / visual polish** — simplify UI around the trustworthy loop only after the data it presents is trustworthy.
+1. Preserve one bounded structured last-test result before `cleanupFlightState()` destroys transient evidence.
+2. Make it work for free sandbox as well as contracts.
+3. Keep transient damage/runtime state out of Blueprint/CraftModel persistence.
+4. Preserve enough stable identity/evidence to support the next rebuild: first failure, involved block when known, lost parts, impact/load/fuel-loss and simulation-health facts.
 
-There is **no active M4/M5/M6/Gate-D feature roadmap during recovery**. Those names belong to history unless consciously reintroduced after current product needs justify them.
+After P2-B: P2-C Workshop Editing Fundamentals, then P2-D information architecture / visual polish.
+
+There is **no active M4/M5/M6/Gate-D feature roadmap during recovery**. Those names belong to history unless current product needs justify them.
 
 ## Documentation authority
 

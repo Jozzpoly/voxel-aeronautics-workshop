@@ -68,7 +68,18 @@
         if (analysis.blockCount > PHYSICS.maxFlightParts) { messages.push(`This prototype flight solver supports up to ${PHYSICS.maxFlightParts} attached modules; this craft has ${analysis.blockCount}.`); level = 'bad'; }
         if (contract.kind === 'hover-return' && staticRatio < 1.02) { messages.push(`Loaded static lift is only ${staticRatio.toFixed(2)}× weight.`); level = staticRatio < 0.75 ? 'bad' : 'warn'; }
         if ((contract.kind === 'gate-course' || contract.kind === 'courier') && analysis.counts.Thruster + analysis.counts.VectorThruster <= 0) { messages.push('The route requires controllable propulsion.'); level = 'bad'; }
-        if ((contract.kind === 'gate-course' || contract.kind === 'courier') && minimumControl < 0.12) { messages.push(`Loaded control authority falls to ${Math.round(minimumControl * 100)}% on the weakest axis.`); if (level !== 'bad') level = 'warn'; }
+        if (contract.kind === 'gate-course' || contract.kind === 'courier') {
+          if (loadedControls.articulated) {
+            const routed = loadedControls.secondaryPilotThrusterCount > 0
+              ? ` Runtime pilot-routes ${loadedControls.secondaryPilotThrusterCount} secondary-body thruster${loadedControls.secondaryPilotThrusterCount === 1 ? '' : 's'}, whose joint-coupled effect is not included.`
+              : '';
+            messages.push(`Control readiness covers primary-body local authority only for articulated craft.${routed}`);
+            if (level !== 'bad') level = 'warn';
+          } else if (minimumControl < 0.12) {
+            messages.push(`Loaded primary-body control authority falls to ${Math.round(minimumControl * 100)}% on the weakest axis.`);
+            if (level !== 'bad') level = 'warn';
+          }
+        }
         if ((contract.kind === 'gate-course' || contract.kind === 'courier') && cruiseRatio < 0.75 && staticRatio < 0.9) { messages.push(`Loaded cruise lift is ${cruiseRatio.toFixed(2)}× weight.`); if (level !== 'bad') level = 'warn'; }
         if (contract.minFuelFraction) {
           const usableEndurance = analysis.enduranceSeconds * (1 - contract.minFuelFraction);
