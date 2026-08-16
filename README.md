@@ -61,7 +61,9 @@ Nie używaj wyniku testów jako substytutu ręcznej oceny produktu.
 
 ## Najbliższy kierunek
 
-1. zakończyć recovery dokumentacji i repozytorium;
-2. wykonać krytyczny audyt kodu oraz długu technicznego;
-3. sklasyfikować każdą ważną funkcję jako `PROVEN`, `PARTIAL`, `ROUGH`, `STUB/CLAIM` albo `ABSENT`;
-4. dopiero wtedy wybrać najmniejszy sensowny zestaw napraw prowadzący do rzeczywiście przyjemnego loopu `build -> test -> understand -> rebuild`.
+Recovery dokumentacji i aktywnego process/generated clutter jest zakończone na `recovery/playable-truth`. Następny etap to **krytyczny audyt kodu i długu technicznego**, bez rozpoczynania szerokiej naprawy produktu.
+
+1. sklasyfikować każdą ważną funkcję jako `PROVEN`, `PARTIAL`, `ROUGH`, `STUB/CLAIM` albo `ABSENT`;
+2. wykryć miejsca, w których testy/dokumentacja obiecują więcej niż realny kod;
+3. wskazać dług techniczny i sprzężenia utrudniające dalszy rozwój;
+4. dopiero potem wybrać najmniejszy sensowny zestaw napraw prowadzący do rzeczywiście przyjemnego loopu `build -> test -> understand -> rebuild`.

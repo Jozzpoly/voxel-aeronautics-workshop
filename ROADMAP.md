@@ -4,7 +4,7 @@ This roadmap starts from the recovered reality of 2026-08-16. Historical Gate/M4
 
 ## P0 — Repository truth and recovery
 
-Current.
+Complete on the recovery lane as of 2026-08-16.
 
 - keep one clearly identified recovery lane;
 - make current documentation short and internally consistent;
@@ -17,7 +17,7 @@ Exit condition: a new agent can identify the current source, current uncertainty
 
 ## P1 — Code reality and technical-debt audit
 
-Next.
+Current next phase.
 
 Audit the actual source rather than historical claims. For each major subsystem classify the state as:
 

@@ -67,11 +67,12 @@ These are architecture constraints, not claims that every surrounding feature is
 
 ## Current priority
 
-1. Make documentation and repository authority unambiguous.
-2. Perform a code-reality and technical-debt audit.
-3. Compare claimed capability with actual implementation and manual behavior.
-4. Classify major surfaces as `PROVEN`, `PARTIAL`, `ROUGH`, `STUB/CLAIM` or `ABSENT`.
-5. Only after that choose product repairs and selective salvage.
+Repository/documentation convergence is complete on the recovery lane. The next phase is the code-reality and technical-debt audit.
+
+1. Compare claimed capability with actual implementation and manual behavior.
+2. Classify major surfaces as `PROVEN`, `PARTIAL`, `ROUGH`, `STUB/CLAIM` or `ABSENT`.
+3. Identify architectural debt, misleading synthetic coverage, rough/stub implementations and missing product paths.
+4. Only after that choose product repairs and selective salvage.
 
 There is **no active M4/M5/M6/Gate-D feature roadmap during recovery**. Those names belong to history unless consciously reintroduced after the audit.
 
