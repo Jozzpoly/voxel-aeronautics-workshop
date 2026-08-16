@@ -25,31 +25,29 @@ Owner test on 2026-08-16 proved only the following about the exact `80c0ae4` run
 - physics/runtime starts;
 - telemetry changes during the test.
 
-Owner explicitly **did not accept the current quality**. There are many visible and behavioral problems, especially UI/readability/polish, and recovery is intentionally not attempting to fix them all at once.
-
-Not currently proven as good product behavior:
-
-- the complete manual build experience;
-- clarity and ergonomics of controls;
-- mechanical authoring quality;
-- usefulness/readability of telemetry and diagnostics;
-- save/load/rebuild flow as an enjoyable user loop;
-- visual quality or scene readability;
-- whether all roadmap-described features are meaningfully usable rather than merely present in code.
-
-Do not convert code presence or a passing test into a product-quality claim.
+Owner explicitly **did not accept the current quality**. There are many visible and behavioral problems, especially UI/readability/polish. Do not convert code presence or a passing test into a product-quality claim.
 
 ## Machine evidence
 
-The `80c0ae4` foundation passed broad local recovery validation across core domain/compiler/runtime, Cannon physics, articulated and multi-space assembly, flight lifecycle, damage/debris, missions, visual asset loading/Studio integration and VectorThruster 24-orientation probing.
+The `80c0ae4` product source passed broad recovery validation across core domain/compiler/runtime, Cannon physics, articulated and multi-space assembly, flight lifecycle, damage/debris, missions, visual asset loading/Studio integration and VectorThruster orientation probing.
 
-Known recovery caveats:
+P0 release/repository cleanup preserved deterministic source parity and LF/CRLF reproducibility.
 
-- validation-runner timeout/process-family tests are environment-sensitive in the current Linux/container: the process-family case hung during H0 and a later `resume-after-timeout` run was timing-flaky; classify this as `HARNESS/ENVIRONMENT` until target-environment evidence says otherwise;
-- the historical tracked-manifest ordering problem was removed during recovery: `SOURCE_MANIFEST.json` is now generated in `dist/` and embedded in release ZIPs rather than tracked as authored source;
-- browser automation in the recovery environment could not provide product proof because localhost and later WebGL/EGL were blocked by environment policy.
+Known tooling caveat: validation-runner timeout/process-family tests are nondeterministic across current Windows/Ubuntu CI even after release reproducibility itself passes. Keep this classified as `HARNESS/ENVIRONMENT` unless evidence ties it to product execution.
 
-These caveats must remain separate from actual product failures.
+## P1 code-reality result
+
+P1 is complete. Detailed current evidence: [`docs/CODE_REALITY_AUDIT.md`](docs/CODE_REALITY_AUDIT.md).
+
+Key conclusions:
+
+- Blueprint/CraftModel/compiler and multi-body Cannon runtime are substantial technical foundations.
+- The workshop editor, mechanisms, UI information architecture and test/rebuild feedback loop are much less mature than those foundations.
+- Engineering analysis contains a reproduced multi-space topology bug and does not model supported secondary-body thruster routing consistently with runtime.
+- Sandbox return clears the very failure evidence needed for the project's experiment -> understand -> rebuild loop.
+- Runtime motor/servo, copy-subgraph and other domain capabilities exist without corresponding player workflows.
+- Device tuning/direct binding is absent beyond global input settings and placement-time ControlSurface axis/sign; `portId`, device runtime, signal graph, sensors/PID and `ControlRuntime` are absent from current `src/**`.
+- Visual/Blockbench tooling is technically extensive but should not lead recovery while core product truth/feedback remains weak.
 
 ## Architectural boundaries currently worth preserving
 
@@ -60,21 +58,19 @@ These caveats must remain separate from actual product failures.
 - `assemblySpaceId`, `blockId`, `mechanicalLinkId` and runtime `bodyId` are different identity domains.
 - future persistent device endpoints should use stable authoring identity such as `{blockId, portId}`, never runtime `bodyId`.
 - Visual Asset Pack / Blockbench data is renderer-facing and must not become gameplay authority.
-- UI workspace/camera preferences are not craft/Blueprint data.
+- UI workspace/camera preferences and transient flight damage are not craft/Blueprint data.
 - manual control remains first-class; future programming should be layered rather than mandatory.
-
-These are architecture constraints, not claims that every surrounding feature is mature.
 
 ## Current priority
 
-Repository/documentation convergence is complete on the recovery lane. The next phase is the code-reality and technical-debt audit.
+P2 is active. Work in this order:
 
-1. Compare claimed capability with actual implementation and manual behavior.
-2. Classify major surfaces as `PROVEN`, `PARTIAL`, `ROUGH`, `STUB/CLAIM` or `ABSENT`.
-3. Identify architectural debt, misleading synthetic coverage, rough/stub implementations and missing product paths.
-4. Only after that choose product repairs and selective salvage.
+1. **P2-A Engineering Analysis Truth** — repair Assembly-Space topology analysis and multi-body control-authority truth with executable tests.
+2. **P2-B Test -> Workshop Feedback Continuity** — preserve a structured last-test result across sandbox/contract return without mutating Blueprint damage state.
+3. **P2-C Workshop Editing Fundamentals** — selected-part/edit flow and selective exposure of existing useful domain capabilities.
+4. **P2-D Information architecture / visual polish** — simplify UI around the trustworthy loop only after the data it presents is trustworthy.
 
-There is **no active M4/M5/M6/Gate-D feature roadmap during recovery**. Those names belong to history unless consciously reintroduced after the audit.
+There is **no active M4/M5/M6/Gate-D feature roadmap during recovery**. Those names belong to history unless consciously reintroduced after current product needs justify them.
 
 ## Documentation authority
 
@@ -88,4 +84,6 @@ Read current docs in this order:
 6. `AGENTS.md`
 7. `docs/README.md`
 
-Anything under `docs/history/` is non-authoritative historical evidence. It can explain how the project got here, but it cannot override live source, current manual evidence or the files above.
+`docs/CODE_REALITY_AUDIT.md` is current evidence supporting the summary above; it does not override `ROADMAP.md` or `PROJECT_VISION.md`.
+
+Anything under `docs/history/` is non-authoritative historical evidence.

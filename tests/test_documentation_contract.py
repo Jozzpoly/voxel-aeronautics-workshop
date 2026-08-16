@@ -15,6 +15,10 @@ CURRENT_DOCS = {
     'docs/research/programming_model.md',
 }
 
+CURRENT_EVIDENCE = {
+    'docs/CODE_REALITY_AUDIT.md',
+}
+
 CURRENT_CONTRACTS = {
     'docs/blockbench_import_studio.md',
     'docs/visual_asset_pack_v1.md',
@@ -54,7 +58,8 @@ HISTORY_ANCHORS = {
     'docs/history/repository/REPOSITORY_STRUCTURE_AUDIT.md',
 }
 
-missing = sorted(path for path in (*CURRENT_DOCS, *CURRENT_CONTRACTS, *HISTORY_ANCHORS) if not (ROOT / path).is_file())
+classified_paths = (*CURRENT_DOCS, *CURRENT_EVIDENCE, *CURRENT_CONTRACTS, *HISTORY_ANCHORS)
+missing = sorted(path for path in classified_paths if not (ROOT / path).is_file())
 assert not missing, f'Missing current/history-classified docs: {missing}'
 
 legacy_present = sorted(path for path in LEGACY_ACTIVE_PATHS if (ROOT / path).exists())
@@ -65,6 +70,7 @@ assert not (ROOT / 'docs' / 'recovery').exists(), 'Undated legacy recovery docs 
 assert not (ROOT / 'docs' / 'repository').exists(), 'Historical repository reports must be archived under docs/history/repository.'
 
 texts = {path: (ROOT / path).read_text(encoding='utf-8') for path in CURRENT_DOCS}
+evidence_texts = {path: (ROOT / path).read_text(encoding='utf-8') for path in CURRENT_EVIDENCE}
 
 # Current docs must not reactivate stale branches or milestone plans.
 STALE_CURRENT_MARKERS = (
@@ -87,6 +93,7 @@ agents = texts['AGENTS.md']
 docs_index = texts['docs/README.md']
 programming = texts['docs/research/programming_model.md']
 history = (ROOT / 'docs/history/README.md').read_text(encoding='utf-8')
+audit = evidence_texts['docs/CODE_REALITY_AUDIT.md']
 
 for required in ('AI_PROJECT_MEMORY.md', 'PROJECT_VISION.md', 'ARCHITECTURE.md', 'ROADMAP.md', 'AGENTS.md', 'docs/README.md'):
     assert required in readme
@@ -104,9 +111,20 @@ for token in ('Blueprint v12', 'CompiledCraft V5', 'RuntimeAssemblyPlan V3', 'as
 
 for token in ('PROVEN', 'PARTIAL', 'ROUGH', 'STUB/CLAIM', 'ABSENT'):
     assert token in roadmap, f'Roadmap misses audit classification: {token}'
+    assert token in audit, f'Code reality audit misses classification: {token}'
+
+assert '## P1 — Code reality and technical-debt audit' in roadmap
+assert '**Complete**' in roadmap[roadmap.index('## P1 — Code reality and technical-debt audit'):]
+assert '## P2 — Recover the smallest truthful VAW loop' in roadmap
+assert '**Current phase.**' in roadmap[roadmap.index('## P2 — Recover the smallest truthful VAW loop'):]
+assert 'P2-A — Engineering Analysis Truth' in roadmap
+assert 'P2-B — Test → Workshop Feedback Continuity' in roadmap
 
 assert 'docs/history/' in agents
 assert 'passing test does not prove' in agents.lower()
+assert 'Current evidence' in docs_index
+assert 'CODE_REALITY_AUDIT.md' in docs_index
+assert 'evidence, not independent roadmap authority' in docs_index
 assert 'Everything under' in docs_index and 'history/' in docs_index
 assert 'never current authority' in docs_index
 assert 'non-authoritative history' in history
@@ -114,16 +132,31 @@ assert 'not an implementation claim' in programming
 assert '{blockId, portId}' in programming
 assert 'ControlRuntime' in programming
 
-# Current memory must distinguish owner evidence from machine evidence.
-for heading in ('Manual product truth', 'Machine evidence', 'Current priority', 'Documentation authority'):
+# Current memory must distinguish owner evidence, machine evidence and audit outcome.
+for heading in ('Manual product truth', 'Machine evidence', 'P1 code-reality result', 'Current priority', 'Documentation authority'):
     assert heading in memory, f'AI_PROJECT_MEMORY misses current-truth section: {heading}'
 assert 'did not accept the current quality' in memory
+assert 'P1 is complete' in memory
+assert 'P2 is active' in memory
+assert 'CODE_REALITY_AUDIT.md' in memory
 assert 'no active M4/M5/M6/Gate-D feature roadmap' in memory
+
+# The current evidence must record the reproduced truth gaps that drive P2.
+for phrase in (
+    'engineering `weakLinks = 4`',
+    'compiled `rigidNeighborBlockIds = 3`',
+    'Failure -> diagnosis -> rebuild',
+    'Device tuning / direct device binding',
+    'Signal graph / ControlRuntime',
+):
+    assert phrase in audit, f'Code reality audit misses current evidence: {phrase}'
 
 print({
     'currentDocs': len(CURRENT_DOCS),
+    'currentEvidence': len(CURRENT_EVIDENCE),
     'currentContracts': len(CURRENT_CONTRACTS),
     'legacyActivePaths': 0,
     'historyAnchors': len(HISTORY_ANCHORS),
     'authorityBoundary': 'current-vs-history-ok',
+    'p1Audit': 'classified-and-linked',
 })

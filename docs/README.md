@@ -1,10 +1,10 @@
 # VAW Documentation Index
 
-This index separates **current truth**, **technical contracts/reference** and **history**.
+This index separates **current truth**, **current evidence**, **technical contracts/reference** and **history**.
 
 ## Current truth
 
-Only these files describe the active project state and direction:
+Only these files define active project state/direction:
 
 - [`../README.md`](../README.md)
 - [`../AI_PROJECT_MEMORY.md`](../AI_PROJECT_MEMORY.md)
@@ -13,7 +13,13 @@ Only these files describe the active project state and direction:
 - [`../ROADMAP.md`](../ROADMAP.md)
 - [`../AGENTS.md`](../AGENTS.md)
 
-If one of these conflicts with live source or new owner/manual evidence, the document is wrong and must be corrected.
+If one conflicts with live source or new owner/manual evidence, the document is wrong and must be corrected.
+
+## Current evidence
+
+- [`CODE_REALITY_AUDIT.md`](CODE_REALITY_AUDIT.md) — P1 source/product audit supporting the current P2 work order. It is evidence, not independent roadmap authority.
+
+When a current evidence document is superseded, move it to `history/` rather than leaving multiple active audits.
 
 ## Technical contracts and reference
 
@@ -31,17 +37,7 @@ Tool-local documents under `tools/**/docs/` are local implementation notes/refer
 
 Everything under [`history/`](history/) is historical evidence.
 
-It contains old:
-
-- milestone/phase reports;
-- readiness reviews;
-- validation snapshots;
-- roadmaps and planning rebases;
-- agent handoffs;
-- recovery packages/reports;
-- workflow and push instructions;
-- repository-reorganization reports;
-- changelog material.
+It contains old milestone/phase reports, readiness reviews, validation snapshots, roadmaps, agent handoffs, recovery packages/reports, workflow instructions, repository-reorganization reports and changelog material.
 
 Historical files are preserved because they contain useful design reasoning and evidence. Their words `current`, `stable`, `ready`, `next`, `complete` or branch names apply only to the old checkpoint in which they were written.
 
@@ -49,11 +45,10 @@ Historical files are preserved because they contain useful design reasoning and 
 
 ## Practical reading order
 
-For normal project work:
-
 1. root current docs;
-2. exact source involved in the task;
-3. relevant contract/ADR;
-4. history only when the reason behind an old decision is needed.
+2. current evidence when the task depends on its findings;
+3. exact source involved in the task;
+4. relevant contract/ADR;
+5. history only when the reason behind an old decision is needed.
 
 Do not begin by recursively reading the history archive.

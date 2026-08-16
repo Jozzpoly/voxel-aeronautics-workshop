@@ -4,52 +4,34 @@ This roadmap starts from the recovered reality of 2026-08-16. Historical Gate/M4
 
 ## P0 — Repository truth and recovery
 
-Complete on the recovery lane as of 2026-08-16.
+**Complete** on the recovery lane.
 
-- keep one clearly identified recovery lane;
-- make current documentation short and internally consistent;
-- remove stale active branch/milestone instructions;
-- move handoffs, old roadmaps, readiness reviews and old workflow instructions into history;
-- ensure tests enforce the current/history boundary instead of old milestone vocabulary;
-- do not modify gameplay merely to make recovery documentation look complete.
-
-Exit condition: a new agent can identify the current source, current uncertainty and next task without reading historical material.
+- current documentation is small and internally consistent;
+- old handoffs/roadmaps/workflows are history, not authority;
+- stale process/generated release state was removed;
+- `main` remains untouched until recovery promotion is justified.
 
 ## P1 — Code reality and technical-debt audit
 
-Current next phase.
+**Complete** on the recovery lane. Detailed evidence: [`docs/CODE_REALITY_AUDIT.md`](docs/CODE_REALITY_AUDIT.md).
 
-Audit the actual source rather than historical claims. For each major subsystem classify the state as:
+The audit classified major surfaces using `PROVEN`, `PARTIAL`, `ROUGH`, `STUB/CLAIM` and `ABSENT`, separating domain capability from runtime integration and actual product workflow.
 
-- `PROVEN` — demonstrated by code evidence and meaningful runtime/manual behavior;
-- `PARTIAL` — real implementation exists but important capability is missing;
-- `ROUGH` — works in some form but quality/design is not acceptable;
-- `STUB/CLAIM` — documentation/tests imply more than the implementation provides;
-- `ABSENT` — desired capability does not exist.
+The central conclusion is that VAW has a strong technical foundation but repeatedly stops before turning that capability into a coherent engineering loop. Confirmed high-value debt includes:
 
-The audit should cover at least:
+- incorrect multi-space weak-link analysis;
+- control-authority prediction that does not match supported multi-body thruster routing;
+- sandbox return discarding failure evidence needed for rebuild/learning;
+- mechanical/runtime capabilities without corresponding authoring/control workflows;
+- a still-heavy behavioral `src/game.js` composition root;
+- duplicated prediction/runtime physics calculations;
+- test coverage that mixes strong executable tests with source-shape/token guards.
 
-- build/editing flow;
-- launch/test lifecycle;
-- manual controls;
-- physics and failure behavior;
-- mechanical links/hinges;
-- camera and UI/workspace architecture;
-- telemetry/diagnostics;
-- persistence/save/load;
-- visual asset pipeline and renderer;
-- mission/terrain systems;
-- release/build tooling;
-- test architecture and generated provenance;
-- coupling, oversized modules, duplication and dead/legacy code.
+## P2 — Recover the smallest truthful VAW loop
 
-Synthetic tests are supporting evidence, not the verdict.
+**Current phase.**
 
-## P2 — Define the smallest real VAW loop worth polishing
-
-Only after P1.
-
-Choose the minimum product surface that should feel coherent:
+Target loop:
 
 ```text
 build
@@ -62,11 +44,32 @@ build
 -> rebuild
 ```
 
-Fix the highest-leverage blockers to that loop before broad feature expansion.
+Repair order:
+
+### P2-A — Engineering Analysis Truth
+
+1. make topology/weak-link analysis Assembly-Space-correct;
+2. align multi-body control-authority prediction with actual runtime thruster routing, or explicitly narrow/label the metric if exact prediction is not defensible yet;
+3. add executable multi-space/multi-body analysis tests;
+4. reduce duplicated prediction/runtime math only where the repair exposes a clean pure boundary.
+
+Exit condition: engineering readouts do not knowingly contradict compiled topology or runtime control semantics for supported craft.
+
+### P2-B — Test → Workshop Feedback Continuity
+
+Preserve one bounded structured last-test result across flight cleanup, including sandbox. It should retain the first meaningful failure and enough block/load/impact/fuel-loss evidence to support the next rebuild without writing transient damage into Blueprint data.
+
+### P2-C — Workshop Editing Fundamentals
+
+Introduce a real selected-part/edit flow and expose existing high-value domain operations selectively instead of adding more future-facing domain APIs first.
+
+### P2-D — Information architecture and visual polish
+
+Only after truth and feedback continuity, simplify panels/camera/telemetry around the real task. Blockbench/visual work follows product needs rather than driving them.
 
 ## P3 — Selective salvage
 
-Later branches (`VAW_GRoK`, mobile lanes and other post-mesh work) are donor pools only.
+Later branches (`VAW_GRoK`, mobile lanes and other post-mesh work) remain donor pools only.
 
 Salvage one bounded capability at a time only when:
 
@@ -75,7 +78,7 @@ Salvage one bounded capability at a time only when:
 3. it preserves current architecture boundaries;
 4. it improves the real product after manual validation.
 
-Never merge the donor branches wholesale.
+Never merge donor branches wholesale.
 
 ## Long-term direction
 
