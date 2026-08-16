@@ -1,50 +1,67 @@
 # Voxel Aeronautics Workshop
 
-**Workbench Foundation - Gate C Stable Base**
+**VAW jest eksperymentalnym warsztatem do budowania maszyn blok po bloku, uruchamiania ich w fizyce i rozumienia, dlaczego działają albo się rozpadają.**
 
-Desktop voxel engineering sandbox where the player builds, tests and pilots their own machine. Gate C is the stable gameplay base: Blueprint v12 Assembly Spaces, deterministic multi-body compilation, articulated real-Cannon flight, strict runtime ownership and offline-capable releases.
+## Stan projektu — 2026-08-16
 
-The current milestone adds the first Workbench UI foundation: dockable/floating panels, side dock stacking, separate build and flight workspace layouts, a full-span bottom parts hotbar with a compact option, a dockable flight mission panel, and refreshed documentation authority. Gameplay, craft saves, physics/runtime contracts and current procedural visuals remain compatible.
+Repozytorium jest w trakcie świadomego recovery. To **nie jest deklaracja stabilnego wydania ani ukończonego gameplay loopu**.
 
-M4G keeps visual iteration fast without creating a new pack for every polish pass. Studio installs one selected block visual into the renderer-only working pack at `assets/visual_packs/local_working_visuals/`, can request in-game visual reload, and imported glTF instances remain child visuals with cloned renderer resources, `visualRoot` subtree mounting, material policy, transform controls and procedural fallback. The stable hit proxy is render-invisible by default and can be shown only through visual debug. Blueprint, CraftModel, `foundation.catalog`, CraftCompiler, physics and control semantics remain authoritative.
+Aktywny lane recovery to `recovery/playable-truth`. Został rozpoczęty z pre-mesh snapshotu `80c0ae4aced1dd695af217cdeadea9025c6305c8`. `main` pozostaje starszą linią i nie powinien być traktowany jako bieżąca prawda produktu, dopóki recovery nie zostanie zakończone i świadomie promowane.
 
-## Run
+### Co zostało potwierdzone ręcznie
+
+Właściciel uruchomił exact single-file build z `80c0ae4` 2026-08-16. Potwierdzone jest tylko to, że:
+
+- aplikacja startuje i renderuje Workbench;
+- widoczny jest istniejący craft;
+- można wejść w `Launch Sandbox Test`;
+- scena testowa/fizyczna startuje;
+- telemetry aktualizuje stan podczas testu.
+
+To **nie jest akceptacja jakości produktu**. Aktualny UI, czytelność, zachowanie i ogólny poziom dopracowania zostały ocenione jako wyraźnie niewystarczające i wymagające późniejszego, osobnego audytu. Nie zakładamy, że funkcja opisana w starym roadmapie działa dobrze tylko dlatego, że istnieje kod albo test.
+
+### Co zostało potwierdzone maszynowo
+
+Na bazowym `80c0ae4` szeroka walidacja foundation/runtime przeszła dla m.in. CraftModel/CraftCompiler, RuntimeAssemblyPlan, Cannon, articulated/multi-space runtime, flight lifecycle, missions, damage/debris, Visual Asset Pack, Blockbench Studio oraz VectorThruster probe.
+
+Znane wyjątki z recovery:
+
+- jeden test process-family validation runnera wiesza się w obecnym Linux/container environment — klasyfikacja `HARNESS/ENVIRONMENT`;
+- tracked `SOURCE_MANIFEST.json` ma historyczny problem generated-provenance ordering; nie jest to dowód regresji runtime;
+- automatyczny browser proof nie był możliwy w środowisku recovery z powodu blokady localhost/WebGL.
+
+Testy są dowodem technicznym, **nie dowodem jakości gry**.
+
+## Aktualna dokumentacja
+
+Bieżącą prawdę projektu tworzą tylko:
+
+1. [`AI_PROJECT_MEMORY.md`](AI_PROJECT_MEMORY.md) — krótki snapshot aktualnego stanu i niepewności;
+2. [`PROJECT_VISION.md`](PROJECT_VISION.md) — trwała wizja i filary projektu;
+3. [`ARCHITECTURE.md`](ARCHITECTURE.md) — aktualne granice architektury zaobserwowane w kodzie;
+4. [`ROADMAP.md`](ROADMAP.md) — obecna kolejność pracy;
+5. [`AGENTS.md`](AGENTS.md) — zasady pracy agentów z repozytorium;
+6. [`docs/README.md`](docs/README.md) — indeks kontraktów, researchu i historii.
+
+Wszystko pod `docs/history/` jest **wyłącznie historią**. Stare milestone'y, Gate'y, readiness review, handoffy i workflowy nie są aktywnym planem, nawet jeśli kiedyś były opisane jako `current`, `stable`, `ready` albo `complete`.
+
+## Uruchomienie lokalne
 
 ```bash
 npm run serve
 ```
 
-Open the printed local address. Runtime libraries and generated UI CSS are vendored; the normal and single-file builds do not require CDN scripts.
-
-## Validate and build
+Główna walidacja techniczna:
 
 ```bash
-npm run check:css
-npm run test
-npm run build
-npm run verify-release
+npm test
 ```
 
-Studio can be tested and served from the same repository:
+Nie używaj wyniku testów jako substytutu ręcznej oceny produktu.
 
-```bash
-npm run studio:test
-npm run studio:serve
-```
+## Najbliższy kierunek
 
-`npm run studio:serve` starts the integrated VAW development server and opens Studio at `/tools/blockbench_import_studio/index.html`, with the local install endpoint enabled. Do not use the standalone Studio static server for daily install/update work unless the integrated VAW server is also running.
-
-## Current contracts
-
-- Blueprint v12: `assemblySpaces[] + blocks[] + mechanicalLinks[]`.
-- CompiledCraft V5: deterministic structural, rigid, mechanical and ownership graphs.
-- RuntimeAssemblyPlan V3: backend-neutral body/space/part/collider/constraint indexes.
-- Workbench UI v4: user preferences only, with build/flight layout separation, side dock stacking, compact/full dock span modes and dockable mission information.
-- `assemblySpaceId`, `blockId`, `mechanicalLinkId` and `bodyId` are separate identity domains.
-- Root-only craft remains the zero-configuration default.
-- `foundation.catalog` owns gameplay block data; procedural Three visuals remain the fallback renderer.
-- Visual Asset Pack V1 is renderer-only. Missing, invalid or unloadable packs must leave procedural fallback visuals active; imported glTF content is never allowed to replace the stable VAW root or hit proxy.
-- Daily art iteration uses `tools/blockbench_import_studio/` -> `Install / Update Block Visual` -> automatic same-origin reload when possible, with in-game `RELOAD VISUALS` / `Shift+V` as fallback. This updates `local_working_visuals` in place instead of creating a new pack per edit.
-- Gate D - Device & Port Schema - is queued behind Workbench UI and documentation preparation.
-
-Agents should start with [`README_FOR_AGENTS.md`](README_FOR_AGENTS.md), then read [`docs/README.md`](docs/README.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), [`docs/blockbench_import_studio.md`](docs/blockbench_import_studio.md), [`docs/visual_asset_pack_v1.md`](docs/visual_asset_pack_v1.md), [`docs/adr/0042-workbench-ui-layout.md`](docs/adr/0042-workbench-ui-layout.md) and [`docs/adr/0043-visual-asset-boundary.md`](docs/adr/0043-visual-asset-boundary.md) before foundation changes.
+1. zakończyć recovery dokumentacji i repozytorium;
+2. wykonać krytyczny audyt kodu oraz długu technicznego;
+3. sklasyfikować każdą ważną funkcję jako `PROVEN`, `PARTIAL`, `ROUGH`, `STUB/CLAIM` albo `ABSENT`;
+4. dopiero wtedy wybrać najmniejszy sensowny zestaw napraw prowadzący do rzeczywiście przyjemnego loopu `build -> test -> understand -> rebuild`.

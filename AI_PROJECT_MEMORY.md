@@ -1,42 +1,90 @@
-# AI Project Memory - Voxel Aeronautics Workshop
+# AI Project Memory — Voxel Aeronautics Workshop
 
-Current source of truth: **Workbench Foundation on stable Gate C**.
+Last recovery grounding: **2026-08-16**.
 
-Current detailed roadmap rebase: `docs/ROADMAP_REBASE_2026-07-01.md`. Current readiness evidence: `docs/FEATURE_EXPANSION_READINESS_AUDIT_2026-07-01.md`. `ROADMAP_NEXT.md` is the short active route map; the rebase is the detailed planning authority for M4L Visual Truth, M5 Voxel Fit, M6 Mechanical V2, M7 Device Tuning and M8 Signal/Control Runtime.
+This file is intentionally short. It records current truth, not project history.
 
-- `APP_VERSION=0.8.2-foundation.workbench-foundation`
-- `RELEASE_ID=foundation-workbench-foundation`
-- Blueprint v12, CompiledCraft V5, RuntimeAssemblyPlan V3.
-- Current checkpoint branch for foundation hardening: `current_work`.
+## Repository state
 
-`CraftModel` is the sole workshop source of truth. `CraftCompiler` is the only verified path to compiled runtime data. Structural, mechanical and future signal graphs remain separate. AssemblyBuilder is the runtime allocation boundary; Physics Port is strict and backend-neutral.
+- Repository: `Jozzpoly/voxel-aeronautics-workshop`.
+- Active recovery lane: `recovery/playable-truth`.
+- Recovery lineage started from `80c0ae4aced1dd695af217cdeadea9025c6305c8` (`current_work` pre-agent-mesh snapshot).
+- `main` is not the current recovery authority until an explicit promotion decision is made.
+- Later branches, including `VAW_GRoK` and mobile branches, are **salvage sources only**. Never merge them wholesale or treat their documentation as current truth.
+- Historical agent-mesh material is not an active operating model for VAW.
 
-Assembly Spaces have durable IDs, parent-local canonical poses and explicit block/link/body/runtime ownership. Root-only craft remains backward compatible. `bodyId` is not persistent device identity; Gate D ports must use `{blockId, portId}`.
+Always resolve the live remote branch head before changing the repository. Do not hardcode this document's commit SHA as the next base.
 
-Workbench UI v5/v9 preference state now covers docked/floating panels plus Authoring UX camera controls. It supports docked/floating panels, side dock stacking, compact/full dock span modes, build/flight layout separation, the parts hotbar, the dockable flight mission panel, UI-only camera mode/follow strength and manual camera target offset. UI workspace/camera data must stay out of Blueprint saves.
+## Manual product truth
 
-`foundation.catalog` owns gameplay data. `game.module-visual-factory` and `game.scene-environment` remain procedural fallback visuals. Blockbench/imported content must go through `game.visual-asset-registry`, `game.visual-asset-loader` and external Visual Asset Pack V1 manifests listed by the renderer-only pack index.
+Owner test on 2026-08-16 proved only the following about the exact `80c0ae4` runtime:
 
-Blockbench Import Studio is integrated as a repository tool at `tools/blockbench_import_studio/`. It is an authoring/export surface, not a gameplay authority and not game runtime code.
+- Workbench loads and renders;
+- an existing craft is visible;
+- `Launch Sandbox Test` enters the test/flight scene;
+- physics/runtime starts;
+- telemetry changes during the test.
 
-M4E visual hardening is local: `game.visual-asset-loader` deep-clones imported renderer resources per instance, evicts rejected glTF loads for retry, mounts `bindings.nodes.visualRoot` as the imported subtree when present, applies Visual Asset Pack axis/unit metadata only to the imported child transform, and keeps procedural fallback on every failure. `assets/visual_packs/real_blockbench_thruster_pack/` is the current real glTF source-tree smoke fixture.
+Owner explicitly **did not accept the current quality**. There are many visible and behavioral problems, especially UI/readability/polish, and recovery is intentionally not attempting to fix them all at once.
 
-M4F fast iteration uses one default working pack, `assets/visual_packs/local_working_visuals/`. Studio's `Install / Update Block Visual` updates only the chosen block folder in that pack through `tools/serve.py`; the game reloads renderer-only visuals via `RELOAD VISUALS` or `Shift+V`. Do not create a new pack for every art polish pass.
+Not currently proven as good product behavior:
 
-M4G visual polish keeps the VAW hit proxy raycastable but render-invisible by default, with `VISUAL DEBUG` only for diagnostics. Studio can request a same-origin game reload after install; the game-side dev controls must not keep Node smoke tests alive through a long-lived `BroadcastChannel`. Use `materialPolicy.alpha: "auto"` plus `materialOverrides` for mixed assets; avoid global `blend` on whole blocks because it can make opaque nozzles/cases sort as transparent under camera angles. Overrides match glTF material names; duplicate names should warn and apply to all matches.
+- the complete manual build experience;
+- clarity and ergonomics of controls;
+- mechanical authoring quality;
+- usefulness/readability of telemetry and diagnostics;
+- save/load/rebuild flow as an enjoyable user loop;
+- visual quality or scene readability;
+- whether all roadmap-described features are meaningfully usable rather than merely present in code.
 
-Known visual import limitation: the current reimported thruster/checker test asset lost its original in-game look after being extracted and reimported. Do not spend M4C/M4E effort repairing that test asset. Treat it as a fixture proving loader/fallback boundaries only; a newly designed Studio asset must be checked against the game for visual fidelity.
+Do not convert code presence or a passing test into a product-quality claim.
 
-The release is offline-capable: Three r128, Cannon 0.6.2 and generated CSS are vendored. Fixed-step overload is measurable. Save recovery preserves the last valid backup. Hostile unknown import fields are projected away before migration.
+## Machine evidence
 
-Do not reintroduce silent numeric fallback, CDN runtime dependencies, whole-craft scans in per-body hot paths, private aggregate globals such as `window.VAW_RUNTIME`, new ad-hoc `window.VAW_*` debug globals, empty future frameworks, persistent `bodyId` references or asset data inside craft saves.
+The `80c0ae4` foundation passed broad local recovery validation across core domain/compiler/runtime, Cannon physics, articulated and multi-space assembly, flight lifecycle, damage/debris, missions, visual asset loading/Studio integration and VectorThruster 24-orientation probing.
 
-Current recovery delta: Authoring UX Milestone 1 is present on `current_work`. It fixes flight runtime mass display after part loss, adds a launcher Flight Focus button using the existing focus path, lowers the bottom launcher below visible panels, adds UI-only camera modes (`static`, `follow-position`, `follow-body`), enables below-craft orbit and Shift+middle camera pan, and keeps `game.js` under the 2500-line architecture guard by extracting `game.camera-controller`.
+Known recovery caveats:
 
-Current M2A delta: Placement targeting now uses `game.build-targeting` for tested normal math. Voxel placement converts `hitObjectLocalNormal -> sceneNormal -> activeSpaceNormal -> gridNormal -> placementCell` before returning the old-compatible target object. Right-click removal and hinge endpoint selection still receive `target.root` and `target.block`; craft mutation and Blueprint schema were not changed. Final audit polish hardened `targetOk()` against accidental result-shape poisoning and added `tests/test_build_targeting.js` to `tests/run_all.py`; broader validation-runner synthetic timeout tests remain environment-sensitive.
+- one validation-runner process-family test hangs in the current Linux/container environment; sibling timeout/resume/side-effect tests pass;
+- tracked `SOURCE_MANIFEST.json` has a generated ordering/provenance mismatch; source hashes were not the problem and the existing builder normalizes it;
+- browser automation in the recovery environment could not provide product proof because localhost and later WebGL/EGL were blocked by environment policy.
 
-Current M2B/M2C delta: Placement validation now returns deterministic UI feedback instead of a bare boolean. Ghost adjacency and click-status messages distinguish no-hit, no-face, invalid-normal, wrong-assembly-space, occupied, block-limit, invalid-block, orphan-block-assembly-space, empty-plan and future symmetry-collision. Orientation readouts now use block-specific semantics for Core forward/up, Thruster thrust direction, Wing chord/lift normal, ControlSurface chord/lift normal plus mixer axis/sign, and VectorThruster thrust/gimbal normal. Telemetry now labels runtime mass as Active mass to avoid implying whole detached-craft mass.
+These caveats must remain separate from actual product failures.
 
-Current foundation hardening delta: M1 is published on `current_work`; M2A moved visual asset composition wiring behind `game.visual-asset-composition`; M2B adds a direct composition test for bootstrap, dev-control loader wiring, procedural factory exposure and Node BroadcastChannel safety; M2C moves power/HUD readouts behind `game.power-control-readouts` while keeping `src/game.js` as final composition entrypoint. M3A/M3B adds `npm run browser:smoke` as separate target-platform evidence with stage-aware JSON diagnostics; missing browser/CDP/localhost support is `ENVIRONMENT`, real UI/runtime failures are `PRODUCT`, and local Chrome currently reaches a PASS path through help-modal start, contract hit-testing, starter craft load, Flight Focus and launch. M3C keeps Visual Asset Pack V1 canonical in `docs/visual_asset_pack_v1.md`, retires root readiness evidence to history, guards new ad-hoc `window.VAW_*` globals, records checkpoint/CI policy in ADR 0044 and adds dry-run-first `.agent-validation/` pruning.
+## Architectural boundaries currently worth preserving
 
-Current roadmap rebase delta: broad feature expansion is not ready to start as one large Gate D push. The next safe lane is M4L Visual Truth: clean owner-approved Balloon visual bindings, establish Studio/game material parity, and add a 24-orientation VectorThruster visual-nozzle-vs-force proof before fixing rig axes. After that, Voxel Fit should remove hidden block gaps deliberately, then Mechanical V2 should redesign hinge/joint frames before schema growth, and only then should device tuning, direct binding and later deterministic signal/control runtime expand.
+- `CraftModel` is workshop authoring authority.
+- `CraftCompiler` is the path from authoring state to compiled runtime data.
+- Blueprint/CraftModel data stays serializable and engine-neutral.
+- structural, mechanical and future signal/control concerns remain separate.
+- `assemblySpaceId`, `blockId`, `mechanicalLinkId` and runtime `bodyId` are different identity domains.
+- future persistent device endpoints should use stable authoring identity such as `{blockId, portId}`, never runtime `bodyId`.
+- Visual Asset Pack / Blockbench data is renderer-facing and must not become gameplay authority.
+- UI workspace/camera preferences are not craft/Blueprint data.
+- manual control remains first-class; future programming should be layered rather than mandatory.
+
+These are architecture constraints, not claims that every surrounding feature is mature.
+
+## Current priority
+
+1. Make documentation and repository authority unambiguous.
+2. Perform a code-reality and technical-debt audit.
+3. Compare claimed capability with actual implementation and manual behavior.
+4. Classify major surfaces as `PROVEN`, `PARTIAL`, `ROUGH`, `STUB/CLAIM` or `ABSENT`.
+5. Only after that choose product repairs and selective salvage.
+
+There is **no active M4/M5/M6/Gate-D feature roadmap during recovery**. Those names belong to history unless consciously reintroduced after the audit.
+
+## Documentation authority
+
+Read current docs in this order:
+
+1. `README.md`
+2. `AI_PROJECT_MEMORY.md`
+3. `PROJECT_VISION.md`
+4. `ARCHITECTURE.md`
+5. `ROADMAP.md`
+6. `AGENTS.md`
+7. `docs/README.md`
+
+Anything under `docs/history/` is non-authoritative historical evidence. It can explain how the project got here, but it cannot override live source, current manual evidence or the files above.

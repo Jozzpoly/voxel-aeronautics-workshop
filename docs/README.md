@@ -1,73 +1,59 @@
 # VAW Documentation Index
 
-Status: Active documentation index
-Last verified: 2026-07-01
-Authority: Navigation and authority classification for current repository docs.
+This index separates **current truth**, **technical contracts/reference** and **history**.
 
-Authority order: current user decision, latest verified remote SHA, source/tests from that SHA, active contracts, accepted ADRs, current evidence, recovery evidence, then history.
+## Current truth
 
-## Active product authority
+Only these files describe the active project state and direction:
 
-- `README.md`
-- `PROJECT_VISION.md`
-- `AI_PROJECT_MEMORY.md`
-- `ARCHITECTURE.md`
-- `ROADMAP_NEXT.md`
-- `docs/ROADMAP_REBASE_2026-07-01.md`
-- `PROGRAMMABLE_MACHINE_RESEARCH.md`
+- [`../README.md`](../README.md)
+- [`../AI_PROJECT_MEMORY.md`](../AI_PROJECT_MEMORY.md)
+- [`../PROJECT_VISION.md`](../PROJECT_VISION.md)
+- [`../ARCHITECTURE.md`](../ARCHITECTURE.md)
+- [`../ROADMAP.md`](../ROADMAP.md)
+- [`../AGENTS.md`](../AGENTS.md)
 
-Current state: Gate C is the stable gameplay base. The immediate foundation concern is no longer only workflow/provenance; the 2026-07-01 roadmap rebase makes Visual Truth, VectorThruster direction proof, Voxel Fit, Mechanical V2 and Device Tuning the ordered planning path before broad Gate D/E work.
+If one of these conflicts with live source or new owner/manual evidence, the document is wrong and must be corrected.
 
-`ROADMAP_NEXT.md` remains the short active route map. `docs/ROADMAP_REBASE_2026-07-01.md` is the detailed active rebase behind it. Future roadmap reviews must explicitly supersede that rebase instead of adding competing active plans.
+## Technical contracts and reference
 
-## Active workflow authority
+These documents describe implementation boundaries or tool formats. They do **not** prove product quality or feature completeness:
 
-- `README_FOR_AGENTS.md`
-- `AGENT_WORKFLOW.md`
-- `DELIVERY_WORKFLOW.md`
-- `PUSH_INSTRUCTIONS.md`
+- `adr/` — architecture decision records; read each ADR status. Superseded process ADRs are historical context, not current project-state authority;
+- `visual_asset_pack_v1.md` — renderer-facing Visual Asset Pack contract;
+- `blockbench_import_studio.md` — Studio integration reference;
+- `mission_map_terrain_authoring.md` — mission-map/terrain authoring reference;
+- `research/programming_model.md` — design intent for future programmable-machine layers; explicitly not an implementation claim.
 
-Transport priority remains:
+Tool-local documents under `tools/**/docs/` are local implementation notes/reference. They are not project-state authority unless a current document explicitly promotes a specific contract.
 
-```text
-direct Git > one final milestone ZIP > complete single file > patch
-```
+## History — never current authority
 
-Default branch rule: `current_work` is the checkpoint branch for multi-session work; `main` is the reviewed stable landing line.
+Everything under [`history/`](history/) is historical evidence.
 
-## Active contract docs
+It contains old:
 
-- `docs/blockbench_import_studio.md`
-- `docs/visual_asset_pack_v1.md`
-- `docs/mission_map_terrain_authoring.md`
+- milestone/phase reports;
+- readiness reviews;
+- validation snapshots;
+- roadmaps and planning rebases;
+- agent handoffs;
+- recovery packages/reports;
+- workflow and push instructions;
+- repository-reorganization reports;
+- changelog material.
 
-`docs/visual_asset_pack_v1.md` is the canonical Visual Asset Pack V1 contract.
-`docs/mission_map_terrain_authoring.md` is the active contract for the
-Gate C mission-map, terrain material, patch/strip and obstacle authoring
-workflow.
-`tools/blockbench_import_studio/docs/**` is Studio-local development or
-historical material unless an active doc explicitly links to a file there.
+Historical files are preserved because they contain useful design reasoning and evidence. Their words `current`, `stable`, `ready`, `next`, `complete` or branch names apply only to the old checkpoint in which they were written.
 
-## Accepted ADRs
+**Never use a file under `docs/history/` to decide the active branch, next milestone or current feature status.**
 
-ADRs 0033-0041 preserve Gate B/C architecture. ADR 0042 defines the Workbench UI layout foundation. ADR 0043 defines the visual asset boundary for external models, textures and animations. ADR 0044 defines the checkpoint branch and CI trigger policy. ADR 0045 defines the renderer-only VectorThruster rig profile.
+## Practical reading order
 
-## Current supporting evidence
+For normal project work:
 
-- `docs/FEATURE_EXPANSION_READINESS_AUDIT_2026-07-01.md`
-- `docs/M4L_VISUAL_TRUTH_BASELINE_2026-07-01.md`
-- `FUTURE_READINESS_REVIEW.md`
-- `docs/repository/RELEASE_ARTIFACT_POLICY_RECOMMENDATION.md`
-- `docs/history/phases/PHASE_1D4A_REPORT.md`
-- `docs/history/validation/TEST_REPORT.md`
-- `docs/history/validation/VALIDATION_REPORT.md`
-- `docs/history/reviews/CODE_REVIEW_REPORT.md`
-- `docs/history/reviews/FOUNDATION_CONVERGENCE_REVIEW.md`
+1. root current docs;
+2. exact source involved in the task;
+3. relevant contract/ADR;
+4. history only when the reason behind an old decision is needed.
 
-## Recovery evidence
-
-Recovery evidence is archived in `docs/recovery/`. Read it before changing input focus, thruster routing, mechanical visuals, hinge cancellation or lifecycle cleanup.
-
-## Historical and superseded material
-
-Historical phase/review/validation documents describe earlier checkpoints and do not override current source/tests. Cosmetic repository reorganization remains frozen unless a concrete blocker affects source-of-truth clarity, release construction or validation.
+Do not begin by recursively reading the history archive.

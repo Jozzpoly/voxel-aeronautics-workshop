@@ -48,12 +48,10 @@ def main() -> None:
     assert 'def expected_archive_names(' not in release_test
     assert 'module.expected_archive_names(ROOT, single.name)' in release_test
 
-    agent_entrypoint = (ROOT / 'README_FOR_AGENTS.md').read_text(encoding='utf-8')
-    assert 'validate_clean_candidate.py' in agent_entrypoint
-    assert 'npm run validate:clean' in agent_entrypoint
-    assert 'npm run validate:clean:fast' in agent_entrypoint
-    assert 'SOURCE_MANIFEST.json' in agent_entrypoint
-    assert 'local_working_visuals' in agent_entrypoint
+    agent_rules = (ROOT / 'AGENTS.md').read_text(encoding='utf-8')
+    assert 'Generated release/provenance output is not authored product truth' in agent_rules
+    assert 'Protect user-authored visual assets' in agent_rules
+    assert 'docs/history/' in agent_rules
 
     print('source provenance contract ok')
 
