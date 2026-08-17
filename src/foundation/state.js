@@ -20,7 +20,8 @@
             activeAssemblySpaceId: 'space:root',
             rootMeshes: [],
             mechanicalLinkVisualsById: new Map(),
-            mechanicalAuthoring: { active: false, firstBlockId: null, axis: 'PY' }
+            mechanicalAuthoring: { active: false, firstBlockId: null, axis: 'PY' },
+            selectedBlockId: null
           },
           flight: {
             assembly: null,

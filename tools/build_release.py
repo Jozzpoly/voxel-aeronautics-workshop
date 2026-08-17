@@ -89,6 +89,7 @@ APP_SOURCES = (
     Path('src/game/input_settings_controller.js'),
     Path('src/game/camera_controller.js'),
     Path('src/game/build_targeting.js'),
+    Path('src/game/workshop_selection_controller.js'),
     Path('src/game/orientation_service.js'),
     Path('src/game/power_control_readouts.js'),
     Path('src/game/visual_asset_registry.js'),

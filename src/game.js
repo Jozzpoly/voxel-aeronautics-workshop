@@ -8,6 +8,7 @@
     const InputSettingsController = window.VAW.require('game.input-settings-controller');
     const CameraController = window.VAW.require('game.camera-controller');
     const BT = window.VAW.require('game.build-targeting');
+    const WorkshopSelectionController = window.VAW.require('game.workshop-selection-controller');
     const OrientationService = window.VAW.require('game.orientation-service');
     const PowerControlReadouts = window.VAW.require('game.power-control-readouts');
     const VisualAssetComposition = window.VAW.require('game.visual-asset-composition');
@@ -66,6 +67,7 @@
     const CRAFT = STATE.craft;
     const WORKSHOP = STATE.workshop;
     let assemblySpaceController = null;
+    let workshopSelectionController = null;
     let powerControlReadouts = null;
 
     const container = document.getElementById('canvas-container');
@@ -620,6 +622,7 @@
         rebuildWorkshopView();
         assertWorkshopViewConsistency();
       }
+      workshopSelectionController?.sync();
     }
 
     CRAFT.subscribe(handleCraftModelChange);
@@ -896,6 +899,17 @@
     }
 
     const raycaster = new THREE.Raycaster();
+
+    function raycastWorkshopBlock(ndc) {
+      raycaster.setFromCamera(ndc, camera);
+      for (const hit of raycaster.intersectObjects(WORKSHOP.rootMeshes, true)) {
+        const root = getRootVoxelFromHit(hit.object);
+        const block = root ? CRAFT.get(root.userData.blockKey) : null;
+        if (block) return { root, block };
+      }
+      return null;
+    }
+
     function hitOk(target) { WORKSHOP.lastTargetResult = BT.targetOk({ target }); return target; }
     function hitFail(reason, details) { WORKSHOP.lastTargetResult = BT.targetFail(reason, details); return null; }
     function raycastBuildTarget(ndc) {
@@ -1490,6 +1504,7 @@
         STATE.mission.helpPaused = false;
         STATE.camera.target.copy(STATE.camera.defaultTarget);
         STATE.camera.targetOffset.set(0, 0, 0);
+        workshopSelectionController?.sync({ preferLastFailure: true });
       } else {
         const compiled = CraftCompiler.compile(CRAFT);
         if (compiled.blockCount > PHYSICS.maxFlightParts) {
@@ -1509,6 +1524,7 @@
         }
         setWorkspacePanelOpen('contracts', false, true);
         setMechanicalAuthoring(false, false); STATE.mode = 'FLIGHT';
+        workshopSelectionController?.sync();
         ghost.visible = false;
         ghostArrow.visible = false;
         ghostNormalArrow.visible = false;
@@ -1562,8 +1578,14 @@
       return assemblySpaceController.authorHingeEndpoint(blockId, axis);
     }
 
-    function performBuildAction(button) {
+    function performBuildAction(button, modifiers = {}) {
       if (STATE.mode !== 'BUILD') return;
+      if (button === 0 && modifiers.shiftKey) {
+        const selectionTarget = raycastWorkshopBlock(STATE.input.pointerNDC);
+        if (selectionTarget?.block?.blockId) workshopSelectionController?.select(selectionTarget.block.blockId, { activateSpace: true, source: 'viewport' });
+        else showStatus('SHIFT + CLICK AN EXISTING PART TO SELECT IT', 1300);
+        return;
+      }
       const target = raycastBuildTarget(STATE.input.pointerNDC);
       if (!target) { showStatus(BT.placementFeedback(WORKSHOP.lastTargetResult).status, 1300); return; }
       if (button === 0 && WORKSHOP.mechanicalAuthoring.active) { handleMechanicalEndpointSelection(target); return; }
@@ -1621,6 +1643,16 @@
       }
     });
     assemblySpaceController.setActiveAssemblySpace(AssemblySpaces.ROOT_ASSEMBLY_SPACE_ID);
+
+    workshopSelectionController = WorkshopSelectionController.create({
+      THREE, state: STATE, craft: CRAFT, workshop: WORKSHOP, scene, document,
+      callbacks: {
+        hoveredBlockId: () => raycastWorkshopBlock(STATE.input.pointerNDC)?.block?.blockId || null,
+        setActiveAssemblySpace: id => assemblySpaceController.setActiveAssemblySpace(id),
+        collectBlueprint, commitHistory, updateTelemetry, updateGhost, autoSave, showStatus
+      }
+    });
+    workshopSelectionController.wire();
 
     const missionController = MissionController.create({
       THREE, Physics, state: STATE, craft: CRAFT, document,
@@ -1744,7 +1776,7 @@
       STATE.input.orbitDrag = false;
       STATE.input.panDrag = false;
       if (!cameraDragWasActive && STATE.mode === 'BUILD' && !STATE.input.downMoved) {
-        if (event.button === 0 || event.button === 2) performBuildAction(event.button);
+        if (event.button === 0 || event.button === 2) performBuildAction(event.button, { shiftKey: event.shiftKey });
       }
       STATE.input.downButton = -1;
       updateGhost();

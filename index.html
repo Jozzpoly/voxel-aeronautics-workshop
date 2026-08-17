@@ -98,6 +98,29 @@
       <button id="btn-import" class="mini-btn">IMPORT JSON</button>
       <input id="blueprint-file" type="file" accept="application/json,.json" hidden />
     </div>
+
+    <div class="mb-3 rounded border border-violet-900/70 bg-slate-950/45 p-2" id="selected-part-panel">
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <div class="text-[10px] uppercase tracking-[0.16em] text-sky-300">Selected part</div>
+        <button id="btn-clear-selected-part" class="mini-btn" type="button" disabled>CLEAR</button>
+      </div>
+      <div id="ui-selected-part-title" class="text-xs font-bold text-white">No part selected</div>
+      <div id="ui-selected-part-meta" class="text-[10px] text-gray-400 mt-1">Shift + left click a part, or select the hovered part.</div>
+      <div id="ui-selected-part-test" class="text-[10px] text-amber-200 mt-2">No failed part recorded in the last test.</div>
+      <div class="grid grid-cols-2 gap-2 mt-2">
+        <button id="btn-select-hovered-part" class="mini-btn" type="button">SELECT HOVERED</button>
+        <button id="btn-select-last-failure" class="mini-btn" type="button" disabled>SELECT LAST FAILURE</button>
+      </div>
+      <div class="text-[10px] uppercase tracking-[0.16em] text-gray-500 mt-3 mb-2">Nudge in assembly space</div>
+      <div class="grid grid-cols-3 gap-2">
+        <button class="mini-btn" type="button" data-selected-nudge="-1,0,0">X −</button>
+        <button class="mini-btn" type="button" data-selected-nudge="0,1,0">Y +</button>
+        <button class="mini-btn" type="button" data-selected-nudge="1,0,0">X +</button>
+        <button class="mini-btn" type="button" data-selected-nudge="0,0,-1">Z −</button>
+        <button class="mini-btn" type="button" data-selected-nudge="0,-1,0">Y −</button>
+        <button class="mini-btn" type="button" data-selected-nudge="0,0,1">Z +</button>
+      </div>
+    </div>
     <div class="mb-3 rounded border border-violet-900/70 bg-slate-950/45 p-2" id="assembly-space-panel">
       <div class="text-[10px] uppercase tracking-[0.16em] text-violet-300 mb-2">Assembly spaces</div>
       <select id="assembly-space-list" class="mini-btn w-full mb-2" aria-label="Active assembly space"><option value="space:root">ROOT • Root</option></select>
@@ -516,6 +539,7 @@
         'src/game/input_settings_controller.js',
         'src/game/camera_controller.js',
         'src/game/build_targeting.js',
+        'src/game/workshop_selection_controller.js',
         'src/game/orientation_service.js',
         'src/game/power_control_readouts.js',
           'src/game/visual_asset_registry.js',
@@ -536,7 +560,7 @@
         'src/foundation/bootstrap.js',
         'src/game.js'
       ];
-      const sourceVersion = 'workbench-ui-v9-m2b-feedback';
+      const sourceVersion = 'workbench-ui-v10-p2c-selection';
       const terrainPresetUrl = 'assets/terrain/local_working_terrain/VAW_TERRAIN_AUTHORING_V1.json';
       const loadTerrainPreset = async () => {
         if (!window.fetch) return;
