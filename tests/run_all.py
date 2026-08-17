@@ -40,6 +40,7 @@ def main() -> None:
     run('node', 'tests/test_assembly_builder.js')
     run('node', 'tests/test_flight_session.js')
     run('node', 'tests/test_flight_integrity.js')
+    run('node', 'tests/test_last_test_feedback.js')
     run('node', 'tests/test_debris_runtime.js')
     run('node', 'tests/test_headless_harness.js')
     run('node', '--expose-gc', 'tests/test_real_cannon_harness.js')

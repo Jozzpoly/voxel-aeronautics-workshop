@@ -58,15 +58,24 @@ Repair order:
 
 Exit result: the known topology contradiction is removed and the remaining articulated-control limitation is stated instead of guessed.
 
-### P2-B — Test → Workshop Feedback Continuity
+### P2-B — Test Evidence Continuity
 
-**Current milestone.**
+**Complete** on the recovery lane.
 
-Preserve one bounded structured last-test result across flight cleanup, including sandbox. It should retain the first meaningful failure and enough block/load/impact/fuel-loss evidence to support the next rebuild without writing transient damage into Blueprint data.
+- sandbox return captures one bounded `lastTestResult` before flight cleanup destroys transient state;
+- contracts write the same evidence shape rather than a separate report model;
+- first-failure runtime evidence now carries stable `blockId`/type/body identity when known;
+- the snapshot retains lost block IDs (bounded), max impact, final load snapshot, fuel use and integrity;
+- structured failure identity is cleared during later flight cleanup only after the bounded result has already captured it;
+- transient damage remains outside Blueprint/CraftModel persistence.
+
+Exit result: returning from a sandbox experiment no longer erases the minimum evidence needed for the next diagnosis/editing stage. Fixed-step scheduler-health persistence and workshop-facing inspection remain explicitly unresolved rather than being faked inside this milestone.
 
 ### P2-C — Workshop Editing Fundamentals
 
-Introduce a real selected-part/edit flow and expose existing high-value domain operations selectively instead of adding more future-facing domain APIs first.
+**Current milestone.**
+
+Introduce a real selected-part/edit flow and expose existing high-value domain operations selectively instead of adding more future-facing domain APIs first. Start with stable selected-part identity, use preserved `lastTestResult.firstFailureEvent.blockId` to make failed-part diagnosis actionable when possible, and then enable editing of an existing placed part; do not broaden into a general mechanism/device framework.
 
 ### P2-D — Information architecture and visual polish
 

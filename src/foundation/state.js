@@ -55,6 +55,7 @@
             lostParts: 0,
             leakingFuelRate: 0,
             firstFailure: '',
+            firstFailureEvent: null,
             structuralFailures: 0,
             initialHealth: 0,
             gyroAuthority: 0,
@@ -98,6 +99,7 @@
             best: {},
             totalStars: 0
           },
+          lastTestResult: null,
           mission: {
             contractId: null,
             active: false,

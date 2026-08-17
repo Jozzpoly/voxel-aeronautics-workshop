@@ -31,7 +31,7 @@ function createFixture({ rejectRemovalOnce = false } = {}) {
     payload: null, payloadBodyLocalPosition: null, payloadMass: 0, initialHealth: 20,
     integrity: 100, dragArea: 0, gyroAuthority: 0, gyroCount: 0, leakingFuelRate: 0,
     fuelMax: 10, fuel: 10, lostParts: 0, structuralFailures: 0, blockCount: 3,
-    firstFailure: '', assemblyPlan: { rigidBodies: [{ bodyId: 'body:root', anchorBlockId: 'core' }, { bodyId: 'body:rotor', anchorBlockId: 'rotor' }] }, runtimeMass: 2, currentInertia: { x: 0, y: 0, z: 0, set(x,y,z){this.x=x;this.y=y;this.z=z;} },
+    firstFailure: '', firstFailureEvent: null, assemblyPlan: { rigidBodies: [{ bodyId: 'body:root', anchorBlockId: 'core' }, { bodyId: 'body:rotor', anchorBlockId: 'rotor' }] }, runtimeMass: 2, currentInertia: { x: 0, y: 0, z: 0, set(x,y,z){this.x=x;this.y=y;this.z=z;} },
     lowestLocalY: -0.5, debris: []
   } };
   const blockBody = new Map(parts.map(item => [item.blockId, item.bodyId]));
@@ -128,11 +128,12 @@ function createFixture({ rejectRemovalOnce = false } = {}) {
 
 // Damage is routed through exact ownership and detaches only the intended block.
 {
-  const { parts, integrity, detached } = createFixture();
+  const { state: integrityState, parts, integrity, detached } = createFixture();
   integrity.damagePart(parts[1], 100, 'test impact');
   assert.strictEqual(parts[1].attached, false);
   assert.strictEqual(parts[2].attached, true);
   assert.deepStrictEqual(detached, ['frame']);
+  assert.strictEqual(integrityState.flight.firstFailureEvent.blockId, 'frame');
 }
 
 
@@ -169,6 +170,9 @@ function createFixture({ rejectRemovalOnce = false } = {}) {
   integrity.updateDebris(0.5);
   assert.strictEqual(state.flight.debris.length, 0);
   assert.deepStrictEqual(disposedDebris, ['d1']);
+  state.flight.firstFailureEvent = { blockId: 'stale' };
+  integrity.disposeAllDebris();
+  assert.strictEqual(state.flight.firstFailureEvent, null, 'Flight cleanup must clear structured failure identity after the result has been captured.');
 }
 
 console.log(JSON.stringify({

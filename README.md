@@ -26,7 +26,9 @@ Bazowy produkt ma szeroko testowany foundation/runtime: CraftModel/CraftCompiler
 
 P1 code-reality audit jest zapisany w [`docs/CODE_REALITY_AUDIT.md`](docs/CODE_REALITY_AUDIT.md). P2-A naprawił pierwszy potwierdzony błąd prawdy produktu: Engineering Analysis korzysta teraz z compiled rigid adjacency dla weak links, a procenty sterowności są jawnie ograniczone do **primary-body local authority** zamiast udawać whole-craft prediction dla maszyn przegubowych. Mission readiness sygnalizuje to ograniczenie zamiast podawać pozornie dokładny wynik.
 
-P2-A przeszedł nowy wykonywalny test multi-space/multi-body oraz szeroki core suite w disposable kandydacie. Jedynym świadomie wyłączonym elementem był wcześniej zidentyfikowany nondeterministyczny harness `test_validation_runner.py`.
+P2-B domknął fundament ciągłości dowodów `test -> return`: sandbox i kontrakty zapisują jeden ograniczony `lastTestResult` przed cleanupem. Wynik zachowuje pierwszą awarię z `blockId` gdy jest znane, utracone bloki oraz impact/load/fuel evidence i nie trafia do Blueprint/CraftModel. Obecna kompozycja gry nie utrwala jeszcze fixed-step scheduler health i nie ma jeszcze właściwego workshop-facing wyboru/inspekcji wyniku — to jest cel P2-C, a nie ukrywana część P2-B.
+
+P2-A/P2-B mają wykonywalne testy i startup lifecycle proof w disposable kandydacie. Znany nondeterministyczny harness `test_validation_runner.py` pozostaje osobnym długiem infrastruktury.
 
 Znane wyjątki:
 
@@ -65,10 +67,10 @@ Nie używaj wyniku testów jako substytutu ręcznej oceny produktu.
 
 ## Najbliższy kierunek
 
-P0 repo recovery, P1 code-reality audit i P2-A Engineering Analysis Truth są zakończone na recovery lane.
+P0 repo recovery, P1 code-reality audit, P2-A Engineering Analysis Truth i P2-B Test Evidence Continuity są zakończone na recovery lane.
 
-**Aktualnym milestone'em jest P2-B — Test → Workshop Feedback Continuity.**
+**Aktualnym milestone'em jest P2-C — Workshop Editing Fundamentals.**
 
-Cel: po powrocie z sandboxowego testu nie wyrzucać informacji potrzebnych do zrozumienia awarii. Zachować jeden ograniczony, strukturalny wynik ostatniego testu — m.in. pierwszą istotną awarię, utracone części i najważniejsze impact/load/fuel-loss evidence — bez zapisywania transient damage do Blueprintu.
+Cel: zbudować prawdziwą tożsamość zaznaczonej już części, połączyć ją z zachowanym `lastTestResult`/failed `blockId` i umożliwić sensowną edycję istniejącego elementu bez ciągłego delete/re-place. Najpierw wykorzystujemy istniejące capability CraftModel tam, gdzie rozwiązują realny problem warsztatu; nie dokładamy nowego Device/Signal/mechanism frameworku.
 
-Dopiero potem przechodzimy do P2-C Workshop Editing Fundamentals i późniejszego uproszczenia UI/visual polish.
+Późniejsze uproszczenie UI/visual polish ma być oparte na ręcznej ocenie realnego workflow, nie na samej obecności infrastruktury.

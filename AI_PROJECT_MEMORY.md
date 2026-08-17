@@ -62,6 +62,19 @@ P2-A Engineering Analysis Truth is complete on the recovery lane.
 
 A broad disposable core-suite run passed after the repair with only the known nondeterministic `test_validation_runner.py` harness excluded. Current browser smoke still cannot provide rendered proof in this environment because app bootstrap does not complete through its Chromium/CDP path.
 
+## P2-B result — Test Evidence Continuity
+
+P2-B Test -> Workshop Feedback Continuity is complete on the recovery lane.
+
+- one bounded top-level `lastTestResult` survives flight cleanup without entering Blueprint/CraftModel persistence;
+- sandbox return captures the result before `setMode('BUILD')` destroys transient flight evidence;
+- contract completion/failure uses the same evidence shape and keeps contract-only outcome data nested;
+- `FlightIntegrity` records structured `firstFailureEvent` identity (`blockId`, type, body and reason) when the runtime knows it;
+- the result keeps bounded lost block IDs, max impact, final load snapshot, fuel use and integrity;
+- current game composition deliberately does not pretend to persist fixed-step scheduler health or provide a finished workshop diagnosis surface yet; P2-C consumes the preserved failed `blockId`/result to make the evidence actionable.
+
+Executable tests cover destructive cleanup continuity, shared sandbox/contract capture, cleanup reset of structured failure identity and stable failed-block identity. Startup smoke still passes single-body, articulated and multi-space UI lifecycle on the disposable candidate. This does not constitute owner acceptance of a workshop diagnosis workflow, which does not exist yet.
+
 ## Architectural boundaries currently worth preserving
 
 - `CraftModel` is workshop authoring authority.
@@ -76,14 +89,15 @@ A broad disposable core-suite run passed after the repair with only the known no
 
 ## Current priority
 
-P2-B is active: **Test -> Workshop Feedback Continuity**.
+P2-C is active: **Workshop Editing Fundamentals**.
 
-1. Preserve one bounded structured last-test result before `cleanupFlightState()` destroys transient evidence.
-2. Make it work for free sandbox as well as contracts.
-3. Keep transient damage/runtime state out of Blueprint/CraftModel persistence.
-4. Preserve enough stable identity/evidence to support the next rebuild: first failure, involved block when known, lost parts, impact/load/fuel-loss and simulation-health facts.
+1. Establish stable selected-part identity distinct from hover target and selected placement tool.
+2. Surface the preserved last-test failed `blockId` through that selection/inspection path when the block still exists.
+3. Allow a useful edit of an already placed part without delete/re-place.
+4. Reuse existing CraftModel operations where they solve the workflow; do not add future-facing APIs first.
+5. Keep Blueprint/CraftModel authority and history/undo semantics intact.
 
-After P2-B: P2-C Workshop Editing Fundamentals, then P2-D information architecture / visual polish.
+After P2-C: P2-D information architecture / visual polish.
 
 There is **no active M4/M5/M6/Gate-D feature roadmap during recovery**. Those names belong to history unless current product needs justify them.
 

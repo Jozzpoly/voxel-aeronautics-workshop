@@ -26,7 +26,7 @@
         computeCraftAnalysis, buildLoadedSnapshot, computeControlMetrics,
         collectBlueprint, cleanupFlightState, findOrientationId, commitHistory,
         updateTelemetry, autoSave, showStatus, updateHUD, disposeObjectTree,
-        clearControlActions, setStabilize, setMode
+        clearControlActions, setStabilize, setMode, snapshotSimulationHealth
       } = callbacks;
 
       function primaryBodyId() {
@@ -517,6 +517,63 @@
         updateMissionHud();
       }
 
+      function captureLastTestResult({ success = null, outcome = 'returned', reason = '', contractResult = null } = {}) {
+        const contract = getContractById(STATE.mission.contractId || STATE.career.selectedContractId);
+        const startFuel = Math.max(0, Number(STATE.mission.startFuel) || 0);
+        const endFuel = Math.max(0, Number(STATE.flight.fuel) || 0);
+        const runtimeParts = Array.isArray(STATE.flight.runtimeParts) ? STATE.flight.runtimeParts : [];
+        const lostBlockIds = [...new Set(runtimeParts.filter(part => part && part.attached === false && part.blockId != null).map(part => String(part.blockId)))];
+        const visibleLostBlockIds = lostBlockIds.slice(0, 64);
+        const failureEvent = STATE.flight.firstFailureEvent && typeof STATE.flight.firstFailureEvent === 'object'
+          ? { ...STATE.flight.firstFailureEvent }
+          : null;
+        const timing = typeof snapshotSimulationHealth === 'function' ? snapshotSimulationHealth() : null;
+        const lastLoads = STATE.flight.lastLoads || {};
+        const result = {
+          kind: contract.id === 'sandbox' ? 'sandbox-test' : 'contract-test',
+          contractId: contract.id,
+          success: typeof success === 'boolean' ? success : null,
+          outcome: String(outcome || 'returned'),
+          reason: String(reason || ''),
+          elapsed: Math.max(0, Number(STATE.mission.elapsed) || 0),
+          startFuel,
+          endFuel,
+          fuelUsed: Math.max(0, startFuel - endFuel),
+          fuelFraction: STATE.flight.fuelMax > 0 ? Math.max(0, Math.min(1, endFuel / STATE.flight.fuelMax)) : 0,
+          integrity: Math.max(0, Math.min(100, Number(STATE.flight.integrity) || 0)),
+          maxImpact: Math.max(Number(STATE.mission.maxImpact) || 0, Number(STATE.flight.maxImpact) || 0),
+          maxAltitude: Math.max(0, Number(STATE.mission.maxAltitude) || 0),
+          maxSpeed: Math.max(0, Number(STATE.mission.maxSpeed) || 0),
+          lostParts: Math.max(0, Math.round(Number(STATE.flight.lostParts) || 0)),
+          lostBlockIds: visibleLostBlockIds,
+          lostBlockIdsTruncated: lostBlockIds.length > visibleLostBlockIds.length,
+          firstFailure: String(STATE.flight.firstFailure || ''),
+          firstFailureEvent: failureEvent,
+          severeImpact: Boolean(STATE.flight.severeImpact),
+          outOfFuel: Boolean(STATE.flight.outOfFuel),
+          lastLoads: {
+            thrust: Number(lastLoads.thrust) || 0,
+            lift: Number(lastLoads.lift) || 0,
+            drag: Number(lastLoads.drag) || 0,
+            impact: Number(lastLoads.impact) || 0
+          },
+          simulation: timing ? {
+            droppedSeconds: Math.max(0, Number(timing.droppedSeconds) || 0),
+            overloadFrames: Math.max(0, Math.round(Number(timing.overloadFrames) || 0)),
+            totalSteps: Math.max(0, Math.round(Number(timing.totalSteps) || 0))
+          } : null
+        };
+        if (contractResult) result.contractResult = {
+          stars: Math.max(0, Math.round(Number(contractResult.stars) || 0)),
+          reward: Math.max(0, Math.round(Number(contractResult.reward) || 0)),
+          payloadRequired: Boolean(contractResult.payloadRequired),
+          payloadIntegrity: Math.max(0, Math.min(1, Number(contractResult.payloadIntegrity) || 0)),
+          payloadLost: Boolean(contractResult.payloadLost)
+        };
+        STATE.lastTestResult = result;
+        return result;
+      }
+
       function calculateMissionStars(contract, success) {
         if (!success || contract.id === 'sandbox') return 0;
         let stars = 1;
@@ -605,6 +662,7 @@
             : `Review the engineering analysis and impact speed before the next attempt.${STATE.flight.firstFailure ? ` First failure: ${STATE.flight.firstFailure}.` : ''}`
         };
         STATE.mission.result = result;
+        captureLastTestResult({ success, outcome: success ? 'completed' : 'failed', reason, contractResult: result });
         showDebrief(result);
         renderContractPanel();
         updateMissionHud();
@@ -679,6 +737,7 @@
         if (STATE.mission.status === 'ACTIVE' && STATE.mission.contractId !== 'sandbox') {
           finishMission(false, 'The test flight was aborted by the pilot.');
         } else {
+          captureLastTestResult({ success: null, outcome: 'returned', reason: 'Sandbox test returned to workshop.' });
           setMode('BUILD');
         }
       }
@@ -707,7 +766,7 @@
         missionProgress, updateMissionHud, craftTiltDegrees, estimateCraftGroundClearance,
         currentCraftAltitude, landingSample, evaluateCraftLanding,
         evaluateCraftLandingZones, isCraftSettledAtAny, startMissionSession,
-        calculateMissionStars, showDebrief, finishMission, updateMission,
+        captureLastTestResult, calculateMissionStars, showDebrief, finishMission, updateMission,
         requestReturnToWorkshop, returnToWorkshopFromDebrief, retryContractFromDebrief
       });
     }

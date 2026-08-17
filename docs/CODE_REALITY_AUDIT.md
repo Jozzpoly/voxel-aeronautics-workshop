@@ -208,7 +208,7 @@ Fix diagnostic truth before polishing its presentation:
 
 Exit condition: engineering readouts do not knowingly contradict compiled topology or runtime control semantics for supported multi-body craft.
 
-### P2-B — Test -> Workshop Feedback Continuity
+### P2-B — Test Evidence Continuity
 
 Create one structured, bounded last-test result that survives flight cleanup and works for sandbox as well as contracts. Preserve enough identity/evidence to answer:
 
@@ -254,4 +254,19 @@ P2-A addressed findings 1 and 2 without pretending to solve articulated dynamics
 
 Validation: targeted engineering, missions, architecture, thruster-routing and Gate C tests passed; a broad disposable core suite passed with only the already-known nondeterministic validation-runner harness excluded. Browser smoke in the recovery container still fails before application bootstrap and therefore provides no rendered PASS.
 
-The next unresolved high-value finding is #3: sandbox return destroys failure evidence needed for `test -> understand -> rebuild`. This drives P2-B.
+The next unresolved high-value finding at P2-A close was #3: sandbox return destroyed failure evidence needed for `test -> understand -> rebuild`. P2-B resolves that continuity break as recorded below.
+
+### P2-B — Test Evidence Continuity: resolved in recovery
+
+P2-B addressed finding 3 without persisting transient damage into craft authority.
+
+- sandbox return captures `lastTestResult` before cleanup; contract finish uses the same evidence schema;
+- `firstFailureEvent` preserves stable block identity/type/body/reason when the runtime knows it;
+- lost block IDs are retained in a bounded list together with lost count, max impact, final load snapshot, fuel use and integrity;
+- `lastTestResult` lives outside transient `flight` state and has no Blueprint/CraftModel/BlueprintController persistence path;
+- structured failure identity is cleared during later flight cleanup only after the bounded result has captured it, preventing stale failed-block identity on a later clean test;
+- executable tests prove the snapshot survives destructive cleanup and that sandbox/contract capture share one model.
+
+Target validation passed FlightIntegrity, FlightSession, MissionEvaluator, missions, architecture/runtime dependency/provenance checks and `STARTUP_OK` for single-body, articulated and multi-space UI lifecycle in the disposable candidate. Current game composition does not persist fixed-step scheduler health and does not yet expose a complete workshop diagnosis surface; P2-C owns that product bridge. Rendered/manual quality remains unaccepted.
+
+The next unresolved product break is finding 5 / the workshop editing gap: useful domain operations exist, but normal placed-part selection/editing is missing. P2-C also consumes the preserved failed `blockId` so test evidence can point back into the workshop instead of remaining only structured state.
