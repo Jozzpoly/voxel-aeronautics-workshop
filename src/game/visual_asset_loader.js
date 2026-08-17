@@ -730,6 +730,7 @@
         importedRoot.userData.visualAssetPackRevision = asset.packRevision || null;
         importedRoot.userData.visualAssetNodeBindings = asset.bindings?.nodes || {};
         importedRoot.userData.visualAssetClipBindings = asset.bindings?.clips || {};
+        importedRoot.userData.visualAssetRigBindings = asset.bindings?.rig || {};
         importedRoot.userData.visualAssetModelPath = asset.model?.path || '';
 
         const scene = cloneScene(gltf);
@@ -755,6 +756,7 @@
         root.add(importedRoot);
         root.userData.visualAssetNodeBindings = asset.bindings?.nodes || {};
         root.userData.visualAssetClipBindings = asset.bindings?.clips || {};
+        root.userData.visualAssetRigBindings = asset.bindings?.rig || {};
         root.userData.importedVisualAssetId = asset.assetId;
         root.userData.importedVisualPackId = asset.packId || null;
         root.userData.importedVisualPackRevision = asset.packRevision || null;
@@ -777,6 +779,7 @@
         delete root.userData.importedVisualPackId;
         delete root.userData.importedVisualPackRevision;
         delete root.userData.importedVisualModelPath;
+        delete root.userData.visualAssetRigBindings;
         delete root.userData.visualAssetPromise;
         const asset = assetForRoot(root);
         root.userData.visualAssetStatus = asset ? 'registered-fallback' : 'procedural-fallback';
@@ -805,11 +808,13 @@
           delete root.userData.visualAssetId;
           root.userData.visualAssetNodeBindings = {};
           root.userData.visualAssetClipBindings = {};
+          root.userData.visualAssetRigBindings = {};
           return Promise.resolve(false);
         }
         root.userData.visualAssetId = asset.assetId;
         root.userData.visualAssetNodeBindings = asset.bindings?.nodes || {};
         root.userData.visualAssetClipBindings = asset.bindings?.clips || {};
+        root.userData.visualAssetRigBindings = asset.bindings?.rig || {};
         if (!modelUrl(asset)) {
           root.userData.visualAssetStatus = 'registered-fallback';
           return Promise.resolve(false);

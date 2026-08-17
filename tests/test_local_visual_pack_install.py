@@ -63,6 +63,32 @@ def install_payload(block_type='Thruster', data=b'{"asset":{"version":"2.0"}}'):
     }
 
 
+def terrain_payload():
+    return {
+        'format': 'VAW_TERRAIN_AUTHORING_V1',
+        'presetId': 'local_working_terrain',
+        'version': '0.1.0-local.0',
+        'metadata': {
+            'authority': 'renderer-only-terrain',
+            'revision': 0,
+        },
+        'terrain': {
+            'fog': {'color': 0x0B1220, 'density': 0.0038},
+            'baseMaterial': 'basin',
+            'materials': {
+                'basin': {'color': 0x15283A, 'roughness': 1, 'texture': {'kind': 'checker', 'colorA': 0x15283A, 'colorB': 0x1B3349, 'repeat': 24}},
+                'routePaint': {'color': 0x93C5FD, 'opacity': 0.34, 'texture': {'kind': 'stripe', 'colorA': 0x60A5FA, 'colorB': 0x1E3A8A, 'repeat': 12}},
+            },
+            'patches': [
+                {'id': 'test-apron', 'material': 'basin', 'center': {'x': 12, 'z': -8}, 'size': {'x': 30, 'z': 22}, 'rotation': 0.2, 'opacity': 0.9, 'layer': 10},
+            ],
+            'strips': [
+                {'id': 'test-road', 'fromPad': 'startPad', 'toPad': 'finishPad', 'width': 8, 'material': 'routePaint', 'opacity': 0.42, 'layer': 20},
+            ],
+        },
+    }
+
+
 def request_json(port: int, method: str, path: str, payload: dict | None = None, origin: str | None = 'http://127.0.0.1:8080'):
     connection = http.client.HTTPConnection('127.0.0.1', port, timeout=5)
     body = json.dumps(payload).encode('utf-8') if payload is not None else None
@@ -128,6 +154,27 @@ def assert_http_endpoint(serve, tmp_root: Path):
         assert cors == 'http://127.0.0.1:8080'
         assert result['ok'] is True
         assert result['revision'] >= 1
+
+        status, cors, terrain = request_json(port, 'GET', serve.DEV_TERRAIN_ENDPOINT_PATH)
+        assert status == 200
+        assert cors == 'http://127.0.0.1:8080'
+        assert terrain['format'] == 'VAW_TERRAIN_AUTHORING_V1'
+        assert terrain['metadata']['authority'] == 'renderer-only-terrain'
+
+        terrain_preflight = request_options(port, serve.DEV_TERRAIN_ENDPOINT_PATH)
+        assert terrain_preflight['status'] == 204
+        assert terrain_preflight['origin'] == 'http://127.0.0.1:8080'
+        assert 'POST' in terrain_preflight['methods']
+        assert 'Content-Type' in terrain_preflight['headers']
+
+        status, cors, terrain_result = request_json(port, 'POST', serve.DEV_TERRAIN_ENDPOINT_PATH, terrain_payload())
+        assert status == 200
+        assert cors == 'http://127.0.0.1:8080'
+        assert terrain_result['ok'] is True
+        assert terrain_result['format'] == 'VAW_TERRAIN_AUTHORING_V1'
+        assert terrain_result['materialCount'] == 2
+        assert terrain_result['patchCount'] == 1
+        assert terrain_result['stripCount'] == 1
     finally:
         server.shutdown()
         server.server_close()
@@ -143,6 +190,9 @@ def main():
         serve.WORKING_PACK_ROOT = serve.VISUAL_PACKS_DIR / serve.WORKING_PACK_ID
         serve.WORKING_MANIFEST_PATH = serve.WORKING_PACK_ROOT / 'VAW_VISUAL_ASSET_PACK_V1.json'
         serve.INSTALLED_PACKS_PATH = serve.VISUAL_PACKS_DIR / 'installed_visual_packs.json'
+        serve.TERRAIN_PRESETS_DIR = tmp_root / 'assets' / 'terrain'
+        serve.WORKING_TERRAIN_PRESET_ROOT = serve.TERRAIN_PRESETS_DIR / serve.WORKING_TERRAIN_PRESET_ID
+        serve.WORKING_TERRAIN_PRESET_PATH = serve.WORKING_TERRAIN_PRESET_ROOT / 'VAW_TERRAIN_AUTHORING_V1.json'
         serve.INSTALLED_PACKS_PATH.parent.mkdir(parents=True, exist_ok=True)
         serve.INSTALLED_PACKS_PATH.write_text(json.dumps({
             'format': 'VAW_VISUAL_PACK_INDEX_V1',
@@ -188,6 +238,31 @@ def main():
         assert index['packs'][0]['source'] == 'local:local_working_visuals'
         assert index['packs'][0]['revision'] == 2
         assert index['packs'][1]['source'] == 'dev:fixture'
+
+        terrain = serve.install_terrain_preset(terrain_payload())
+        assert terrain['ok'] is True
+        assert terrain['revision'] == 1
+        assert terrain['materialCount'] == 2
+        saved_terrain = json.loads(serve.WORKING_TERRAIN_PRESET_PATH.read_text(encoding='utf-8'))
+        assert saved_terrain['metadata']['authority'] == 'renderer-only-terrain'
+        assert saved_terrain['terrain']['patches'][0]['layer'] == 10
+        assert saved_terrain['terrain']['strips'][0]['fromPad'] == 'startPad'
+
+        bad_terrain = terrain_payload()
+        bad_terrain['terrain']['patches'][0]['material'] = 'missingMaterial'
+        try:
+            serve.install_terrain_preset(bad_terrain)
+            raise AssertionError('missing terrain material should be rejected')
+        except ValueError as error:
+            assert 'missing material' in str(error)
+
+        bad_pad = terrain_payload()
+        bad_pad['terrain']['strips'][0]['toPad'] = 'missingPad'
+        try:
+            serve.install_terrain_preset(bad_pad)
+            raise AssertionError('missing terrain pad should be rejected')
+        except ValueError as error:
+            assert 'missing pad' in str(error)
 
         bad = install_payload()
         bad['files'][0]['path'] = 'models/blocks/thruster/../../escape.gltf'

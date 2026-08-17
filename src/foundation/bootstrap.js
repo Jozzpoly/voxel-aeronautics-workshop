@@ -30,7 +30,7 @@
       webglRenderer: true,
       physicsBackend: Physics.id,
       physicsBoundary: 'phase-1d4a-neutral-mechanical-assembly-api',
-      runtimeAssembly: 'runtime-assembly-plan-v2',
+      runtimeAssembly: 'VAW_RUNTIME_ASSEMBLY_PLAN_V3',
       headlessHarness: 'deterministic-free-flight-v1',
       missionEvaluation: 'phase-1d2b-multi-pad-ground-state',
       aerostatics: 'altitude-lift-damped-settling-v2',

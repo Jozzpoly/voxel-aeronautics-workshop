@@ -41,9 +41,37 @@ The install endpoint writes only under `local_working_visuals`, overwrites only 
 
 Studio stores the last authoring settings per VAW block type in browser `localStorage`: target block, node aliases, renderer-only transform, material policy and fire/glow material split settings. This is an authoring convenience only. It must not be serialized into Blueprint, CraftModel, saves or gameplay data. If a newly imported model uses different node names, review `visualRoot` and aliases before install; the saved block profile is meant to speed iteration, not to become an asset authority.
 
+`Clear rig bindings` clears only optional node aliases: `flame`, `flameGlow`, `gimbalAssembly` and `controlFlapPivot`. It does not clear `visualRoot`, transform, material policy or block type. Studio may reuse transform and material defaults across block types, but global defaults must not carry optional rig aliases or fire/glow split state from one block type to another. Exact per-block profiles remain restorable for the same block type.
+
+For `VectorThruster`, Studio can write a renderer-only rig profile under `bindings.rig.vectorThruster`. Use `Use default VectorThruster profile` as a starting point, then adjust `gimbalA`, `gimbalB` and roll preview axes/inversion to match the imported pivot. The profile references `gimbalAssembly`; it does not define control axes, force behavior, Blueprint data or physics. Missing or invalid rig metadata blocks export/audit or falls back safely in runtime.
+
 If Studio reports `Install failed: Failed to fetch`, it usually means Studio is not connected to the integrated VAW dev endpoint. Click `Check install endpoint`. If it is unavailable, start `npm run studio:serve` from the repository root and reopen Studio from the printed `/tools/blockbench_import_studio/index.html` URL. Standalone Studio preview servers can load models, but they cannot write into the game unless the integrated VAW server is reachable.
 
 If solid parts look transparent or edges appear to show geometry behind them, check the material policy first. A global `blend` applies transparent sorting to the whole imported model. Prefer Material Doctor's `auto` policy with per-material overrides such as `NozzleMat=opaque` and `FlameMat=blend`. If several glTF materials share the same name, an override by name applies to every match; rename materials in Blockbench when you need separate policies.
+
+For a read-only pack sanity check, run:
+
+```bash
+node tools/run_with_python_env.js python tools/audit_visual_asset_pack.py assets/visual_packs/local_working_visuals --allow-diagnostics
+```
+
+The local working pack is user art. Audit diagnostics for `local_working_visuals` are evidence for manual review; they are not permission to normalize, delete or auto-fix the art.
+
+For an actionable dry-run cleanup report, add `--suggest-cleanup`:
+
+```bash
+node tools/run_with_python_env.js python tools/audit_visual_asset_pack.py assets/visual_packs/local_working_visuals --allow-diagnostics --suggest-cleanup
+```
+
+The JSON report keeps the original `diagnostics` list and also includes `assetReports` entries with `assetId`, `blockTypes`, model status, per-asset diagnostics and dry-run `cleanupSuggestions`. The top-level `suggestedManifestCleanup` object is always advisory; it never writes files.
+
+`SOURCE_MANIFEST.json` is generated into `dist/` during release builds and embedded in the source ZIP; it is not authored repository state. If the local working pack contains protected art that is not part of the candidate, validate the staged candidate in isolation with:
+
+```bash
+node tools/run_with_python_env.js python tools/validate_clean_candidate.py
+```
+
+The helper validates an isolated `.agent-validation/` checkout with the staged patch applied, reports protected local visual dirty paths, and leaves `local_working_visuals` untouched.
 
 ## Export Pack Artifact
 
@@ -81,4 +109,6 @@ Use that sample only as a loader/fallback fixture. The acceptance target is diff
 
 `assets/visual_packs/real_blockbench_thruster_pack/` and `tools/blockbench_import_studio/assets/real_blockbench_*` are M4E regression fixtures copied from real Blockbench exports. They prove the folder/index and validator path, not final art direction.
 
-VectorThruster visual motion is still limited by the current V1 node alias set. `gimbalAssembly` is a single renderer node, and the runtime currently applies `gimbalA/gimbalB` to fixed local rotation axes. That can look correct for forward/back input but wrong for left/right or roll when the imported model's nozzle pivot axes do not match the procedural VAW model. The next hardening step should add an explicit renderer-only vector-thruster rig profile in Studio and runtime diagnostics, without adding control semantics to the visual pack.
+VectorThruster visual motion can now use the optional `bindings.rig.vectorThruster` profile. Older packs without that profile still use the legacy fallback mapping, so existing fixtures remain loadable. If a particular imported VectorThruster still looks wrong, fix the renderer profile and node binding, not Blueprint, CraftModel, force math or save data.
+
+Studio now reports renderer-profile diagnostics for `VectorThruster` authoring: disabled profile fallback, missing `gimbalAssembly`, missing `gimbalA`/`gimbalB`/roll channels and invalid axes are surfaced before export. These diagnostics are renderer-only proof points; they do not authorize runtime force/control or save-schema changes.

@@ -12,7 +12,7 @@ A source ZIP and a single-file HTML were distributed separately. Even when local
 Every release must:
 
 - use a unique release identifier and filenames;
-- generate `SOURCE_MANIFEST.json` with hashes of build inputs;
+- generate `SOURCE_MANIFEST.json` with hashes of build inputs as a build/release artifact, not tracked authored source;
 - embed release and manifest markers in the single-file HTML;
 - package that exact HTML inside the source ZIP under `release/`;
 - test every embedded application module against the corresponding source file;

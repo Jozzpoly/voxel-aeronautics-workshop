@@ -20,7 +20,8 @@
             activeAssemblySpaceId: 'space:root',
             rootMeshes: [],
             mechanicalLinkVisualsById: new Map(),
-            mechanicalAuthoring: { active: false, firstBlockId: null, axis: 'PY' }
+            mechanicalAuthoring: { active: false, firstBlockId: null, axis: 'PY' },
+            selectedBlockId: null
           },
           flight: {
             assembly: null,
@@ -55,6 +56,7 @@
             lostParts: 0,
             leakingFuelRate: 0,
             firstFailure: '',
+            firstFailureEvent: null,
             structuralFailures: 0,
             initialHealth: 0,
             gyroAuthority: 0,
@@ -98,6 +100,7 @@
             best: {},
             totalStars: 0
           },
+          lastTestResult: null,
           mission: {
             contractId: null,
             active: false,

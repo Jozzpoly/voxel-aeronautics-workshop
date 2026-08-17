@@ -89,6 +89,19 @@
 
       function markMetricsDirty() { state.flight.metricsDirty = true; }
 
+      function recordFailure(message, { kind = 'structural', part = null, reason = '' } = {}, force = false) {
+        if (!force && state.flight.firstFailure) return false;
+        state.flight.firstFailure = String(message || 'Structural failure');
+        state.flight.firstFailureEvent = {
+          kind: String(kind || 'structural'),
+          blockId: part?.blockId == null ? null : String(part.blockId),
+          blockType: part?.type == null ? null : String(part.type),
+          bodyId: part?.bodyId == null ? null : String(part.bodyId),
+          reason: String(reason || '')
+        };
+        return true;
+      }
+
       function recompute(force = false) {
         if (!force && !state.flight.metricsDirty) return false;
         const primaryBodyId = flightSession.primaryBodyId();
@@ -189,7 +202,7 @@
         state.flight.lostParts += 1;
         state.flight.structuralFailures += 1;
         state.flight.blockCount = Math.max(1, state.flight.blockCount - 1);
-        if (!state.flight.firstFailure) state.flight.firstFailure = `${part.type} detached: ${reason}`;
+        recordFailure(`${part.type} detached: ${reason}`, { kind: 'detached', part, reason });
         notify('onPartDetached', part, reason);
       }
 
@@ -210,7 +223,7 @@
           if (!part.attached) return;
           if (part.type === 'Core') {
             part.health = 0; coreFailed = true; state.flight.integrity = 0;
-            state.flight.firstFailure = `Command core failed: ${reason}`;
+            recordFailure(`Command core failed: ${reason}`, { kind: 'core-failed', part, reason }, true);
             notify('onCoreFailed', part, reason); return;
           }
           const broken = flightSession.breakConstraintsForEndpointBlock(part.blockId, reason);
@@ -262,7 +275,7 @@
           }
         }
         part.health = projected;
-        if (!state.flight.firstFailure && healthFraction(part) < 0.55) state.flight.firstFailure = `${part.type} critically damaged by ${reason}`;
+        if (healthFraction(part) < 0.55) recordFailure(`${part.type} critically damaged by ${reason}`, { kind: 'critical-damage', part, reason });
         notify('onPartDamaged', part, reason); markMetricsDirty();
         return part.health <= 0;
       }
@@ -300,7 +313,7 @@
         payload.health = 0;
         state.flight.payloadMass = 0;
         state.flight.payloadBodyLocalPosition = null;
-        if (!state.flight.firstFailure) state.flight.firstFailure = `Payload lost: ${reason}`;
+        recordFailure(`Payload lost: ${reason}`, { kind: 'payload-lost', reason });
         notify('onPayloadDetached', payload, reason);
         recenterBody(payload.bodyId);
         recompute(true);
@@ -357,6 +370,7 @@
           } catch (error) { errors.push(error); }
         }
         if (errors.length) throw aggregate(errors, 'Debris cleanup failed.');
+        state.flight.firstFailureEvent = null;
         return true;
       }
 

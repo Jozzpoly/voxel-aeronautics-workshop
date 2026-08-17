@@ -56,10 +56,13 @@ def main() -> int:
     focused = [
         ['node', 'tests/test_visual_asset_manifest.js'],
         ['node', 'tests/test_visual_asset_registry.js'],
+        ['node', 'tests/test_visual_runtime_adapter.js'],
         ['node', 'tests/test_visual_asset_loader.js'],
         ['node', 'tests/test_visual_asset_dev_controls.js'],
+        ['node', 'tests/test_visual_asset_composition.js'],
         ['node', 'tests/test_blockbench_import_studio_integration.js'],
         [py, 'tests/test_local_visual_pack_install.py'],
+        [py, 'tests/test_visual_asset_pack_audit.py'],
         [npm_command(), 'run', 'studio:test'],
     ]
 

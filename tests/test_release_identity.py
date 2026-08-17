@@ -8,7 +8,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 package = json.loads((ROOT / 'package.json').read_text(encoding='utf-8'))
-manifest = json.loads((ROOT / 'SOURCE_MANIFEST.json').read_text(encoding='utf-8'))
 config = (ROOT / 'src/foundation/config.js').read_text(encoding='utf-8')
 html = (ROOT / 'index.html').read_text(encoding='utf-8')
 
@@ -16,6 +15,7 @@ spec = importlib.util.spec_from_file_location('release_builder', ROOT / 'tools/b
 module = importlib.util.module_from_spec(spec)
 assert spec and spec.loader
 spec.loader.exec_module(module)
+manifest = module.source_manifest(ROOT)
 
 version_match = re.search(r"const APP_VERSION = '([^']+)';", config)
 release_match = re.search(r"const RELEASE_ID = '([^']+)';", config)

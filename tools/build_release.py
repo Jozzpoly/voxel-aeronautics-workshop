@@ -13,25 +13,48 @@ APP_VERSION = '0.8.2-foundation.workbench-foundation'
 SINGLE_NAME = 'Voxel_Aeronautics_Workshop_Workbench_Foundation.html'
 ZIP_NAME = 'Voxel_Aeronautics_Workshop_Workbench_Foundation.zip'
 MANIFEST_NAME = 'SOURCE_MANIFEST.json'
+GENERATED_MANIFEST_DIR = 'dist'
 ARCHIVE_ROOT = 'Voxel_Aeronautics_Workshop_WORKBENCH_FOUNDATION_READY_TO_PUSH'
 IGNORED_ARCHIVE_PARTS = {'dist', 'release', '.agent-validation', '__pycache__', '.pytest_cache', '.git', 'node_modules'}
+ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
+CANONICAL_TEXT_SUFFIXES = {
+    '.css',
+    '.cjs',
+    '.gltf',
+    '.html',
+    '.js',
+    '.json',
+    '.md',
+    '.mjs',
+    '.py',
+    '.sh',
+    '.svg',
+    '.toml',
+    '.txt',
+    '.xml',
+    '.yaml',
+    '.yml',
+}
+CANONICAL_TEXT_FILENAMES = {'.gitattributes'}
+EXECUTABLE_ARCHIVE_PATHS: tuple[Path, ...] = tuple()
 
 
-def files_under(relative_root: Path) -> tuple[Path, ...]:
-    root = ROOT / relative_root
-    if not root.exists():
+def files_under(relative_root: Path, root: Path = ROOT) -> tuple[Path, ...]:
+    directory = root / relative_root
+    if not directory.exists():
         return tuple()
     ignored = {'__pycache__', '.pytest_cache'}
     return tuple(
-        path.relative_to(ROOT)
-        for path in sorted(root.rglob('*'))
-        if path.is_file() and not any(part in ignored for part in path.relative_to(root).parts)
+        path.relative_to(root)
+        for path in sorted(directory.rglob('*'))
+        if path.is_file() and not any(part in ignored for part in path.relative_to(directory).parts)
     )
 
 
 APP_SOURCES = (
     Path('src/foundation/kernel.js'),
     Path('src/foundation/config.js'),
+    Path('src/foundation/terrain_authoring.js'),
     Path('src/foundation/catalog.js'),
     Path('src/foundation/visual_asset_manifest.js'),
     Path('src/foundation/orientation.js'),
@@ -66,12 +89,15 @@ APP_SOURCES = (
     Path('src/game/input_settings_controller.js'),
     Path('src/game/camera_controller.js'),
     Path('src/game/build_targeting.js'),
+    Path('src/game/workshop_selection_controller.js'),
     Path('src/game/orientation_service.js'),
+    Path('src/game/power_control_readouts.js'),
     Path('src/game/visual_asset_registry.js'),
     Path('src/game/visual_asset_loader.js'),
     Path('src/game/visual_asset_dev_controls.js'),
     Path('src/game/visual_runtime_adapter.js'),
     Path('src/game/module_visual_factory.js'),
+    Path('src/game/visual_asset_composition.js'),
     Path('src/game/assembly_space_controller.js'),
     Path('src/game/engineering_analysis.js'),
     Path('src/game/blueprint_controller.js'),
@@ -84,26 +110,49 @@ APP_SOURCES = (
     Path('src/foundation/bootstrap.js'),
     Path('src/game.js'),
 )
-VISUAL_PACK_SOURCES = files_under(Path('assets/visual_packs'))
-MANIFEST_INPUTS = (
+MANIFEST_PREFIX_INPUTS = (
     Path('index.html'),
     Path('tailwind.generated.css'),
     Path('styles.css'),
     Path('vendor/three-r128/three.min.js'),
     Path('vendor/three-r128/GLTFLoader.js'),
     Path('vendor/cannon-0.6.2/cannon.min.js'),
-    *VISUAL_PACK_SOURCES,
+)
+MANIFEST_SUFFIX_INPUTS = (
     Path('tools/generate_tailwind_css.js'),
     Path('package.json'),
     Path('tools/build_release.py'),
     Path('tools/verify_release.py'),
     *APP_SOURCES,
 )
-STUDIO_TOOL_SOURCES = files_under(Path('tools/blockbench_import_studio'))
-MANIFEST_INPUTS = (
-    *MANIFEST_INPUTS,
-    *STUDIO_TOOL_SOURCES,
-)
+
+
+def visual_pack_sources(root: Path = ROOT) -> tuple[Path, ...]:
+    return files_under(Path('assets/visual_packs'), root)
+
+
+def terrain_preset_sources(root: Path = ROOT) -> tuple[Path, ...]:
+    return files_under(Path('assets/terrain'), root)
+
+
+def studio_tool_sources(root: Path = ROOT) -> tuple[Path, ...]:
+    return files_under(Path('tools/blockbench_import_studio'), root)
+
+
+def manifest_inputs(root: Path = ROOT) -> tuple[Path, ...]:
+    return (
+        *MANIFEST_PREFIX_INPUTS,
+        *visual_pack_sources(root),
+        *terrain_preset_sources(root),
+        *MANIFEST_SUFFIX_INPUTS,
+        *studio_tool_sources(root),
+    )
+
+
+VISUAL_PACK_SOURCES = visual_pack_sources(ROOT)
+TERRAIN_PRESET_SOURCES = terrain_preset_sources(ROOT)
+STUDIO_TOOL_SOURCES = studio_tool_sources(ROOT)
+MANIFEST_INPUTS = manifest_inputs(ROOT)
 LOADER_BEGIN = '  <!-- BEGIN APP LOADER -->'
 LOADER_END = '  <!-- END APP LOADER -->'
 
@@ -120,16 +169,33 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def is_canonical_text_path(relative: Path) -> bool:
+    path = Path(relative)
+    return path.name in CANONICAL_TEXT_FILENAMES or path.suffix.lower() in CANONICAL_TEXT_SUFFIXES
+
+
+def canonicalize_text_bytes(data: bytes, relative: Path) -> bytes:
+    if not is_canonical_text_path(relative):
+        return data
+    return data.replace(b'\r\n', b'\n').replace(b'\r', b'\n')
+
+
+def canonical_source_bytes(root: Path, relative: Path) -> bytes:
+    data = (root / relative).read_bytes()
+    return canonicalize_text_bytes(data, relative)
+
+
 def source_manifest(root: Path = ROOT) -> dict:
     files = {}
-    for relative in MANIFEST_INPUTS:
-        files[relative.as_posix()] = sha256(root / relative)
+    inputs = manifest_inputs(root)
+    for relative in inputs:
+        files[relative.as_posix()] = sha256_bytes(canonical_source_bytes(root, relative))
     return {
         'releaseId': RELEASE_ID,
         'appVersion': APP_VERSION,
         'entrypoint': 'index.html',
         'embeddedApplicationSources': [path.as_posix() for path in APP_SOURCES],
-        'studioToolSources': [path.as_posix() for path in STUDIO_TOOL_SOURCES],
+        'studioToolSources': [path.as_posix() for path in studio_tool_sources(root)],
         'files': files,
     }
 
@@ -138,11 +204,10 @@ def manifest_text(root: Path = ROOT) -> str:
     return json.dumps(source_manifest(root), ensure_ascii=False, sort_keys=True, indent=2) + '\n'
 
 
-def ensure_source_manifest(root: Path = ROOT) -> Path:
-    destination = root / MANIFEST_NAME
-    content = manifest_text(root)
-    if not destination.exists() or destination.read_text(encoding='utf-8') != content:
-        destination.write_text(content, encoding='utf-8', newline='\n')
+def write_source_manifest(root: Path = ROOT, destination: Path | None = None) -> Path:
+    destination = destination or (root / GENERATED_MANIFEST_DIR / MANIFEST_NAME)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(manifest_text(root), encoding='utf-8', newline='\n')
     return destination
 
 
@@ -245,30 +310,62 @@ def build_single_html(root: Path = ROOT) -> str:
     return replace_loader(html, inline)
 
 
-def _deterministic_info(name: str) -> zipfile.ZipInfo:
-    info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
-    info.compress_type = zipfile.ZIP_DEFLATED
-    info.external_attr = 0o100644 << 16
+def expected_archive_names(root: Path = ROOT, single_name: str | None = None, *, excluded_paths: tuple[Path, ...] = ()) -> tuple[str, ...]:
+    excluded = {path.resolve() for path in excluded_paths}
+    names: list[str] = []
+    for path in sorted(root.rglob('*')):
+        relative = path.relative_to(root)
+        if not path.is_file() or any(part in IGNORED_ARCHIVE_PARTS for part in relative.parts):
+            continue
+        if relative == Path(MANIFEST_NAME):
+            continue
+        if path.resolve() in excluded:
+            continue
+        names.append((Path(ARCHIVE_ROOT) / relative).as_posix())
+    names.append((Path(ARCHIVE_ROOT) / MANIFEST_NAME).as_posix())
+    if single_name is not None:
+        names.append((Path(ARCHIVE_ROOT) / 'release' / single_name).as_posix())
+        names.append((Path(ARCHIVE_ROOT) / 'release' / 'SHA256.txt').as_posix())
+    return tuple(names)
+
+
+def _deterministic_info(name: str, *, mode: int = 0o100644) -> zipfile.ZipInfo:
+    info = zipfile.ZipInfo(name, date_time=ZIP_TIMESTAMP)
+    info.compress_type = zipfile.ZIP_STORED
+    info.create_system = 3
+    info.external_attr = mode << 16
     return info
 
 
+def _archive_mode(relative: Path) -> int:
+    return 0o100755 if relative in EXECUTABLE_ARCHIVE_PATHS else 0o100644
+
+
+def _write_archive_bytes(archive: zipfile.ZipFile, name: str, data: bytes, *, mode: int = 0o100644) -> None:
+    archive.writestr(_deterministic_info(name, mode=mode), data, compress_type=zipfile.ZIP_STORED)
+
+
 def write_zip(root: Path, destination: Path, single_file: Path | None = None) -> None:
-    ensure_source_manifest(root)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(destination, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+    with zipfile.ZipFile(destination, 'w', compression=zipfile.ZIP_STORED) as archive:
         for path in sorted(root.rglob('*')):
             relative = path.relative_to(root)
             if not path.is_file() or any(part in IGNORED_ARCHIVE_PARTS for part in relative.parts):
                 continue
+            if relative == Path(MANIFEST_NAME):
+                continue
             if path.resolve() == destination.resolve():
                 continue
-            archive.write(path, Path(ARCHIVE_ROOT) / relative)
+            archive_name = (Path(ARCHIVE_ROOT) / relative).as_posix()
+            _write_archive_bytes(archive, archive_name, canonical_source_bytes(root, relative), mode=_archive_mode(relative))
+        manifest_path = (Path(ARCHIVE_ROOT) / MANIFEST_NAME).as_posix()
+        _write_archive_bytes(archive, manifest_path, manifest_text(root).encode('utf-8'))
         if single_file is not None:
             release_path = (Path(ARCHIVE_ROOT) / 'release' / single_file.name).as_posix()
-            archive.writestr(_deterministic_info(release_path), single_file.read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+            _write_archive_bytes(archive, release_path, single_file.read_bytes())
             single_hash = f'{sha256(single_file)}  {single_file.name}\n'.encode('utf-8')
             hash_path = (Path(ARCHIVE_ROOT) / 'release' / 'SHA256.txt').as_posix()
-            archive.writestr(_deterministic_info(hash_path), single_hash, compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+            _write_archive_bytes(archive, hash_path, single_hash)
 
 
 def main() -> None:
@@ -278,7 +375,7 @@ def main() -> None:
     parser.add_argument('--hashes', type=Path, default=ROOT / 'dist' / 'SHA256.txt')
     args = parser.parse_args()
 
-    ensure_source_manifest(ROOT)
+    write_source_manifest(ROOT)
     args.single.parent.mkdir(parents=True, exist_ok=True)
     args.single.write_text(build_single_html(ROOT), encoding='utf-8', newline='\n')
     write_zip(ROOT, args.zip_path, args.single)

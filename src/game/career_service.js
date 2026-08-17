@@ -56,9 +56,11 @@
       }
       function careerRank() {
         const completedCount = CONTRACTS.filter(contract => contract.id !== 'sandbox' && state.career.completed[contract.id] === true).length;
-        if (completedCount >= 4) return 'Chief Test Engineer';
-        if (completedCount >= 3) return 'Senior Aeronaut';
-        if (completedCount >= 2) return 'Flight Engineer';
+        const playableCount = Math.max(1, CONTRACTS.filter(contract => contract.id !== 'sandbox').length);
+        if (completedCount >= playableCount) return 'Chief Test Engineer';
+        if (completedCount >= Math.ceil(playableCount * 0.75)) return 'Range Commander';
+        if (completedCount >= Math.ceil(playableCount * 0.50)) return 'Senior Aeronaut';
+        if (completedCount >= Math.ceil(playableCount * 0.25)) return 'Flight Engineer';
         if (completedCount >= 1) return 'Licensed Apprentice';
         return 'Apprentice Engineer';
       }

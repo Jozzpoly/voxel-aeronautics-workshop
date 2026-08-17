@@ -97,7 +97,7 @@ assert(flame && flame.visible, 'Thruster flame must be controllable through the 
 const vector = factory.createModuleVisual('VectorThruster', 0);
 assert.strictEqual(adapter.setGimbal(vector, 0.5, -0.25, Math.PI / 8), true);
 const gimbal = adapter.findByName(vector, 'gimbalAssembly');
-assert(gimbal && gimbal.rotation.y < 0 && gimbal.rotation.z < 0);
+assert(gimbal && gimbal.rotation.y > 0 && gimbal.rotation.z > 0);
 
 const control = factory.createModuleVisual('ControlSurface', 0);
 assert.strictEqual(adapter.setControlDeflection(control, 0.5, Math.PI / 6), true);

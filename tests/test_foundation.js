@@ -11,6 +11,7 @@ vm.runInThisContext(fs.readFileSync(path.join(__dirname, 'browser_stub_libs.js')
 const sourceFiles = [
   'src/foundation/kernel.js',
   'src/foundation/config.js',
+  'src/foundation/terrain_authoring.js',
   'src/foundation/catalog.js',
   'src/foundation/orientation.js',
   'src/foundation/blueprint.js',
@@ -45,6 +46,7 @@ for (const relative of sourceFiles) {
 }
 
 const Config = VAW.require('foundation.config');
+const TerrainAuthoring = VAW.require('foundation.terrain-authoring');
 const Catalog = VAW.require('foundation.catalog');
 const Orientation = VAW.require('foundation.orientation');
 const Blueprint = VAW.require('foundation.blueprint');
@@ -67,16 +69,25 @@ const { Physics, Capabilities } = VAW.require('runtime.active-context');
 assert(Object.isFrozen(Config));
 assert(Object.isFrozen(Config.GRID));
 assert.strictEqual(Config.SAVE_VERSION, 12);
-assert.strictEqual(Config.TEST_RANGE.maxAltitude, 160);
+assert.strictEqual(Config.TEST_RANGE.maxAltitude, 260);
+assert.strictEqual(Config.TEST_RANGE.bounds, 360);
+assert(Object.isFrozen(Config.TEST_RANGE.pads));
+assert(Object.isFrozen(Config.TEST_RANGE.terrain.materials));
+assert(Config.TEST_RANGE.terrain.fog.density <= 0.006);
+const defaultTerrainPreset = TerrainAuthoring.createPresetFromTestRange(Config.TEST_RANGE);
+assert.strictEqual(defaultTerrainPreset.format, 'VAW_TERRAIN_AUTHORING_V1');
+assert.deepStrictEqual(TerrainAuthoring.validateTerrain(defaultTerrainPreset.terrain, Config.TEST_RANGE), []);
+assert.strictEqual(TerrainAuthoring.mergeTestRangeTerrain(Config.TEST_RANGE, defaultTerrainPreset).terrain.fog.density, Config.TEST_RANGE.terrain.fog.density);
 assert.strictEqual(typeof Config.PHYSICS.wingStallStart, 'number');
 assert(Object.isFrozen(Catalog.BLOCKS));
 assert(Object.isFrozen(Catalog.CONTRACTS));
-assert.strictEqual(Catalog.getContractById('courier').payloadMass, 10);
+assert.strictEqual(Catalog.getContractById('courier').payloadMass, 7);
 assert.strictEqual(Catalog.getContractById('missing'), null);
-assert(Catalog.knownContractIds().has('heavy_lift'));
+assert(Catalog.knownContractIds().has('frontier_gold_trial'));
+assert.strictEqual(Catalog.MISSION_MAP, Config.TEST_RANGE.missionMap);
 assert.strictEqual(Capabilities.physicsBackend, 'cannon');
 assert.strictEqual(Capabilities.physicsBoundary, 'phase-1d4a-neutral-mechanical-assembly-api');
-assert.strictEqual(Capabilities.runtimeAssembly, 'runtime-assembly-plan-v2');
+assert.strictEqual(Capabilities.runtimeAssembly, 'VAW_RUNTIME_ASSEMBLY_PLAN_V3');
 assert.strictEqual(Capabilities.headlessHarness, 'deterministic-free-flight-v1');
 assert.strictEqual(Capabilities.missionEvaluation, 'phase-1d2b-multi-pad-ground-state');
 assert.strictEqual(Capabilities.aerostatics, 'altitude-lift-damped-settling-v2');

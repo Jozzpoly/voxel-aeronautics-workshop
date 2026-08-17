@@ -50,6 +50,49 @@ function validManifest(overrides = {}) {
 
 {
   const manifest = validManifest();
+  manifest.assets[0].bindings.blockTypes = ['VectorThruster'];
+  manifest.assets[0].bindings.nodes.gimbalAssembly = '/NozzlePivot';
+  manifest.assets[0].bindings.rig = {
+    vectorThruster: {
+      channels: [
+        { input: 'gimbalA', node: 'gimbalAssembly', axis: 'z', direction: -1 },
+        { input: 'gimbalB', node: 'gimbalAssembly', axis: 'y', direction: 1 },
+        { input: 'roll', node: 'gimbalAssembly', axis: 'x', direction: 1 }
+      ]
+    }
+  };
+  const result = VisualAssetManifest.validateManifest(manifest);
+  assert.strictEqual(result.ok, true, JSON.stringify(result.errors));
+  assert.deepStrictEqual(result.assets[0].bindings.rig.vectorThruster.channels[0], {
+    input: 'gimbalA',
+    node: 'gimbalAssembly',
+    axis: 'z',
+    direction: -1
+  });
+}
+
+{
+  const manifest = validManifest();
+  manifest.assets[0].bindings.blockTypes = ['VectorThruster'];
+  manifest.assets[0].bindings.rig = { vectorThruster: { channels: [{ input: 'pitch', node: 'gimbalAssembly', axis: 'yaw', direction: 0 }] } };
+  const result = VisualAssetManifest.validateManifest(manifest);
+  assert.strictEqual(result.ok, false);
+  assert(result.errors.some(item => item.code === 'visualAsset.rigInputInvalid'));
+  assert(result.errors.some(item => item.code === 'visualAsset.rigAxisInvalid'));
+  assert(result.errors.some(item => item.code === 'visualAsset.rigDirectionInvalid'));
+  assert(result.errors.some(item => item.code === 'visualAsset.rigNodeBindingMissing'));
+}
+
+{
+  const manifest = validManifest();
+  manifest.assets[0].bindings.rig = { gameplayGimbal: { channels: [] } };
+  const result = VisualAssetManifest.validateManifest(manifest);
+  assert.strictEqual(result.ok, false);
+  assert(result.errors.some(item => item.code === 'visualAsset.unknownRigProfile'));
+}
+
+{
+  const manifest = validManifest();
   manifest.assets[0].model.transform = {
     position: { x: 0.25, y: -0.5, z: 1 },
     rotationDegrees: { x: 0, y: 90, z: 180 },

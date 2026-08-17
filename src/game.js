@@ -8,11 +8,10 @@
     const InputSettingsController = window.VAW.require('game.input-settings-controller');
     const CameraController = window.VAW.require('game.camera-controller');
     const BT = window.VAW.require('game.build-targeting');
+    const WorkshopSelectionController = window.VAW.require('game.workshop-selection-controller');
     const OrientationService = window.VAW.require('game.orientation-service');
-    const VisualAssetRegistry = window.VAW.require('game.visual-asset-registry');
-    const VisualAssetLoader = window.VAW.require('game.visual-asset-loader');
-    const VisualRuntimeAdapter = window.VAW.require('game.visual-runtime-adapter');
-    const ModuleVisualFactory = window.VAW.require('game.module-visual-factory');
+    const PowerControlReadouts = window.VAW.require('game.power-control-readouts');
+    const VisualAssetComposition = window.VAW.require('game.visual-asset-composition');
     const AssemblySpaceController = window.VAW.require('game.assembly-space-controller');
     const EngineeringAnalysis = window.VAW.require('game.engineering-analysis');
     const BlueprintController = window.VAW.require('game.blueprint-controller');
@@ -24,6 +23,7 @@
     const DebrisRuntime = window.VAW.require('game.debris-runtime');
 
     const Config = window.VAW.require('foundation.config');
+    const TerrainAuthoring = window.VAW.require('foundation.terrain-authoring');
     const Catalog = window.VAW.require('foundation.catalog');
     const Orientation = window.VAW.require('foundation.orientation');
     const Blueprint = window.VAW.require('foundation.blueprint');
@@ -50,6 +50,13 @@
       SYMMETRY_MODES, CONTROL_AXES, CONTROL_SIGNS
     } = Config;
     const { BLOCKS, CONTRACTS } = Catalog;
+    const RENDER_TEST_RANGE = TerrainAuthoring.mergeTestRangeTerrain(TEST_RANGE, window.__VAW_TERRAIN_PRESET__ || null);
+    if (typeof window.BroadcastChannel === 'function' && window.location?.reload) {
+      const terrainChannel = new window.BroadcastChannel('vaw-terrain-authoring');
+      terrainChannel.onmessage = event => {
+        if (event.data?.type === 'terrain-preset-updated') window.location.reload();
+      };
+    }
     const LANDING_POLICY = MissionEvaluator.normalizeLandingPolicy(MISSION.landing);
     const AEROSTATIC_POLICY = Aerostatics.normalizePolicy(AEROSTATICS);
     const {
@@ -60,10 +67,12 @@
     const CRAFT = STATE.craft;
     const WORKSHOP = STATE.workshop;
     let assemblySpaceController = null;
+    let workshopSelectionController = null;
+    let powerControlReadouts = null;
 
     const container = document.getElementById('canvas-container');
     const environment = SceneEnvironment.create({
-      THREE, Physics, container, GRID, AEROSTATIC_POLICY, COLLISION_GROUP, TEST_RANGE, BLOCKS
+      THREE, Physics, container, GRID, AEROSTATIC_POLICY, COLLISION_GROUP, TEST_RANGE: RENDER_TEST_RANGE, BLOCKS
     });
     const {
       scene, camera, renderer, gridHelper, basePlane,
@@ -142,16 +151,6 @@
       updateFlightFeedback();
     }
 
-    function staticPassiveThrusterLift(parts, power) {
-      let lift = 0;
-      for (const part of parts || []) {
-        if (!part || !part.attached || (part.type !== 'Thruster' && part.type !== 'VectorThruster')) continue;
-        const axisY = Number(part.localAxis?.y ?? part.basis?.chord?.y ?? 0);
-        lift += Math.max(0, axisY) * (part.force || part.def?.force || 0) * THREE.MathUtils.clamp(power, 0, 1) * runtimePartHealthFraction(part);
-      }
-      return lift;
-    }
-
     function primaryFlightBodyId() {
       return flightSession.isActive() ? flightSession.primaryBodyId() : null;
     }
@@ -171,149 +170,8 @@
       return transform ? Math.max(0, transform.position.y - TEST_RANGE.groundY) : 0;
     }
 
-    function verticalSupportSample() {
-      const flight = STATE.mode === 'FLIGHT' && primaryFlightBodyId();
-      const altitude = flight ? currentAerostaticAltitude() : 0;
-      let weight = 0;
-      let maxSeaLevelLift = 0;
-      let maxPassiveLift = 0;
-      if (flight) {
-        weight = Math.max(0, STATE.flight.runtimeMass) * AEROSTATIC_POLICY.gravity;
-        for (const part of STATE.flight.functionalBlocks) {
-          if (!part.attached) continue;
-          const health = runtimePartHealthFraction(part);
-          if (part.type === 'Balloon') maxSeaLevelLift += part.force * health;
-          if (part.type === 'Thruster' || part.type === 'VectorThruster') {
-            const axisY = Number(part.localAxis?.y ?? part.basis?.chord?.y ?? 0);
-            maxPassiveLift += Math.max(0, axisY) * (part.force || part.def?.force || 0) * health;
-          }
-        }
-      } else {
-        const analysis = STATE.flight.analysis || computeCraftAnalysis();
-        weight = Math.max(0, analysis.mass) * AEROSTATIC_POLICY.gravity;
-        for (const part of analysis.snapshot.parts) {
-          if (part.type === 'Balloon') maxSeaLevelLift += part.def.force || 0;
-          if (part.type === 'Thruster' || part.type === 'VectorThruster') {
-            maxPassiveLift += Math.max(0, Number(part.basis?.chord?.y) || 0) * (part.def.force || 0);
-          }
-        }
-      }
-      return { altitude, weight, maxSeaLevelLift, maxPassiveLift };
-    }
-
-    function balloonLiftGuidance(sample = verticalSupportSample()) {
-      const passiveLift = sample.maxPassiveLift * STATE.thrusterPower;
-      const requiredPower = Aerostatics.requiredPowerForHover({
-        weight: sample.weight,
-        passiveLift,
-        maxSeaLevelLift: sample.maxSeaLevelLift,
-        altitude: sample.altitude
-      }, AEROSTATIC_POLICY);
-      const equilibriumAltitude = Aerostatics.equilibriumAltitude({
-        weight: sample.weight,
-        passiveLift,
-        maxSeaLevelLift: sample.maxSeaLevelLift,
-        power: STATE.balloonPower
-      }, AEROSTATIC_POLICY);
-      return { ...sample, passiveLift, requiredPower, equilibriumAltitude };
-    }
-
-    function passiveThrustGuidance(sample = verticalSupportSample()) {
-      const balloonLift = Aerostatics.availableLift(
-        sample.maxSeaLevelLift,
-        STATE.balloonPower,
-        sample.altitude,
-        AEROSTATIC_POLICY
-      );
-      const requiredPower = Aerostatics.requiredSupplementalPowerForHover({
-        weight: sample.weight,
-        baselineLift: balloonLift,
-        maxSupplementalLift: sample.maxPassiveLift
-      });
-      return { ...sample, balloonLift, requiredPower };
-    }
-
-    function primaryBindingLabel(action) {
-      const profile = InputProfile.normalize(STATE.input.profile);
-      return InputProfile.formatCode(profile.bindings[action]?.[0] || '');
-    }
-
-    function powerBindingHint(decreaseAction, increaseAction) {
-      return `${primaryBindingLabel(decreaseAction)} / ${primaryBindingLabel(increaseAction)}`;
-    }
-
-    function syncGuidedPowerControl({ markerId, zoneId, guidanceId, requiredPower, unavailableText, neutralText, selectedText, bindingHint }) {
-      const marker = document.getElementById(markerId);
-      const climbZone = document.getElementById(zoneId);
-      const guidance = document.getElementById(guidanceId);
-      if (!marker || !climbZone || !guidance) return;
-      const finiteRequired = Number.isFinite(requiredPower);
-      const reachable = finiteRequired && requiredPower <= 1;
-      const markerPercent = finiteRequired ? THREE.MathUtils.clamp(requiredPower * 100, 0, 100) : 100;
-      marker.style.left = `${markerPercent}%`;
-      marker.classList.toggle('unreachable', !reachable);
-      climbZone.style.left = `${markerPercent}%`;
-      climbZone.style.width = `${Math.max(0, 100 - markerPercent)}%`;
-      climbZone.classList.toggle('unreachable', !reachable);
-      const thresholdText = !finiteRequired
-        ? unavailableText
-        : (requiredPower > 1 ? `${Math.round(requiredPower * 100)}% required • unavailable` : neutralText);
-      guidance.innerHTML = `<span>${thresholdText}</span><span>${bindingHint} • ${selectedText}</span>`;
-      marker.title = thresholdText;
-      climbZone.title = reachable ? 'Settings above this marker produce upward acceleration at the current altitude.' : thresholdText;
-    }
-
     function syncPowerControlReadouts() {
-      const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
-      setText('ui-thruster-power', `${Math.round(STATE.thrusterPower * 100)}%`);
-      setText('ui-balloon-power', `${Math.round(STATE.balloonPower * 100)}%`);
-      setText('ui-stability', `${Math.round(STATE.stabilityAssist * 100)}%`);
-
-      const sample = verticalSupportSample();
-      const selectedSupport = sample.maxPassiveLift * STATE.thrusterPower + Aerostatics.availableLift(sample.maxSeaLevelLift, STATE.balloonPower, sample.altitude, AEROSTATIC_POLICY);
-      const supportRatio = sample.weight > 1e-6 ? selectedSupport / sample.weight : 0;
-      setText('ui-vertical-support', sample.weight > 1e-6 ? `${supportRatio.toFixed(2)}× weight` : '—');
-      const hasCraft = sample.weight > 1e-6;
-      const hasPassiveLift = sample.maxPassiveLift > 1e-6;
-      const thrusterInfo = passiveThrustGuidance(sample);
-      const thrusterRequired = hasCraft && hasPassiveLift ? thrusterInfo.requiredPower : Number.POSITIVE_INFINITY;
-      const thrusterDelta = Number.isFinite(thrusterRequired) ? STATE.thrusterPower - thrusterRequired : -1;
-      const thrusterSelected = !hasCraft
-        ? 'waiting for craft'
-        : (!hasPassiveLift
-          ? 'no upward thrusters'
-          : (thrusterDelta > 0.015 ? 'selected: climb' : (thrusterDelta < -0.015 ? 'selected: descend' : 'selected: near hover')));
-      const thrusterNeutral = thrusterRequired <= 0
-        ? 'Balloons already cover hover • passive thrust optional'
-        : `Hover ≈ ${Math.round(thrusterRequired * 100)}% • climb above marker`;
-      syncGuidedPowerControl({
-        markerId: 'ui-thruster-hover-marker',
-        zoneId: 'ui-thruster-climb-zone',
-        guidanceId: 'ui-thruster-guidance',
-        requiredPower: thrusterRequired,
-        unavailableText: !hasCraft ? 'Build a craft to calculate hover' : 'No upward passive thrusters installed',
-        neutralText: thrusterNeutral,
-        selectedText: thrusterSelected,
-        bindingHint: powerBindingHint('thrusterPower-', 'thrusterPower+')
-      });
-
-      const hasBalloonLift = sample.maxSeaLevelLift > 1e-6;
-      const balloonInfo = balloonLiftGuidance(sample);
-      const balloonRequired = hasCraft && hasBalloonLift ? balloonInfo.requiredPower : Number.POSITIVE_INFINITY;
-      const balloonNeutral = `Hover ≈ ${Math.round(balloonRequired * 100)}% at launch level • lift falls with altitude`;
-      let balloonSelected = 'selected: below hover';
-      if (balloonInfo.equilibriumAltitude === Number.POSITIVE_INFINITY) balloonSelected = 'selected: continuous climb';
-      else if (Number.isFinite(balloonInfo.equilibriumAltitude)) balloonSelected = `equilibrium ≈ ${balloonInfo.equilibriumAltitude.toFixed(0)} m`;
-      syncGuidedPowerControl({
-        markerId: 'ui-balloon-hover-marker',
-        zoneId: 'ui-balloon-climb-zone',
-        guidanceId: 'ui-balloon-guidance',
-        requiredPower: balloonRequired,
-        unavailableText: !hasCraft ? 'Build a craft to calculate hover' : 'No balloons installed',
-        neutralText: balloonNeutral,
-        selectedText: balloonSelected,
-        bindingHint: powerBindingHint('balloonPower-', 'balloonPower+')
-      });
+      if (powerControlReadouts) powerControlReadouts.syncPowerControlReadouts();
     }
 
     function updateFlightFeedback() {
@@ -450,7 +308,7 @@
       buildButton.textContent = STATE.mission.status === 'ACTIVE' && STATE.mission.contractId !== 'sandbox' ? 'Abort Contract' : 'Return to Drydock';
       if (STATE.mode === 'BUILD') {
         const contract = getSelectedContract();
-        flightButton.textContent = contract.id === 'sandbox' ? 'Launch Sandbox Test' : `Launch ${contract.title.replace(/^\d+\s*•\s*/, '')}`;
+        flightButton.textContent = contract.id === 'sandbox' ? 'Launch Sandbox Test' : `Launch ${contract.title.replace(/^\d+\s*[-•]\s*/, '')}`;
       }
       document.getElementById('btn-symmetry').textContent = `SYMMETRY: ${STATE.symmetry}`;
 
@@ -573,13 +431,25 @@
       setHorizontalBar, updateEngineeringAnalysisUI, updateAnalysisVisuals
     } = engineeringAnalysis;
 
-    const visualAssetRegistry=VisualAssetRegistry.create();
-    const visualAssetLoader = VisualAssetLoader.create({THREE,visualAssetRegistry,disposeObjectTree,logger:console});
-    visualAssetLoader.bootstrapInstalledPacks().catch(console.warn);
-    const visualRuntimeAdapter=VisualRuntimeAdapter.create();
-    const moduleVisualFactory=ModuleVisualFactory.create({THREE,sharedGeometry,cloneMaterial,visualAssetRegistry});
-    const { createModuleVisual } = moduleVisualFactory;
-    window.VAW.require('game.visual-asset-dev-controls').create({visualAssetLoader,showStatus,document,window});
+    powerControlReadouts = PowerControlReadouts.create({
+      state: STATE, document, THREE, InputProfile, Aerostatics, aerostaticPolicy: AEROSTATIC_POLICY,
+      getPrimaryFlightBodyId: primaryFlightBodyId, currentAerostaticAltitude, computeCraftAnalysis, runtimePartHealthFraction
+    });
+
+    const {
+      visualAssetLoader,
+      visualRuntimeAdapter,
+      createModuleVisual
+    } = VisualAssetComposition.create({
+      THREE,
+      sharedGeometry,
+      cloneMaterial,
+      disposeObjectTree,
+      showStatus,
+      document,
+      window,
+      logger: console
+    });
 
     function symmetryOffsets(x, z) {
       const pairs = [];
@@ -752,6 +622,7 @@
         rebuildWorkshopView();
         assertWorkshopViewConsistency();
       }
+      workshopSelectionController?.sync();
     }
 
     CRAFT.subscribe(handleCraftModelChange);
@@ -1028,6 +899,17 @@
     }
 
     const raycaster = new THREE.Raycaster();
+
+    function raycastWorkshopBlock(ndc) {
+      raycaster.setFromCamera(ndc, camera);
+      for (const hit of raycaster.intersectObjects(WORKSHOP.rootMeshes, true)) {
+        const root = getRootVoxelFromHit(hit.object);
+        const block = root ? CRAFT.get(root.userData.blockKey) : null;
+        if (block) return { root, block };
+      }
+      return null;
+    }
+
     function hitOk(target) { WORKSHOP.lastTargetResult = BT.targetOk({ target }); return target; }
     function hitFail(reason, details) { WORKSHOP.lastTargetResult = BT.targetFail(reason, details); return null; }
     function raycastBuildTarget(ndc) {
@@ -1491,7 +1373,7 @@
           mass: part.def.mass || 0, maxHealth: part.def.durability || 60, health: part.def.durability || 60,
           rigidNeighborBlockIds: [...part.rigidNeighborBlockIds],
           pilotControlled: bodyId === started.primaryBodyId || part.type === 'Thruster' || part.type === 'VectorThruster',
-          attached: true, lastCommand: 0, gimbalA: 0, gimbalB: 0, controlDeflection: 0
+          attached: true, lastCommand: 0, gimbalA: 0, gimbalB: 0, gimbalRoll: 0, controlDeflection: 0
         };
         runtimeParts.push(runtimePart);
         if (runtimePart.pilotControlled && (part.type === 'Thruster' || part.type === 'VectorThruster')) {
@@ -1622,6 +1504,7 @@
         STATE.mission.helpPaused = false;
         STATE.camera.target.copy(STATE.camera.defaultTarget);
         STATE.camera.targetOffset.set(0, 0, 0);
+        workshopSelectionController?.sync({ preferLastFailure: true });
       } else {
         const compiled = CraftCompiler.compile(CRAFT);
         if (compiled.blockCount > PHYSICS.maxFlightParts) {
@@ -1641,6 +1524,7 @@
         }
         setWorkspacePanelOpen('contracts', false, true);
         setMechanicalAuthoring(false, false); STATE.mode = 'FLIGHT';
+        workshopSelectionController?.sync();
         ghost.visible = false;
         ghostArrow.visible = false;
         ghostNormalArrow.visible = false;
@@ -1694,8 +1578,14 @@
       return assemblySpaceController.authorHingeEndpoint(blockId, axis);
     }
 
-    function performBuildAction(button) {
+    function performBuildAction(button, modifiers = {}) {
       if (STATE.mode !== 'BUILD') return;
+      if (button === 0 && modifiers.shiftKey) {
+        const selectionTarget = raycastWorkshopBlock(STATE.input.pointerNDC);
+        if (selectionTarget?.block?.blockId) workshopSelectionController?.select(selectionTarget.block.blockId, { activateSpace: true, source: 'viewport' });
+        else showStatus('SHIFT + CLICK AN EXISTING PART TO SELECT IT', 1300);
+        return;
+      }
       const target = raycastBuildTarget(STATE.input.pointerNDC);
       if (!target) { showStatus(BT.placementFeedback(WORKSHOP.lastTargetResult).status, 1300); return; }
       if (button === 0 && WORKSHOP.mechanicalAuthoring.active) { handleMechanicalEndpointSelection(target); return; }
@@ -1753,6 +1643,16 @@
       }
     });
     assemblySpaceController.setActiveAssemblySpace(AssemblySpaces.ROOT_ASSEMBLY_SPACE_ID);
+
+    workshopSelectionController = WorkshopSelectionController.create({
+      THREE, state: STATE, craft: CRAFT, workshop: WORKSHOP, scene, document,
+      callbacks: {
+        hoveredBlockId: () => raycastWorkshopBlock(STATE.input.pointerNDC)?.block?.blockId || null,
+        setActiveAssemblySpace: id => assemblySpaceController.setActiveAssemblySpace(id),
+        collectBlueprint, commitHistory, updateTelemetry, updateGhost, autoSave, showStatus
+      }
+    });
+    workshopSelectionController.wire();
 
     const missionController = MissionController.create({
       THREE, Physics, state: STATE, craft: CRAFT, document,
@@ -1876,7 +1776,7 @@
       STATE.input.orbitDrag = false;
       STATE.input.panDrag = false;
       if (!cameraDragWasActive && STATE.mode === 'BUILD' && !STATE.input.downMoved) {
-        if (event.button === 0 || event.button === 2) performBuildAction(event.button);
+        if (event.button === 0 || event.button === 2) performBuildAction(event.button, { shiftKey: event.shiftKey });
       }
       STATE.input.downButton = -1;
       updateGhost();
@@ -2138,7 +2038,7 @@
       for (const mod of STATE.flight.functionalBlocks) {
         if ((mod.type !== 'Thruster' && mod.type !== 'VectorThruster') || !mod.visual || !mod.attached) continue;
         const intensity = Math.max(0, mod.lastCommand || 0);
-        visualRuntimeAdapter.setGimbal(mod.visual, mod.gimbalA || 0, mod.gimbalB || 0, PHYSICS.gimbalAngle);
+        visualRuntimeAdapter.setGimbal(mod.visual, mod.gimbalA || 0, mod.gimbalB || 0, PHYSICS.gimbalAngle, { roll: mod.gimbalRoll || 0 });
         visualRuntimeAdapter.setThrusterIntensity(mod.visual, intensity, { active: STATE.mode === 'FLIGHT' });
       }
     }
@@ -2247,7 +2147,7 @@
       let b = torqueSpan.lengthSquared() > 0.0001 ? cannonDot(desired, torqueSpan) / (normalization * torqueSpan.length()) * desiredLength : 0;
       const magnitude = Math.hypot(a, b);
       if (magnitude > 1) { a /= magnitude; b /= magnitude; }
-      mod.gimbalA = a; mod.gimbalB = b;
+      mod.gimbalA = a; mod.gimbalB = b; mod.gimbalRoll = Number(pilot.roll) || 0;
       const forwardScale = Math.cos(PHYSICS.gimbalAngle * Math.min(1, Math.hypot(a,b)));
       return forward.scale(baseForce * forwardScale).vadd(mod.localNormal.scale(lateral*a)).vadd(mod.localSpan.scale(lateral*b));
     }

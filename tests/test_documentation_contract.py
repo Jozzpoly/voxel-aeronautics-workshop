@@ -4,147 +4,99 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-PHASE_REPORT_NAMES = (
-    'PHASE_1C2_REPORT.md',
-    'PHASE_1D1_REPORT.md',
-    'PHASE_1D2_REPORT.md',
-    'PHASE_1D2A_REPORT.md',
-    'PHASE_1D2B_REPORT.md',
-    'PHASE_1D2C_REPORT.md',
-    'PHASE_1D2D_REPORT.md',
-    'PHASE_1D2E_REPORT.md',
-    'PHASE_1D2F_REPORT.md',
-    'PHASE_1D3A_REPORT.md',
-    'PHASE_1D3B_REPORT.md',
-    'PHASE_1D3B1_REPORT.md',
-    'PHASE_1D3C_REPORT.md',
-    'PHASE_1D3D_REPORT.md',
-    'PHASE_1D3E_REPORT.md',
-    'PHASE_1D4A_REPORT.md',
-)
-PHASE_REPORTS = {f'docs/history/phases/{name}' for name in PHASE_REPORT_NAMES}
-HISTORICAL_REVIEWS = {
-    'docs/history/reviews/FOUNDATION_REVIEW.md',
-    'docs/history/reviews/CRITICAL_REVIEW.md',
-    'docs/history/reviews/GAME_MODULARIZATION_REVIEW.md',
-    'docs/history/reviews/CODE_REVIEW_REPORT.md',
-    'docs/history/reviews/HOTFIX_REPORT.md',
-    'docs/history/reviews/FOUNDATION_CONVERGENCE_REVIEW.md',
-}
-OLD_REVIEW_PATHS = {
-    'FOUNDATION_REVIEW.md',
-    'CRITICAL_REVIEW.md',
-    'GAME_MODULARIZATION_REVIEW.md',
-    'CODE_REVIEW_REPORT.md',
-    'HOTFIX_REPORT.md',
-    'FOUNDATION_CONVERGENCE_REVIEW.md',
-}
-RECOVERY_EVIDENCE = {
-    'docs/recovery/README.md',
-    'docs/recovery/BROWSER_RECOVERY_SCENARIO_2026-06-16.md',
-    'docs/recovery/RECOVERY_AUDIT_2026-06-16.md',
-    'docs/recovery/RECOVERY_BASELINE_TESTS.md',
-    'docs/recovery/RECOVERY_DELIVERY_2026-06-16.md',
-    'docs/recovery/RECOVERY_VALIDATION_REPORT_2026-06-16.md',
-}
-VALIDATION_HISTORY = {
-    'docs/history/validation/README.md',
-    'docs/history/validation/TEST_REPORT.md',
-    'docs/history/validation/VALIDATION_REPORT.md',
-}
-OLD_RECOVERY_PATHS = {Path(path).name for path in RECOVERY_EVIDENCE if path.endswith('.md') and Path(path).name != 'README.md'}
-OLD_VALIDATION_PATHS = {'TEST_REPORT.md', 'VALIDATION_REPORT.md'}
-
-ACTIVE_DOCUMENTS = {
+CURRENT_DOCS = {
     'README.md',
-    'docs/README.md',
     'AI_PROJECT_MEMORY.md',
     'PROJECT_VISION.md',
     'ARCHITECTURE.md',
-    'ROADMAP_NEXT.md',
-    'FOUNDATION_READINESS_REVIEW.md',
-    'PROGRAMMABLE_MACHINE_RESEARCH.md',
-    'FUTURE_READINESS_REVIEW.md',
+    'ROADMAP.md',
+    'AGENTS.md',
+    'docs/README.md',
+    'docs/research/programming_model.md',
+}
+
+CURRENT_EVIDENCE = {
+    'docs/CODE_REALITY_AUDIT.md',
+}
+
+CURRENT_CONTRACTS = {
+    'docs/blockbench_import_studio.md',
+    'docs/visual_asset_pack_v1.md',
+    'docs/mission_map_terrain_authoring.md',
+}
+
+LEGACY_ACTIVE_PATHS = {
+    'README_FOR_AGENTS.md',
     'AGENT_WORKFLOW.md',
     'DELIVERY_WORKFLOW.md',
     'PUSH_INSTRUCTIONS.md',
+    'ROADMAP_NEXT.md',
+    'FUTURE_READINESS_REVIEW.md',
+    'PROGRAMMABLE_MACHINE_RESEARCH.md',
+    'CHANGELOG.md',
+    'docs/ROADMAP_REBASE_2026-07-01.md',
+    'docs/FEATURE_EXPANSION_READINESS_AUDIT_2026-07-01.md',
+    'docs/M4L_VISUAL_TRUTH_BASELINE_2026-07-01.md',
     'docs/WORKFLOW_REPAIR_HANDOFF.md',
 }
 
-required = {
-    *ACTIVE_DOCUMENTS,
-    'examples/articulated_hinge_v11.json',
-    'examples/assembly_spaces_v12.json',
-    'docs/history/phases/README.md',
-    'docs/history/reviews/README.md',
-    'docs/repository/REPOSITORY_STRUCTURE_AUDIT.md',
-    'docs/repository/REPOSITORY_STRUCTURE_TARGET.md',
-    'docs/repository/REPOSITORY_STRUCTURE_MIGRATION_REPORT.md',
-    'docs/repository/DOCUMENTATION_CONVERGENCE_STAGE2_REPORT.md',
-    *PHASE_REPORTS,
-    *HISTORICAL_REVIEWS,
-    *RECOVERY_EVIDENCE,
-    *VALIDATION_HISTORY,
-    *{f'docs/adr/{number:04d}-{name}.md' for number, name in [
-        (33, 'blueprint-v11-mechanical-link-schema'),
-        (34, 'persistent-mechanical-and-rigid-island-identities'),
-        (35, 'structural-cuts-rigid-bypass-and-assembly-connectivity'),
-        (36, 'coordinate-spaces-and-body-assembly-pose'),
-        (37, 'pure-topology-compilers-and-structured-diagnostics'),
-        (38, 'launch-loadout-payload-ownership-per-body'),
-        (39, 'body-frame-rebase-with-active-constraints'),
-        (40, 'minimal-workshop-hinge-authoring'),
-        (41, 'assembly-spaces-and-spatial-ownership'),
-        (42, 'workbench-ui-layout'),
-        (43, 'visual-asset-boundary'),
-    ]},
+HISTORY_ANCHORS = {
+    'docs/history/README.md',
+    'docs/history/CHANGELOG.md',
+    'docs/history/workflows/README_FOR_AGENTS_2026-07-01.md',
+    'docs/history/workflows/AGENT_WORKFLOW_V3.md',
+    'docs/history/workflows/DELIVERY_WORKFLOW_V3.md',
+    'docs/history/workflows/PUSH_INSTRUCTIONS_2026-06.md',
+    'docs/history/planning/ROADMAP_NEXT_2026-07-01.md',
+    'docs/history/planning/ROADMAP_REBASE_2026-07-01.md',
+    'docs/history/reviews/FUTURE_READINESS_REVIEW_2026-06-18.md',
+    'docs/history/reviews/FEATURE_EXPANSION_READINESS_AUDIT_2026-07-01.md',
+    'docs/history/validation/M4L_VISUAL_TRUTH_BASELINE_2026-07-01.md',
+    'docs/history/handoffs/WORKFLOW_REPAIR_HANDOFF.md',
+    'docs/history/recovery/2026-06-16/README.md',
+    'docs/history/research/PROGRAMMABLE_MACHINE_RESEARCH_legacy.md',
+    'docs/history/repository/REPOSITORY_STRUCTURE_AUDIT.md',
 }
 
-missing = sorted(path for path in required if not (ROOT / path).is_file())
-assert not missing, f'Missing active or classified documents: {missing}'
+classified_paths = (*CURRENT_DOCS, *CURRENT_EVIDENCE, *CURRENT_CONTRACTS, *HISTORY_ANCHORS)
+missing = sorted(path for path in classified_paths if not (ROOT / path).is_file())
+assert not missing, f'Missing current/history-classified docs: {missing}'
 
-old_phase_paths = sorted(name for name in PHASE_REPORT_NAMES if (ROOT / name).exists())
-assert not old_phase_paths, f'Phase reports must not remain in repository root: {old_phase_paths}'
+legacy_present = sorted(path for path in LEGACY_ACTIVE_PATHS if (ROOT / path).exists())
+assert not legacy_present, f'Legacy documents must not remain in active locations: {legacy_present}'
 
-old_review_paths = sorted(path for path in OLD_REVIEW_PATHS if (ROOT / path).exists())
-assert not old_review_paths, f'Superseded reviews must not remain in repository root: {old_review_paths}'
+assert not (ROOT / '.codex' / 'handoff').exists(), 'Legacy .codex/handoff must be archived under docs/history.'
+assert not (ROOT / 'docs' / 'recovery').exists(), 'Undated legacy recovery docs must be archived under docs/history/recovery/<date>.'
+assert not (ROOT / 'docs' / 'repository').exists(), 'Historical repository reports must be archived under docs/history/repository.'
 
-old_recovery_paths = sorted(path for path in OLD_RECOVERY_PATHS if (ROOT / path).exists())
-assert not old_recovery_paths, f'Recovery evidence must not remain in repository root: {old_recovery_paths}'
+texts = {path: (ROOT / path).read_text(encoding='utf-8') for path in CURRENT_DOCS}
+evidence_texts = {path: (ROOT / path).read_text(encoding='utf-8') for path in CURRENT_EVIDENCE}
 
-old_validation_paths = sorted(path for path in OLD_VALIDATION_PATHS if (ROOT / path).exists())
-assert not old_validation_paths, f'Validation snapshots must not remain in repository root: {old_validation_paths}'
+# Current docs must not reactivate stale branches or milestone plans.
+STALE_CURRENT_MARKERS = (
+    'maintenance/workflow-repair-clean',
+    'maintenance/workflow-bootstrap',
+    'Current checkpoint branch for foundation hardening: `current_work`',
+    'Current source of truth: **Workbench Foundation on stable Gate C**',
+    'Active detailed rebase: `docs/ROADMAP_REBASE_2026-07-01.md`',
+)
+for path, text in texts.items():
+    for marker in STALE_CURRENT_MARKERS:
+        assert marker not in text, f'{path} contains stale active authority: {marker}'
 
-texts = {
-    path: (ROOT / path).read_text(encoding='utf-8')
-    for path in required
-    if path.endswith('.md')
-}
-
-for path in (
-    'AI_PROJECT_MEMORY.md',
-    'ARCHITECTURE.md',
-    'ROADMAP_NEXT.md',
-    'README.md',
-    'FOUNDATION_READINESS_REVIEW.md',
-    'FUTURE_READINESS_REVIEW.md',
-):
-    assert 'Gate C' in texts[path], f'{path} does not identify the current gate.'
-assert 'Phase 1D.4A' in texts['docs/history/phases/PHASE_1D4A_REPORT.md']
-
-vision = texts['PROJECT_VISION.md']
-review = texts['FOUNDATION_READINESS_REVIEW.md']
-research = texts['PROGRAMMABLE_MACHINE_RESEARCH.md']
-architecture = texts['ARCHITECTURE.md']
-roadmap = texts['ROADMAP_NEXT.md']
+readme = texts['README.md']
 memory = texts['AI_PROJECT_MEMORY.md']
+vision = texts['PROJECT_VISION.md']
+architecture = texts['ARCHITECTURE.md']
+roadmap = texts['ROADMAP.md']
+agents = texts['AGENTS.md']
 docs_index = texts['docs/README.md']
-agent = texts['AGENT_WORKFLOW.md']
-delivery = texts['DELIVERY_WORKFLOW.md']
-push = texts['PUSH_INSTRUCTIONS.md']
-handoff = texts['docs/WORKFLOW_REPAIR_HANDOFF.md']
-phase_index = texts['docs/history/phases/README.md']
-review_index = texts['docs/history/reviews/README.md']
+programming = texts['docs/research/programming_model.md']
+history = (ROOT / 'docs/history/README.md').read_text(encoding='utf-8')
+audit = evidence_texts['docs/CODE_REALITY_AUDIT.md']
+
+for required in ('AI_PROJECT_MEMORY.md', 'PROJECT_VISION.md', 'ARCHITECTURE.md', 'ROADMAP.md', 'AGENTS.md', 'docs/README.md'):
+    assert required in readme
 
 for phrase in (
     'Sandbox przed checklistą',
@@ -152,91 +104,80 @@ for phrase in (
     'Manualne sterowanie pozostaje pełnoprawne',
     'Programowanie rośnie warstwami',
 ):
-    assert phrase in vision, f'Project vision is missing pillar: {phrase}'
+    assert phrase in vision, f'Project vision lost durable pillar: {phrase}'
 
-for phrase in ('Gate C', 'Gate D', 'Device & Port Schema'):
-    assert phrase in review or phrase in roadmap, f'Foundation documents miss gate: {phrase}'
+for token in ('Blueprint v12', 'CompiledCraft V5', 'RuntimeAssemblyPlan V3', 'assemblySpaceId', 'blockId', 'bodyId'):
+    assert token in architecture, f'Architecture misses current boundary token: {token}'
 
-for phrase in ('{blockId, portId}', 'ControlRuntime', 'Kable, bus i wireless', 'sublevel'):
-    assert phrase in research, f'Programming research is missing concept: {phrase}'
+for token in ('PROVEN', 'PARTIAL', 'ROUGH', 'STUB/CLAIM', 'ABSENT'):
+    assert token in roadmap, f'Roadmap misses audit classification: {token}'
+    assert token in audit, f'Code reality audit misses classification: {token}'
 
-for phrase in ('Blueprint v12', 'CompiledCraft V5', 'RuntimeAssemblyPlan V3', 'assemblySpaceId', 'bodyId'):
-    assert phrase in architecture
+assert '## P1 — Code reality and technical-debt audit' in roadmap
+assert '**Complete**' in roadmap[roadmap.index('## P1 — Code reality and technical-debt audit'):]
+assert '## P2 — Recover the smallest truthful VAW loop' in roadmap
+assert '**Current phase.**' in roadmap[roadmap.index('## P2 — Recover the smallest truthful VAW loop'):]
+assert '### P2-A — Engineering Analysis Truth' in roadmap
+p2a = roadmap[roadmap.index('### P2-A — Engineering Analysis Truth'):roadmap.index('### P2-B — Test Evidence Continuity')]
+assert '**Complete**' in p2a
+assert '### P2-B — Test Evidence Continuity' in roadmap
+p2b = roadmap[roadmap.index('### P2-B — Test Evidence Continuity'):roadmap.index('### P2-C — Workshop Editing Fundamentals')]
+assert '**Complete**' in p2b
+assert '### P2-C — Workshop Editing Fundamentals' in roadmap
+p2c = roadmap[roadmap.index('### P2-C — Workshop Editing Fundamentals'):roadmap.index('### P2-D — Information architecture and visual polish')]
+assert '**Current milestone.**' in p2c
 
-for phrase in ('Gate C', 'Gate D', 'Gate E', 'dynamic rigid-body split'):
-    assert phrase in roadmap or phrase in memory
+assert 'docs/history/' in agents
+assert 'passing test does not prove' in agents.lower()
+assert 'Current evidence' in docs_index
+assert 'CODE_REALITY_AUDIT.md' in docs_index
+assert 'evidence, not independent roadmap authority' in docs_index
+assert 'Everything under' in docs_index and 'history/' in docs_index
+assert 'never current authority' in docs_index
+assert 'non-authoritative history' in history
+assert 'not an implementation claim' in programming
+assert '{blockId, portId}' in programming
+assert 'ControlRuntime' in programming
+assert 'P2-B Test Evidence Continuity' in readme
+assert 'fixed-step scheduler health' in readme.lower()
+assert 'P2-C' in readme and 'failed `blockId`' in readme
+assert 'P2-C — Workshop Editing Fundamentals' in readme
+assert 'P2-A Engineering Analysis Truth' in readme
 
-for number in range(33, 44):
-    path = next(path for path in required if path.startswith(f'docs/adr/{number:04d}-'))
-    assert 'Status: Accepted' in texts[path]
+# Current memory must distinguish owner evidence, machine evidence and audit outcome.
+for heading in ('Manual product truth', 'Machine evidence', 'P1 code-reality result', 'Current priority', 'Documentation authority'):
+    assert heading in memory, f'AI_PROJECT_MEMORY misses current-truth section: {heading}'
+assert 'did not accept the current quality' in memory
+assert 'P1 is complete' in memory
+assert 'P2-A Engineering Analysis Truth is complete' in memory
+assert 'P2-B result — Test Evidence Continuity' in memory
+assert 'P2-C is active' in memory
+assert 'CODE_REALITY_AUDIT.md' in memory
+assert 'no active M4/M5/M6/Gate-D feature roadmap' in memory
 
-for name in PHASE_REPORT_NAMES:
-    assert f'`{name}`' in phase_index, f'Phase archive index misses {name}'
-
-for path in HISTORICAL_REVIEWS:
-    name = Path(path).name
-    assert f'`{name}`' in review_index, f'Historical review index misses {name}'
-
-validation_index = texts['docs/history/validation/README.md']
-for path in VALIDATION_HISTORY:
-    name = Path(path).name
-    if name != 'README.md':
-        assert f'`{name}`' in validation_index, f'Validation archive index misses {name}'
-
-recovery_index = texts['docs/recovery/README.md']
-for path in RECOVERY_EVIDENCE:
-    name = Path(path).name
-    if name != 'README.md':
-        assert f'`{name}`' in recovery_index, f'Recovery archive index misses {name}'
-
-for heading in (
-    'Active product source of truth',
-    'Active workflow contracts',
-    'Accepted ADRs',
-    'Current supporting evidence',
-    'Recovery evidence',
-    'Historical and superseded material',
+# The current evidence must record the reproduced truth gaps that drive P2.
+for phrase in (
+    'engineering `weakLinks = 4`',
+    'compiled `rigidNeighborBlockIds = 3`',
+    'Failure -> diagnosis -> rebuild',
+    'Device tuning / direct device binding',
+    'Signal graph / ControlRuntime',
+    'P2-A — Engineering Analysis Truth: resolved in recovery',
+    'compiler-owned `rigidNeighborBlockIds`',
+    'P2-B — Test Evidence Continuity: resolved in recovery',
+    '`firstFailureEvent` preserves stable block identity',
 ):
-    assert heading in docs_index, f'Documentation index misses category: {heading}'
-
-assert 'docs/README.md' in texts['README.md']
-assert 'direct Git > one final milestone ZIP > complete single file > patch' in docs_index
-assert 'Mode R' in agent and 'Mode Z' in agent and 'Mode P' in agent
-assert 'three genuinely different safe mechanisms' in agent
-assert 'bezpośredni Git > jeden końcowy ZIP milestone' in delivery
-assert 'git push origin' in delivery and ('force-push' in delivery or '--force' in delivery)
-assert 'git push origin' in push and 'Never force-push' in push
-assert 'Gate C' in handoff and 'Gate D' in handoff and 'Workbench Foundation' in handoff
-assert 'ddce6b4' in handoff
-
-STALE_ACTIVE_PHRASES = (
-    'NOT-PUBLISHED',
-    'Stage 1 has not yet been published',
-    'Stage 1 is unpublished',
-    'use the complete Stage 1-R1 patch',
-    'Preferowany wariant patchowy',
-    'Patch jest domyślnym workflow',
-)
-for path in ACTIVE_DOCUMENTS:
-    text = texts[path]
-    for phrase in STALE_ACTIVE_PHRASES:
-        assert phrase not in text, f'{path} contains stale active status: {phrase}'
-
-for publication_doc in ('AGENT_WORKFLOW.md', 'DELIVERY_WORKFLOW.md', 'PUSH_INSTRUCTIONS.md'):
-    text = texts[publication_doc]
-    assert all(
-        line.strip() != 'git add -A -- .'
-        for line in text.splitlines()
-    ), f'{publication_doc} must not recommend uncontrolled repository-wide staging'
+    assert phrase in audit, f'Code reality audit misses current evidence: {phrase}'
 
 print({
-    'requiredDocuments': len(required),
-    'activeDocuments': len(ACTIVE_DOCUMENTS),
-    'phaseReportsArchived': len(PHASE_REPORTS),
-    'historicalReviewsArchived': len(HISTORICAL_REVIEWS),
-    'staleActiveStatus': 0,
-    'currentGate': 'Gate C stable base',
-    'nextGate': 'Workbench Foundation',
-    'documentationIndex': 'ok',
-    'workflowV3': 'ok',
+    'currentDocs': len(CURRENT_DOCS),
+    'currentEvidence': len(CURRENT_EVIDENCE),
+    'currentContracts': len(CURRENT_CONTRACTS),
+    'legacyActivePaths': 0,
+    'historyAnchors': len(HISTORY_ANCHORS),
+    'authorityBoundary': 'current-vs-history-ok',
+    'p1Audit': 'classified-and-linked',
+    'p2A': 'complete',
+    'p2B': 'complete',
+    'p2C': 'current',
 })

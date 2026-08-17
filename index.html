@@ -98,6 +98,29 @@
       <button id="btn-import" class="mini-btn">IMPORT JSON</button>
       <input id="blueprint-file" type="file" accept="application/json,.json" hidden />
     </div>
+
+    <div class="mb-3 rounded border border-violet-900/70 bg-slate-950/45 p-2" id="selected-part-panel">
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <div class="text-[10px] uppercase tracking-[0.16em] text-sky-300">Selected part</div>
+        <button id="btn-clear-selected-part" class="mini-btn" type="button" disabled>CLEAR</button>
+      </div>
+      <div id="ui-selected-part-title" class="text-xs font-bold text-white">No part selected</div>
+      <div id="ui-selected-part-meta" class="text-[10px] text-gray-400 mt-1">Shift + left click a part, or select the hovered part.</div>
+      <div id="ui-selected-part-test" class="text-[10px] text-amber-200 mt-2">No failed part recorded in the last test.</div>
+      <div class="grid grid-cols-2 gap-2 mt-2">
+        <button id="btn-select-hovered-part" class="mini-btn" type="button">SELECT HOVERED</button>
+        <button id="btn-select-last-failure" class="mini-btn" type="button" disabled>SELECT LAST FAILURE</button>
+      </div>
+      <div class="text-[10px] uppercase tracking-[0.16em] text-gray-500 mt-3 mb-2">Nudge in assembly space</div>
+      <div class="grid grid-cols-3 gap-2">
+        <button class="mini-btn" type="button" data-selected-nudge="-1,0,0">X −</button>
+        <button class="mini-btn" type="button" data-selected-nudge="0,1,0">Y +</button>
+        <button class="mini-btn" type="button" data-selected-nudge="1,0,0">X +</button>
+        <button class="mini-btn" type="button" data-selected-nudge="0,0,-1">Z −</button>
+        <button class="mini-btn" type="button" data-selected-nudge="0,-1,0">Y −</button>
+        <button class="mini-btn" type="button" data-selected-nudge="0,0,1">Z +</button>
+      </div>
+    </div>
     <div class="mb-3 rounded border border-violet-900/70 bg-slate-950/45 p-2" id="assembly-space-panel">
       <div class="text-[10px] uppercase tracking-[0.16em] text-violet-300 mb-2">Assembly spaces</div>
       <select id="assembly-space-list" class="mini-btn w-full mb-2" aria-label="Active assembly space"><option value="space:root">ROOT • Root</option></select>
@@ -170,6 +193,7 @@
       </div>
       <p id="ui-contract-description" class="text-xs text-gray-300 mt-2 leading-relaxed"></p>
       <div id="ui-contract-objectives" class="space-y-1 mt-2 text-[11px] text-gray-300"></div>
+      <div id="ui-contract-route-notes" class="contract-notes mt-3"></div>
       <div class="grid grid-cols-2 gap-2 mt-3 text-[11px]">
         <div class="chip justify-between"><span>Time limit</span><span id="ui-contract-time" class="font-mono text-white">—</span></div>
         <div class="chip justify-between"><span>Payload</span><span id="ui-contract-payload" class="font-mono text-white">0 kg</span></div>
@@ -480,6 +504,7 @@
       const sources = [
         'src/foundation/kernel.js',
         'src/foundation/config.js',
+        'src/foundation/terrain_authoring.js',
         'src/foundation/catalog.js',
         'src/foundation/visual_asset_manifest.js',
         'src/foundation/orientation.js',
@@ -514,12 +539,15 @@
         'src/game/input_settings_controller.js',
         'src/game/camera_controller.js',
         'src/game/build_targeting.js',
+        'src/game/workshop_selection_controller.js',
         'src/game/orientation_service.js',
+        'src/game/power_control_readouts.js',
           'src/game/visual_asset_registry.js',
           'src/game/visual_asset_loader.js',
           'src/game/visual_asset_dev_controls.js',
           'src/game/visual_runtime_adapter.js',
         'src/game/module_visual_factory.js',
+        'src/game/visual_asset_composition.js',
         'src/game/assembly_space_controller.js',
         'src/game/engineering_analysis.js',
         'src/game/blueprint_controller.js',
@@ -532,7 +560,18 @@
         'src/foundation/bootstrap.js',
         'src/game.js'
       ];
-      const sourceVersion = 'workbench-ui-v9-m2b-feedback';
+      const sourceVersion = 'workbench-ui-v10-p2c-selection';
+      const terrainPresetUrl = 'assets/terrain/local_working_terrain/VAW_TERRAIN_AUTHORING_V1.json';
+      const loadTerrainPreset = async () => {
+        if (!window.fetch) return;
+        try {
+          const response = await fetch(`${terrainPresetUrl}?v=${Date.now()}`, { cache: 'no-store' });
+          if (!response.ok) return;
+          window.__VAW_TERRAIN_PRESET__ = await response.json();
+        } catch (_) {
+          window.__VAW_TERRAIN_PRESET__ = null;
+        }
+      };
       let cursor = 0;
       const loadNext = () => {
         if (cursor >= sources.length) return;
@@ -542,7 +581,8 @@
         script.async = false;
         script.onload = loadNext;
         script.onerror = () => showFatal(`The script ${source} could not be loaded.`);
-        document.body.appendChild(script);
+        if (source === 'src/game.js') loadTerrainPreset().finally(() => document.body.appendChild(script));
+        else document.body.appendChild(script);
       };
       loadNext();
     })();

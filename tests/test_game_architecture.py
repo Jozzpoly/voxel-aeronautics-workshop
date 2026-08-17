@@ -14,12 +14,15 @@ EXPECTED_MODULES = {
     'input_settings_controller.js': 'game.input-settings-controller',
     'camera_controller.js': 'game.camera-controller',
     'build_targeting.js': 'game.build-targeting',
+    'workshop_selection_controller.js': 'game.workshop-selection-controller',
     'orientation_service.js': 'game.orientation-service',
+    'power_control_readouts.js': 'game.power-control-readouts',
     'visual_asset_registry.js': 'game.visual-asset-registry',
     'visual_asset_loader.js': 'game.visual-asset-loader',
     'visual_asset_dev_controls.js': 'game.visual-asset-dev-controls',
     'visual_runtime_adapter.js': 'game.visual-runtime-adapter',
     'module_visual_factory.js': 'game.module-visual-factory',
+    'visual_asset_composition.js': 'game.visual-asset-composition',
     'assembly_space_controller.js': 'game.assembly-space-controller',
     'engineering_analysis.js': 'game.engineering-analysis',
     'blueprint_controller.js': 'game.blueprint-controller',
@@ -33,15 +36,41 @@ EXPECTED_MODULES = {
 
 paths = {path.name: path for path in GAME_PATHS if path.parent == GAME_MODULE_DIR}
 assert set(paths) == set(EXPECTED_MODULES), (set(paths), set(EXPECTED_MODULES))
+VISUAL_COMPOSITION_DEPENDENCIES = {
+    'game.visual-asset-registry',
+    'game.visual-asset-loader',
+    'game.visual-asset-dev-controls',
+    'game.visual-runtime-adapter',
+    'game.module-visual-factory',
+}
+ALLOWED_WINDOW_VAW_GLOBALS = {
+    'window.VAW_VISUAL_ASSET_DIAGNOSTICS',
+    'window.VAW_VISUAL_ASSET_DEBUG',
+}
+
+
+def assert_no_new_window_vaw_globals(source: str, label: str) -> None:
+    for match in re.finditer(r'\bwindow\??\.VAW_[A-Z0-9_]+\b', source):
+        global_name = match.group(0).replace('window?.', 'window.')
+        assert global_name in ALLOWED_WINDOW_VAW_GLOBALS, (
+            f'{label} introduces ad-hoc window.VAW_* global: {global_name}'
+        )
 
 for filename, module_name in EXPECTED_MODULES.items():
     source = paths[filename].read_text(encoding='utf-8')
     pattern = rf"window\.VAW\.define\(\s*['\"]{re.escape(module_name)}['\"]"
     assert len(re.findall(pattern, source)) == 1, f'{filename} must define {module_name} exactly once'
+    assert source.count('window.VAW.define(') == 1, f'{filename} must define exactly one module'
     assert 'window.VAW_RUNTIME' not in source, f'{filename} bypasses explicit module injection'
     assert 'src/game.js' not in source, f'{filename} depends on the monolithic entrypoint'
+    assert_no_new_window_vaw_globals(source, filename)
 
 ordered = [path.relative_to(ROOT).as_posix() for path in SOURCE_PATHS]
+for path in SOURCE_PATHS:
+    assert_no_new_window_vaw_globals(
+        path.read_text(encoding='utf-8'),
+        path.relative_to(ROOT).as_posix(),
+    )
 bootstrap_index = ordered.index('src/foundation/bootstrap.js')
 entry_index = ordered.index('src/game.js')
 for filename in EXPECTED_MODULES:
@@ -50,9 +79,10 @@ assert entry_index == len(ordered) - 1, 'game.js must remain the final compositi
 
 main = GAME_MAIN.read_text(encoding='utf-8')
 assert 'window.VAW_RUNTIME' not in main, 'composition root must use explicit kernel modules, not a private aggregate global'
+assert_no_new_window_vaw_globals(main, 'game.js')
 assert "window.VAW.require('runtime.active-context')" in main
-assert len(main.splitlines()) <= 2500, f'game.js regrew to {len(main.splitlines())} lines'
-assert len(main.encode('utf-8')) <= 120_000, f'game.js regrew to {len(main.encode("utf-8"))} bytes'
+assert len(main.splitlines()) <= 2400, f'game.js regrew to {len(main.splitlines())} lines'
+assert len(main.encode('utf-8')) <= 116_000, f'game.js regrew to {len(main.encode("utf-8"))} bytes'
 
 ownership = {
     'createModuleVisual': 'module_visual_factory.js',
@@ -68,7 +98,23 @@ for function_name, owner in ownership.items():
     assert owners == [owner], f'{function_name} ownership mismatch: {owners}'
 
 for module_name in EXPECTED_MODULES.values():
+    if module_name in VISUAL_COMPOSITION_DEPENDENCIES:
+        continue
     assert f"window.VAW.require('{module_name}')" in main, f'entrypoint does not compose {module_name}'
+
+visual_composition_source = paths['visual_asset_composition.js'].read_text(encoding='utf-8')
+for module_name in VISUAL_COMPOSITION_DEPENDENCIES:
+    assert f"'{module_name}'" in visual_composition_source, f'visual composition does not own {module_name}'
+for composition_call in (
+    'VisualAssetRegistry.create()',
+    'VisualAssetLoader.create',
+    'VisualRuntimeAdapter.create()',
+    'ModuleVisualFactory.create',
+    'VisualAssetDevControls.create',
+    'bootstrapInstalledPacks',
+):
+    assert composition_call in visual_composition_source, f'visual composition missing {composition_call}'
+    assert composition_call not in main, f'entrypoint still owns visual stack detail: {composition_call}'
 
 
 for leaked_private in ('autosaveTimer', 'workspaceSaveTimer', 'keyboardLockActive'):

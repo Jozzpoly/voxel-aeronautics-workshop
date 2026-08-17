@@ -1,52 +1,54 @@
 # VAW Documentation Index
 
-Authority order: current user decision, latest verified remote SHA, source/tests from that SHA, active contracts, accepted ADRs, current evidence, recovery evidence, then history.
+This index separates **current truth**, **current evidence**, **technical contracts/reference** and **history**.
 
-## Active product source of truth
+## Current truth
 
-- `README.md`
-- `PROJECT_VISION.md`
-- `AI_PROJECT_MEMORY.md`
-- `ARCHITECTURE.md`
-- `ROADMAP_NEXT.md`
-- `FOUNDATION_READINESS_REVIEW.md`
-- `FUTURE_READINESS_REVIEW.md`
-- `PROGRAMMABLE_MACHINE_RESEARCH.md`
+Only these files define active project state/direction:
 
-Current state: Gate C is the stable gameplay base. The immediate milestone is Workbench Foundation plus M4G visual asset polish: dockable UI layout, side dock stacking, build/flight workspace separation, dockable flight mission information, visual asset boundaries, Studio-in-repo authoring, single working-pack visual iteration, renderer-only imported child safety, invisible-by-default hit proxy debug and material fidelity for mixed opaque/alpha assets. Gate D - Device & Port Schema - is temporarily behind this UI/documentation preparation.
+- [`../README.md`](../README.md)
+- [`../AI_PROJECT_MEMORY.md`](../AI_PROJECT_MEMORY.md)
+- [`../PROJECT_VISION.md`](../PROJECT_VISION.md)
+- [`../ARCHITECTURE.md`](../ARCHITECTURE.md)
+- [`../ROADMAP.md`](../ROADMAP.md)
+- [`../AGENTS.md`](../AGENTS.md)
 
-## Active workflow contracts
+If one conflicts with live source or new owner/manual evidence, the document is wrong and must be corrected.
 
-- `AGENT_WORKFLOW.md`
-- `DELIVERY_WORKFLOW.md`
-- `PUSH_INSTRUCTIONS.md`
-- `docs/WORKFLOW_REPAIR_HANDOFF.md`
-- `docs/blockbench_import_studio.md`
-- `docs/visual_asset_pack_v1.md`
+## Current evidence
 
-Transport priority remains:
+- [`CODE_REALITY_AUDIT.md`](CODE_REALITY_AUDIT.md) — P1 source/product audit supporting the current P2 work order. It is evidence, not independent roadmap authority.
 
-```text
-direct Git > one final milestone ZIP > complete single file > patch
-```
+When a current evidence document is superseded, move it to `history/` rather than leaving multiple active audits.
 
-## Accepted ADRs
+## Technical contracts and reference
 
-ADRs 0033-0041 preserve Gate B/C architecture. ADR 0042 defines the Workbench UI layout foundation. ADR 0043 defines the visual asset boundary for external models, textures and animations.
+These documents describe implementation boundaries or tool formats. They do **not** prove product quality or feature completeness:
 
-## Current supporting evidence
+- `adr/` — architecture decision records; read each ADR status. Superseded process ADRs are historical context, not current project-state authority;
+- `visual_asset_pack_v1.md` — renderer-facing Visual Asset Pack contract;
+- `blockbench_import_studio.md` — Studio integration reference;
+- `mission_map_terrain_authoring.md` — mission-map/terrain authoring reference;
+- `research/programming_model.md` — design intent for future programmable-machine layers; explicitly not an implementation claim.
 
-- `FUTURE_READINESS_REVIEW.md`
-- `docs/history/phases/PHASE_1D4A_REPORT.md`
-- `docs/history/validation/TEST_REPORT.md`
-- `docs/history/validation/VALIDATION_REPORT.md`
-- `docs/history/reviews/CODE_REVIEW_REPORT.md`
-- `docs/history/reviews/FOUNDATION_CONVERGENCE_REVIEW.md`
+Tool-local documents under `tools/**/docs/` are local implementation notes/reference. They are not project-state authority unless a current document explicitly promotes a specific contract.
 
-## Recovery evidence
+## History — never current authority
 
-Recovery evidence is archived in `docs/recovery/`. Read it before changing input focus, thruster routing, mechanical visuals, hinge cancellation or lifecycle cleanup.
+Everything under [`history/`](history/) is historical evidence.
 
-## Historical and superseded material
+It contains old milestone/phase reports, readiness reviews, validation snapshots, roadmaps, agent handoffs, recovery packages/reports, workflow instructions, repository-reorganization reports and changelog material.
 
-Historical phase/review/validation documents describe earlier checkpoints and do not override current source/tests. Cosmetic repository reorganization remains frozen unless a concrete blocker affects source-of-truth clarity, release construction or validation.
+Historical files are preserved because they contain useful design reasoning and evidence. Their words `current`, `stable`, `ready`, `next`, `complete` or branch names apply only to the old checkpoint in which they were written.
+
+**Never use a file under `docs/history/` to decide the active branch, next milestone or current feature status.**
+
+## Practical reading order
+
+1. root current docs;
+2. current evidence when the task depends on its findings;
+3. exact source involved in the task;
+4. relevant contract/ADR;
+5. history only when the reason behind an old decision is needed.
+
+Do not begin by recursively reading the history archive.
