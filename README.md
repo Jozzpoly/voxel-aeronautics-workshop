@@ -71,6 +71,16 @@ P0 repo recovery, P1 code-reality audit, P2-A Engineering Analysis Truth i P2-B 
 
 **Aktualnym milestone'em jest P2-C — Workshop Editing Fundamentals.**
 
+**Zweryfikowany stan implementacji na `0dd7390` (odczyt 2026-10-19):** pierwsza, ograniczona część P2-C już istnieje w `src/game/workshop_selection_controller.js`, `index.html` i `tests/test_workshop_selection.js`: trwałe zaznaczenie przez `blockId`, wskazanie zachowanej pierwszej awarii, drobne przesunięcia istniejącej części z zapisem do historii oraz odmowa przesunięcia części z mechanicznym linkiem. To dowód obecności kodu i testu, **nie potwierdzenie ergonomii, gotowości całego P2-C ani akceptacji Ownera**. Trzeba przeprowadzić rzeczywisty test renderowany i ocenić dalszą edycję/diagnostykę.
+
 Cel: zbudować prawdziwą tożsamość zaznaczonej już części, połączyć ją z zachowanym `lastTestResult`/failed `blockId` i umożliwić sensowną edycję istniejącego elementu bez ciągłego delete/re-place. Najpierw wykorzystujemy istniejące capability CraftModel tam, gdzie rozwiązują realny problem warsztatu; nie dokładamy nowego Device/Signal/mechanism frameworku.
 
 Późniejsze uproszczenie UI/visual polish ma być oparte na ręcznej ocenie realnego workflow, nie na samej obecności infrastruktury.
+
+## Kontekst Medium / Jaskinia — weryfikacja 2026-10-19
+
+- **Jaskinia jest osobnym produktem i punktem wejścia, nie alternatywnym źródłem prawdy VAW.** Jej [kompas](https://github.com/Jozzpoly/Jozz-Cave-Workbench/issues/5) definiuje szybkie uruchamianie eksperymentów, odzyskiwalne adresy i czytelność pracy dla agentów. [PR #4](https://github.com/Jozzpoly/Jozz-Cave-Workbench/pull/4) rozwija m.in. import materiałów z repozytoriów (także VAW), adresy i interfejs dla agentów; na dzień weryfikacji pozostawał niescalony.
+- **Medium pozostaje laboratorium współpracy, nie wymaganym menedżerem repo.** [Jego bieżące wejście](https://github.com/Jozzpoly/Shared-Work-Medium-Lab/blob/main/START_HERE.md) odróżnia źródła, eksperymenty, Owner feedback i rzeczywiście przyjęty produkt. Nie tworzyć dla VAW agent-mesha, kolejki statusów ani obowiązkowego raportowania tylko po to, by „integrować Medium”.
+- **Brakuje potwierdzonego, jednoklikowego uruchomienia bieżącego recovery.** GitHub Pages dla VAW nie jest włączony; `index.html` w repo i zielone CI nie dowodzą dostępnego grywalnego builda. Następny realny test integracji to uruchomienie konkretnego przypiętego SHA, zebranie obserwacji z warsztatu i dopiero potem świadome udostępnienie wejścia w Jaskini.
+- **Bezpieczeństwo:** `main` zostaje nieruszony, [PR #16](https://github.com/Jozzpoly/voxel-aeronautics-workshop/pull/16) pozostaje szkicem do oceny. Starsze gałęzie mobilne, automatyzacje i `VAW_GRoK` są materiałem donorowym; nie usuwać ani scalać masowo bez zbadania zależności i ważnych adresów. Jedno przyszłe aktywne `main` pozostaje celem, a nie deklaracją stanu obecnego.
+
