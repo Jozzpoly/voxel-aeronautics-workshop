@@ -28,18 +28,18 @@ jobs:
           echo "$published" | grep -F "089e68e69b01617104a4f0a15bd8b988d39119a7" >/dev/null || { echo "::error::Expected playable build not yet published."; exit 1; }
           gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" --jq '.[].head.ref' > "$RUNNER_TEMP/vaw-open-heads"
           cat > "$RUNNER_TEMP/vaw-legacy-heads" <<'VAW_LEGACY'
-VAW_GRoK 9851ad56a12bf38a628f0cf5016064ace9196f6a
-automation/mobile-compatibility-clean-result-29104753424 27a4342dcbf5a4aab953556ef84c9183f05176c9
-automation/mobile-compatibility-transport-trigger 0c98849076484a78be33652ca9fc663c1bf1a2f3
-automation/mobile-flight-smoke dc3b17bb41adc34a2cc8aad27f2f86d0dbc45d30
-automation/mobile-smoke-neutral-result-29106764698 02e231fc3cd32f3243de67a0873f0ad9c5c52edd
-automation/mobile-smoke-neutral-trigger 6c42bb85f7141b061c3456118615053c180c74f6
-automation/mobile-smoke-watchdog-result-29106019729 6c118461f6f8e7b240370c058bc3ed1147897bad
-automation/mobile-smoke-watchdog-trigger bbeca7704b97a030da50158201f67e4837791387
-current_work 80c0ae4aced1dd695af217cdeadea9025c6305c8
-mobile/compatibility-validation 99c24752bfdf9575cc32989701a0d13a4cc5cfdd
-mobile/playable-mvp 3da2d2aa05b9c3f6aa208dc9a703a843fea292ca
-mobile/touch-foundation 460b6ebeb23b1541e9b923783a06f13e9ec05467
+          VAW_GRoK 9851ad56a12bf38a628f0cf5016064ace9196f6a
+          automation/mobile-compatibility-clean-result-29104753424 27a4342dcbf5a4aab953556ef84c9183f05176c9
+          automation/mobile-compatibility-transport-trigger 0c98849076484a78be33652ca9fc663c1bf1a2f3
+          automation/mobile-flight-smoke dc3b17bb41adc34a2cc8aad27f2f86d0dbc45d30
+          automation/mobile-smoke-neutral-result-29106764698 02e231fc3cd32f3243de67a0873f0ad9c5c52edd
+          automation/mobile-smoke-neutral-trigger 6c42bb85f7141b061c3456118615053c180c74f6
+          automation/mobile-smoke-watchdog-result-29106019729 6c118461f6f8e7b240370c058bc3ed1147897bad
+          automation/mobile-smoke-watchdog-trigger bbeca7704b97a030da50158201f67e4837791387
+          current_work 80c0ae4aced1dd695af217cdeadea9025c6305c8
+          mobile/compatibility-validation 99c24752bfdf9575cc32989701a0d13a4cc5cfdd
+          mobile/playable-mvp 3da2d2aa05b9c3f6aa208dc9a703a843fea292ca
+          mobile/touch-foundation 460b6ebeb23b1541e9b923783a06f13e9ec05467
           VAW_LEGACY
           while read -r branch expected; do
             [[ -n "$branch" ]] || continue
