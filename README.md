@@ -2,6 +2,10 @@
 
 **VAW jest eksperymentalnym warsztatem do budowania maszyn blok po bloku, uruchamiania ich w fizyce i rozumienia, dlaczego działają albo się rozpadają.**
 
+## Uruchom grywalny recovery
+
+[**Zagraj — VAW (HTMLPreview)**](https://htmlpreview.github.io/?https://raw.githubusercontent.com/Jozzpoly/voxel-aeronautics-workshop/gh-pages/index.html). To wygenerowany, niezależny od serwera jednoplikowy build z materiałami w gałęzi publikacyjnej `gh-pages`. Źródłową rewizję podaje [BUILD_INFO.json](https://github.com/Jozzpoly/voxel-aeronautics-workshop/blob/gh-pages/BUILD_INFO.json). **Działa na komputerze; jakość warsztatu pozostaje niezaakceptowana przez Ownera.** Publikacja nie oznacza scalenia recovery do `main`.
+
 ## Stan projektu — 2026-08-16
 
 Repozytorium jest w trakcie świadomego recovery. To **nie jest deklaracja stabilnego wydania ani ukończonego gameplay loopu**.

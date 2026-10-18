@@ -1,0 +1,86 @@
+name: Archive obsolete VAW branches (one-time)
+
+on:
+  push:
+    branches: [recovery/playable-truth]
+    paths:
+      - .github/workflows/compact-branches.yml
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  archive:
+    if: github.ref == 'refs/heads/recovery/playable-truth'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Verify all legacy branch tips before changing anything
+        shell: bash
+        run: |
+          set -euo pipefail
+          live=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/recovery/playable-truth" --jq '.object.sha')
+          [[ "$live" == "$GITHUB_SHA" ]] || { echo "::error::Recovery advanced; abort."; exit 1; }
+          published=$(gh api "repos/$GITHUB_REPOSITORY/contents/BUILD_INFO.json?ref=gh-pages" --jq '.content' | tr -d '\n' | base64 -d)
+          echo "$published" | grep -F "089e68e69b01617104a4f0a15bd8b988d39119a7" >/dev/null || { echo "::error::Expected playable build not yet published."; exit 1; }
+          gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" --jq '.[].head.ref' > "$RUNNER_TEMP/vaw-open-heads"
+          cat > "$RUNNER_TEMP/vaw-legacy-heads" <<'VAW_LEGACY'
+VAW_GRoK 9851ad56a12bf38a628f0cf5016064ace9196f6a
+automation/mobile-compatibility-clean-result-29104753424 27a4342dcbf5a4aab953556ef84c9183f05176c9
+automation/mobile-compatibility-transport-trigger 0c98849076484a78be33652ca9fc663c1bf1a2f3
+automation/mobile-flight-smoke dc3b17bb41adc34a2cc8aad27f2f86d0dbc45d30
+automation/mobile-smoke-neutral-result-29106764698 02e231fc3cd32f3243de67a0873f0ad9c5c52edd
+automation/mobile-smoke-neutral-trigger 6c42bb85f7141b061c3456118615053c180c74f6
+automation/mobile-smoke-watchdog-result-29106019729 6c118461f6f8e7b240370c058bc3ed1147897bad
+automation/mobile-smoke-watchdog-trigger bbeca7704b97a030da50158201f67e4837791387
+current_work 80c0ae4aced1dd695af217cdeadea9025c6305c8
+mobile/compatibility-validation 99c24752bfdf9575cc32989701a0d13a4cc5cfdd
+mobile/playable-mvp 3da2d2aa05b9c3f6aa208dc9a703a843fea292ca
+mobile/touch-foundation 460b6ebeb23b1541e9b923783a06f13e9ec05467
+          VAW_LEGACY
+          while read -r branch expected; do
+            [[ -n "$branch" ]] || continue
+            if grep -Fqx "$branch" "$RUNNER_TEMP/vaw-open-heads"; then echo "::error::Open PR uses $branch"; exit 1; fi
+            current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$branch" --jq '.object.sha')
+            [[ "$current" == "$expected" ]] || { echo "::error::Branch $branch moved from $expected to $current"; exit 1; }
+          done < "$RUNNER_TEMP/vaw-legacy-heads"
+          echo "All 12 tips are unchanged and not heads of open PRs."
+
+      - name: Preserve every tip as an exact archive tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          while read -r branch expected; do
+            [[ -n "$branch" ]] || continue
+            tag="archive/vaw-2026-10-19/${branch//\//--}"
+            if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" --jq '.object.sha' > "$RUNNER_TEMP/vaw-tag-sha" 2>/dev/null; then
+              [[ "$(cat "$RUNNER_TEMP/vaw-tag-sha")" == "$expected" ]] || { echo "::error::Conflicting archive tag $tag"; exit 1; }
+            else
+              gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$tag" -f "sha=$expected" >/dev/null
+              actual=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" --jq '.object.sha')
+              [[ "$actual" == "$expected" ]] || { echo "::error::Archive tag failed: $tag"; exit 1; }
+            fi
+            echo "Archived $branch as $tag"
+          done < "$RUNNER_TEMP/vaw-legacy-heads"
+
+      - name: Remove only leased legacy refs after archival verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          while read -r branch expected; do
+            [[ -n "$branch" ]] || continue
+            tag="archive/vaw-2026-10-19/${branch//\//--}"
+            current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$branch" --jq '.object.sha')
+            archived=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" --jq '.object.sha')
+            [[ "$current" == "$expected" && "$archived" == "$expected" ]] || { echo "::error::Lease/tag mismatch for $branch; abort."; exit 1; }
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$branch" >/dev/null
+            echo "Deleted obsolete branch reference $branch"
+          done < "$RUNNER_TEMP/vaw-legacy-heads"
+          branches=$(gh api "repos/$GITHUB_REPOSITORY/branches?per_page=100" --jq '.[].name')
+          echo "$branches"
+          [[ "$(echo "$branches" | wc -l)" -eq 3 ]] || { echo "::error::Unexpected remaining branch count"; exit 1; }
+          for required in main recovery/playable-truth gh-pages; do echo "$branches" | grep -Fqx "$required" || exit 1; done
+          echo 'Three-branch target achieved with all old tips archived.'
