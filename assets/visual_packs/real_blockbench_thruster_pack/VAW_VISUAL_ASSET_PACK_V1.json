@@ -1,0 +1,45 @@
+{
+  "format": "VAW_VISUAL_ASSET_PACK_V1",
+  "packId": "real_blockbench_thruster_pack",
+  "version": "0.1.0-m4e-regression",
+  "metadata": {
+    "status": "real-blockbench-regression-fixture",
+    "generatedBy": "VAW M4E hardening",
+    "authority": "visual-only",
+    "note": "Real glTF regression asset copied from the user-provided Blockbench exports. It is a renderer-only fixture, not gameplay data."
+  },
+  "assets": [
+    {
+      "assetId": "real_blockbench_thruster_test_anim",
+      "kind": "blockVisual",
+      "model": {
+        "path": "models/test_anim.gltf",
+        "unitMeters": 1,
+        "forwardAxis": "+X",
+        "upAxis": "+Y"
+      },
+      "bindings": {
+        "blockTypes": [
+          "Thruster"
+        ],
+        "nodes": {
+          "visualRoot": "/group",
+          "flame": null,
+          "flameGlow": null,
+          "gimbalAssembly": null,
+          "controlFlapPivot": null
+        },
+        "clips": {
+          "idle": null,
+          "thrust": "animation",
+          "damage": null
+        }
+      },
+      "materialPolicy": {
+        "pixelated": true,
+        "alpha": "mask-or-blend",
+        "doubleSided": "from-gltf"
+      }
+    }
+  ]
+}
