@@ -26,6 +26,7 @@ jobs:
           node-version: '22'
       - name: Regenerate and validate recovery
         run: |
+          npm install --no-save --package-lock=false --ignore-scripts tailwindcss@4.1.10
           node tools/generate_tailwind_css.js
           node tools/generate_tailwind_css.js --check
           node tests/test_workshop_selection.js
