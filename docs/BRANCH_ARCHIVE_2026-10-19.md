@@ -31,7 +31,7 @@ Each tag points at the original, exact branch tip. Archived sources remain retri
 
 ## Safety rules
 
-- The cleanup workflow `.github/workflows/compact-branches.yml` independently checks that each branch still points to its pinned SHA, that its archive tag exists and matches, and that no open PR depends on the branch. Only then does it delete the old branch *ref*, never its source/commits/tags.
+- The completed one-time cleanup workflow (preserved as `docs/history/BRANCH_COMPRESSION_WORKFLOW_2026-10-19.yml`, no longer executable by Actions) independently checked that each branch still points to its pinned SHA, that its archive tag exists and matches, and that no open PR depends on the branch. Only then does it delete the old branch *ref*, never its source/commits/tags.
 - If a branch moves after this table was written, halt rather than deleting unknown work.
 - Old links containing retired branch names may stop resolving; use the exact commit or archive tag instead. Closed PR diffs remain recorded.
 - No history rewrites, force pushes, product code changes, or promotion into `main` are part of this compression.
