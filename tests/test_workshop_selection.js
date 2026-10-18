@@ -47,6 +47,7 @@ const blocks = new Map([
 ]);
 const linkedIds = new Set();
 const craft = {
+  revision: 4,
   getById(id) { return blocks.get(id) || null; },
   linksForBlock(id) { return linkedIds.has(id) ? [{ mechanicalLinkId: 'hinge-1' }] : []; },
   move(blockId, x, y, z) {
@@ -54,14 +55,17 @@ const craft = {
     if (!before) return { ok: false, reason: 'missing-block' };
     const after = { ...before, x, y, z };
     blocks.set(blockId, after);
+    this.revision += 1;
     moves.push([blockId, x, y, z]);
     return { ok: true, block: after };
   }
 };
 const state = {
+  mode: 'BUILD',
   workshop: { selectedBlockId: null },
   lastTestResult: {
-    firstFailureEvent: { blockId: 'child-failed', type: 'Thruster', reason: 'hard landing' },
+    craftRevision: craft.revision,
+    firstFailureEvent: { blockId: 'child-failed', blockType: 'Thruster', reason: 'hard landing' },
     lostBlockIds: ['child-failed']
   }
 };
@@ -125,7 +129,22 @@ assert(elements['ui-selected-part-meta'].textContent.includes('[3, 1, -1]'));
 controller.clear();
 assert.strictEqual(state.workshop.selectedBlockId, null);
 assert.strictEqual(highlighted, null);
+assert(elements['ui-selected-part-test'].textContent.includes('earlier craft revision'));
+assert.strictEqual(elements['btn-select-last-failure'].disabled, true);
+assert.strictEqual(controller.selectLastFailure().reason, 'stale-test-result');
+assert.strictEqual(controller.sync({ preferLastFailure: true }).ok, false);
 
+state.mode = 'FLIGHT';
+controller.select('child-failed');
+controller.render();
+assert(nudgeButtons.every(button => button.disabled), 'Editing controls must be disabled in FLIGHT');
+const moveCountBeforeFlight = moves.length;
+assert.strictEqual(controller.nudge(1, 0, 0).reason, 'not-build-mode');
+assert.strictEqual(moves.length, moveCountBeforeFlight);
+state.mode = 'BUILD';
+controller.clear();
+
+state.lastTestResult.craftRevision = craft.revision; // Another actual test on this edited craft.
 const autoFailure = controller.sync({ preferLastFailure: true });
 assert.strictEqual(autoFailure.ok, true);
 assert.strictEqual(state.workshop.selectedBlockId, 'child-failed');

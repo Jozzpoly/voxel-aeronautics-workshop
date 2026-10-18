@@ -532,6 +532,7 @@
         const result = {
           kind: contract.id === 'sandbox' ? 'sandbox-test' : 'contract-test',
           contractId: contract.id,
+          craftRevision: CRAFT.revision,
           success: typeof success === 'boolean' ? success : null,
           outcome: String(outcome || 'returned'),
           reason: String(reason || ''),

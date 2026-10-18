@@ -35,11 +35,14 @@
         const id = STATE.workshop.selectedBlockId;
         return id ? craft.getById(id) : null;
       };
+      const testAppliesToCurrentCraft = () => Number.isInteger(STATE.lastTestResult?.craftRevision)
+        && STATE.lastTestResult.craftRevision === craft.revision;
       const lastFailureEvent = () => {
+        if (!testAppliesToCurrentCraft()) return null;
         const event = STATE.lastTestResult?.firstFailureEvent;
         return event && typeof event === 'object' && event.blockId ? event : null;
       };
-      const lastLostBlockIds = () => Array.isArray(STATE.lastTestResult?.lostBlockIds)
+      const lastLostBlockIds = () => testAppliesToCurrentCraft() && Array.isArray(STATE.lastTestResult?.lostBlockIds)
         ? STATE.lastTestResult.lostBlockIds
         : [];
 
@@ -88,9 +91,11 @@
           if (meta) meta.textContent = 'Shift + left click a part, or select the hovered part.';
           if (test) {
             const event = lastFailureEvent();
-            test.textContent = event
-              ? `Last test first failure: ${event.type || 'part'} • ${event.reason || 'unknown reason'}`
-              : 'No failed part recorded in the last test.';
+            test.textContent = STATE.lastTestResult && !testAppliesToCurrentCraft()
+              ? 'Last test belongs to an earlier craft revision.'
+              : event
+                ? `Last test first failure: ${event.blockType || 'part'} • ${event.reason || 'unknown reason'}`
+                : 'No failed part recorded in the last test.';
           }
         } else {
           if (title) title.textContent = `${block.type} • ${block.blockId}`;
@@ -103,6 +108,8 @@
               test.textContent = `FIRST FAILURE • ${event.reason || 'failure'}${lost ? ' • LOST DURING TEST' : ''}`;
             } else if (lost) {
               test.textContent = 'LOST DURING LAST TEST';
+            } else if (STATE.lastTestResult && !testAppliesToCurrentCraft()) {
+              test.textContent = 'Last test belongs to an earlier craft revision.';
             } else {
               test.textContent = event ? 'Not the first failed part in the last test.' : 'No failure evidence for this part.';
             }
@@ -112,7 +119,7 @@
         if (clear) clear.disabled = block == null;
         const failureId = lastFailureEvent()?.blockId || null;
         if (failure) failure.disabled = !failureId || !craft.getById(failureId);
-        for (const button of nudges) button.disabled = block == null;
+        for (const button of nudges) button.disabled = block == null || STATE.mode !== 'BUILD';
         return block;
       }
 
@@ -144,6 +151,10 @@
       }
 
       function selectLastFailure() {
+        if (STATE.lastTestResult && !testAppliesToCurrentCraft()) {
+          showStatus('LAST TEST BELONGS TO EARLIER CRAFT VERSION', 1600);
+          return { ok: false, reason: 'stale-test-result' };
+        }
         const event = lastFailureEvent();
         if (!event?.blockId) {
           showStatus('NO FAILED PART IN LAST TEST', 1400);
@@ -166,6 +177,7 @@
       }
 
       function nudge(dx, dy, dz) {
+        if (STATE.mode !== 'BUILD') return { ok: false, reason: 'not-build-mode' };
         const block = selectedBlock();
         if (block == null) return { ok: false, reason: 'no-selection' };
         if (craft.linksForBlock?.(block.blockId)?.length) {

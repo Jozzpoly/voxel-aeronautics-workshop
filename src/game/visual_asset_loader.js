@@ -23,6 +23,7 @@
 
       const diagnostics = [];
       const trackedRoots = new Set();
+      function untrackRoot(root) { return trackedRoots.delete(root); }
       const loadPromisesByAssetId = new Map();
       const materialWarningKeys = new Set();
       let debugVisualsVisible = false;
@@ -902,6 +903,7 @@
         reloadInstalledPacks,
         attachImportedVisual,
         detachImportedVisual,
+        untrackRoot,
         upgradeRoots,
         clearModelCache,
         setDebugVisualsVisible,

@@ -511,6 +511,7 @@
       if (!key) return false;
       const mesh = WORKSHOP.meshesByKey.get(key);
       if (!mesh) return false;
+      visualAssetLoader.untrackRoot(mesh);
       assemblySpaceController.detachBlockVisual(mesh);
       removeRootMesh(mesh);
       WORKSHOP.meshesByKey.delete(key);
@@ -584,6 +585,7 @@
     function rebuildWorkshopView() {
       assemblySpaceController.syncRoots();
       for (const mesh of WORKSHOP.meshesByKey.values()) {
+        visualAssetLoader.untrackRoot(mesh);
         scene.remove(mesh);
         disposeObjectTree(mesh);
       }
@@ -705,6 +707,7 @@
       Physics,
       world,
       removeVisualRoot(root) {
+        root.traverse?.(object => { if (object?.userData?.isVoxelRoot) visualAssetLoader.untrackRoot(object); });
         scene.remove(root);
         disposeObjectTree(root);
         return true;

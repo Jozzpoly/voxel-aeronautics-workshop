@@ -245,6 +245,8 @@ async function main() {
   assert.strictEqual(mesh1.material.disposed, true);
   assert.strictEqual(mesh2.geometry.disposed, false, 'Disposing one imported instance must not corrupt another instance using the same cached glTF.');
   assert.strictEqual(mesh2.material.disposed, false, 'Disposing one imported material must not dispose another imported instance material.');
+  assert.strictEqual(loader.untrackRoot(root2), true, 'Disposed root must unregister from asset reload tracking.');
+  assert.strictEqual(loader.untrackRoot(root2), false, 'Unregistration is idempotent.');
 
   const missingManifest = JSON.parse(JSON.stringify(studioSampleManifest));
   missingManifest.assets[0].assetId = 'test_anim_missing';
