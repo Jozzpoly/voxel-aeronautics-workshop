@@ -25,19 +25,22 @@ let part = {
   blockId: 'selected-core', key: 'space:child:0,0,0', type: 'Core',
   assemblySpaceId: 'space:child', x: 0, y: 0, z: 0
 };
+const otherPart = { blockId: 'another-part', key: 'space:child:3,0,0', type: 'Hull', assemblySpaceId: 'space:child', x: 3, y: 0, z: 0 };
 const statuses = [], moves = [];
 let history = 0, autosaves = 0, linked = false, selection = null;
 const craft = {
   revision: 4,
-  getById(id) { return id === part.blockId ? part : null; },
+  getById(id) { return id === part.blockId ? part : id === otherPart.blockId ? otherPart : null; },
   linksForBlock() { return linked ? [{ mechanicalLinkId: 'hinge' }] : []; },
   move(id, x, y, z) {
-    if (id !== part.blockId) return { ok: false, reason: 'missing-block' };
-    if (x === part.x && y === part.y && z === part.z) return { ok: true, reason: 'unchanged' };
+    const block = this.getById(id);
+    if (!block) return { ok: false, reason: 'missing-block' };
+    if (x === block.x && y === block.y && z === block.z) return { ok: true, reason: 'unchanged' };
     moves.push([id, x, y, z]);
-    part = { ...part, x, y, z };
+    if (id === part.blockId) part = { ...part, x, y, z };
+    else Object.assign(otherPart, { x, y, z });
     this.revision += 1;
-    return { ok: true, block: part };
+    return { ok: true, block: this.getById(id) };
   }
 };
 const state = { mode: 'BUILD', workshop: { selectedBlockId: null }, lastTestResult: null };
@@ -92,4 +95,37 @@ linked = false;
 state.mode = 'FLIGHT';
 assert.strictEqual(controller.beginDrag(start), false, 'Select dragging is BUILD-only');
 state.mode = 'BUILD';
-console.log({ planarDrag: 'nested-parent-local-space', cancel: 'atomic', undoCommits: history, stableId: true, linkedGuard: true });
+
+// Falsifier A: final ray missing the drag plane must not commit the previously
+// projected destination. A temporary deterministic Raycaster shim simulates a
+// pointer ray parallel to the local plane while retaining real Three math.
+const RealRaycaster = THREE.Raycaster;
+THREE.Raycaster = class extends RealRaycaster {
+  setFromCamera(ndc, activeCamera) {
+    super.setFromCamera(ndc, activeCamera);
+    if (ndc.x === 1000) this.ray.direction.set(1, 0, 0); // horizontal, parallel to XZ
+  }
+};
+const invalidPoint = new THREE.Vector2(1000, 0);
+const beforeInvalidMoves = moves.length, beforeInvalidHistory = history;
+assert.strictEqual(controller.beginDrag(start), true);
+assert.strictEqual(controller.previewDrag(destination, true), true);
+assert.strictEqual(controller.finishDrag(invalidPoint, true), true);
+assert.strictEqual(moves.length, beforeInvalidMoves,
+  'Invalid final cursor projection must not commit stale last-good preview coordinates');
+assert.strictEqual(history, beforeInvalidHistory,
+  'Invalid final cursor projection must not create an Undo entry');
+THREE.Raycaster = RealRaycaster;
+
+// Falsifier B: the authored identity captured on pointerdown cannot change
+// just because another inspector action updates selection during the drag.
+const beforeSelectionMoves = moves.length;
+assert.strictEqual(controller.beginDrag(start), true);
+assert.strictEqual(controller.previewDrag(destination, true), true);
+assert.strictEqual(controller.select(otherPart.blockId).ok, true);
+assert.strictEqual(controller.finishDrag(destination, true), true);
+assert.strictEqual(moves.length, beforeSelectionMoves,
+  'Releasing a drag after selection changes must never move the newly selected part');
+assert.strictEqual(otherPart.x, 3);
+console.log({ planarDrag: 'nested-parent-local-space', cancel: 'atomic', undoCommits: history,
+  stableId: true, linkedGuard: true, invalidRelease: 'rejected', selectionRace: 'rejected' });
