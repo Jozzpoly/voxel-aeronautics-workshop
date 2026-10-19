@@ -1,0 +1,48 @@
+name: Regenerate VAW CSS for rescue export (one-time)
+# Retire this one-time workflow after exact generator build and tests.
+
+on:
+  push:
+    branches: [recovery/playable-truth]
+    paths:
+      - .github/workflows/once-rescue-export-css.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vaw-once-rescue-export-css
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    if: github.ref == 'refs/heads/recovery/playable-truth'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Regenerate exact CSS and test
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts tailwindcss@4.1.10
+          node tools/generate_tailwind_css.js
+          node tools/generate_tailwind_css.js --check
+          node tests/test_blueprint_controller_hardening.js
+          python tests/run_all.py
+      - name: Archive one-time CI and commit generated CSS
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git mv .github/workflows/once-rescue-export-css.yml docs/history/ONE_TIME_RESCUE_EXPORT_CSS_2026-10-20.yml
+          git add tailwind.generated.css docs/history/ONE_TIME_RESCUE_EXPORT_CSS_2026-10-20.yml
+          git commit -m 'build(recovery): regenerate CSS for rescue export controls'
+          git push origin HEAD:refs/heads/recovery/playable-truth
