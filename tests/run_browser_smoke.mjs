@@ -339,6 +339,29 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
     count: document.getElementById('ui-blocks').textContent
   })`);
   assert(firstBlock.undoEnabled && firstBlock.currentTool === 'Core', 'Manual first block lacks undo or correct tool selection.');
+
+  setStage('manual-selected-part-move');
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', ...placementPoint });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mousePressed', ...placementPoint, button: 'left', modifiers: 8, clickCount: 1 });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseReleased', ...placementPoint, button: 'left', modifiers: 8, clickCount: 1 });
+  const originalSelection = await evaluate(cdp, `({
+    name: document.getElementById('ui-selected-part-title')?.textContent,
+    position: document.getElementById('ui-selected-part-meta')?.textContent,
+    nudgeEnabled: !document.querySelector('[data-selected-nudge="1,0,0"]')?.disabled
+  })`);
+  assert(originalSelection.name?.startsWith('Core •') && originalSelection.nudgeEnabled,
+    `Cannot select/nudge the originally built block: ${JSON.stringify(originalSelection)}`);
+  await clickElement(cdp, '[data-selected-nudge="1,0,0"]');
+  const movedSelection = await evaluate(cdp, `({
+    name: document.getElementById('ui-selected-part-title')?.textContent,
+    position: document.getElementById('ui-selected-part-meta')?.textContent,
+    count: document.getElementById('ui-blocks')?.textContent
+  })`);
+  assert(movedSelection.name === originalSelection.name && movedSelection.position !== originalSelection.position
+    && movedSelection.count === '1', `Selected-part move lost identity or failed: ${JSON.stringify({ originalSelection, movedSelection })}`);
+  await clickElement(cdp, '#btn-undo');
+  await waitFor(cdp, `document.getElementById('ui-selected-part-meta')?.textContent === ${JSON.stringify(originalSelection.position)}`, 'single-block move undo restored position');
+
   await clickElement(cdp, '#btn-undo');
   await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '0'`, 'manual placement undo');
   await clickElement(cdp, '#btn-redo');
@@ -427,7 +450,7 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   assert(errors.length === 0, `Browser console/runtime errors: ${JSON.stringify(errors)}`);
   return {
     starterBlocks: 17,
-    manualBuild: { firstBlock: 'Core', secondBlock: 'Hull', selection: true, undo: true, redo: true, sandbox: true, returnToWorkshop: true, newBlueprint: true },
+    manualBuild: { firstBlock: 'Core', stableIdMove: true, secondBlock: 'Hull', selection: true, undo: true, redo: true, sandbox: true, returnToWorkshop: true, newBlueprint: true },
     corePanels: panels,
     terrain: terrainState,
     flightMode: true,
