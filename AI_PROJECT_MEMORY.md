@@ -1,5 +1,17 @@
 # AI Project Memory — Voxel Aeronautics Workshop
 
+## 2026-10-20 — Select-mode planar drag experiment (candidate)
+
+- **Gesture surface**: `Select / Inspect (V)` now captures a selected part on pointerdown; movement beyond the established 6px click slop previews a snapped move in that part's local XZ plane. The origin remains physically present until drop and an amber bounding outline shows the tentative target. Single click still inspects. Y movement remains available through existing discrete nudges; this is not a 3D gizmo or a full mechanical joint editor.
+- **Truth boundary**: `workshop_selection_controller.js` owns drag start/preview/end/cancel, computes drag intersections against the local assembly plane from the selected visual's world transform, converts the snapped target through the actual parent world matrix and calls existing `nudge` exactly once on drop. The `CraftModel` and `Blueprint` are **not mutated during preview**, and `blockId` is preserved. Mechanically linked blocks refuse the move; destination validity is authoritatively checked by `CraftModel.move` only at drop, so amber is a tentative indicator, **not a green-valid claim**.
+- **Cancel contract**: pointercancel, Escape, window blur, selection sync and non-select pointer movement clear a transient visual preview without changing history or saves. Normal Build placement and right-click removal use the separately validated drag suppression from the previous shipped revision.
+- **Tests**: `tests/test_workshop_drag.js` covers real Three.js parent-space transforms, no-op clicks, preview cancellation, single commit/undo history and linked-part refusal. Chromium smoke now attempts a *real cursor drag* of a manually built Core in Select, checks unchanged `blockId`, one block, moved coordinates and undo recovery. One-time exact CSS regeneration and core tests PASS: [run 39342199826](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39342199826), then archived as `docs/history/ONE_TIME_SELECTION_DRAG_CSS_2026-10-20.yml`.
+- **Unproven until final gate**: full real Chromium end-to-end drag, manually judged tactile feel, all camera orientations and older browsers; no release authorized on this candidate without browser evidence. The currently published build remains `8dfbdd0f`, not this experiment.
+- **Follow-up pressure**: interaction logic in `game.js` has reached the architecture size ceiling. Further gestures should justify a dedicated controller extraction; do not keep adding giant inline handlers merely to satisfy an arbitrary file-length guard.
+
+---
+
+
 ## 2026-10-20 — Pointer gesture regression containment (candidate)
 
 - **Reproduced in source**: `src/game.js` previously set `STATE.input.downMoved` only during camera pan/orbit, not ordinary left/right pointer movements. Therefore a pointerdown→move→pointerup in BUILD could still execute `performBuildAction` and place/remove a block at release.
