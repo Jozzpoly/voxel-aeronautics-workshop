@@ -1,4 +1,5 @@
 name: Verify Blueprint mode transition and regenerate CSS (one-time)
+# Source sync fallback corrected after anti-recursion gate.
 # v2: source now delegates palette and select state to game.workshop-tool-mode.
 # v3: canonical source manifest now includes the delegated module.
 # v4: tool function ownership is unambiguous in the architecture audit.
