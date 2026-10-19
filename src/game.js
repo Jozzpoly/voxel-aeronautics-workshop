@@ -1670,16 +1670,11 @@
       callbacks: {
         hoveredBlockId: () => raycastWorkshopBlock(STATE.input.pointerNDC)?.block?.blockId || null,
         setActiveAssemblySpace: id => assemblySpaceController.setActiveAssemblySpace(id),
-        collectBlueprint, commitHistory, updateTelemetry, updateGhost, autoSave, showStatus
+        collectBlueprint, commitHistory, updateTelemetry, updateGhost, autoSave, showStatus,
+        frameSelectedVisual: block => frameWorkshopObject(WORKSHOP.meshesByKey.get(block.key))
       }
     });
     workshopSelectionController.wire();
-    document.getElementById('btn-frame-selected-part')?.addEventListener('click', () => {
-      if (STATE.mode !== 'BUILD') return;
-      const selected = workshopSelectionController.selectedBlock();
-      const visual = selected ? WORKSHOP.meshesByKey.get(selected.key) : null;
-      if (!frameWorkshopObject(visual)) showStatus('SELECT A VISIBLE PART TO FRAME', 1400);
-    });
 
     const missionController = MissionController.create({
       THREE, Physics, state: STATE, craft: CRAFT, document,
