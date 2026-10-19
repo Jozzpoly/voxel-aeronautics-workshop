@@ -698,7 +698,7 @@
         }
       }
     });
-    function setSelectedTool(tool) { workshopToolMode.setSelectedTool(tool); }
+    const setSelectedTool = tool => workshopToolMode.setSelectedTool(tool);
 
     function disposeObjectTree(root) {
       if (!root) return;
