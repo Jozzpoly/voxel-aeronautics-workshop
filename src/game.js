@@ -117,7 +117,7 @@
     } = inputSettingsController;
 
     const cameraController = CameraController.create({ state: STATE, camera, THREE, document, saveUIPreferences, showStatus, primaryFlightBodyId, primaryFlightTransform });
-    const { normalizeCameraState, clampCameraPitch, applyCameraOrbit, syncCameraControls, setCameraMode, setCameraFollowStrength, resetCamera, panCameraTargetByPixels, fitCameraToFlightTarget } = cameraController;
+    const { normalizeCameraState, clampCameraPitch, applyCameraOrbit, syncCameraControls, setCameraMode, setCameraFollowStrength, resetCamera, frameWorkshopObject, panCameraTargetByPixels, fitCameraToFlightTarget } = cameraController;
 
     function recomputePilotAxes() {
       const intent = FlightControl.pilotFromActions(STATE.input.controlActions, STATE.input.profile);
@@ -1674,6 +1674,12 @@
       }
     });
     workshopSelectionController.wire();
+    document.getElementById('btn-frame-selected-part')?.addEventListener('click', () => {
+      if (STATE.mode !== 'BUILD') return;
+      const selected = workshopSelectionController.selectedBlock();
+      const visual = selected ? WORKSHOP.meshesByKey.get(selected.key) : null;
+      if (!frameWorkshopObject(visual)) showStatus('SELECT A VISIBLE PART TO FRAME', 1400);
+    });
 
     const missionController = MissionController.create({
       THREE, Physics, state: STATE, craft: CRAFT, document,
