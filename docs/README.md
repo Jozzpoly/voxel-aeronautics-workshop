@@ -18,6 +18,7 @@ If one conflicts with live source or new owner/manual evidence, the document is 
 ## Current evidence
 
 - [`CODE_REALITY_AUDIT.md`](CODE_REALITY_AUDIT.md) — P1 source/product audit supporting the current P2 work order. It is evidence, not independent roadmap authority.
+- [`research/2026-10-19-cross-project-builder-ux-donors.md`](research/2026-10-19-cross-project-builder-ux-donors.md) — current bounded cross-project donor research and VAW UX/data-safety falsifiers; **research evidence, not permission to transplant code or a new roadmap**.
 
 When a current evidence document is superseded, move it to `history/` rather than leaving multiple active audits.
 
