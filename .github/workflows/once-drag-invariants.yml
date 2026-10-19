@@ -1,4 +1,5 @@
 name: VAW one-time adversarial Select drag gate
+# Retry after proving both stale-ray and selection-target regressions; now guarded.
 on:
   push:
     branches: [recovery/playable-truth]
