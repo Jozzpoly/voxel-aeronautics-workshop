@@ -1,5 +1,16 @@
 # AI Project Memory — Voxel Aeronautics Workshop
 
+## 2026-10-20 — Pointer gesture regression containment (candidate)
+
+- **Reproduced in source**: `src/game.js` previously set `STATE.input.downMoved` only during camera pan/orbit, not ordinary left/right pointer movements. Therefore a pointerdown→move→pointerup in BUILD could still execute `performBuildAction` and place/remove a block at release.
+- **Bounded correction**: track slop greater than 6 screen pixels as a sticky drag for non-camera mouse buttons; suppress placement/deletion after any such drag, even if the pointer returns to its initial pixel. Confirm the release button matches the original press and independently check final displacement to guard against missed move events. Existing Alt/middle camera orbit and pan behavior remains unchanged.
+- **Actual browser regression probe added**: disposable Chromium free-build smoke now exercises left-drag-return without placement, normal stationary left placement, right-drag-return without deletion, stationary right deletion and undo restore, then the pre-existing Select/Build/Sandbox lifecycle.
+- **Evidence boundary**: controller/core and source-derived CSS generation passed in the one-time workflow, archived as `docs/history/ONE_TIME_POINTER_DRAG_GUARD_CSS_2026-10-20.yml`. The final real browser gate and published Pages identity require independent verification. No user gesture-feel acceptance claimed, and this is **not** free transform/drag editing yet.
+- **Architectural lesson**: the 2400-line `game.js` composition limit is almost saturated. Substantial future gesture behavior should be owned by a purpose-built input/controller boundary, not extended with long inline event handlers; this release intentionally fixes only the accidental destructive gesture.
+
+---
+
+
 ## 2026-10-20 — Bounded builder-camera quality pass (recovery candidate)
 
 - **Product distinction confirmed**: the launcher button previously labeled compact `⛶ FOCUS` toggles fullscreen flight focus plus keyboard capture; it does **not** frame craft geometry. Renamed its compact visible label to `⛶ PILOT` to reduce camera/keyboard focus ambiguity without changing its behavior.
