@@ -1,4 +1,5 @@
 name: VAW manual authoring browser proof (one-time)
+# v2: also launch and return a two-part manually authored craft.
 
 on:
   push:
