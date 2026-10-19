@@ -1,6 +1,18 @@
 # AI Project Memory — Voxel Aeronautics Workshop
 
-Last recovery grounding: **2026-08-16**.
+## Live checkpoint — 2026-10-19 (supersedes dated browser/deployment claims below)
+
+- **Goal**: Owner confirmed VAW now works as a playable entry in Jaskinia. Access is no longer the blocker; the task is to recover the *quality of building, launching, observing, understanding and rebuilding*. No Owner acceptance of gameplay feel/UI has been granted.
+- **Direct launch**: https://jozzpoly.github.io/voxel-aeronautics-workshop/ ; GitHub Pages is enabled. Jaskinia v6.3's refreshed project snapshot has VAW `pages` and three source branches. Do not confuse a live entry with validated desktop/mobile usability.
+- **Version truth**: `gh-pages/BUILD_INFO.json` pins the published playable source at `8f0ec44b1a641df64a6b5c66ca8e500d29c2d1b6`. As checked on 19 October, recovery HEAD was `9df67c85e9c6553ca9be277878740d776db53213`, four commits newer; those intervening commits changed browser-test/CI files, not product `src/**`. Always recheck the live ref and build info. `main` is still the older historical default, not the recovery product.
+- **Validation boundary**: current recovery passed core and release reproduction CI as well as a *real Chromium* browser lifecycle gate. `tests/run_browser_smoke.mjs` physically clicks preset/launch UI; `tests/run_browser_recovery.mjs` loads a predefined articulated Blueprint using an injected probe, checks real Two-body/Cannon runtime and return/relaunch. Neither is Owner-authored free-build testing, ergonomic assessment or real mobile acceptance. Older claims below that no browser test can bootstrap were historical constraints, not current truth.
+- **Workstation continuity**: 14 source branches were reduced to exactly three: `main`, `recovery/playable-truth`, and generated `gh-pages`. The 12 retired heads are safeguarded by exact Git tags, mapped in `docs/BRANCH_ARCHIVE_2026-10-19.md`. Do not restore the agent mesh.
+- **Owner's product judgement**: sandbox first; an arbitrary first block, manual piloting, readable physical consequences and the ability to diagnose and rebuild matter more than new domain subsystems or contract checklists. Historical pain points to *retest*, not assume current: UI panels/focus, hinge authoring/feedback, building ergonomics, flight feel (drag/damping, lift), symmetry/controls and response clarity. Keep Jozz Vehicle, Box3D/ANVIL and future matter-based builders separate strategic research horizons; they do not authorize a VAW rewrite.
+- **Next product gate**: test the *actual published game* from empty craft through a freely designed machine, control/launch, failure/observation, return, selected-part edit and repeated test. Prefer captured Owner evidence/remarks from Jaskinia and concise targeted fixes. Protect user saves and exact build identity. Do not merge PR #16 solely because tests are green.
+
+---
+
+Historical recovery grounding: **2026-08-16**.
 
 This file is intentionally short. It records current truth, not project history.
 

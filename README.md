@@ -4,7 +4,9 @@
 
 ## Uruchom grywalny recovery
 
-[**Zagraj — VAW (HTMLPreview)**](https://htmlpreview.github.io/?https://raw.githubusercontent.com/Jozzpoly/voxel-aeronautics-workshop/gh-pages/index.html). To wygenerowany, niezależny od serwera jednoplikowy build z materiałami w gałęzi publikacyjnej `gh-pages`. Źródłową rewizję podaje [BUILD_INFO.json](https://github.com/Jozzpoly/voxel-aeronautics-workshop/blob/gh-pages/BUILD_INFO.json). **Działa na komputerze; jakość warsztatu pozostaje niezaakceptowana przez Ownera.** Publikacja nie oznacza scalenia recovery do `main`.
+[**Zagraj — VAW na GitHub Pages**](https://jozzpoly.github.io/voxel-aeronautics-workshop/). Gra jest dostępna także jako wejście w Jaskini (Owner potwierdził 2026-10-19). Build jest publikowany niezależnie z gałęzi `gh-pages`; jego dokładną rewizję źródłową wskazuje [BUILD_INFO.json](https://github.com/Jozzpoly/voxel-aeronautics-workshop/blob/gh-pages/BUILD_INFO.json). **Dostępność w Jaskini nie jest jeszcze akceptacją jakości warsztatu, sterowania ani mobile.** `main` pozostaje starszą, historyczną bazą; recovery na PR #16 jest osobnym kandydatem.
+
+**Dowody aktualne na 2026-10-19:** prawdziwy Chromium browser smoke i articulated lifecycle dla source i standalone przeszły w CI. Testy używają presetów/Blueprintów testowych; nie zastępują swobodnego Owner testu `buduj → uruchom → obserwuj → przebuduj`. Aktualny checkpoint i ograniczenia dowodowe: [AI_PROJECT_MEMORY.md](AI_PROJECT_MEMORY.md). Poniższy sierpniowy opis jest historyczną bazą recovery, nie najświeższym dowodem.
 
 ## Stan projektu — 2026-08-16
 
