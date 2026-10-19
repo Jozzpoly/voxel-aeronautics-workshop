@@ -109,6 +109,9 @@
         // The authored block's x/y/z can be local to a nested assembly space.
         // Use its rendered world transform, including imported visual bounds.
         if (STATE.mode !== 'BUILD' || !object || !THREE.Box3 || !THREE.Sphere) return false;
+        // Force all assembly-space ancestors up to date before deriving world bounds.
+        // A newly edited nested frame may not have been rendered yet.
+        object.updateWorldMatrix(true, true);
         const bounds = new THREE.Box3().setFromObject(object);
         if (bounds.isEmpty()) return false;
         const sphere = bounds.getBoundingSphere(new THREE.Sphere());
