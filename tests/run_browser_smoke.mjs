@@ -343,6 +343,52 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '0'`, 'manual placement undo');
   await clickElement(cdp, '#btn-redo');
   await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '1'`, 'manual placement redo');
+  // From a genuinely placed Core, attach a second part through the visible
+  // viewport. This was previously untested even when all CI was green.
+  setStage('manual-second-part');
+  await clickElement(cdp, '#parts-hotbar-list [data-tool="Hull"]');
+  const offsets = [0, 16, -16, 32, -32, 48, -48, 64, -64, 80, -80, 104, -104];
+  let secondPoint = null;
+  const placementProbes = [];
+  for (const dy of offsets) {
+    if (secondPoint) break;
+    for (const dx of offsets) {
+      const x = placementPoint.x + dx, y = placementPoint.y + dy;
+      if (x < 0 || y < 0 || x >= 1440 || y >= 1000) continue;
+      await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+      const probe = await evaluate(cdp, `(() => {
+        const hit = document.elementFromPoint(${x}, ${y});
+        return { canvas: hit?.tagName === 'CANVAS', feedback: document.getElementById('ui-adj')?.textContent };
+      })()`);
+      if (placementProbes.length < 20) placementProbes.push({ dx, dy, ...probe });
+      if (probe?.canvas && /^OK x1$/.test(probe.feedback || '')) {
+        secondPoint = { x, y };
+        break;
+      }
+    }
+  }
+  assert(secondPoint, `Cannot find a legal second-block face in a normal visible workshop. Probes: ${JSON.stringify(placementProbes)}`);
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mousePressed', ...secondPoint, button: 'left', clickCount: 1 });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseReleased', ...secondPoint, button: 'left', clickCount: 1 });
+  await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '2'`, 'manual adjacent second part');
+
+  setStage('manual-part-selection');
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', ...secondPoint });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mousePressed', ...secondPoint, button: 'left', clickCount: 1, modifiers: 8 });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseReleased', ...secondPoint, button: 'left', clickCount: 1, modifiers: 8 });
+  const selected = await evaluate(cdp, `({
+    title: document.getElementById('ui-selected-part-title')?.textContent,
+    clearEnabled: !document.getElementById('btn-clear-selected-part')?.disabled,
+    count: document.getElementById('ui-blocks')?.textContent
+  })`);
+  assert(selected.clearEnabled && selected.title && !selected.title.startsWith('No part selected'),
+    `Shift+click did not select the physically built part: ${JSON.stringify(selected)}`);
+  assert(selected.count === '2', 'Shift+click part selection accidentally altered the craft.');
+  await clickElement(cdp, '#btn-undo');
+  await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '1'`, 'manual second-part undo');
+  await clickElement(cdp, '#btn-redo');
+  await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '2'`, 'manual second-part redo');
+
   await clickElement(cdp, '#btn-clear');
   await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '0'`, 'new blueprint clears manual probe');
 
@@ -360,7 +406,7 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   assert(errors.length === 0, `Browser console/runtime errors: ${JSON.stringify(errors)}`);
   return {
     starterBlocks: 17,
-    manualBuild: { firstBlock: 'Core', undo: true, redo: true, newBlueprint: true },
+    manualBuild: { firstBlock: 'Core', secondBlock: 'Hull', selection: true, undo: true, redo: true, newBlueprint: true },
     corePanels: panels,
     terrain: terrainState,
     flightMode: true,
