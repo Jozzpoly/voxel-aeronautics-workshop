@@ -123,7 +123,23 @@ assert(statuses.includes('INVALID BLUEPRINT'));
 const tabValues = new Map([[Config.SAVE_KEY, previousPrimary]]);
 const tabStorage = {
   getItem: key => tabValues.has(key) ? tabValues.get(key) : null,
-  setItem: (key, value) => tabValues.set(key, value)
+  setItem: (key, value) => tabValues.set(key, value),
+  get length() { return tabValues.size; },
+  key(index) { return [...tabValues.keys()][index] || null; }
+};
+const rescuePanel = { style: { display: 'none' } };
+const rescuePicker = {
+  value: '', options: [],
+  replaceChildren() { this.options = []; },
+  appendChild(option) { this.options.push(option); }
+};
+const tabDocument = {
+  ...document,
+  getElementById(id) {
+    if (id === 'rescue-controls') return rescuePanel;
+    if (id === 'rescue-copy-select') return rescuePicker;
+    return document.getElementById(id);
+  }
 };
 function makeTab(id) {
   let authored = Blueprint.createDocument({ blocks: [{ blockId: id, assemblySpaceId: 'space:root', x: 0, y: 0, z: 0, type: 'Core' }] });
@@ -133,7 +149,7 @@ function makeTab(id) {
     replaceDocument(data) { authored = data; return { ok: true }; }
   };
   return Controller.create({
-    state: { ...state, mode: 'BUILD' }, craft: tabCraft, document, storage: tabStorage, defaultOrientation: 0,
+    state: { ...state, mode: 'BUILD' }, craft: tabCraft, document: tabDocument, storage: tabStorage, defaultOrientation: 0,
     markers: { comSphere: {}, axesHelper: {} },
     callbacks: {
       cleanupFlightState() {}, updateTelemetry() {}, updateGhost() {}, updateControlConfigurationUI() {},
@@ -152,6 +168,13 @@ assert.strictEqual(tabValues.get(Config.SAVE_BACKUP_KEY), previousPrimary, 'conf
 const rescueKeys = [...tabValues.keys()].filter(key => key.startsWith(Config.SAVE_KEY + ':conflict:'));
 assert.strictEqual(rescueKeys.length, 1, 'conflicting craft must get one distinct rescue slot');
 assert.strictEqual(JSON.parse(tabValues.get(rescueKeys[0])).blocks[0].blockId, 'tab-b');
+assert.deepStrictEqual(tabB.listRescueCopies().map(copy => copy.key), rescueKeys);
+assert.strictEqual(rescuePanel.style.display, 'flex', 'conflict exposes the export rescue UI');
+assert.strictEqual(rescuePicker.value, rescueKeys[0]);
+assert.strictEqual(rescuePicker.options.length, 1);
+assert.strictEqual(tabB.exportRescueCopy(), true, 'retained copy must be user-exportable');
+assert.strictEqual(tabValues.has(rescueKeys[0]), true, 'export does not remove a rescue copy');
+assert(statuses.includes('RESCUE EXPORTED • IMPORT JSON TO OPEN'));
 assert(statuses.includes('SAVE CONFLICT • EXPORT BLUEPRINT'));
 assert.strictEqual(tabB.persistBlueprint(false), false);
 assert.strictEqual([...tabValues.keys()].filter(key => key.startsWith(Config.SAVE_KEY + ':conflict:')).length, 1,
