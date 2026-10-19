@@ -5,6 +5,7 @@ name: Publish playable VAW recovery
 # 2026-10-20 release gate: browser-verified conflict protection and non-destructive rescue JSON export.
 # 2026-10-20 release gate: selected-part world-space FRAME, pilot focus clarity, real Chromium PASS.
 # 2026-10-20 release gate: real pointer drag-return suppresses accidental Build edits; Chromium regression PASS.
+# 2026-10-20 release gate: Select-only local-XZ drag, one undo commit and real Chromium free-build PASS.
 
 on:
   push:
