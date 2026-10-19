@@ -1753,6 +1753,7 @@
 
     renderer.domElement.addEventListener('pointermove', (event) => {
       if (event.pointerType === 'touch' || isOverUI(event.target)) return;
+      if (STATE.input.downButton >= 0 && !STATE.input.orbitDrag && !STATE.input.panDrag && Math.hypot(event.clientX - STATE.input.dragStartX, event.clientY - STATE.input.dragStartY) > 6) STATE.input.downMoved = true;
       rayToNDC(event.clientX, event.clientY);
       if (STATE.input.orbitDrag || STATE.input.panDrag) {
         const dx = event.clientX - STATE.input.dragStartX;
@@ -1778,7 +1779,7 @@
       const cameraDragWasActive = STATE.input.orbitDrag || STATE.input.panDrag;
       STATE.input.orbitDrag = false;
       STATE.input.panDrag = false;
-      if (!cameraDragWasActive && STATE.mode === 'BUILD' && !STATE.input.downMoved) {
+      if (!cameraDragWasActive && STATE.mode === 'BUILD' && !STATE.input.downMoved && STATE.input.downButton === event.button && Math.hypot(event.clientX - STATE.input.dragStartX, event.clientY - STATE.input.dragStartY) <= 6) {
         if (event.button === 0 || event.button === 2) performBuildAction(event.button, { shiftKey: event.shiftKey });
       }
       STATE.input.downButton = -1;
