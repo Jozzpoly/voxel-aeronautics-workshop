@@ -14,7 +14,7 @@
       const { comSphere, axesHelper } = markers;
       const {
         cleanupFlightState, updateTelemetry, updateGhost, updateControlConfigurationUI,
-        syncHudVisibility, resetToEmptyCraft, updateHUD, showStatus, setMechanicalAuthoring = () => {}
+        syncHudVisibility, resetToEmptyCraft, updateHUD, showStatus, setMechanicalAuthoring = () => {}, resetToolMode = null
       } = callbacks;
       const DEFAULT_ORIENTATION = defaultOrientation;
       const localStorage = storage;
@@ -84,6 +84,11 @@
         }
       }
 
+      function syncToolSelection() {
+        if (typeof resetToolMode === 'function') return resetToolMode();
+        syncToolSelection();
+      }
+
       function normalizeBlueprintData(data) { return Blueprint.normalize(data); }
 
       function loadBlueprintData(data) {
@@ -114,10 +119,7 @@
         /** @type {HTMLInputElement} */ (document.getElementById('thruster-power')).value = String(Math.round(STATE.thrusterPower * 100));
         /** @type {HTMLInputElement} */ (document.getElementById('balloon-power')).value = String(Math.round(STATE.balloonPower * 100));
         /** @type {HTMLInputElement} */ (document.getElementById('stability')).value = String(Math.round(STATE.stabilityAssist * 100));
-        document.querySelectorAll('.tool-btn').forEach(element => {
-          const btn = /** @type {HTMLElement} */ (element);
-          btn.classList.toggle('active', btn.dataset.tool === STATE.selectedBlock);
-        });
+        syncToolSelection();
         comSphere.visible = CRAFT.size > 0;
         axesHelper.visible = true;
         updateTelemetry();
@@ -222,10 +224,7 @@
         /** @type {HTMLInputElement} */ (document.getElementById('balloon-power')).value = '70';
         /** @type {HTMLInputElement} */ (document.getElementById('stability')).value = '18';
         resetToEmptyCraft(false);
-        document.querySelectorAll('.tool-btn').forEach(element => {
-          const btn = /** @type {HTMLElement} */ (element);
-          btn.classList.toggle('active', btn.dataset.tool === STATE.selectedBlock);
-        });
+        syncToolSelection();
         commitHistory(historyBefore);
         updateHUD();
         updateGhost();
