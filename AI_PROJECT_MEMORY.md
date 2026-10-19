@@ -1,3 +1,15 @@
+## 2026-10-19 — Browser proof of a freely authored craft
+
+- **Source checkpoint:** `5b66ca36e6a5a29dae1909bc91f91a40652fafa1`, after the original published `3307e3f`. Gameplay `src/**` is unchanged between them; these commits extend `tests/run_browser_smoke.mjs` and a temporary CI gate.
+- **Actual Chromium player-input path:** from an empty workshop, choose a Core from the parts bar; place it with a real pointer click on the build plane; Shift+click to select; move the selected Core using the X+ inspector button; verify its identity remains stable and its position changes; undo the move; undo/redo the first placement; choose Hull; find a valid adjacent face from real mouse feedback; place it; Shift+click a part and confirm it remains two blocks; undo/redo; choose Sandbox through the contract-card UI; launch this handmade two-block craft in real Cannon flight; return to workshop; verify both blocks persist; clear the craft; finally run the 17-part starter launch smoke.
+- **Browser proof:** [one-time isolated Chromium run 39312934267](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39312934267), rerun attempt 2 PASS. [Validation run 39312940840](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39312940840) and Release Reproducibility PASS. Browser outputs `manualBuild.stableIdMove=true`, `secondBlock='Hull'`, `selection=true`, `sandbox=true`, `returnToWorkshop=true`, and zero console errors.
+- **Known harness interference:** the isolated CI browser sometimes hangs at the Chromium remote-debug startup before gameplay. One earlier test validation failed in the known Linux process-family/SIGTERM runner test. Classify failures by stage and inspect job logs: neither is proof of a product failure. The same authored test passed without a production-code change when Chromium did start.
+- **Not proven:** natural feel/readability of constructing multiple parts; drag/rotate editing; intuitive mechanical authoring; meaningful flight controls and physics feel; productive visual diagnosis after real damage; usable phone/touch play; Jaskinia iframe focus/persistence across devices. This is engineering confidence, *not Owner PASS*.
+- **Release boundary:** `gh-pages/BUILD_INFO.json` still pins `3307e3f`; its underlying gameplay is identical to the recovery test commit, so no Jaskinia/game release is required merely to add tests. Do not imply that a new published build was created by the tests.
+- **Next appropriate move:** prioritize bounded visual/Owner experiments and tactile builder improvements where evidence supports them, rather than more breadth or a new agent mesh. The user wants VAW to be a complete, attractive, immediately accessible game in Jaskinia; the separate Jozz Vehicle / Box3D matter-builder visions remain strategic future conversations.
+
+---
+
 # AI Project Memory — Voxel Aeronautics Workshop
 
 ## Live checkpoint — 2026-10-19 (supersedes dated browser/deployment claims below)
