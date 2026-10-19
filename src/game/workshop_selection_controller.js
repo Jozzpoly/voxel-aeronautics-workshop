@@ -92,7 +92,7 @@
 
         if (block == null) {
           if (title) title.textContent = 'No part selected';
-          if (meta) meta.textContent = 'Shift + left click a part, or select the hovered part.';
+          if (meta) meta.textContent = 'Shift+click to select, or use Select (V): click to inspect, drag on its plane to move.';
           if (test) {
             const event = lastFailureEvent();
             test.textContent = STATE.lastTestResult && !testAppliesToCurrentCraft()
