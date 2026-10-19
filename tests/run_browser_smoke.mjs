@@ -298,6 +298,43 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   assert(panels.build && panels.telemetry && panels.parts, 'Core UI panels are missing.');
   assert(panels.flightFocusButtons >= 2, 'Flight Focus path must expose controls and launcher buttons.');
 
+  setStage('empty-workshop-manual-build');
+  // Exercise the actual UI and pointer path. Older smokes skipped free build entirely
+  // by loading a starter preset or injecting a Blueprint into the application.
+  await clickElement(cdp, '#parts-hotbar-list [data-tool="Core"]');
+  const coreButton = await evaluate(cdp, `document.querySelector('#parts-hotbar-list [data-tool="Core"]')?.classList.contains('active')`);
+  assert(coreButton === true, 'Selecting Core in the parts hotbar did not activate the build tool.');
+
+  let placementPoint = null;
+  const canvasCandidates = [[720, 530], [730, 600], [800, 520], [660, 580], [800, 680]];
+  for (const [x, y] of canvasCandidates) {
+    await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+    const probe = await evaluate(cdp, `(() => {
+      const at = document.elementFromPoint(${x}, ${y});
+      return { canvas: at?.tagName === 'CANVAS', preview: document.getElementById('ui-adj')?.textContent };
+    })()`);
+    if (probe?.canvas && /^OK x1$/.test(probe.preview || '')) {
+      placementPoint = { x, y };
+      break;
+    }
+  }
+  assert(placementPoint, 'No unobscured, valid first-block canvas target in normal workshop viewport.');
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mousePressed', ...placementPoint, button: 'left', clickCount: 1 });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseReleased', ...placementPoint, button: 'left', clickCount: 1 });
+  await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '1'`, 'manual first-block placement');
+  const firstBlock = await evaluate(cdp, `({
+    undoEnabled: !document.getElementById('btn-undo').disabled,
+    currentTool: document.querySelector('#parts-hotbar-list [data-tool="Core"].active')?.dataset.tool,
+    count: document.getElementById('ui-blocks').textContent
+  })`);
+  assert(firstBlock.undoEnabled && firstBlock.currentTool === 'Core', 'Manual first block lacks undo or correct tool selection.');
+  await clickElement(cdp, '#btn-undo');
+  await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '0'`, 'manual placement undo');
+  await clickElement(cdp, '#btn-redo');
+  await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '1'`, 'manual placement redo');
+  await clickElement(cdp, '#btn-clear');
+  await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '0'`, 'new blueprint clears manual probe');
+
   setStage('hit-test');
   await clickElement(cdp, '[data-panel-toggle="contracts"]');
   await waitFor(cdp, `document.getElementById('contract-panel') && !document.getElementById('contract-panel').hidden`, 'contract panel visible');
@@ -312,6 +349,7 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   assert(errors.length === 0, `Browser console/runtime errors: ${JSON.stringify(errors)}`);
   return {
     starterBlocks: 17,
+    manualBuild: { firstBlock: 'Core', undo: true, redo: true, newBlueprint: true },
     corePanels: panels,
     terrain: terrainState,
     flightMode: true,
