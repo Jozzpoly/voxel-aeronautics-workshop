@@ -1,5 +1,17 @@
 # AI Project Memory — Voxel Aeronautics Workshop
 
+## 2026-10-20 — Two-tab autosave containment (candidate, not yet published)
+
+- **Validated source change**: `src/game/blueprint_controller.js` now observes the shared primary save at tab startup, refuses a stale write when another tab changed it, preserves the local draft under a distinct `:conflict:` rescue key and shows `SAVE CONFLICT • EXPORT BLUEPRINT`. Loading the actual current primary intentionally updates the baseline. Existing backup writes remain scoped to successful saves.
+- **Executable regression**: `tests/test_blueprint_controller_hardening.js` opens two controllers against one simulated same-origin storage, confirms that B cannot overwrite A's primary/backup, checks B's retained conflict JSON, and tests recovery through explicit loading. This is a deterministic controller/storage test, not a true two-window Chromium test.
+- **Build evidence**: one-time [CSS regeneration workflow](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39335359317) generated the exact Tailwind 4.1.10 artifact, passed the targeted test and core `tests/run_all.py`, then archived itself under `docs/history/ONE_TIME_CROSS_TAB_SAVE_CSS_2026-10-20.yml`. Source candidate hash `5357899f7de1523cf16074436ad0c2d49a450dacca7706832229a9c8f6f9d1b9`.
+- **Limitations (do not overclaim)**: a read/compare/write sequence in `localStorage` is **not atomic across tabs** and therefore is not a complete guarantee against a tightly interleaved simultaneous save. Rescue keys have no player-facing recovery picker yet; on a conflict, export the still-open craft to a file. Quota/storage errors can also defeat the rescue copy. Proper isolated browser cross-tab trials and explicit recovery UX are still needed.
+- **Release boundary**: Jaskinia/Pages still runs source `2681c383489ad95913a0780589f15186b93320fd` as verified through `gh-pages/BUILD_INFO.json`; these new edits are **unpublished** on recovery only. Do not promote `main` or publish merely because tests are green.
+- **Next gate**: real Chromium end-to-end validation of the exact recovery head, then an accessible non-destructive rescue flow and Owner evaluation of construction/flight feel before broader UI changes.
+
+---
+
+
 ## 2026-10-19 — Browser proof of a freely authored craft
 
 - **Source checkpoint:** `5b66ca36e6a5a29dae1909bc91f91a40652fafa1`, after the original published `3307e3f`. Gameplay `src/**` is unchanged between them; these commits extend `tests/run_browser_smoke.mjs` and a temporary CI gate.
