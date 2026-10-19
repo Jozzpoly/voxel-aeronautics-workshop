@@ -1,0 +1,41 @@
+name: Regenerate VAW CSS and validate pointer drag guard (one-time)
+on:
+  push:
+    branches: [recovery/playable-truth]
+    paths: [.github/workflows/once-pointer-drag-guard.yml]
+permissions:
+  contents: write
+concurrency:
+  group: vaw-once-pointer-drag-guard
+  cancel-in-progress: false
+jobs:
+  repair:
+    if: github.ref == 'refs/heads/recovery/playable-truth'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compile source-derived CSS and run core validation
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts tailwindcss@4.1.10
+          node tools/generate_tailwind_css.js
+          node tools/generate_tailwind_css.js --check
+          python -u tests/run_all.py
+      - name: Archive one-time workflow with exact output
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git mv .github/workflows/once-pointer-drag-guard.yml docs/history/ONE_TIME_POINTER_DRAG_GUARD_CSS_2026-10-20.yml
+          git add tailwind.generated.css docs/history/ONE_TIME_POINTER_DRAG_GUARD_CSS_2026-10-20.yml
+          git commit -m 'build(recovery): regenerate CSS for pointer drag safety'
+          git push origin HEAD:refs/heads/recovery/playable-truth
