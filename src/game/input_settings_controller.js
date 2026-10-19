@@ -77,7 +77,7 @@
           const button = /** @type {HTMLButtonElement} */ (rawButton);
           const compact = button.dataset.flightFocusCompact === 'true';
           button.disabled = !supported;
-          button.textContent = active ? (compact ? '⛶ EXIT' : 'EXIT FOCUS') : (compact ? '⛶ FOCUS' : 'FLIGHT FOCUS');
+          button.textContent = active ? (compact ? '⛶ EXIT PILOT' : 'EXIT FOCUS') : (compact ? '⛶ PILOT' : 'FLIGHT FOCUS');
           button.classList.toggle('active', active);
           button.setAttribute('aria-pressed', String(active));
           button.setAttribute('title', active ? 'Exit fullscreen flight focus' : 'Toggle fullscreen flight focus');
