@@ -42,5 +42,26 @@ jobs:
       - name: Verify release
         run: python tools/verify_release.py --single dist/Voxel_Aeronautics_Workshop_Workbench_Foundation.html --zip dist/Voxel_Aeronautics_Workshop_Workbench_Foundation.zip --hashes dist/SHA256.txt
 
+      - name: Real-render browser smoke — build, 17-part preset and launch
+        env:
+          VAW_BROWSER: /usr/bin/google-chrome
+          DBUS_SESSION_BUS_ADDRESS: ''
+          DBUS_SYSTEM_BUS_ADDRESS: ''
+        run: node tests/run_browser_smoke.mjs
+
+      - name: Articulated lifecycle — source and generated release
+        env:
+          CHROMIUM: /usr/bin/google-chrome
+        run: node tests/run_browser_recovery.mjs
+
+      - name: Preserve browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vaw-browser-failure-${{ github.sha }}
+          path: recovery-artifacts/browser/
+          retention-days: 14
+          if-no-files-found: ignore
+
       - name: Check whitespace
         run: git diff --check
