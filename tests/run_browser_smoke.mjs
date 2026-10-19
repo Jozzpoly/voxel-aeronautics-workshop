@@ -354,6 +354,26 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   })`);
   assert(selectResult.count === '1' && selectResult.selected?.startsWith('Core •') && selectResult.selectActive,
     `Ordinary click in Select mode must inspect without changing craft: ${JSON.stringify(selectResult)}`);
+  setStage('select-mode-new-blueprint-consistency');
+  await clickElement(cdp, '#btn-clear');
+  await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '0'`, 'New Blueprint after Select');
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', ...placementPoint });
+  const afterNew = await evaluate(cdp, `({
+    hullVisible: document.querySelector('#parts-hotbar-list [data-tool="Hull"]')?.classList.contains('active'),
+    hullPressed: document.querySelector('#parts-hotbar-list [data-tool="Hull"]')?.getAttribute('aria-pressed'),
+    selectVisible: document.querySelector('#parts-hotbar-list [data-tool="Select"]')?.classList.contains('active'),
+    selectPressed: document.querySelector('#parts-hotbar-list [data-tool="Select"]')?.getAttribute('aria-pressed'),
+    placement: document.getElementById('ui-adj')?.textContent
+  })`);
+  assert(afterNew.hullVisible && afterNew.hullPressed === 'true' && !afterNew.selectVisible
+    && afterNew.selectPressed === 'false' && /^OK x1$/.test(afterNew.placement || ''),
+    `After New Blueprint, active tool display and real click intent diverge: ${JSON.stringify(afterNew)}`);
+  await clickElement(cdp, '#parts-hotbar-list [data-tool="Core"]');
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', ...placementPoint });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mousePressed', ...placementPoint, button: 'left', clickCount: 1 });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseReleased', ...placementPoint, button: 'left', clickCount: 1 });
+  await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '1'`, 'build resumed after new blueprint');
+
   await clickElement(cdp, '#parts-hotbar-list [data-tool="Core"]');
   const buildResumed = await evaluate(cdp, `({
     selectActive: document.querySelector('#parts-hotbar-list [data-tool="Select"]')?.classList.contains('active'),
