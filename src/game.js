@@ -1666,9 +1666,10 @@
     assemblySpaceController.setActiveAssemblySpace(AssemblySpaces.ROOT_ASSEMBLY_SPACE_ID);
 
     workshopSelectionController = WorkshopSelectionController.create({
-      THREE, state: STATE, craft: CRAFT, workshop: WORKSHOP, scene, document,
+      THREE, state: STATE, craft: CRAFT, workshop: WORKSHOP, scene, camera, document,
       callbacks: {
         hoveredBlockId: () => raycastWorkshopBlock(STATE.input.pointerNDC)?.block?.blockId || null,
+        hitBlock: ndc => raycastWorkshopBlock(ndc),
         setActiveAssemblySpace: id => assemblySpaceController.setActiveAssemblySpace(id),
         collectBlueprint, commitHistory, updateTelemetry, updateGhost, autoSave, showStatus,
         frameSelectedVisual: block => frameWorkshopObject(WORKSHOP.meshesByKey.get(block.key))
@@ -1737,8 +1738,7 @@
       if (event.pointerType === 'touch' || isOverUI(event.target)) return;
       releaseEditableInteraction();
       rayToNDC(event.clientX, event.clientY);
-      STATE.input.downButton = event.button;
-      STATE.input.downMoved = false;
+      STATE.input.downButton = event.button; STATE.input.downMoved = false;
       STATE.input.dragStartX = event.clientX;
       STATE.input.dragStartY = event.clientY;
 
@@ -1747,6 +1747,7 @@
       } else if (event.altKey || event.button === 1) {
         STATE.input.orbitDrag = true;
       }
+      if (event.button === 0 && !event.altKey && workshopToolMode.isSelecting()) workshopSelectionController?.beginDrag(STATE.input.pointerNDC);
       try { renderer.domElement.setPointerCapture(event.pointerId); } catch (_) {}
       event.preventDefault();
     });
@@ -1770,7 +1771,7 @@
           STATE.input.downMoved = true;
         }
       }
-      if (STATE.mode === 'BUILD') updateGhost();
+      if (STATE.mode === 'BUILD') { if (workshopToolMode.isSelecting()) workshopSelectionController?.previewDrag(STATE.input.pointerNDC, STATE.input.downMoved); else workshopSelectionController?.cancelDrag(); updateGhost(); }
     });
 
     renderer.domElement.addEventListener('pointerup', (event) => {
@@ -1779,17 +1780,16 @@
       const cameraDragWasActive = STATE.input.orbitDrag || STATE.input.panDrag;
       STATE.input.orbitDrag = false;
       STATE.input.panDrag = false;
-      if (!cameraDragWasActive && STATE.mode === 'BUILD' && !STATE.input.downMoved && STATE.input.downButton === event.button && Math.hypot(event.clientX - STATE.input.dragStartX, event.clientY - STATE.input.dragStartY) <= 6) {
+      if (!cameraDragWasActive && !workshopSelectionController?.finishDrag(STATE.input.pointerNDC, STATE.input.downMoved) && STATE.mode === 'BUILD' && !STATE.input.downMoved && STATE.input.downButton === event.button && Math.hypot(event.clientX - STATE.input.dragStartX, event.clientY - STATE.input.dragStartY) <= 6) {
         if (event.button === 0 || event.button === 2) performBuildAction(event.button, { shiftKey: event.shiftKey });
       }
-      STATE.input.downButton = -1;
+      STATE.input.downButton = -1; workshopSelectionController?.cancelDrag();
       updateGhost();
     });
 
     renderer.domElement.addEventListener('pointercancel', () => {
-      STATE.input.orbitDrag = false;
-      STATE.input.panDrag = false;
-      STATE.input.downButton = -1;
+      STATE.input.orbitDrag = false; STATE.input.panDrag = false;
+      STATE.input.downButton = -1; workshopSelectionController?.cancelDrag();
     });
 
     renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
@@ -1983,7 +1983,7 @@
       } else if (key === 'r') {
         applyBuildRotation(event.shiftKey ? -1 : 1);
       } else if (event.key === 'Escape') {
-        if (!closeTopmostWorkspacePanel()) setHelpVisible(false);
+        if (!workshopSelectionController?.cancelDrag() && !closeTopmostWorkspacePanel()) setHelpVisible(false);
       } else if (key === 'f') {
         setMode('FLIGHT');
       } else if (key === 's') {
@@ -2020,7 +2020,7 @@
       if (action) setControlAction(action, false);
     });
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-    window.addEventListener('blur', clearControlActions);
+    window.addEventListener('blur', () => { clearControlActions(); workshopSelectionController?.cancelDrag(); });
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) clearControlActions();
     });
