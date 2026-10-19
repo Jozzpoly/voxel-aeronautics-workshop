@@ -27,6 +27,7 @@ const ids = [
   'ui-selected-part-meta',
   'ui-selected-part-test',
   'btn-clear-selected-part',
+  'btn-frame-selected-part',
   'btn-select-hovered-part',
   'btn-select-last-failure'
 ];
@@ -97,6 +98,7 @@ const controller = WorkshopSelectionController.create({
 
 controller.wire();
 assert.strictEqual(elements['ui-selected-part-title'].textContent, 'No part selected');
+assert.strictEqual(elements['btn-frame-selected-part'].disabled, true);
 assert.strictEqual(elements['btn-select-last-failure'].disabled, false);
 
 const failed = controller.selectLastFailure();
@@ -104,6 +106,7 @@ assert.strictEqual(failed.ok, true);
 assert.strictEqual(state.workshop.selectedBlockId, 'child-failed');
 assert.strictEqual(activeSpace, 'space:child');
 assert.strictEqual(highlighted, 'child-failed');
+assert.strictEqual(elements['btn-frame-selected-part'].disabled, false);
 assert(elements['ui-selected-part-title'].textContent.includes('Thruster'));
 assert(elements['ui-selected-part-test'].textContent.includes('FIRST FAILURE'));
 assert(elements['ui-selected-part-test'].textContent.includes('LOST DURING TEST'));
@@ -138,6 +141,7 @@ state.mode = 'FLIGHT';
 controller.select('child-failed');
 controller.render();
 assert(nudgeButtons.every(button => button.disabled), 'Editing controls must be disabled in FLIGHT');
+assert.strictEqual(elements['btn-frame-selected-part'].disabled, true, 'Framing must be BUILD only');
 const moveCountBeforeFlight = moves.length;
 assert.strictEqual(controller.nudge(1, 0, 0).reason, 'not-build-mode');
 assert.strictEqual(moves.length, moveCountBeforeFlight);
