@@ -340,6 +340,27 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   })`);
   assert(firstBlock.undoEnabled && firstBlock.currentTool === 'Core', 'Manual first block lacks undo or correct tool selection.');
 
+  setStage('select-mode-does-not-place');
+  await clickElement(cdp, '#parts-hotbar-list [data-tool="Select"]');
+  const selectActive = await evaluate(cdp, `document.querySelector('#parts-hotbar-list [data-tool="Select"]')?.getAttribute('aria-pressed')`);
+  assert(selectActive === 'true', 'Select / Inspect mode must activate visibly and accessibly.');
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', ...placementPoint });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mousePressed', ...placementPoint, button: 'left', clickCount: 1 });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseReleased', ...placementPoint, button: 'left', clickCount: 1 });
+  const selectResult = await evaluate(cdp, `({
+    count: document.getElementById('ui-blocks')?.textContent,
+    selected: document.getElementById('ui-selected-part-title')?.textContent,
+    selectActive: document.querySelector('#parts-hotbar-list [data-tool="Select"]')?.classList.contains('active')
+  })`);
+  assert(selectResult.count === '1' && selectResult.selected?.startsWith('Core •') && selectResult.selectActive,
+    `Ordinary click in Select mode must inspect without changing craft: ${JSON.stringify(selectResult)}`);
+  await clickElement(cdp, '#parts-hotbar-list [data-tool="Core"]');
+  const buildResumed = await evaluate(cdp, `({
+    selectActive: document.querySelector('#parts-hotbar-list [data-tool="Select"]')?.classList.contains('active'),
+    coreActive: document.querySelector('#parts-hotbar-list [data-tool="Core"]')?.classList.contains('active')
+  })`);
+  assert(!buildResumed.selectActive && buildResumed.coreActive, 'Choosing a part must resume ordinary Build mode.');
+
   setStage('manual-selected-part-move');
   await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', ...placementPoint });
   await cdp.call('Input.dispatchMouseEvent', { type: 'mousePressed', ...placementPoint, button: 'left', modifiers: 8, clickCount: 1 });
@@ -450,7 +471,7 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   assert(errors.length === 0, `Browser console/runtime errors: ${JSON.stringify(errors)}`);
   return {
     starterBlocks: 17,
-    manualBuild: { firstBlock: 'Core', stableIdMove: true, secondBlock: 'Hull', selection: true, undo: true, redo: true, sandbox: true, returnToWorkshop: true, newBlueprint: true },
+    manualBuild: { firstBlock: 'Core', clickSelectMode: true, stableIdMove: true, secondBlock: 'Hull', selection: true, undo: true, redo: true, sandbox: true, returnToWorkshop: true, newBlueprint: true },
     corePanels: panels,
     terrain: terrainState,
     flightMode: true,

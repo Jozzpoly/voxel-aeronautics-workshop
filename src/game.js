@@ -676,10 +676,28 @@
       rotateOrientationRoll(step);
     }
 
+    let selectionMode = false;
+
+    function syncToolButtonStates() {
+      document.querySelectorAll('.tool-btn').forEach(element => {
+        const active = selectionMode ? element.dataset.tool === 'Select' : element.dataset.tool === STATE.selectedBlock;
+        element.classList.toggle('active', active);
+        element.setAttribute('aria-pressed', String(active));
+      });
+    }
+
+    function setSelectionMode(enabled = true) {
+      if (STATE.mode !== 'BUILD') return;
+      selectionMode = Boolean(enabled);
+      syncToolButtonStates();
+      updateGhost();
+    }
+
     function setSelectedTool(tool) {
       if (STATE.mode !== 'BUILD' || !BLOCKS[tool]) return;
+      selectionMode = false;
       STATE.selectedBlock = tool;
-      document.querySelectorAll('.tool-btn').forEach(element => element.classList.toggle('active', element.dataset.tool === tool));
+      syncToolButtonStates();
       updateControlConfigurationUI();
       updateTelemetry();
       updateGhost();
@@ -968,6 +986,7 @@
 
     function updateGhost() {
       if (STATE.mode !== 'BUILD' || !STATE.input.pointerInside) {
+        renderer.domElement.style.cursor = '';
         for (const visual of WORKSHOP.mechanicalLinkVisualsById.values()) visual.visible = false;
         ghost.visible = false;
         ghostArrow.visible = false;
@@ -978,6 +997,22 @@
         return;
       }
 
+      if (selectionMode) {
+        ghost.visible = false;
+        ghostArrow.visible = false;
+        ghostNormalArrow.visible = false;
+        hideSymmetryGhosts();
+        const hit = raycastWorkshopBlock(STATE.input.pointerNDC);
+        STATE.hovered.valid = Boolean(hit);
+        STATE.hovered.kind = hit ? 'voxel' : null;
+        STATE.hovered.root = hit?.root || null;
+        renderer.domElement.style.cursor = hit ? 'pointer' : 'default';
+        document.getElementById('ui-adj').textContent = hit
+          ? `SELECT • ${hit.block.type}`
+          : 'SELECT • CLICK A PART';
+        return;
+      }
+      renderer.domElement.style.cursor = '';
       const target = raycastBuildTarget(STATE.input.pointerNDC);
       STATE.hovered.valid = !!target;
       STATE.hovered.kind = target ? target.kind : null;
@@ -1583,6 +1618,17 @@
 
     function performBuildAction(button, modifiers = {}) {
       if (STATE.mode !== 'BUILD') return;
+      if (selectionMode) {
+        if (button === 0) {
+          const target = raycastWorkshopBlock(STATE.input.pointerNDC);
+          if (target?.block?.blockId) {
+            workshopSelectionController?.select(target.block.blockId, { activateSpace: true, source: 'select-mode' });
+          } else {
+            workshopSelectionController?.clear({ source: 'select-mode' });
+          }
+        }
+        return;
+      }
       if (button === 0 && modifiers.shiftKey) {
         const selectionTarget = raycastWorkshopBlock(STATE.input.pointerNDC);
         if (selectionTarget?.block?.blockId) workshopSelectionController?.select(selectionTarget.block.blockId, { activateSpace: true, source: 'viewport' });
@@ -1701,6 +1747,26 @@
     document.getElementById('btn-roll-orientation-right')?.addEventListener('click', () => applyBuildRotation(1));
 
     const toolContainer = document.getElementById('tool-container'), hotbarList = document.getElementById('parts-hotbar-list');
+    const selectTool = document.createElement('button');
+    selectTool.type = 'button';
+    selectTool.dataset.tool = 'Select';
+    selectTool.className = 'tool-btn';
+    selectTool.innerHTML = `
+      <div class="w-6 h-6 rounded border border-sky-400/60 shrink-0 flex items-center justify-center text-sky-300">⌖</div>
+      <div class="min-w-0 flex-1">
+        <div class="font-bold text-white leading-tight">Select / Inspect</div>
+        <div class="tool-description text-[10px] text-gray-400">Click to inspect; no building or deleting while active.</div>
+      </div>
+      <div class="tool-shortcut text-[10px] font-mono text-slate-500">V</div>
+    `;
+    selectTool.addEventListener('click', () => setSelectionMode(!selectionMode));
+    toolContainer.appendChild(selectTool);
+    if (hotbarList) {
+      const hotbarSelect = selectTool.cloneNode(true);
+      hotbarSelect.classList.add('hotbar-tool-btn');
+      hotbarSelect.addEventListener('click', () => setSelectionMode(!selectionMode));
+      hotbarList.appendChild(hotbarSelect);
+    }
     Object.keys(BLOCKS).forEach(name => {
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -1721,6 +1787,7 @@
       toolContainer.appendChild(btn);
       if (hotbarList) { const hotbarBtn = btn.cloneNode(true); hotbarBtn.classList.add('hotbar-tool-btn'); hotbarBtn.addEventListener('click', () => setSelectedTool(name)); hotbarList.appendChild(hotbarBtn); }
     });
+    syncToolButtonStates();
 
     renderer.domElement.addEventListener('pointerenter', () => {
       STATE.input.pointerInside = true;
@@ -1988,6 +2055,8 @@
         saveBlueprint();
       } else if (key === 'x') {
         toggleSymmetry();
+      } else if (key === 'v') {
+        setSelectionMode(!selectionMode);
       } else if (event.key === '0') {
         setSelectedTool('Core');
       } else if (event.key === '1') {
