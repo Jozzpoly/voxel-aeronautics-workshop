@@ -453,6 +453,11 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   await clickElement(cdp, '#btn-redo');
   await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '2'`, 'manual second-part redo');
 
+  setStage('frame-selected-part');
+  const frameEnabled = await evaluate(cdp, `!document.getElementById('btn-frame-selected-part')?.disabled`);
+  assert(frameEnabled, 'Selected part should expose an explicit framing action.');
+  await clickElement(cdp, '#btn-frame-selected-part');
+
   // Fly this actual player-built two-part craft, not a generated preset.
   // A craft that cannot thrust is still a legitimate sandbox physics test.
   setStage('self-built-craft-sandbox');
@@ -528,7 +533,7 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   assert(errors.length === 0, `Browser console/runtime errors: ${JSON.stringify(errors)}`);
   return {
     starterBlocks: 17,
-    manualBuild: { firstBlock: 'Core', clickSelectMode: true, stableIdMove: true, secondBlock: 'Hull', selection: true, undo: true, redo: true, sandbox: true, returnToWorkshop: true, newBlueprint: true, rescueExport: true },
+    manualBuild: { firstBlock: 'Core', clickSelectMode: true, stableIdMove: true, secondBlock: 'Hull', selection: true, undo: true, redo: true, sandbox: true, returnToWorkshop: true, newBlueprint: true, rescueExport: true, frameSelectedPart: true },
     corePanels: panels,
     terrain: terrainState,
     flightMode: true,
