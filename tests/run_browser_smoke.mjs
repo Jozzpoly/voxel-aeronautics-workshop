@@ -380,6 +380,24 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   })`);
   assert(selectResult.count === '1' && selectResult.selected?.startsWith('Core •') && selectResult.selectActive,
     `Ordinary click in Select mode must inspect without changing craft: ${JSON.stringify(selectResult)}`);
+  setStage('selected-part-planar-drag');
+  const dragBefore = await evaluate(cdp, `({
+    title: document.getElementById('ui-selected-part-title')?.textContent,
+    position: document.getElementById('ui-selected-part-meta')?.textContent
+  })`);
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', ...placementPoint });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mousePressed', ...placementPoint, button: 'left', clickCount: 1 });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', x: placementPoint.x - 120, y: placementPoint.y, button: 'left', buttons: 1 });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseReleased', x: placementPoint.x - 120, y: placementPoint.y, button: 'left', clickCount: 1 });
+  const dragAfter = await evaluate(cdp, `({
+    title: document.getElementById('ui-selected-part-title')?.textContent,
+    position: document.getElementById('ui-selected-part-meta')?.textContent,
+    count: document.getElementById('ui-blocks')?.textContent
+  })`);
+  assert(dragAfter.title === dragBefore.title && dragAfter.position !== dragBefore.position && dragAfter.count === '1',
+    `Select drag must move the same authored block, not build another: ${JSON.stringify({ dragBefore, dragAfter })}`);
+  await clickElement(cdp, '#btn-undo');
+  await waitFor(cdp, `document.getElementById('ui-selected-part-meta')?.textContent === ${JSON.stringify(dragBefore.position)}`, 'drag undo restores original block position');
   setStage('select-mode-new-blueprint-consistency');
   await clickElement(cdp, '#btn-clear');
   await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '0'`, 'New Blueprint after Select');
@@ -559,7 +577,7 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   assert(errors.length === 0, `Browser console/runtime errors: ${JSON.stringify(errors)}`);
   return {
     starterBlocks: 17,
-    manualBuild: { firstBlock: 'Core', dragSlopProtected: true, clickSelectMode: true, stableIdMove: true, secondBlock: 'Hull', selection: true, undo: true, redo: true, sandbox: true, returnToWorkshop: true, newBlueprint: true, rescueExport: true, frameSelectedPart: true },
+    manualBuild: { firstBlock: 'Core', dragSlopProtected: true, clickSelectMode: true, stableIdMove: true, secondBlock: 'Hull', selection: true, undo: true, redo: true, sandbox: true, returnToWorkshop: true, newBlueprint: true, rescueExport: true, frameSelectedPart: true, planarDrag: true },
     corePanels: panels,
     terrain: terrainState,
     flightMode: true,
