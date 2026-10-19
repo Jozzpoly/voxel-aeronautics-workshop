@@ -1,5 +1,5 @@
 name: VAW manual authoring browser proof (one-time)
-# v2: also launch and return a two-part manually authored craft.
+# v3: also move a selected part without losing block identity before building and flight.
 
 on:
   push:
