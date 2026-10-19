@@ -86,7 +86,10 @@
 
       function syncToolSelection() {
         if (typeof resetToolMode === 'function') return resetToolMode();
-        syncToolSelection();
+        document.querySelectorAll('.tool-btn').forEach(element => {
+          const btn = /** @type {HTMLElement} */ (element);
+          btn.classList.toggle('active', btn.dataset.tool === STATE.selectedBlock);
+        });
       }
 
       function normalizeBlueprintData(data) { return Blueprint.normalize(data); }
