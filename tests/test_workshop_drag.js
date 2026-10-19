@@ -138,9 +138,21 @@ assert.strictEqual(controller.beginDrag(start), true);
 assert.strictEqual(controller.previewDrag(destination, true), true);
 assertNonzeroPreview('selection changes mid-drag');
 assert.strictEqual(controller.select(otherPart.blockId).ok, true);
-assert.strictEqual(controller.finishDrag(destination, true), true);
+assert.strictEqual(controller.finishDrag(destination, true), false,
+  'Selecting another part cancels the previous transient drag session');
 assert.strictEqual(moves.length, beforeSelectionMoves,
   'Releasing a drag after selection changes must never move the newly selected part');
+assert.strictEqual(otherPart.x, 3);
+
+// Defense-in-depth: even when integration bypasses the controller's select(),
+// a changed selectedBlockId must never redirect the drag commit to another part.
+assert.strictEqual(controller.select(part.blockId).ok, true);
+assert.strictEqual(controller.beginDrag(start), true);
+assert.strictEqual(controller.previewDrag(destination, true), true);
+assertNonzeroPreview('directly replaced selection');
+state.workshop.selectedBlockId = otherPart.blockId;
+assert.strictEqual(controller.finishDrag(destination, true), true);
+assert.strictEqual(moves.length, beforeSelectionMoves);
 assert.strictEqual(otherPart.x, 3);
 console.log({ planarDrag: 'nested-parent-local-space', cancel: 'atomic', undoCommits: history,
   stableId: true, linkedGuard: true, invalidRelease: 'rejected', selectionRace: 'rejected' });
