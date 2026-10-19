@@ -1,5 +1,16 @@
 # AI Project Memory — Voxel Aeronautics Workshop
 
+## 2026-10-20 — Bounded builder-camera quality pass (recovery candidate)
+
+- **Product distinction confirmed**: the launcher button previously labeled compact `⛶ FOCUS` toggles fullscreen flight focus plus keyboard capture; it does **not** frame craft geometry. Renamed its compact visible label to `⛶ PILOT` to reduce camera/keyboard focus ambiguity without changing its behavior.
+- **New Builder action**: the Selected Part inspector now has a disabled-until-selected `FRAME` button. `game.workshop-selection-controller` owns its event; `game.camera-controller.frameWorkshopObject` uses real `THREE.Box3` of the selected visual rather than the block's potentially assembly-local coordinates, fits a safe perspective distance, preserves view yaw/pitch and does nothing during FLIGHT. No auto-framing was introduced: the player explicitly requests it.
+- **Critical falsification**: a real Three.js test reproduced stale nested-parent transforms. The first frame implementation aimed at local coordinates. Calling `object.updateWorldMatrix(true, true)` before deriving world bounds fixed this. `tests/test_camera_controller.js` now enforces the nested-space case and flight no-op; selection tests cover disabled state; the actual Chromium smoke physically clicks FRAME after manually building/selecting a craft before flight.
+- **Architecture containment**: `game.js` has an explicit 2400-line limit. Initial button wiring breached it; logic was moved into `workshop_selection_controller.js`, preserving controller ownership. The exact Tailwind 4.1.10 CSS generator passed its one-time gate ([CI run](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39338263534)) and archived the temporary workflow at `docs/history/ONE_TIME_FRAME_SELECTION_CSS_2026-10-20.yml`.
+- **Evidence boundary**: the CI generator and core suite passed. Full source/release browser CI, publication and Owner ergonomic/feel acceptance must be rechecked independently. This camera candidate was **not automatically deployed by the CSS generator**. Existing published rescue build remains the last live truth until separately promoted.
+
+---
+
+
 ## 2026-10-20 — Two-tab autosave containment (candidate, not yet published)
 
 - **Validated source change**: `src/game/blueprint_controller.js` now observes the shared primary save at tab startup, refuses a stale write when another tab changed it, preserves the local draft under a distinct `:conflict:` rescue key and shows `SAVE CONFLICT • EXPORT BLUEPRINT`. Loading the actual current primary intentionally updates the baseline. Existing backup writes remain scoped to successful saves.
