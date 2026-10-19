@@ -3,7 +3,7 @@ name: VAW real-browser acceptance gate (one-time)
 on:
   push:
     branches: [recovery/playable-truth]
-    paths: [.github/workflows/real-browser-once.yml]
+    paths: [.github/workflows/real-browser-once.yml, tests/run_browser_recovery.mjs]
 
 permissions:
   contents: read
