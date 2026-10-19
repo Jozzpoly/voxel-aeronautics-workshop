@@ -96,6 +96,19 @@ state.mode = 'FLIGHT';
 assert.strictEqual(controller.beginDrag(start), false, 'Select dragging is BUILD-only');
 state.mode = 'BUILD';
 
+// Reset the fixture's rendered position to match its authoritative authored
+// position; the earlier mocked CraftModel.move does not trigger a real
+// WORKSHOP visual rebuild. Without this, the candidate displacement can be
+// a no-op and the negative tests falsely pass.
+part = { ...part, x: 0, y: 0, z: 0 };
+mesh.position.set(0, 0, 0);
+controller.select(part.blockId);
+function assertNonzeroPreview(label) {
+  const candidate = scene.children.find(item => item.material?.color?.getHex?.() === 0xfbbf24);
+  assert(candidate?.visible && candidate.position.length() > 0.001,
+    label + ': regression setup must have a real visible nonzero candidate offset');
+}
+
 // Falsifier A: final ray missing the drag plane must not commit the previously
 // projected destination. A temporary deterministic Raycaster shim simulates a
 // pointer ray parallel to the local plane while retaining real Three math.
@@ -110,6 +123,7 @@ const invalidPoint = new THREE.Vector2(1000, 0);
 const beforeInvalidMoves = moves.length, beforeInvalidHistory = history;
 assert.strictEqual(controller.beginDrag(start), true);
 assert.strictEqual(controller.previewDrag(destination, true), true);
+assertNonzeroPreview('invalid final ray');
 assert.strictEqual(controller.finishDrag(invalidPoint, true), true);
 assert.strictEqual(moves.length, beforeInvalidMoves,
   'Invalid final cursor projection must not commit stale last-good preview coordinates');
@@ -122,6 +136,7 @@ THREE.Raycaster = RealRaycaster;
 const beforeSelectionMoves = moves.length;
 assert.strictEqual(controller.beginDrag(start), true);
 assert.strictEqual(controller.previewDrag(destination, true), true);
+assertNonzeroPreview('selection changes mid-drag');
 assert.strictEqual(controller.select(otherPart.blockId).ok, true);
 assert.strictEqual(controller.finishDrag(destination, true), true);
 assert.strictEqual(moves.length, beforeSelectionMoves,
