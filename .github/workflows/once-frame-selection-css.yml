@@ -1,6 +1,7 @@
 name: Regenerate VAW CSS for selection framing (one-time)
 # Self-archives after generating the exact CSS and verifying the camera work.
 # Retry after fixing nested assembly-space parent world transforms.
+# Retry after moving selected-frame button ownership out of game.js.
 
 on:
   push:
