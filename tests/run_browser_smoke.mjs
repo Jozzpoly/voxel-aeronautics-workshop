@@ -330,6 +330,17 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
     }
   }
   assert(placementPoint, 'No unobscured, valid first-block canvas target in normal workshop viewport.');
+  // Drag beyond the click slop and return to the original target. This used to
+  // create a Core despite the player never performing a stationary click.
+  setStage('left-drag-must-not-build');
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mousePressed', ...placementPoint, button: 'left', clickCount: 1 });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', x: placementPoint.x + 30, y: placementPoint.y + 20, button: 'left', buttons: 1 });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', ...placementPoint, button: 'left', buttons: 1 });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseReleased', ...placementPoint, button: 'left', clickCount: 1 });
+  assert(await evaluate(cdp, `document.getElementById('ui-blocks')?.textContent === '0'`),
+    'Left-drag in BUILD must not place a block even when the pointer returns to the start.');
+
+  setStage('empty-workshop-manual-build');
   await cdp.call('Input.dispatchMouseEvent', { type: 'mousePressed', ...placementPoint, button: 'left', clickCount: 1 });
   await cdp.call('Input.dispatchMouseEvent', { type: 'mouseReleased', ...placementPoint, button: 'left', clickCount: 1 });
   await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '1'`, 'manual first-block placement');
@@ -339,6 +350,21 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
     count: document.getElementById('ui-blocks').textContent
   })`);
   assert(firstBlock.undoEnabled && firstBlock.currentTool === 'Core', 'Manual first block lacks undo or correct tool selection.');
+
+  // Right-button movements must not delete a part, either. Confirm that
+  // the same stationary right-click still deletes, then undo it.
+  setStage('right-drag-must-not-delete');
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mousePressed', ...placementPoint, button: 'right', clickCount: 1 });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', x: placementPoint.x + 30, y: placementPoint.y + 20, button: 'right', buttons: 2 });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', ...placementPoint, button: 'right', buttons: 2 });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseReleased', ...placementPoint, button: 'right', clickCount: 1 });
+  assert(await evaluate(cdp, `document.getElementById('ui-blocks')?.textContent === '1'`),
+    'Right-drag in BUILD must not delete a block even when the pointer returns.');
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mousePressed', ...placementPoint, button: 'right', clickCount: 1 });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseReleased', ...placementPoint, button: 'right', clickCount: 1 });
+  await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '0'`, 'stationary right-click deletes normally');
+  await clickElement(cdp, '#btn-undo');
+  await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '1'`, 'undo restores right-click removal');
 
   setStage('select-mode-does-not-place');
   await clickElement(cdp, '#parts-hotbar-list [data-tool="Select"]');
@@ -533,7 +559,7 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   assert(errors.length === 0, `Browser console/runtime errors: ${JSON.stringify(errors)}`);
   return {
     starterBlocks: 17,
-    manualBuild: { firstBlock: 'Core', clickSelectMode: true, stableIdMove: true, secondBlock: 'Hull', selection: true, undo: true, redo: true, sandbox: true, returnToWorkshop: true, newBlueprint: true, rescueExport: true, frameSelectedPart: true },
+    manualBuild: { firstBlock: 'Core', dragSlopProtected: true, clickSelectMode: true, stableIdMove: true, secondBlock: 'Hull', selection: true, undo: true, redo: true, sandbox: true, returnToWorkshop: true, newBlueprint: true, rescueExport: true, frameSelectedPart: true },
     corePanels: panels,
     terrain: terrainState,
     flightMode: true,
