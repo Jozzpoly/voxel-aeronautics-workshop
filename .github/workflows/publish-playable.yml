@@ -1,4 +1,5 @@
 name: Publish playable VAW recovery
+# Intentionally manual: update this workflow to publish a new verified revision.
 
 on:
   push:
