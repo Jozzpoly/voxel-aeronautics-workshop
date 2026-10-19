@@ -132,6 +132,7 @@
       function select(blockId, { activateSpace = false, source = 'manual' } = {}) {
         const block = blockId ? craft.getById(blockId) : null;
         if (block == null) return { ok: false, reason: 'missing-block' };
+        if (dragSession && dragSession.blockId !== block.blockId) cancelDrag();
         STATE.workshop.selectedBlockId = block.blockId;
         if (activateSpace) setActiveAssemblySpace(block.assemblySpaceId);
         notify(block, source);
@@ -140,6 +141,7 @@
       }
 
       function clear({ source = 'manual' } = {}) {
+        cancelDrag();
         const changed = Boolean(STATE.workshop.selectedBlockId);
         STATE.workshop.selectedBlockId = null;
         notify(null, source);
@@ -271,8 +273,9 @@
         const deltaX = drag.targetDx, deltaZ = drag.targetDz;
         const validProjection = drag.projectionValid;
         const stillSameBlock = craft.getById(drag.blockId) === drag.original;
+        const stillSelected = selectedBlock()?.blockId === drag.blockId;
         cancelDrag();
-        if (STATE.mode !== 'BUILD' || !stillSameBlock || !validProjection || craft.linksForBlock?.(drag.blockId)?.length) return true;
+        if (STATE.mode !== 'BUILD' || !stillSameBlock || !stillSelected || !validProjection || craft.linksForBlock?.(drag.blockId)?.length) return true;
         if (deltaX || deltaZ) nudge(deltaX, 0, deltaZ);
         return true;
       }
