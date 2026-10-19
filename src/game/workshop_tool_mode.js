@@ -63,7 +63,7 @@
         select.classList.add('tool-btn');
         select.innerHTML = '<div class="w-6 h-6 rounded border border-sky-400/60 shrink-0 flex items-center justify-center text-sky-300">⌖</div>'
           + '<div class="min-w-0 flex-1"><div class="font-bold text-white leading-tight">Select / Inspect</div>'
-          + '<div class="tool-description text-[10px] text-gray-400">Click to inspect; no building or deleting while active.</div></div>'
+          + '<div class="tool-description text-[10px] text-gray-400">Click to inspect; drag in its plane to move. No building or deleting.</div></div>'
           + '<div class="tool-shortcut text-[10px] font-mono text-slate-500">V</div>';
         append(select, () => toggle());
         const types = Object.keys(blocks);
