@@ -15,6 +15,7 @@ EXPECTED_MODULES = {
     'camera_controller.js': 'game.camera-controller',
     'build_targeting.js': 'game.build-targeting',
     'workshop_selection_controller.js': 'game.workshop-selection-controller',
+    'workshop_tool_mode.js': 'game.workshop-tool-mode',
     'orientation_service.js': 'game.orientation-service',
     'power_control_readouts.js': 'game.power-control-readouts',
     'visual_asset_registry.js': 'game.visual-asset-registry',
