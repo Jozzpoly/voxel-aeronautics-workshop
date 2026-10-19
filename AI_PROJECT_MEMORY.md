@@ -1,5 +1,18 @@
 # AI Project Memory — Voxel Aeronautics Workshop
 
+## 2026-10-20 — Voluntary adversarial drag-truth experiment (candidate until separately shipped)
+
+- **Question chosen autonomously:** can a visible Select drag ever commit a different authored outcome than what the cursor currently indicates? This was an adversarial integrity experiment, not an Owner-requested feature or a new editor architecture.
+- **Falsification setup mattered:** the first attempt to test two suspected races passed vacuously because the fake CraftModel updated its block record but not the corresponding Three visual, leaving a zero-delta preview. Corrected the test fixture to reset the authored/rendered state and asserted an actual nonzero visible amber preview **before** both negative scenarios. This changed the test from green to red.
+- **Confirmed regression A:** a final pointer ray parallel to the local movement plane produced no intersection, but the controller retained a last-good candidate and committed that stale target. [Red Validation](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39344333823) at `41f613e6`: unexpected second move (`2 !== 1`). This is a deterministic real-Three unit scenario using an injected Raycaster horizon, not evidence of an observed Owner incident.
+- **Confirmed regression B:** after A was fixed, switching the selected part during an active drag caused the final `nudge` to modify the **new selection**, not the grabbed part. [Red targeted CI](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39344557031) at `d113341c`: unexpected second move (`2 !== 1`). UI actions using the selection controller could trigger this; the test intentionally changes selection mid-gesture.
+- **Corrective contracts:** invalid or non-finite final ray-plane projection now invalidates/hides the preview and prevents commit. Changing or clearing selection cancels the transient drag. A second `blockId` identity check guards the commit even if caller code modifies selection state directly. The established single-move/Undo semantics are not changed. No new API, dependencies, or destructive storage steps.
+- **Green gate:** [one-time corrective CI](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39344684656) PASS: both strengthened unit regressions, exact Tailwind generation and full `tests/run_all.py`. Temporary workflow archived under `docs/history/ONE_TIME_DRAG_INVARIANTS_2026-10-20.yml`, leaving a reproducible source-derived artifact; generated output is not hand-edited.
+- **Evidence and limits:** tests establish deterministic validity/identity properties and preserve prior Chromium free-build/flight coverage. No real Owner interaction was captured, no true physically invalid mouse-plane intersection was captured on a live canvas, no proof of arbitrary pointer reentrancy, and no claim of improved tactile feel. Deployment requires independent publication verification.
+
+---
+
+
 ## 2026-10-20 — Select-mode planar drag experiment (released; Owner feel unverified)
 
 - **Gesture surface**: `Select / Inspect (V)` now captures a selected part on pointerdown; movement beyond the established 6px click slop previews a snapped move in that part's local XZ plane. The origin remains physically present until drop and an amber bounding outline shows the tentative target. Single click still inspects. Y movement remains available through existing discrete nudges; this is not a 3D gizmo or a full mechanical joint editor.
