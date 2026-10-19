@@ -213,7 +213,7 @@
         const grab = ray.ray.intersectPlane(plane, new THREE.Vector3());
         if (!grab) return false;
         dragSession = { blockId: block.blockId, original: block, visual, origin, plane, grab: grab.clone(),
-          targetDx: 0, targetDz: 0, activated: false, preview: null };
+          targetDx: 0, targetDz: 0, activated: false, preview: null, projectionValid: false };
         return true;
       }
 
@@ -241,7 +241,12 @@
         const ray = new THREE.Raycaster();
         ray.setFromCamera(ndc, camera);
         const point = ray.ray.intersectPlane(drag.plane, new THREE.Vector3());
-        if (!point) return true;
+        if (!point || ![point.x, point.y, point.z].every(Number.isFinite)) {
+          drag.projectionValid = false;
+          if (drag.preview) drag.preview.visible = false;
+          return true;
+        }
+        drag.projectionValid = true;
         const worldTarget = drag.origin.clone().add(point.sub(drag.grab));
         drag.visual.parent.updateWorldMatrix(true, false);
         const localTarget = drag.visual.parent.worldToLocal(worldTarget);
@@ -264,9 +269,10 @@
         previewDrag(ndc, true);
         const drag = dragSession;
         const deltaX = drag.targetDx, deltaZ = drag.targetDz;
+        const validProjection = drag.projectionValid;
         const stillSameBlock = craft.getById(drag.blockId) === drag.original;
         cancelDrag();
-        if (STATE.mode !== 'BUILD' || !stillSameBlock || craft.linksForBlock?.(drag.blockId)?.length) return true;
+        if (STATE.mode !== 'BUILD' || !stillSameBlock || !validProjection || craft.linksForBlock?.(drag.blockId)?.length) return true;
         if (deltaX || deltaZ) nudge(deltaX, 0, deltaZ);
         return true;
       }
