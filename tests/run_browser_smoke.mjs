@@ -389,11 +389,32 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   await clickElement(cdp, '#btn-redo');
   await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '2'`, 'manual second-part redo');
 
+  // Fly this actual player-built two-part craft, not a generated preset.
+  // A craft that cannot thrust is still a legitimate sandbox physics test.
+  setStage('self-built-craft-sandbox');
+  const contractsClosed = await evaluate(cdp, `document.getElementById('contract-panel')?.hidden`);
+  if (contractsClosed) await clickElement(cdp, '[data-panel-toggle="contracts"]');
+  await waitFor(cdp, `document.getElementById('contract-panel') && !document.getElementById('contract-panel').hidden`, 'contracts open to choose sandbox');
+  await clickElement(cdp, '#contract-list .contract-card:first-child');
+  await waitFor(cdp, `document.getElementById('btn-flight')?.textContent === 'Launch Sandbox Test'`, 'sandbox selected for custom craft');
+  await clickElement(cdp, '#btn-flight');
+  await waitFor(cdp, `document.getElementById('ui-mode')?.textContent === 'FLIGHT'`, 'custom craft physical test flight');
+  const inFlight = await evaluate(cdp, `({
+    mode: document.getElementById('ui-mode')?.textContent,
+    count: document.getElementById('ui-blocks')?.textContent,
+    returnEnabled: !document.getElementById('btn-build')?.disabled
+  })`);
+  assert(inFlight.returnEnabled, `Custom craft launched but return to workshop was disabled: ${JSON.stringify(inFlight)}`);
+  await clickElement(cdp, '#btn-build');
+  await waitFor(cdp, `document.getElementById('ui-mode')?.textContent === 'BUILD'`, 'custom craft return to workshop');
+  await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '2'`, 'custom blueprint persisted after simulated flight');
+
   await clickElement(cdp, '#btn-clear');
   await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '0'`, 'new blueprint clears manual probe');
 
   setStage('hit-test');
-  await clickElement(cdp, '[data-panel-toggle="contracts"]');
+  const contractsHidden = await evaluate(cdp, `document.getElementById('contract-panel')?.hidden`);
+  if (contractsHidden) await clickElement(cdp, '[data-panel-toggle="contracts"]');
   await waitFor(cdp, `document.getElementById('contract-panel') && !document.getElementById('contract-panel').hidden`, 'contract panel visible');
   await clickElement(cdp, '#btn-starter-craft');
   await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '17'`, 'starter craft visible');
@@ -406,7 +427,7 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   assert(errors.length === 0, `Browser console/runtime errors: ${JSON.stringify(errors)}`);
   return {
     starterBlocks: 17,
-    manualBuild: { firstBlock: 'Core', secondBlock: 'Hull', selection: true, undo: true, redo: true, newBlueprint: true },
+    manualBuild: { firstBlock: 'Core', secondBlock: 'Hull', selection: true, undo: true, redo: true, sandbox: true, returnToWorkshop: true, newBlueprint: true },
     corePanels: panels,
     terrain: terrainState,
     flightMode: true,
