@@ -107,7 +107,10 @@
     <div class="mb-3 rounded border border-violet-900/70 bg-slate-950/45 p-2" id="selected-part-panel">
       <div class="flex items-center justify-between gap-2 mb-2">
         <div class="text-[10px] uppercase tracking-[0.16em] text-sky-300">Selected part</div>
-        <button id="btn-clear-selected-part" class="mini-btn" type="button" disabled>CLEAR</button>
+        <div class="flex items-center gap-1">
+          <button id="btn-frame-selected-part" class="mini-btn" type="button" title="Frame the selected part in the 3D view" disabled>FRAME</button>
+          <button id="btn-clear-selected-part" class="mini-btn" type="button" disabled>CLEAR</button>
+        </div>
       </div>
       <div id="ui-selected-part-title" class="text-xs font-bold text-white">No part selected</div>
       <div id="ui-selected-part-meta" class="text-[10px] text-gray-400 mt-1">Shift + left click a part, or select the hovered part.</div>
