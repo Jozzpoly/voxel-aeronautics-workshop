@@ -473,6 +473,43 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   await waitFor(cdp, `document.getElementById('ui-mode')?.textContent === 'BUILD'`, 'custom craft return to workshop');
   await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '2'`, 'custom blueprint persisted after simulated flight');
 
+  // A simulated foreign tab changes the same-origin storage between saves.
+  // This checks the real, rendered rescue picker and export path rather than
+  // relying only on the controller's isolated storage fixture. The browser
+  // profile is disposable and never uses the Owner's actual saved blueprints.
+  setStage('rescue-export-browser');
+  await clickElement(cdp, '#btn-save');
+  const foreignSave = await evaluate(cdp, `(() => {
+    const { SAVE_KEY } = window.VAW.require('foundation.config');
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    const other = JSON.parse(raw);
+    other.selectedBlock = other.selectedBlock === 'Wing' ? 'Core' : 'Wing';
+    const encoded = JSON.stringify(other);
+    localStorage.setItem(SAVE_KEY, encoded);
+    return encoded;
+  })()`);
+  assert(foreignSave, 'Cannot establish simulated other-tab save in browser storage.');
+  await clickElement(cdp, '#btn-save');
+  await waitFor(cdp, `document.getElementById('rescue-controls')?.style.display === 'flex'`,
+    'a stale save exposes local rescue controls');
+  const rescue = await evaluate(cdp, `(() => {
+    const { SAVE_KEY } = window.VAW.require('foundation.config');
+    const primary = localStorage.getItem(SAVE_KEY);
+    const selector = document.getElementById('rescue-copy-select');
+    const copy = selector?.value ? localStorage.getItem(selector.value) : null;
+    return {
+      primary, rescueBlocks: copy ? JSON.parse(copy).blocks.length : -1,
+      exportedKey: selector?.value || null,
+      canExport: !document.getElementById('btn-export-rescue')?.disabled
+    };
+  })()`);
+  assert(rescue.primary === foreignSave && rescue.exportedKey && rescue.rescueBlocks === 2 && rescue.canExport,
+    `The other tab's craft was overwritten or the current craft cannot be rescued: ${JSON.stringify(rescue)}`);
+  await clickElement(cdp, '#btn-export-rescue');
+  assert(await evaluate(cdp, `localStorage.getItem(document.getElementById('rescue-copy-select').value) !== null`),
+    'Export of a rescue copy should never delete that copy.');
+
   await clickElement(cdp, '#btn-clear');
   await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '0'`, 'new blueprint clears manual probe');
 
@@ -491,7 +528,7 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
   assert(errors.length === 0, `Browser console/runtime errors: ${JSON.stringify(errors)}`);
   return {
     starterBlocks: 17,
-    manualBuild: { firstBlock: 'Core', clickSelectMode: true, stableIdMove: true, secondBlock: 'Hull', selection: true, undo: true, redo: true, sandbox: true, returnToWorkshop: true, newBlueprint: true },
+    manualBuild: { firstBlock: 'Core', clickSelectMode: true, stableIdMove: true, secondBlock: 'Hull', selection: true, undo: true, redo: true, sandbox: true, returnToWorkshop: true, newBlueprint: true, rescueExport: true },
     corePanels: panels,
     terrain: terrainState,
     flightMode: true,
