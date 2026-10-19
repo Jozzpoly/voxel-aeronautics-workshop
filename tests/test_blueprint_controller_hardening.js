@@ -74,7 +74,21 @@ assert.strictEqual(JSON.parse(values.get(Config.SAVE_KEY)).version, 12);
 const goodBackup = values.get(Config.SAVE_KEY);
 values.set(Config.SAVE_BACKUP_KEY, goodBackup);
 values.set(Config.SAVE_KEY, '{corrupt-json');
-assert.strictEqual(controller.persistBlueprint(false), true);
+// A stale controller must not silently overwrite storage changed outside its tab.
+assert.strictEqual(controller.persistBlueprint(false), false);
+assert.strictEqual(values.get(Config.SAVE_KEY), '{corrupt-json');
+assert.strictEqual(values.get(Config.SAVE_BACKUP_KEY), goodBackup);
+// A newly opened recovery session starts from the actual current primary and
+// can deliberately repair it, without discarding the last valid backup.
+const recoveryController = Controller.create({
+  state, craft, document, storage, defaultOrientation: 0,
+  markers: { comSphere: {}, axesHelper: {} },
+  callbacks: {
+    cleanupFlightState() {}, updateTelemetry() {}, updateGhost() {}, updateControlConfigurationUI() {},
+    syncHudVisibility() {}, resetToEmptyCraft() {}, updateHUD() {}, showStatus: text => statuses.push(text), setMechanicalAuthoring() {}
+  }
+});
+assert.strictEqual(recoveryController.persistBlueprint(false), true);
 assert.strictEqual(values.get(Config.SAVE_BACKUP_KEY), goodBackup);
 assert.strictEqual(Blueprint.normalize(JSON.parse(values.get(Config.SAVE_KEY))).version, 12);
 
@@ -104,4 +118,47 @@ controller.importBlueprintFile({});
 assert.strictEqual(fileReaderConstructed, true);
 assert(statuses.includes('INVALID BLUEPRINT'));
 
-console.log({ atomicLoad: 'ok', backupSave: 'ok', corruptPrimaryPreservesBackup: 'ok', importSizeGuard: 'ok' });
+// Two independent tabs sharing one origin and save slot must not silently
+// overwrite each other. The displaced tab retains a recoverable JSON snapshot.
+const tabValues = new Map([[Config.SAVE_KEY, previousPrimary]]);
+const tabStorage = {
+  getItem: key => tabValues.has(key) ? tabValues.get(key) : null,
+  setItem: (key, value) => tabValues.set(key, value)
+};
+function makeTab(id) {
+  let authored = Blueprint.createDocument({ blocks: [{ blockId: id, assemblySpaceId: 'space:root', x: 0, y: 0, z: 0, type: 'Core' }] });
+  const tabCraft = {
+    get size() { return authored.blocks.length; },
+    toDocument() { return authored; },
+    replaceDocument(data) { authored = data; return { ok: true }; }
+  };
+  return Controller.create({
+    state: { ...state, mode: 'BUILD' }, craft: tabCraft, document, storage: tabStorage, defaultOrientation: 0,
+    markers: { comSphere: {}, axesHelper: {} },
+    callbacks: {
+      cleanupFlightState() {}, updateTelemetry() {}, updateGhost() {}, updateControlConfigurationUI() {},
+      syncHudVisibility() {}, resetToEmptyCraft() {}, updateHUD() {},
+      showStatus: text => statuses.push(text), setMechanicalAuthoring() {}
+    }
+  });
+}
+const tabA = makeTab('tab-a');
+const tabB = makeTab('tab-b');
+assert.strictEqual(tabA.persistBlueprint(false), true);
+const primaryAfterA = tabValues.get(Config.SAVE_KEY);
+assert.strictEqual(tabB.persistBlueprint(false), false, 'stale tab B must refuse silent last-writer-wins');
+assert.strictEqual(tabValues.get(Config.SAVE_KEY), primaryAfterA, 'conflict must not replace the shared primary');
+assert.strictEqual(tabValues.get(Config.SAVE_BACKUP_KEY), previousPrimary, 'conflict must not replace the backup');
+const rescueKeys = [...tabValues.keys()].filter(key => key.startsWith(Config.SAVE_KEY + ':conflict:'));
+assert.strictEqual(rescueKeys.length, 1, 'conflicting craft must get one distinct rescue slot');
+assert.strictEqual(JSON.parse(tabValues.get(rescueKeys[0])).blocks[0].blockId, 'tab-b');
+assert(statuses.includes('SAVE CONFLICT • EXPORT BLUEPRINT'));
+assert.strictEqual(tabB.persistBlueprint(false), false);
+assert.strictEqual([...tabValues.keys()].filter(key => key.startsWith(Config.SAVE_KEY + ':conflict:')).length, 1,
+  'repeated conflicted autosaves in one tab should reuse its rescue slot');
+assert.strictEqual(tabB.loadBlueprint(false), true, 'explicitly loading the new primary should resolve stale baseline');
+assert.strictEqual(tabB.persistBlueprint(false), true);
+assert.strictEqual(tabValues.get(Config.SAVE_KEY), primaryAfterA);
+
+console.log({ atomicLoad: 'ok', backupSave: 'ok', corruptPrimaryPreservesBackup: 'ok',
+  importSizeGuard: 'ok', multiTabConflict: 'rescue-without-overwrite' });
