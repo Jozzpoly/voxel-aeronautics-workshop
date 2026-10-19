@@ -57,6 +57,7 @@ def main() -> None:
     run('node', 'tests/test_craft_history.js')
     run('node', 'tests/test_build_targeting.js')
     run('node', 'tests/test_workshop_selection.js')
+    run('node', 'tests/test_camera_controller.js')
     run('node', 'tests/test_engineering_analysis.js')
     run('node', 'tests/test_orientation_service.js')
     run('node', 'tests/test_power_control_readouts.js')
