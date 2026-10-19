@@ -98,6 +98,11 @@
       <button id="btn-import" class="mini-btn">IMPORT JSON</button>
       <input id="blueprint-file" type="file" accept="application/json,.json" hidden />
     </div>
+    <div id="rescue-controls" class="flex flex-wrap items-center gap-2 mb-3" style="display:none">
+      <label for="rescue-copy-select" class="text-[10px] text-amber-300">LOCAL RESCUE COPY</label>
+      <select id="rescue-copy-select" class="mini-btn" aria-label="Saved rescue copy to export"></select>
+      <button id="btn-export-rescue" class="mini-btn" type="button">EXPORT RESCUE JSON</button>
+    </div>
 
     <div class="mb-3 rounded border border-violet-900/70 bg-slate-950/45 p-2" id="selected-part-panel">
       <div class="flex items-center justify-between gap-2 mb-2">
