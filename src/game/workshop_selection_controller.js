@@ -117,6 +117,8 @@
         }
 
         if (clear) clear.disabled = block == null;
+        const frame = element('btn-frame-selected-part');
+        if (frame) frame.disabled = block == null || STATE.mode !== 'BUILD';
         const failureId = lastFailureEvent()?.blockId || null;
         if (failure) failure.disabled = !failureId || !craft.getById(failureId);
         for (const button of nudges) button.disabled = block == null || STATE.mode !== 'BUILD';
