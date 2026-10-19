@@ -1865,6 +1865,7 @@
     document.getElementById('btn-undo')?.addEventListener('click', undoBlueprint);
     document.getElementById('btn-redo')?.addEventListener('click', redoBlueprint);
     document.getElementById('btn-export')?.addEventListener('click', exportBlueprint);
+    document.getElementById('btn-export-rescue')?.addEventListener('click', () => blueprintController.exportRescueCopy());
     document.getElementById('btn-import')?.addEventListener('click', () => document.getElementById('blueprint-file')?.click());
     document.getElementById('blueprint-file')?.addEventListener('change', event => {
       const input = (event.target);
