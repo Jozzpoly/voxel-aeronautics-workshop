@@ -1631,7 +1631,8 @@
       markers: { comSphere, axesHelper },
       callbacks: {
         cleanupFlightState, updateTelemetry, updateGhost, updateControlConfigurationUI,
-        syncHudVisibility, resetToEmptyCraft, updateHUD, showStatus, setMechanicalAuthoring
+        syncHudVisibility, resetToEmptyCraft, updateHUD, showStatus, setMechanicalAuthoring,
+        resetToolMode: () => workshopToolMode.toggle(false)
       }
     });
     const {
