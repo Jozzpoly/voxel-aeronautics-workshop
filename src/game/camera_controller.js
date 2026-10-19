@@ -105,6 +105,29 @@
         applyCameraOrbit();
       }
 
+      function frameWorkshopObject(object) {
+        // The authored block's x/y/z can be local to a nested assembly space.
+        // Use its rendered world transform, including imported visual bounds.
+        if (STATE.mode !== 'BUILD' || !object || !THREE.Box3 || !THREE.Sphere) return false;
+        const bounds = new THREE.Box3().setFromObject(object);
+        if (bounds.isEmpty()) return false;
+        const sphere = bounds.getBoundingSphere(new THREE.Sphere());
+        const center = sphere.center;
+        const radius = sphere.radius;
+        if (![center.x, center.y, center.z, radius].every(Number.isFinite)) return false;
+        const verticalHalfFov = THREE.MathUtils.degToRad(camera.fov || 60) / 2;
+        const horizontalHalfFov = Math.atan(Math.tan(verticalHalfFov) * Math.max(0.2, camera.aspect || 1));
+        const narrowHalfFov = Math.min(verticalHalfFov, horizontalHalfFov);
+        if (!Number.isFinite(narrowHalfFov) || narrowHalfFov <= 0) return false;
+        const framedDistance = radius / Math.sin(narrowHalfFov) * 1.35;
+        STATE.camera.target.copy(center);
+        STATE.camera.targetOffset.set(0, 0, 0);
+        STATE.camera.distance = THREE.MathUtils.clamp(framedDistance, 6, 160);
+        applyCameraOrbit();
+        showStatus('FRAME SELECTED PART', 1000);
+        return true;
+      }
+
       function panCameraTargetByPixels(dx, dy) {
         normalizeCameraState();
         const worldUp = new THREE.Vector3(0, 1, 0);
@@ -138,6 +161,7 @@
         setCameraMode,
         setCameraFollowStrength,
         resetCamera,
+        frameWorkshopObject,
         panCameraTargetByPixels,
         fitCameraToFlightTarget
       });
