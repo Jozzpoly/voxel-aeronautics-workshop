@@ -284,8 +284,19 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
     return Boolean(modal && getComputedStyle(modal).display !== 'none');
   })()`);
   if (helpVisible) {
+    const intro = await evaluate(cdp, `(() => {
+      const start = document.getElementById('start-engineering');
+      const rect = start.getBoundingClientRect();
+      const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
+      return { buttonVisible: y > 0 && y < innerHeight && document.elementFromPoint(x, y) === start,
+        detailedGuideInitiallyCollapsed: !document.getElementById('workshop-guide-details').open };
+    })()`);
+    assert(intro.buttonVisible, 'Enter Workshop is not reachable without scrolling the onboarding modal.');
+    assert(intro.detailedGuideInitiallyCollapsed, 'Full controls must not block first play by default.');
     await clickElement(cdp, '#start-engineering');
     await waitFor(cdp, `getComputedStyle(document.getElementById('help-modal')).display === 'none'`, 'help modal closed');
+    assert(await evaluate(cdp, `localStorage.getItem('vaw:workshop-welcome-seen-v1') === '1'`),
+      'Dismissed welcome guide must not block later Jaskinia game launches.');
   }
   await waitFor(cdp, `document.getElementById('ui-blocks')?.textContent === '0'`, 'empty workshop');
 

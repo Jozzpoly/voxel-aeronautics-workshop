@@ -107,6 +107,12 @@
       border: 1px solid rgba(255,255,255,0.1);
       box-shadow: 0 20px 60px rgba(0,0,0,0.5);
     }
+    #help-modal .modal-content { max-width: 640px; }
+    #workshop-guide-details { border-top: 1px solid rgba(148,163,184,0.24); padding-top: 0.75rem; }
+    #workshop-guide-details summary { cursor: pointer; padding: 0.6rem 0; color: #93c5fd; font-weight: 600; }
+    #workshop-guide-details summary:hover { color: white; }
+    #workshop-guide-details summary:focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; }
+    #workshop-guide-details ul { margin-top: 0.8rem; }
     .hud-collapsed #hud-content { display: none; }
     html, body {
       background:

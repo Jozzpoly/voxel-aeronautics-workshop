@@ -1828,8 +1828,13 @@
     document.getElementById('btn-flight').addEventListener('click', () => setMode('FLIGHT'));
     document.getElementById('btn-build').addEventListener('click', requestReturnToWorkshop);
     document.getElementById('btn-help').addEventListener('click', () => setHelpVisible(true));
-    document.getElementById('close-help').addEventListener('click', () => setHelpVisible(false));
-    document.getElementById('start-engineering').addEventListener('click', () => setHelpVisible(false));
+    const welcomeKey = 'vaw:workshop-welcome-seen-v1';
+    function dismissWelcomeGuide() {
+      try { localStorage.setItem(welcomeKey, '1'); } catch (_) {}
+      setHelpVisible(false);
+    }
+    document.getElementById('close-help').addEventListener('click', dismissWelcomeGuide);
+    document.getElementById('start-engineering').addEventListener('click', dismissWelcomeGuide);
     document.getElementById('btn-debrief-workshop').addEventListener('click', returnToWorkshopFromDebrief);
     document.getElementById('btn-debrief-retry').addEventListener('click', retryContractFromDebrief);
     document.getElementById('btn-starter-craft').addEventListener('click', loadStarterCraft);
@@ -2386,4 +2391,5 @@
     STATE.uiCollapsed = false;
     syncHudVisibility();
     loadDefaultsOrSave();
+    try { if (localStorage.getItem(welcomeKey) === '1') setHelpVisible(false); } catch (_) {}
     animate();
