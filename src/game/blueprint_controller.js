@@ -18,6 +18,12 @@
       } = callbacks;
       const DEFAULT_ORIENTATION = defaultOrientation;
       const localStorage = storage;
+      // Observe the shared primary before this tab starts editing. A second
+      // VAW tab may save the same origin's key at any time.
+      let observedPrimary;
+      try { observedPrimary = localStorage.getItem(SAVE_KEY); }
+      catch (_) { observedPrimary = null; }
+      let conflictSnapshotKey = null;
 
       function collectBlueprint() {
         return CRAFT.toDocument({
@@ -149,11 +155,24 @@
         try {
           const payload = JSON.stringify(collectBlueprint());
           const previous = localStorage.getItem(SAVE_KEY);
+          if (previous !== observedPrimary && previous !== payload) {
+            // Never silently overwrite another tab's authored work. Preserve
+            // this tab's candidate under its own rescue key, without touching
+            // the shared primary or its last-known-good backup.
+            if (!conflictSnapshotKey) {
+              conflictSnapshotKey = `${SAVE_KEY}:conflict:${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            }
+            try { localStorage.setItem(conflictSnapshotKey, payload); }
+            catch (rescueError) { console.warn('Blueprint conflict rescue failed:', rescueError); }
+            showStatus('SAVE CONFLICT • EXPORT BLUEPRINT', 5000);
+            return false;
+          }
           if (previous && previous !== payload && validStoredBlueprint(previous)) {
             try { localStorage.setItem(SAVE_BACKUP_KEY, previous); }
             catch (backupError) { console.warn('Blueprint backup save failed:', backupError); }
           }
           localStorage.setItem(SAVE_KEY, payload);
+          observedPrimary = payload;
           if (showToast) showStatus('SAVED', 800);
           return true;
         } catch (error) {
@@ -203,6 +222,7 @@
             if (!raw) continue;
             const parsed = JSON.parse(raw);
             if (!loadBlueprintData(parsed)) continue;
+            if (key === SAVE_KEY) observedPrimary = raw;
             if (recordHistory) commitHistory(previous);
             if (key !== SAVE_KEY || parsed.version !== SAVE_VERSION) autoSave(false, true);
             if (recordHistory) showStatus('LOADED', 800);
