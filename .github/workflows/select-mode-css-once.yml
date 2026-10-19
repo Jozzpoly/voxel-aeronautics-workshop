@@ -1,4 +1,5 @@
 name: Compile Select-mode UI and check browser workflow (one-time)
+# v2: source now delegates palette and select state to game.workshop-tool-mode.
 
 on:
   push:
