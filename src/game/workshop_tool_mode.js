@@ -60,7 +60,7 @@
         const select = document.createElement('button');
         select.type = 'button';
         select.dataset.tool = 'Select';
-        select.className = 'tool-btn';
+        select.classList.add('tool-btn');
         select.innerHTML = '<div class="w-6 h-6 rounded border border-sky-400/60 shrink-0 flex items-center justify-center text-sky-300">⌖</div>'
           + '<div class="min-w-0 flex-1"><div class="font-bold text-white leading-tight">Select / Inspect</div>'
           + '<div class="tool-description text-[10px] text-gray-400">Click to inspect; no building or deleting while active.</div></div>'
@@ -71,7 +71,7 @@
           const button = document.createElement('button');
           button.type = 'button';
           button.dataset.tool = name;
-          button.className = 'tool-btn';
+          button.classList.add('tool-btn');
           const colorHex = '#' + blocks[name].color.toString(16).padStart(6, '0');
           const displayName = name.replace(/([a-z])([A-Z])/g, '$1 $2');
           const shortcut = name === 'Core' ? 0 : types.filter(type => type !== 'Core').indexOf(name) + 1;
