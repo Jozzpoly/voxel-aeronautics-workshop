@@ -385,6 +385,23 @@ async function runSmoke(cdp, baseUrl, browserMessages, setStage) {
     title: document.getElementById('ui-selected-part-title')?.textContent,
     position: document.getElementById('ui-selected-part-meta')?.textContent
   })`);
+  // Interruption before pointer release must not commit an authored move.
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', ...placementPoint });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mousePressed', ...placementPoint, button: 'left', clickCount: 1 });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', x: placementPoint.x - 120, y: placementPoint.y, button: 'left', buttons: 1 });
+  await cdp.call('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+  await cdp.call('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseReleased', x: placementPoint.x - 120, y: placementPoint.y, button: 'left', clickCount: 1 });
+  assert(await evaluate(cdp, `document.getElementById('ui-selected-part-meta')?.textContent === ${JSON.stringify(dragBefore.position)}`),
+    'Escape cancels the preview without editing the authored block.');
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', ...placementPoint });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mousePressed', ...placementPoint, button: 'left', clickCount: 1 });
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', x: placementPoint.x - 120, y: placementPoint.y, button: 'left', buttons: 1 });
+  await evaluate(cdp, `window.dispatchEvent(new Event('blur'))`);
+  await cdp.call('Input.dispatchMouseEvent', { type: 'mouseReleased', x: placementPoint.x - 120, y: placementPoint.y, button: 'left', clickCount: 1 });
+  assert(await evaluate(cdp, `document.getElementById('ui-selected-part-meta')?.textContent === ${JSON.stringify(dragBefore.position)}`),
+    'Window blur cancels the preview without editing the authored block.');
+  // Then perform a genuine release and confirm exactly one reversible move.
   await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', ...placementPoint });
   await cdp.call('Input.dispatchMouseEvent', { type: 'mousePressed', ...placementPoint, button: 'left', clickCount: 1 });
   await cdp.call('Input.dispatchMouseEvent', { type: 'mouseMoved', x: placementPoint.x - 120, y: placementPoint.y, button: 'left', buttons: 1 });
