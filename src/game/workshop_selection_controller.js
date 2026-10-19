@@ -24,6 +24,7 @@
         updateGhost = () => {},
         autoSave = () => {},
         onSelectionChanged = () => {},
+        frameSelectedVisual = () => false,
         showStatus = () => {}
       } = callbacks;
 
@@ -215,6 +216,11 @@
         element('btn-select-hovered-part')?.addEventListener('click', selectHovered);
         element('btn-select-last-failure')?.addEventListener('click', selectLastFailure);
         element('btn-clear-selected-part')?.addEventListener('click', () => clear());
+        element('btn-frame-selected-part')?.addEventListener('click', () => {
+          const block = selectedBlock();
+          if (!block || STATE.mode !== 'BUILD') return;
+          if (!frameSelectedVisual(block)) showStatus('SELECT A VISIBLE PART TO FRAME', 1400);
+        });
         for (const button of document?.querySelectorAll?.('[data-selected-nudge]') || []) {
           button.addEventListener('click', () => {
             const vector = String(button.dataset.selectedNudge || '').split(',').map(Number);
