@@ -1,3 +1,5 @@
+# AI Project Memory — Voxel Aeronautics Workshop
+
 ## 2026-10-19 — Browser proof of a freely authored craft
 
 - **Source checkpoint:** `5b66ca36e6a5a29dae1909bc91f91a40652fafa1`, after the original published `3307e3f`. Gameplay `src/**` is unchanged between them; these commits extend `tests/run_browser_smoke.mjs` and a temporary CI gate.
@@ -9,8 +11,6 @@
 - **Next appropriate move:** prioritize bounded visual/Owner experiments and tactile builder improvements where evidence supports them, rather than more breadth or a new agent mesh. The user wants VAW to be a complete, attractive, immediately accessible game in Jaskinia; the separate Jozz Vehicle / Box3D matter-builder visions remain strategic future conversations.
 
 ---
-
-# AI Project Memory — Voxel Aeronautics Workshop
 
 ## Live checkpoint — 2026-10-19 (supersedes dated browser/deployment claims below)
 
