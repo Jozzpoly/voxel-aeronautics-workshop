@@ -83,7 +83,7 @@
         }
         syncButtons();
       }
-      return Object.freeze({ toggle, setSelectedTool, renderHover, interceptClick, installButtons });
+      return Object.freeze({ toggle, isSelecting: () => selecting, setSelectedTool, renderHover, interceptClick, installButtons });
     }
     return Object.freeze({ create });
   });
