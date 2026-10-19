@@ -20,10 +20,11 @@ jobs:
           node-version: '22'
       - name: Verify real Chromium engine
         run: |
-          test -x /usr/bin/google-chrome
+          test -x /usr/bin/chromium
+          /usr/bin/chromium --version
       - name: Manual placement, adjacent part, selection, undo-redo and starter flight
         env:
-          VAW_BROWSER: /usr/bin/google-chrome
+          VAW_BROWSER: /usr/bin/chromium
           DBUS_SESSION_BUS_ADDRESS: ''
           DBUS_SYSTEM_BUS_ADDRESS: ''
         run: node tests/run_browser_smoke.mjs
