@@ -1,5 +1,6 @@
 name: Publish playable VAW recovery
 # Release gate: verified empty-craft manual placement and compact first-visit experience (2026-10-19).
+# Release gate: one-click Select / Inspect via V, followed by source and release Chromium PASS.
 # Intentionally manual: update this workflow to publish a new verified revision.
 
 on:
