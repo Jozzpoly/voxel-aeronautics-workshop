@@ -27,10 +27,15 @@ let part = {
 };
 const otherPart = { blockId: 'another-part', key: 'space:child:3,0,0', type: 'Hull', assemblySpaceId: 'space:child', x: 3, y: 0, z: 0 };
 const statuses = [], moves = [];
-let history = 0, autosaves = 0, linked = false, selection = null;
+let history = 0, autosaves = 0, linked = false, selection = null, checkPreviewOccupancy = false;
 const craft = {
   revision: 4,
   getById(id) { return id === part.blockId ? part : id === otherPart.blockId ? otherPart : null; },
+  validateMove(id, x, y, z) {
+    const occupied = checkPreviewOccupancy && id === part.blockId
+      && x === otherPart.x && y === otherPart.y && z === otherPart.z;
+    return occupied ? { ok: false, reason: 'occupied' } : { ok: true };
+  },
   linksForBlock() { return linked ? [{ mechanicalLinkId: 'hinge' }] : []; },
   move(id, x, y, z) {
     const block = this.getById(id);
@@ -154,5 +159,27 @@ state.workshop.selectedBlockId = otherPart.blockId;
 assert.strictEqual(controller.finishDrag(destination, true), true);
 assert.strictEqual(moves.length, beforeSelectionMoves);
 assert.strictEqual(otherPart.x, 3);
+
+// Occupied preview is visually invalid before release; the attempt must never
+// mutate authored state. First obtain a guaranteed nonzero world-space outline.
+state.workshop.selectedBlockId = part.blockId;
+assert.strictEqual(controller.beginDrag(start), true);
+assert.strictEqual(controller.previewDrag(destination, true), true);
+assertNonzeroPreview('collision falsifier setup');
+const candidateOutline = scene.children.find(item => item.material?.color?.getHex?.() === 0xfbbf24);
+const proposedWorld = mesh.getWorldPosition(new THREE.Vector3()).add(candidateOutline.position);
+const proposedLocal = parent.worldToLocal(proposedWorld);
+otherPart.x = Math.round(proposedLocal.x);
+otherPart.y = part.y;
+otherPart.z = Math.round(proposedLocal.z);
+checkPreviewOccupancy = true;
+const beforeRejectedPreviewMoves = moves.length, beforeRejectedPreviewHistory = history;
+assert.strictEqual(controller.previewDrag(destination, true), true);
+assert.strictEqual(candidateOutline.material.color.getHex(), 0xfb7185,
+  'Occupied destination must be visibly rejected before pointer release');
+assert.strictEqual(controller.finishDrag(destination, true), true);
+assert.strictEqual(moves.length, beforeRejectedPreviewMoves, 'Occupied preview must not trigger a commit');
+assert.strictEqual(history, beforeRejectedPreviewHistory, 'Occupied preview must not create Undo history');
+checkPreviewOccupancy = false;
 console.log({ planarDrag: 'nested-parent-local-space', cancel: 'atomic', undoCommits: history,
   stableId: true, linkedGuard: true, invalidRelease: 'rejected', selectionRace: 'rejected' });
