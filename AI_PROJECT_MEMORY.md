@@ -1,6 +1,6 @@
 # AI Project Memory — Voxel Aeronautics Workshop
 
-## 2026-10-20 — Voluntary adversarial drag-truth experiment (candidate until separately shipped)
+## 2026-10-20 — Voluntary adversarial drag-truth experiment (shipped; Owner feel unverified)
 
 - **Question chosen autonomously:** can a visible Select drag ever commit a different authored outcome than what the cursor currently indicates? This was an adversarial integrity experiment, not an Owner-requested feature or a new editor architecture.
 - **Falsification setup mattered:** the first attempt to test two suspected races passed vacuously because the fake CraftModel updated its block record but not the corresponding Three visual, leaving a zero-delta preview. Corrected the test fixture to reset the authored/rendered state and asserted an actual nonzero visible amber preview **before** both negative scenarios. This changed the test from green to red.
@@ -8,7 +8,7 @@
 - **Confirmed regression B:** after A was fixed, switching the selected part during an active drag caused the final `nudge` to modify the **new selection**, not the grabbed part. [Red targeted CI](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39344557031) at `d113341c`: unexpected second move (`2 !== 1`). UI actions using the selection controller could trigger this; the test intentionally changes selection mid-gesture.
 - **Corrective contracts:** invalid or non-finite final ray-plane projection now invalidates/hides the preview and prevents commit. Changing or clearing selection cancels the transient drag. A second `blockId` identity check guards the commit even if caller code modifies selection state directly. The established single-move/Undo semantics are not changed. No new API, dependencies, or destructive storage steps.
 - **Green gate:** [one-time corrective CI](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39344684656) PASS: both strengthened unit regressions, exact Tailwind generation and full `tests/run_all.py`. Temporary workflow archived under `docs/history/ONE_TIME_DRAG_INVARIANTS_2026-10-20.yml`, leaving a reproducible source-derived artifact; generated output is not hand-edited.
-- **Evidence and limits:** tests establish deterministic validity/identity properties and preserve prior Chromium free-build/flight coverage. No real Owner interaction was captured, no true physically invalid mouse-plane intersection was captured on a live canvas, no proof of arbitrary pointer reentrancy, and no claim of improved tactile feel. Deployment requires independent publication verification.
+- **Release verification:** [full Validation](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39344880280) PASS on source candidate; [reproducible build](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39344880255) PASS. Production release is `d79938abd96601edbee853b66723fa1522fcee2c`: [publish workflow](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39345067306) PASS, exact SHA checked in both `gh-pages/BUILD_INFO.json` and the public URL in Opera. **Limits remain:** no Owner test, no live-canvas capture of a physically invalid final pointer-plane intersection, no arbitrary reentrancy proof, and no verified improvement to tactile feel.
 
 ---
 
