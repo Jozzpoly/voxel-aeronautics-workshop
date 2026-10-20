@@ -11,6 +11,8 @@ const MaterialTools = require('../src/gltf_material_tools.js');
 const Controls = require('../src/viewport_controls.js');
 const Validator = require('../src/vaw_validator.js');
 const VisualAssetPack = require('../src/visual_asset_pack_v1.js');
+const TerrainAuthoring = require('../src/terrain_authoring_v1.js');
+const AuthoringState = require('../src/authoring_state.js');
 const PackageExporter = require('../src/package_exporter.js');
 
 const root = path.resolve(__dirname, '..');
@@ -28,7 +30,8 @@ async function main() {
   for (const required of [
     'index.html', 'minimal_viewer.html', 'app/main.js', 'app/styles.css',
     'src/file_bundle_resolver.js', 'src/project_files_report.js', 'src/animation_report.js', 'src/layout_manager.js', 'src/minimal_gltf_viewer.js', 'src/viewport_controls.js', 'src/fit_camera.js',
-    'src/texture_report.js', 'src/gltf_material_tools.js', 'src/vaw_validator.js', 'src/visual_asset_pack_v1.js', 'src/package_exporter.js',
+    'src/texture_report.js', 'src/gltf_material_tools.js', 'src/vaw_validator.js', 'src/visual_asset_pack_v1.js', 'src/terrain_authoring_v1.js', 'src/authoring_state.js', 'src/package_exporter.js',
+    'tests/test_authoring_state.js', 'tests/test_authoring_state_flow.js',
     'vendor/three.min.js', 'vendor/GLTFLoader.js',
     'assets/uv_checker_cube_gltf/uv_checker_cube.gltf', 'assets/uv_checker_cube_gltf/uv_checker_cube.bin', 'assets/uv_checker_cube_gltf/textures/uv_checker.png',
     'docs/RECOVERY_AUDIT.md', 'docs/ROOT_CAUSE_ANALYSIS.md', 'docs/IMPLEMENTATION_REPORT.md', 'docs/USER_TESTING_GUIDE.md',
@@ -142,6 +145,23 @@ async function main() {
   assert.equal(Controls.classifyPointerButton(0, false), 'ignore');
   assert.equal(Controls.classifyPointerButton(2, false), 'ignore');
 
+  const terrainPreset = TerrainAuthoring.normalizePreset({
+    terrain: {
+      fog: { color: '#0b1220', density: 0.0038 },
+      materials: {
+        basin: { color: '#15283a', texture: { kind: 'checker', colorA: '#15283a', colorB: '#1b3349', repeat: 16 } },
+        routePaint: { color: '#93c5fd', opacity: 0.4, texture: { kind: 'stripe', colorA: '#60a5fa', colorB: '#1e3a8a', repeat: 12 } }
+      },
+      baseMaterial: 'basin',
+      patches: [{ id: 'yard', material: 'basin', center: { x: 0, z: 0 }, size: { x: 20, z: 20 }, layer: 10 }],
+      strips: [{ id: 'road', fromPad: 'startPad', toPad: 'finishPad', width: 8, material: 'routePaint', opacity: 0.4, layer: 20 }]
+    }
+  });
+  assert.equal(terrainPreset.format, 'VAW_TERRAIN_AUTHORING_V1');
+  assert.deepEqual(TerrainAuthoring.diagnosticsForPreset(terrainPreset), []);
+  assert.equal(TerrainAuthoring.DEFAULT_PAD_PREVIEW_POSITIONS.startPad.x, 0);
+  assert.equal(TerrainAuthoring.DEFAULT_PAD_PREVIEW_POSITIONS.frontierPad.z, -218);
+
   const noSidecar = Validator.validateReadiness({ gltfJson: gltf, sidecar: null, dependencies: [] });
   assert.equal(noSidecar.viewerOk, true);
   assert.equal(noSidecar.vawReady, false);
@@ -214,6 +234,20 @@ async function main() {
   assertDiag(validatePackPatch(pack => { pack.assets[0].dragArea = 2; }), 'pack.forbiddenGameplayField');
   assertDiag(validatePackPatch(pack => { pack.assets[0].fuelRate = 1; }), 'pack.forbiddenGameplayField');
   assertDiag(validatePackPatch(pack => { pack.assets[0].controlAxis = 'yaw'; }), 'pack.forbiddenGameplayField');
+
+  const vectorRigGltf = { nodes: [{ name: 'Root', children: [1] }, { name: 'gimbal' }], animations: [] };
+  const vectorRigPack = VisualAssetPack.inferManifest(vectorRigGltf, { basename: 'vector.gltf', normalizedPath: 'models/vector.gltf' }, { blockTypes: ['VectorThruster'] });
+  assert.ok(vectorRigPack.assets[0].bindings.rig.vectorThruster, 'VectorThruster inference should include a renderer-only rig profile when a gimbal node is found.');
+  const vectorRigResult = VisualAssetPack.validateManifest({ manifest: vectorRigPack, gltfJson: vectorRigGltf, dependencies: [], modelRecord: { normalizedPath: 'models/vector.gltf' } });
+  assert.equal(vectorRigResult.vawReady, true, 'Valid renderer-only VectorThruster rig profile should export.');
+  const invalidVectorRigPack = JSON.parse(JSON.stringify(vectorRigPack));
+  invalidVectorRigPack.assets[0].bindings.nodes.gimbalAssembly = null;
+  invalidVectorRigPack.assets[0].bindings.rig.vectorThruster.channels = [{ input: 'pitch', node: 'gimbalAssembly', axis: 'yaw', direction: 0 }];
+  const invalidVectorRigResult = VisualAssetPack.validateManifest({ manifest: invalidVectorRigPack, gltfJson: vectorRigGltf, dependencies: [], modelRecord: { normalizedPath: 'models/vector.gltf' } });
+  assertDiag(invalidVectorRigResult, 'binding.rigInputInvalid');
+  assertDiag(invalidVectorRigResult, 'binding.rigAxisInvalid');
+  assertDiag(invalidVectorRigResult, 'binding.rigDirectionInvalid');
+  assertDiag(invalidVectorRigResult, 'binding.rigNodeBindingMissing');
 
   const engineMirrorCases = [
     ['accepts VectorThruster', pack => { pack.assets[0].bindings.blockTypes = ['VectorThruster']; }, true],
@@ -330,6 +364,9 @@ async function main() {
   assert.equal(schema.$defs.asset.properties.bindings.required.includes('clips'), true);
   assert.equal(schema.$defs.asset.properties.bindings.properties.nodes.additionalProperties, false);
   assert.equal(schema.$defs.asset.properties.bindings.properties.clips.additionalProperties, false);
+  assert.deepEqual(schema.$defs.rigInput.enum, ['gimbalA', 'gimbalB', 'roll']);
+  assert.deepEqual(schema.$defs.rigAxis.enum, ['x', 'y', 'z']);
+  assert.equal(schema.$defs.asset.properties.bindings.properties.rig.additionalProperties, false);
   assert.ok(schema.$defs.safePackPath.pattern.includes('\\\\'), 'schema path pattern should reject backslashes');
   assert.ok(schema.$defs.notGameplayPropertyName, 'schema should include a forbidden gameplay property-name guard');
   const schemaText = JSON.stringify(schema);
@@ -363,9 +400,29 @@ async function main() {
   for (const snippet of ['Format JSON', 'Apply manifest', 'parseSidecarFromEditor', 'validateManifest']) {
     assert.ok(index.includes(snippet) || app.includes(snippet) || readText('src/vaw_validator.js').includes(snippet), `missing sidecar hardening snippet: ${snippet}`);
   }
-  for (const snippet of ['vaw-block-type', 'choose explicitly', 'vaw-node-visual-root', 'vaw-node-flame-glow', 'selectedBlockTypes', 'inferVisualAssetManifest']) {
+  for (const snippet of ['vaw-block-type', 'choose explicitly', 'vaw-node-visual-root', 'vaw-node-flame-glow', 'vaw-clear-rig-bindings', 'selectedBlockTypes', 'inferVisualAssetManifest']) {
     assert.ok(index.includes(snippet) || app.includes(snippet), `missing explicit Visual Asset Pack authoring UI snippet: ${snippet}`);
   }
+  for (const snippet of [
+    'terrain-preview',
+    'renderTerrainPreview',
+    'DEFAULT_PAD_PREVIEW_POSITIONS',
+    'vaw-vector-rig-enabled',
+    'vaw-vector-rig-default',
+    'currentVectorRigProfile',
+    'currentVectorRigPreviewDiagnostics',
+    'vectorRig.gimbalAssemblyMissing',
+    'vectorRig.channelMissing',
+    'vectorRig.axisInvalid',
+    'vectorRig.fallback',
+    'vectorRig.previewReady',
+    'rig: currentRigFields()'
+  ]) {
+    assert.ok(index.includes(snippet) || app.includes(snippet), `missing VectorThruster rig authoring snippet: ${snippet}`);
+  }
+  assert.ok(AuthoringState.OPTIONAL_NODE_ALIASES.includes('gimbalAssembly'), 'Authoring state helper must own optional rig aliases.');
+  assert.ok(app.includes('AuthoringState.applyNodeFields'), 'Studio must commit empty optional rig inputs as null bindings.');
+  assert.ok(app.includes('AuthoringState.preferenceSnapshotForBlock'), 'Studio must not restore rig defaults across block types.');
   assert.ok(app.includes('commitAuthoringFieldsToManifest'), 'Apply/Validate/Export must commit explicit authoring controls into the manifest.');
   assert.ok(app.includes('currentAuthoringPrefsSnapshot'), 'Studio must keep per-block authoring preferences for repeated in-game visual iteration.');
   assert.ok(app.includes('saveAuthoringPrefsForBlock'), 'Authoring prefs must be keyed by VAW block type.');

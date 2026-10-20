@@ -574,6 +574,30 @@ def test_cli_list_only_from_invalid_and_resume() -> None:
     assert [record["status"] for record in resumed_summary["stages"]] == ["pass", "pass"]
 
 
+def test_node_stage_receives_python_environment() -> None:
+    root = make_repo()
+    driver = root / "requires_python_env.js"
+    driver.write_text(
+        (
+            "const fs = require('fs');\n"
+            "if (!process.env.PYTHON) process.exit(9);\n"
+            "fs.writeFileSync(process.argv[2], process.env.PYTHON);\n"
+        ),
+        encoding="utf-8",
+    )
+    previous = os.environ.pop("PYTHON", None)
+    try:
+        plan = Plan("node-python-env", (Stage("node-env", ("node", str(driver), "{run_dir}/python-env.txt"), 10),))
+        code, _, summary = run_plan(plan, root)
+    finally:
+        if previous is not None:
+            os.environ["PYTHON"] = previous
+    assert code == 0
+    assert summary["stages"][0]["status"] == "pass"
+    run_dir = Path(summary["runDirectory"])
+    assert (run_dir / "python-env.txt").read_text(encoding="utf-8") == PYTHON
+
+
 def main() -> None:
     test_plan_validation_and_selection()
     test_pass_fail_timeout_and_basic_side_effects()
@@ -588,6 +612,7 @@ def main() -> None:
     test_host_sigterm_persists_interruption_kills_family_and_resumes()
     test_run_directory_command_tokens_are_isolated()
     test_cli_list_only_from_invalid_and_resume()
+    test_node_stage_receives_python_environment()
     print(
         {
             "passFailTimeout": "ok",
@@ -603,6 +628,7 @@ def main() -> None:
             "spawnErrorPersistence": "ok",
             "runDirectoryTokenIsolation": "ok",
             "cliControls": "ok",
+            "pythonEnvPropagation": "ok",
             "hostSignals": "ok" if os.name != "nt" else "not-run-on-windows",
             "identicalDeleteRecreate": "final-state-only-known-limitation",
             "sigkillCleanup": "not-guaranteed-known-limitation",

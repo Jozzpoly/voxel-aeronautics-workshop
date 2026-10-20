@@ -1,0 +1,52 @@
+name: VAW real-browser acceptance gate (one-time)
+
+on:
+  push:
+    branches: [recovery/playable-truth]
+    paths: [.github/workflows/real-browser-once.yml, tests/run_browser_recovery.mjs]
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact recovery
+        uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Check installed browsers
+        run: |
+          command -v chromium || true
+          command -v google-chrome || true
+          command -v xvfb-run || true
+      - name: Real Three.js / Cannon browser smoke
+        env:
+          VAW_BROWSER: /usr/bin/google-chrome
+          DBUS_SESSION_BUS_ADDRESS: ''
+          DBUS_SYSTEM_BUS_ADDRESS: ''
+        run: node tests/run_browser_smoke.mjs
+      - name: Generate exactly reproducible standalone build
+        run: python tools/build_release.py
+      - name: Source and standalone lifecycle browser recovery
+        env:
+          CHROMIUM: /usr/bin/chromium
+        run: |
+          if [ ! -x /usr/bin/chromium ]; then
+            if [ -x /usr/bin/google-chrome ]; then export CHROMIUM=/usr/bin/google-chrome; else echo 'No Chromium engine' >&2; exit 2; fi
+          fi
+          node tests/run_browser_recovery.mjs
+      - name: Preserve browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vaw-browser-evidence-${{ github.sha }}
+          path: recovery-artifacts/browser/
+          retention-days: 14
+          if-no-files-found: ignore

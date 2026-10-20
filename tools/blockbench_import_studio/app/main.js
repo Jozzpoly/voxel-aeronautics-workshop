@@ -7,6 +7,8 @@
   const ViewerApi = window.VAW_MINIMAL_GLTF_VIEWER;
   const Validator = window.VAW_VALIDATOR || null;
   const VisualAssetPack = window.VAW_VISUAL_ASSET_PACK_V1 || null;
+  const TerrainAuthoring = window.VAW_TERRAIN_AUTHORING_V1 || null;
+  const AuthoringState = window.VAW_STUDIO_AUTHORING_STATE || null;
   const PackageExporter = window.VAW_PACKAGE_EXPORTER || null;
   const ProjectFilesReport = window.VAW_PROJECT_FILES_REPORT || null;
   const LayoutManager = window.VAW_LAYOUT_MANAGER || null;
@@ -33,6 +35,8 @@
   const AUTHORING_PREFS_KEY = 'vaw.blockbench_import_studio.authoring_prefs.v1';
   const INSTALL_ENDPOINT_PREFS_KEY = 'vaw.blockbench_import_studio.install_endpoint.v1';
   const INSTALL_ENDPOINT_PATH = '/__vaw/install_visual_block';
+  const TERRAIN_ENDPOINT_PATH = '/__vaw/install_terrain_preset';
+  const TERRAIN_PRESET_URL = '../../assets/terrain/local_working_terrain/VAW_TERRAIN_AUTHORING_V1.json';
   const INSTALL_ENDPOINT_CANDIDATE_PORTS = ['8765', '8095'];
 
   const el = Object.fromEntries([
@@ -42,12 +46,18 @@
     'animation-select', 'play-animation', 'pause-animation', 'stop-animation', 'animation-loop', 'animation-speed', 'animation-time', 'animation-time-label', 'animation-list',
     'fit-view', 'reset-camera', 'toggle-grid', 'toggle-axes', 'toggle-bounds', 'pixel-textures', 'force-double-sided', 'checker-material',
     'viewer', 'event-log', 'texture-summary', 'texture-list', 'mesh-list', 'vaw-status', 'sidecar-status', 'sidecar-json', 'infer-sidecar',
-    'vaw-block-type', 'vaw-node-visual-root-picker', 'vaw-use-suggested-root', 'vaw-node-visual-root', 'vaw-node-flame', 'vaw-node-flame-glow', 'vaw-node-gimbal', 'vaw-node-control-flap',
+    'vaw-block-type', 'vaw-node-visual-root-picker', 'vaw-use-suggested-root', 'vaw-clear-rig-bindings', 'vaw-node-visual-root', 'vaw-node-flame', 'vaw-node-flame-glow', 'vaw-node-gimbal', 'vaw-node-control-flap',
     'vaw-transform-pos-x', 'vaw-transform-pos-y', 'vaw-transform-pos-z', 'vaw-transform-rot-x', 'vaw-transform-rot-y', 'vaw-transform-rot-z', 'vaw-transform-scale-x', 'vaw-transform-scale-y', 'vaw-transform-scale-z',
     'vaw-transform-center', 'vaw-transform-fit', 'vaw-transform-reset',
     'vaw-material-alpha', 'vaw-material-double-sided', 'vaw-material-pixelated', 'vaw-material-overrides', 'vaw-material-use-doctor', 'vaw-material-clear-overrides', 'vaw-material-reset-auto', 'vaw-material-override-list', 'vaw-material-doctor',
     'vaw-fire-split-enabled', 'vaw-fire-split-nodes', 'vaw-fire-split-suggest',
+    'vaw-vector-rig-enabled', 'vaw-vector-rig-default', 'vaw-vector-rig-gimbal-a-axis', 'vaw-vector-rig-gimbal-a-invert', 'vaw-vector-rig-gimbal-b-axis', 'vaw-vector-rig-gimbal-b-invert', 'vaw-vector-rig-roll-axis', 'vaw-vector-rig-roll-invert',
     'vaw-install-endpoint', 'vaw-install-probe',
+    'terrain-status', 'terrain-fog-color', 'terrain-fog-density', 'terrain-base-material',
+    'terrain-material-select', 'terrain-material-new', 'terrain-material-delete', 'terrain-material-id', 'terrain-material-kind', 'terrain-material-color-a', 'terrain-material-color-b', 'terrain-material-repeat', 'terrain-material-roughness', 'terrain-material-opacity',
+    'terrain-patch-select', 'terrain-patch-new', 'terrain-patch-delete', 'terrain-patch-id', 'terrain-patch-material', 'terrain-patch-x', 'terrain-patch-z', 'terrain-patch-size-x', 'terrain-patch-size-z', 'terrain-patch-rotation', 'terrain-patch-opacity', 'terrain-patch-layer',
+    'terrain-strip-select', 'terrain-strip-new', 'terrain-strip-delete', 'terrain-strip-id', 'terrain-strip-from-pad', 'terrain-strip-to-pad', 'terrain-strip-material', 'terrain-strip-width', 'terrain-strip-opacity', 'terrain-strip-layer',
+    'terrain-json', 'terrain-apply-json', 'terrain-reload', 'terrain-install', 'terrain-diagnostics', 'terrain-preview',
     'format-sidecar', 'apply-sidecar', 'validate-vaw', 'download-sidecar', 'download-debug-package', 'download-package', 'install-block-visual', 'install-status', 'diagnostics'
   ].map(id => [id, document.getElementById(id)]));
 
@@ -77,6 +87,10 @@
     lastValidation: null,
     activePrefsBlockType: '',
     authoringPrefsRestored: false,
+    terrainPreset: null,
+    terrainSelectedMaterialId: '',
+    terrainSelectedPatchId: '',
+    terrainSelectedStripId: '',
   };
 
   function init() {
@@ -88,6 +102,7 @@
     applyStoredAuthoringPrefs();
     applyStoredInstallEndpoint();
     renderAll();
+    loadTerrainPreset().catch(error => setTerrainStatus('warn', `Terrain preset unavailable: ${error.message || error}`));
     setViewerStatus('neutral', 'Gotowy do importu', 'Wrzuć komplet .gltf + .bin + tekstury.');
   }
 
@@ -213,6 +228,163 @@
     setFireSplitNodePaths(Array.isArray(fireSplit?.nodes) ? fireSplit.nodes : []);
   }
 
+  const VECTOR_RIG_DEFAULT_CHANNELS = Object.freeze([
+    Object.freeze({ input: 'gimbalA', node: 'gimbalAssembly', axis: 'z', direction: 1 }),
+    Object.freeze({ input: 'gimbalB', node: 'gimbalAssembly', axis: 'y', direction: -1 }),
+    Object.freeze({ input: 'roll', node: 'gimbalAssembly', axis: 'x', direction: 1 }),
+  ]);
+  const VECTOR_RIG_INPUTS = Object.freeze(['gimbalA', 'gimbalB', 'roll']);
+  const VECTOR_RIG_AXES = Object.freeze(['x', 'y', 'z']);
+
+  function vectorRigFieldPrefix(input) {
+    if (input === 'gimbalA') return 'vaw-vector-rig-gimbal-a';
+    if (input === 'gimbalB') return 'vaw-vector-rig-gimbal-b';
+    return 'vaw-vector-rig-roll';
+  }
+
+  function defaultVectorRigProfile() {
+    return VisualAssetPack?.defaultVectorThrusterRig ? VisualAssetPack.defaultVectorThrusterRig() : {
+      channels: VECTOR_RIG_DEFAULT_CHANNELS.map(channel => ({ ...channel })),
+    };
+  }
+
+  function currentVectorRigProfile() {
+    if (!el['vaw-vector-rig-enabled']?.checked) return null;
+    return {
+      channels: VECTOR_RIG_DEFAULT_CHANNELS.map(defaultChannel => {
+        const prefix = vectorRigFieldPrefix(defaultChannel.input);
+        const axis = String(el[`${prefix}-axis`]?.value || defaultChannel.axis).trim().toLowerCase();
+        const direction = el[`${prefix}-invert`]?.checked ? -1 : 1;
+        return { input: defaultChannel.input, node: 'gimbalAssembly', axis, direction };
+      }),
+    };
+  }
+
+  function currentVectorRigPreviewDiagnostics() {
+    const diagnostics = [];
+    const blockTypes = selectedBlockTypes();
+    const profile = currentVectorRigProfile();
+    const isVectorThruster = blockTypes.includes('VectorThruster');
+    if (!isVectorThruster) {
+      if (profile) {
+        diagnostics.push({
+          domain: 'vector-rig-preview',
+          severity: 'warning',
+          code: 'vectorRig.blockTypeMismatch',
+          message: 'VectorThruster renderer rig profile is only exported for VectorThruster block type. Disable it or choose VectorThruster.',
+        });
+      }
+      return diagnostics;
+    }
+    if (!profile) {
+      diagnostics.push({
+        domain: 'vector-rig-preview',
+        severity: 'info',
+        code: 'vectorRig.fallback',
+        message: 'No renderer rig profile is enabled. Runtime preview will use the safe legacy visual fallback for older packs.',
+      });
+      return diagnostics;
+    }
+
+    const nodes = currentNodeFields();
+    if (!nodes.gimbalAssembly) {
+      diagnostics.push({
+        domain: 'vector-rig-preview',
+        severity: 'error',
+        code: 'vectorRig.gimbalAssemblyMissing',
+        message: 'VectorThruster rig profile needs the optional gimbalAssembly node binding before export.',
+      });
+    }
+
+    const channels = Array.isArray(profile.channels) ? profile.channels : [];
+    let validChannels = 0;
+    for (const input of VECTOR_RIG_INPUTS) {
+      const channel = channels.find(item => item?.input === input);
+      if (!channel) {
+        diagnostics.push({
+          domain: 'vector-rig-preview',
+          severity: 'error',
+          code: 'vectorRig.channelMissing',
+          message: `VectorThruster rig profile is missing ${input}.`,
+        });
+        continue;
+      }
+      if (channel.node !== 'gimbalAssembly') {
+        diagnostics.push({
+          domain: 'vector-rig-preview',
+          severity: 'error',
+          code: 'vectorRig.nodeInvalid',
+          message: `${input} must reference the renderer-only gimbalAssembly node alias.`,
+        });
+      }
+      if (!VECTOR_RIG_AXES.includes(String(channel.axis || '').toLowerCase())) {
+        diagnostics.push({
+          domain: 'vector-rig-preview',
+          severity: 'error',
+          code: 'vectorRig.axisInvalid',
+          message: `${input} uses an invalid preview axis. Choose x, y or z.`,
+        });
+      }
+      if (![1, -1].includes(Number(channel.direction))) {
+        diagnostics.push({
+          domain: 'vector-rig-preview',
+          severity: 'error',
+          code: 'vectorRig.directionInvalid',
+          message: `${input} uses an invalid preview direction. Use the invert checkbox instead of custom values.`,
+        });
+      }
+      validChannels += 1;
+    }
+
+    if (validChannels === VECTOR_RIG_INPUTS.length && !diagnostics.some(item => item.severity === 'error')) {
+      diagnostics.push({
+        domain: 'vector-rig-preview',
+        severity: 'info',
+        code: 'vectorRig.previewReady',
+        message: 'VectorThruster renderer-only profile covers gimbalA, gimbalB and roll preview inputs.',
+      });
+    }
+    return diagnostics;
+  }
+
+  function currentRigFields() {
+    const profile = currentVectorRigProfile();
+    return profile ? { vectorThruster: profile } : {};
+  }
+
+  function syncVectorRigFields(rig = {}) {
+    const profile = rig?.vectorThruster || null;
+    if (el['vaw-vector-rig-enabled']) el['vaw-vector-rig-enabled'].checked = Boolean(profile);
+    const channels = Array.isArray(profile?.channels) ? profile.channels : defaultVectorRigProfile().channels;
+    for (const defaultChannel of VECTOR_RIG_DEFAULT_CHANNELS) {
+      const channel = channels.find(item => item?.input === defaultChannel.input) || defaultChannel;
+      const prefix = vectorRigFieldPrefix(defaultChannel.input);
+      if (el[`${prefix}-axis`]) el[`${prefix}-axis`].value = String(channel.axis || defaultChannel.axis).toLowerCase();
+      if (el[`${prefix}-invert`]) el[`${prefix}-invert`].checked = Number(channel.direction) === -1;
+    }
+  }
+
+  function applyRigFields(asset) {
+    asset.bindings = asset.bindings || {};
+    const existingRig = asset.bindings.rig && typeof asset.bindings.rig === 'object' && !Array.isArray(asset.bindings.rig)
+      ? asset.bindings.rig
+      : {};
+    const nextRig = { ...existingRig };
+    const blockTypes = selectedBlockTypes();
+    const profile = currentVectorRigProfile();
+    if (blockTypes.includes('VectorThruster') && profile) nextRig.vectorThruster = profile;
+    else delete nextRig.vectorThruster;
+    if (Object.keys(nextRig).length) asset.bindings.rig = nextRig;
+    else delete asset.bindings.rig;
+  }
+
+  function useDefaultVectorRigProfile() {
+    if (el['vaw-vector-rig-enabled']) el['vaw-vector-rig-enabled'].checked = true;
+    syncVectorRigFields({ vectorThruster: defaultVectorRigProfile() });
+    addEvent('vector rig: default renderer-only profile applied');
+    updateAuthoringDraftFromForm();
+  }
+
   function materialOverrideMap() {
     const map = new Map();
     for (const item of parseMaterialOverrideLines(el['vaw-material-overrides']?.value || '')) {
@@ -252,6 +424,13 @@
   function clearMaterialOverrides() {
     setMaterialOverrides([]);
     addEvent('material policy: overrides cleared');
+  }
+
+  function clearRigBindings() {
+    if (!AuthoringState) return;
+    syncNodeFields(AuthoringState.clearOptionalNodeFields(currentNodeFields()));
+    addEvent('rig bindings: optional nodes cleared');
+    updateAuthoringDraftFromForm();
   }
 
   function resetMaterialPolicyToAuto() {
@@ -366,18 +545,8 @@
     asset.bindings = asset.bindings || {};
     const blockTypes = selectedBlockTypes();
     if (blockTypes.length || !preserveEmpty) asset.bindings.blockTypes = blockTypes;
-    asset.bindings.nodes = asset.bindings.nodes || {};
-    const visualRoot = nodeField('vaw-node-visual-root');
-    if (visualRoot || !preserveEmpty) asset.bindings.nodes.visualRoot = visualRoot;
-    for (const [alias, id] of [
-      ['flame', 'vaw-node-flame'],
-      ['flameGlow', 'vaw-node-flame-glow'],
-      ['gimbalAssembly', 'vaw-node-gimbal'],
-      ['controlFlapPivot', 'vaw-node-control-flap']
-    ]) {
-      const value = nodeField(id);
-      if (value || !preserveEmpty) asset.bindings.nodes[alias] = value;
-    }
+    AuthoringState.applyNodeFields(asset, currentNodeFields(), { preserveEmpty });
+    applyRigFields(asset);
     asset.materialPolicy = currentMaterialPolicyFields();
     return manifest;
   }
@@ -392,6 +561,7 @@
     if (el['vaw-block-type']) el['vaw-block-type'].value = blockType;
     if (blockType) state.activePrefsBlockType = blockType;
     syncNodeFields(asset?.bindings?.nodes || {});
+    syncVectorRigFields(asset?.bindings?.rig || {});
     syncTransformFieldsFromManifest(manifest);
     syncMaterialPolicyFieldsFromManifest(manifest);
     refreshNodePathPicker();
@@ -412,6 +582,7 @@
       transform: currentTransformFields(),
       materialPolicy: currentMaterialPolicyFields(),
       fireSplit: currentFireSplitFields(),
+      rig: currentRigFields(),
     };
   }
 
@@ -420,21 +591,13 @@
     if (snapshot.transform) syncTransformFieldsFromManifest({ assets: [{ model: { transform: snapshot.transform } }] });
     if (snapshot.materialPolicy) syncMaterialPolicyFieldsFromManifest({ assets: [{ materialPolicy: snapshot.materialPolicy }] });
     if (snapshot.fireSplit) syncFireSplitFields(snapshot.fireSplit);
+    syncVectorRigFields(snapshot.rig || {});
     refreshNodePathPicker();
   }
 
   function saveAuthoringPrefsForBlock(blockType, snapshot = currentAuthoringPrefsSnapshot()) {
-    const normalizedBlockType = String(blockType || '').trim();
     const prefs = loadAuthoringPrefs();
-    const next = {
-      ...prefs,
-      lastBlockType: normalizedBlockType || prefs.lastBlockType || '',
-      defaults: snapshot,
-      byBlock: {
-        ...(prefs.byBlock && typeof prefs.byBlock === 'object' ? prefs.byBlock : {})
-      }
-    };
-    if (normalizedBlockType) next.byBlock[normalizedBlockType] = snapshot;
+    const next = AuthoringState.preferenceDocumentForSave(prefs, blockType, snapshot);
     try { localStorage.setItem(AUTHORING_PREFS_KEY, JSON.stringify(next)); }
     catch (_) { /* Preferences are optional; Studio must work without localStorage. */ }
   }
@@ -445,11 +608,7 @@
 
   function getAuthoringPrefsForBlock(blockType, { includeDefaults = false } = {}) {
     const prefs = loadAuthoringPrefs();
-    const normalizedBlockType = String(blockType || '').trim();
-    if (normalizedBlockType && prefs.byBlock && typeof prefs.byBlock === 'object' && prefs.byBlock[normalizedBlockType]) {
-      return prefs.byBlock[normalizedBlockType];
-    }
-    return includeDefaults ? prefs.defaults || null : null;
+    return AuthoringState.preferenceSnapshotForBlock(prefs, blockType, { includeDefaults });
   }
 
   function applyAuthoringPrefsForBlock(blockType, { includeDefaults = false } = {}) {
@@ -593,6 +752,420 @@
     }
   }
 
+  function setTerrainStatus(kind, message) {
+    if (!el['terrain-status']) return;
+    el['terrain-status'].className = `status ${kind || 'neutral'}`;
+    el['terrain-status'].textContent = message;
+  }
+
+  function terrainMaterialIds() {
+    return Object.keys(state.terrainPreset?.terrain?.materials || {});
+  }
+
+  function terrainPatches() {
+    return state.terrainPreset?.terrain?.patches || [];
+  }
+
+  function terrainStrips() {
+    return state.terrainPreset?.terrain?.strips || [];
+  }
+
+  function setSelectOptions(select, values, selected, labeler = value => value) {
+    if (!select) return;
+    select.innerHTML = '';
+    for (const value of values) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = labeler(value);
+      select.appendChild(option);
+    }
+    if (values.includes(selected)) select.value = selected;
+    else if (values.length) select.value = values[0];
+  }
+
+  function terrainNumber(id, fallback = 0) {
+    const value = Number(el[id]?.value);
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  function terrainText(id, fallback = '') {
+    return String(el[id]?.value || fallback).trim();
+  }
+
+  function terrainSafeId(value, fallback) {
+    const text = String(value || '').trim().replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+    return /^[A-Za-z]/.test(text) ? text : fallback;
+  }
+
+  function terrainDiagnostics() {
+    return TerrainAuthoring?.diagnosticsForPreset
+      ? TerrainAuthoring.diagnosticsForPreset(state.terrainPreset)
+      : [];
+  }
+
+  function setTerrainPreset(document, statusMessage = 'Terrain preset loaded.') {
+    if (!TerrainAuthoring) return;
+    state.terrainPreset = TerrainAuthoring.normalizePreset(document || TerrainAuthoring.defaultPreset());
+    const materialIds = terrainMaterialIds();
+    state.terrainSelectedMaterialId = materialIds.includes(state.terrainSelectedMaterialId) ? state.terrainSelectedMaterialId : (materialIds[0] || '');
+    state.terrainSelectedPatchId = terrainPatches().some(patch => patch.id === state.terrainSelectedPatchId) ? state.terrainSelectedPatchId : (terrainPatches()[0]?.id || '');
+    state.terrainSelectedStripId = terrainStrips().some(strip => strip.id === state.terrainSelectedStripId) ? state.terrainSelectedStripId : (terrainStrips()[0]?.id || '');
+    renderTerrainEditor();
+    setTerrainStatus('ok', statusMessage);
+  }
+
+  async function fetchTerrainPresetDocument() {
+    const endpointResponse = await fetch(TERRAIN_ENDPOINT_PATH, { cache: 'no-store' }).catch(() => null);
+    if (endpointResponse?.ok) return endpointResponse.json();
+    const fileResponse = await fetch(`${TERRAIN_PRESET_URL}?v=${Date.now()}`, { cache: 'no-store' }).catch(() => null);
+    if (fileResponse?.ok) return fileResponse.json();
+    return TerrainAuthoring.defaultPreset();
+  }
+
+  async function loadTerrainPreset() {
+    if (!TerrainAuthoring || isMinimalPage) return;
+    setTerrainStatus('neutral', 'Loading terrain preset...');
+    const document = await fetchTerrainPresetDocument();
+    setTerrainPreset(document, 'Terrain preset loaded from local working preset.');
+    addEvent('terrain: preset loaded');
+  }
+
+  function renderTerrainDiagnostics() {
+    const target = el['terrain-diagnostics'];
+    if (!target || !TerrainAuthoring || !state.terrainPreset) return;
+    const diagnostics = terrainDiagnostics();
+    if (!diagnostics.length) {
+      target.innerHTML = '<span class="fact">terrain preset valid</span>';
+      return;
+    }
+    target.innerHTML = diagnostics.map(item => {
+      const css = item.severity === 'error' ? 'bad' : 'warn';
+      return `<span class="fact ${css}">${escapeHtml(item.code)}: ${escapeHtml(item.message)}</span>`;
+    }).join('');
+  }
+
+  function terrainMaterialPreviewColor(materialId) {
+    const material = state.terrainPreset?.terrain?.materials?.[materialId] || null;
+    const color = material?.color ?? material?.texture?.colorA ?? 0x334155;
+    return TerrainAuthoring.numberToHex(color);
+  }
+
+  function renderTerrainPreview() {
+    const target = el['terrain-preview'];
+    if (!target || !TerrainAuthoring || !state.terrainPreset) return;
+    const terrain = state.terrainPreset.terrain;
+    const padPositions = TerrainAuthoring.DEFAULT_PAD_PREVIEW_POSITIONS || {};
+    const points = [
+      ...Object.values(padPositions),
+      ...terrainPatches().map(patch => patch.center || {}),
+    ].filter(point => Number.isFinite(Number(point.x)) && Number.isFinite(Number(point.z)));
+    if (!points.length) {
+      target.innerHTML = '<svg viewBox="0 0 360 190" role="img"><text class="preview-note" x="16" y="28">Terrain preview unavailable.</text></svg>';
+      return;
+    }
+    const viewWidth = 360;
+    const viewHeight = 220;
+    const margin = 18;
+    let minX = Math.min(...points.map(point => Number(point.x)));
+    let maxX = Math.max(...points.map(point => Number(point.x)));
+    let minZ = Math.min(...points.map(point => Number(point.z)));
+    let maxZ = Math.max(...points.map(point => Number(point.z)));
+    const padding = 42;
+    minX -= padding;
+    maxX += padding;
+    minZ -= padding;
+    maxZ += padding;
+    const spanX = Math.max(1, maxX - minX);
+    const spanZ = Math.max(1, maxZ - minZ);
+    const scaleX = (viewWidth - margin * 2) / spanX;
+    const scaleZ = (viewHeight - margin * 2) / spanZ;
+    const pointToSvg = point => ({
+      x: margin + (Number(point.x) - minX) * scaleX,
+      y: margin + (Number(point.z) - minZ) * scaleZ
+    });
+    const stripRows = terrainStrips()
+      .slice()
+      .sort((left, right) => (left.layer || 0) - (right.layer || 0))
+      .map(strip => {
+        const from = padPositions[strip.fromPad];
+        const to = padPositions[strip.toPad];
+        if (!from || !to) return '';
+        const start = pointToSvg(from);
+        const end = pointToSvg(to);
+        const selected = strip.id === state.terrainSelectedStripId;
+        const width = Math.max(2, Number(strip.width || 1) * Math.min(scaleX, scaleZ));
+        const opacity = Math.max(0.08, Math.min(0.95, Number(strip.opacity || 0.4)));
+        return `<line x1="${start.x.toFixed(2)}" y1="${start.y.toFixed(2)}" x2="${end.x.toFixed(2)}" y2="${end.y.toFixed(2)}" stroke="${terrainMaterialPreviewColor(strip.material)}" stroke-width="${width.toFixed(2)}" stroke-linecap="round" opacity="${opacity.toFixed(2)}"${selected ? ' stroke-dasharray="7 4"' : ''}><title>${escapeHtml(strip.id)}</title></line>`;
+      })
+      .join('');
+    const patchRows = terrainPatches()
+      .slice()
+      .sort((left, right) => (left.layer || 0) - (right.layer || 0))
+      .map(patch => {
+        const center = pointToSvg(patch.center || { x: 0, z: 0 });
+        const width = Math.max(4, Number(patch.size?.x || 1) * scaleX);
+        const height = Math.max(4, Number(patch.size?.z || 1) * scaleZ);
+        const opacity = Math.max(0.12, Math.min(1, Number(patch.opacity ?? 0.74)));
+        const rotation = (Number(patch.rotation || 0) * 180 / Math.PI).toFixed(2);
+        const selected = patch.id === state.terrainSelectedPatchId;
+        return `<g transform="translate(${center.x.toFixed(2)} ${center.y.toFixed(2)}) rotate(${rotation})"><rect x="${(-width / 2).toFixed(2)}" y="${(-height / 2).toFixed(2)}" width="${width.toFixed(2)}" height="${height.toFixed(2)}" rx="2" fill="${terrainMaterialPreviewColor(patch.material)}" opacity="${opacity.toFixed(2)}" stroke="${selected ? '#fbbf24' : '#93c5fd'}" stroke-width="${selected ? '2.4' : '0.9'}"><title>${escapeHtml(patch.id)}</title></rect></g>`;
+      })
+      .join('');
+    const padRows = Object.entries(padPositions).map(([id, pad]) => {
+      const point = pointToSvg(pad);
+      const selected = terrainStrips().some(strip => strip.id === state.terrainSelectedStripId && (strip.fromPad === id || strip.toPad === id));
+      return `<g><circle cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="${selected ? '5.4' : '4.2'}" fill="${selected ? '#fbbf24' : '#dbeafe'}" stroke="#06101d" stroke-width="1.4"><title>${escapeHtml(pad.label || id)}</title></circle><text class="preview-label" x="${(point.x + 6).toFixed(2)}" y="${(point.y - 6).toFixed(2)}">${escapeHtml(id.replace(/Pad$/, ''))}</text></g>`;
+    }).join('');
+    target.innerHTML = [
+      `<svg viewBox="0 0 ${viewWidth} ${viewHeight}" role="img" aria-label="Terrain map preview">`,
+      `<rect x="0" y="0" width="${viewWidth}" height="${viewHeight}" fill="${terrainMaterialPreviewColor(terrain.baseMaterial)}" opacity="0.55" />`,
+      '<path d="M18 18H342V202H18Z" fill="none" stroke="#2e577b" stroke-width="1" opacity="0.72" />',
+      patchRows,
+      stripRows,
+      padRows,
+      `<text class="preview-note" x="16" y="${viewHeight - 10}">materials ${terrainMaterialIds().length} / patches ${terrainPatches().length} / strips ${terrainStrips().length}</text>`,
+      '</svg>'
+    ].join('');
+  }
+
+  function renderTerrainEditor() {
+    if (!TerrainAuthoring || !state.terrainPreset) return;
+    const terrain = state.terrainPreset.terrain;
+    const materialIds = terrainMaterialIds();
+    setSelectOptions(el['terrain-base-material'], materialIds, terrain.baseMaterial);
+    setSelectOptions(el['terrain-material-select'], materialIds, state.terrainSelectedMaterialId);
+    setSelectOptions(el['terrain-patch-material'], materialIds, terrainPatches().find(patch => patch.id === state.terrainSelectedPatchId)?.material);
+    setSelectOptions(el['terrain-strip-material'], materialIds, terrainStrips().find(strip => strip.id === state.terrainSelectedStripId)?.material);
+    setSelectOptions(el['terrain-patch-select'], terrainPatches().map(patch => patch.id), state.terrainSelectedPatchId);
+    setSelectOptions(el['terrain-strip-select'], terrainStrips().map(strip => strip.id), state.terrainSelectedStripId);
+    for (const id of ['terrain-strip-from-pad', 'terrain-strip-to-pad']) setSelectOptions(el[id], TerrainAuthoring.DEFAULT_PAD_IDS, el[id]?.value || TerrainAuthoring.DEFAULT_PAD_IDS[0]);
+    if (el['terrain-fog-color']) el['terrain-fog-color'].value = TerrainAuthoring.numberToHex(terrain.fog.color);
+    if (el['terrain-fog-density']) el['terrain-fog-density'].value = String(terrain.fog.density);
+    if (el['terrain-base-material']) el['terrain-base-material'].value = terrain.baseMaterial;
+
+    const material = terrain.materials[state.terrainSelectedMaterialId] || terrain.materials[materialIds[0]] || null;
+    if (material) {
+      if (el['terrain-material-id']) el['terrain-material-id'].value = state.terrainSelectedMaterialId;
+      if (el['terrain-material-kind']) el['terrain-material-kind'].value = material.texture.kind;
+      if (el['terrain-material-color-a']) el['terrain-material-color-a'].value = TerrainAuthoring.numberToHex(material.texture.colorA);
+      if (el['terrain-material-color-b']) el['terrain-material-color-b'].value = TerrainAuthoring.numberToHex(material.texture.colorB);
+      if (el['terrain-material-repeat']) el['terrain-material-repeat'].value = String(material.texture.repeat);
+      if (el['terrain-material-roughness']) el['terrain-material-roughness'].value = String(material.roughness);
+      if (el['terrain-material-opacity']) el['terrain-material-opacity'].value = String(material.opacity ?? 1);
+    }
+
+    const patch = terrainPatches().find(item => item.id === state.terrainSelectedPatchId);
+    if (patch) {
+      if (el['terrain-patch-id']) el['terrain-patch-id'].value = patch.id;
+      if (el['terrain-patch-material']) el['terrain-patch-material'].value = patch.material;
+      if (el['terrain-patch-x']) el['terrain-patch-x'].value = String(patch.center.x);
+      if (el['terrain-patch-z']) el['terrain-patch-z'].value = String(patch.center.z);
+      if (el['terrain-patch-size-x']) el['terrain-patch-size-x'].value = String(patch.size.x);
+      if (el['terrain-patch-size-z']) el['terrain-patch-size-z'].value = String(patch.size.z);
+      if (el['terrain-patch-rotation']) el['terrain-patch-rotation'].value = String(patch.rotation);
+      if (el['terrain-patch-opacity']) el['terrain-patch-opacity'].value = String(patch.opacity ?? 1);
+      if (el['terrain-patch-layer']) el['terrain-patch-layer'].value = String(patch.layer ?? 10);
+    }
+
+    const strip = terrainStrips().find(item => item.id === state.terrainSelectedStripId);
+    if (strip) {
+      if (el['terrain-strip-id']) el['terrain-strip-id'].value = strip.id;
+      if (el['terrain-strip-from-pad']) el['terrain-strip-from-pad'].value = strip.fromPad;
+      if (el['terrain-strip-to-pad']) el['terrain-strip-to-pad'].value = strip.toPad;
+      if (el['terrain-strip-material']) el['terrain-strip-material'].value = strip.material;
+      if (el['terrain-strip-width']) el['terrain-strip-width'].value = String(strip.width);
+      if (el['terrain-strip-opacity']) el['terrain-strip-opacity'].value = String(strip.opacity);
+      if (el['terrain-strip-layer']) el['terrain-strip-layer'].value = String(strip.layer ?? 20);
+    }
+
+    if (el['terrain-json']) el['terrain-json'].value = JSON.stringify(state.terrainPreset, null, 2) + '\n';
+    renderTerrainPreview();
+    renderTerrainDiagnostics();
+  }
+
+  function updateTerrainFogFromForm() {
+    if (!TerrainAuthoring || !state.terrainPreset) return;
+    state.terrainPreset.terrain.fog.color = TerrainAuthoring.hexToNumber(el['terrain-fog-color']?.value, state.terrainPreset.terrain.fog.color);
+    state.terrainPreset.terrain.fog.density = terrainNumber('terrain-fog-density', state.terrainPreset.terrain.fog.density);
+    state.terrainPreset.terrain.baseMaterial = terrainText('terrain-base-material', state.terrainPreset.terrain.baseMaterial);
+    state.terrainPreset = TerrainAuthoring.normalizePreset(state.terrainPreset);
+    renderTerrainEditor();
+  }
+
+  function updateTerrainMaterialFromForm() {
+    if (!TerrainAuthoring || !state.terrainPreset || !state.terrainSelectedMaterialId) return;
+    const previousId = state.terrainSelectedMaterialId;
+    const nextId = terrainSafeId(el['terrain-material-id']?.value, previousId);
+    const material = {
+      color: TerrainAuthoring.hexToNumber(el['terrain-material-color-a']?.value, 0x15283a),
+      roughness: terrainNumber('terrain-material-roughness', 1),
+      opacity: terrainNumber('terrain-material-opacity', 1),
+      texture: {
+        kind: terrainText('terrain-material-kind', 'checker'),
+        colorA: TerrainAuthoring.hexToNumber(el['terrain-material-color-a']?.value, 0x15283a),
+        colorB: TerrainAuthoring.hexToNumber(el['terrain-material-color-b']?.value, 0x1b3349),
+        repeat: terrainNumber('terrain-material-repeat', 16)
+      }
+    };
+    const materials = state.terrainPreset.terrain.materials;
+    delete materials[previousId];
+    materials[nextId] = material;
+    if (state.terrainPreset.terrain.baseMaterial === previousId) state.terrainPreset.terrain.baseMaterial = nextId;
+    for (const patch of terrainPatches()) if (patch.material === previousId) patch.material = nextId;
+    for (const strip of terrainStrips()) if (strip.material === previousId) strip.material = nextId;
+    state.terrainSelectedMaterialId = nextId;
+    state.terrainPreset = TerrainAuthoring.normalizePreset(state.terrainPreset);
+    renderTerrainEditor();
+  }
+
+  function updateTerrainPatchFromForm() {
+    if (!TerrainAuthoring || !state.terrainPreset || !state.terrainSelectedPatchId) return;
+    const patches = terrainPatches();
+    const index = patches.findIndex(patch => patch.id === state.terrainSelectedPatchId);
+    if (index < 0) return;
+    const id = terrainSafeId(el['terrain-patch-id']?.value, state.terrainSelectedPatchId);
+    patches[index] = {
+      id,
+      material: terrainText('terrain-patch-material', state.terrainPreset.terrain.baseMaterial),
+      center: { x: terrainNumber('terrain-patch-x', 0), z: terrainNumber('terrain-patch-z', 0) },
+      size: { x: terrainNumber('terrain-patch-size-x', 20), z: terrainNumber('terrain-patch-size-z', 20) },
+      rotation: terrainNumber('terrain-patch-rotation', 0),
+      opacity: terrainNumber('terrain-patch-opacity', 1),
+      layer: terrainNumber('terrain-patch-layer', 10)
+    };
+    state.terrainSelectedPatchId = id;
+    state.terrainPreset = TerrainAuthoring.normalizePreset(state.terrainPreset);
+    renderTerrainEditor();
+  }
+
+  function updateTerrainStripFromForm() {
+    if (!TerrainAuthoring || !state.terrainPreset || !state.terrainSelectedStripId) return;
+    const strips = terrainStrips();
+    const index = strips.findIndex(strip => strip.id === state.terrainSelectedStripId);
+    if (index < 0) return;
+    const id = terrainSafeId(el['terrain-strip-id']?.value, state.terrainSelectedStripId);
+    strips[index] = {
+      id,
+      fromPad: terrainText('terrain-strip-from-pad', TerrainAuthoring.DEFAULT_PAD_IDS[0]),
+      toPad: terrainText('terrain-strip-to-pad', TerrainAuthoring.DEFAULT_PAD_IDS[1]),
+      material: terrainText('terrain-strip-material', state.terrainPreset.terrain.baseMaterial),
+      width: terrainNumber('terrain-strip-width', 8),
+      opacity: terrainNumber('terrain-strip-opacity', 0.4),
+      layer: terrainNumber('terrain-strip-layer', 20)
+    };
+    state.terrainSelectedStripId = id;
+    state.terrainPreset = TerrainAuthoring.normalizePreset(state.terrainPreset);
+    renderTerrainEditor();
+  }
+
+  function addTerrainMaterial() {
+    if (!TerrainAuthoring || !state.terrainPreset) return;
+    let index = terrainMaterialIds().length + 1;
+    let id = `material${index}`;
+    while (state.terrainPreset.terrain.materials[id]) id = `material${index += 1}`;
+    state.terrainPreset.terrain.materials[id] = {
+      color: 0x6b7280,
+      roughness: 1,
+      opacity: 1,
+      texture: { kind: 'noise', colorA: 0x4b5563, colorB: 0x9ca3af, repeat: 18 }
+    };
+    state.terrainSelectedMaterialId = id;
+    renderTerrainEditor();
+  }
+
+  function deleteTerrainMaterial() {
+    if (!TerrainAuthoring || !state.terrainPreset || terrainMaterialIds().length <= 1) return;
+    const id = state.terrainSelectedMaterialId;
+    const replacement = terrainMaterialIds().find(item => item !== id);
+    delete state.terrainPreset.terrain.materials[id];
+    if (state.terrainPreset.terrain.baseMaterial === id) state.terrainPreset.terrain.baseMaterial = replacement;
+    for (const patch of terrainPatches()) if (patch.material === id) patch.material = replacement;
+    for (const strip of terrainStrips()) if (strip.material === id) strip.material = replacement;
+    state.terrainSelectedMaterialId = replacement;
+    state.terrainPreset = TerrainAuthoring.normalizePreset(state.terrainPreset);
+    renderTerrainEditor();
+  }
+
+  function addTerrainPatch() {
+    if (!TerrainAuthoring || !state.terrainPreset) return;
+    const id = `patch-${terrainPatches().length + 1}`;
+    state.terrainPreset.terrain.patches.push({ id, material: state.terrainPreset.terrain.baseMaterial, center: { x: 0, z: 0 }, size: { x: 40, z: 30 }, rotation: 0, opacity: 1, layer: 10 });
+    state.terrainSelectedPatchId = id;
+    renderTerrainEditor();
+  }
+
+  function deleteTerrainPatch() {
+    if (!TerrainAuthoring || !state.terrainPreset) return;
+    state.terrainPreset.terrain.patches = terrainPatches().filter(patch => patch.id !== state.terrainSelectedPatchId);
+    state.terrainSelectedPatchId = terrainPatches()[0]?.id || '';
+    renderTerrainEditor();
+  }
+
+  function addTerrainStrip() {
+    if (!TerrainAuthoring || !state.terrainPreset) return;
+    const id = `strip-${terrainStrips().length + 1}`;
+    state.terrainPreset.terrain.strips.push({ id, fromPad: 'startPad', toPad: 'finishPad', width: 8, material: state.terrainPreset.terrain.baseMaterial, opacity: 0.4, layer: 20 });
+    state.terrainSelectedStripId = id;
+    renderTerrainEditor();
+  }
+
+  function deleteTerrainStrip() {
+    if (!TerrainAuthoring || !state.terrainPreset) return;
+    state.terrainPreset.terrain.strips = terrainStrips().filter(strip => strip.id !== state.terrainSelectedStripId);
+    state.terrainSelectedStripId = terrainStrips()[0]?.id || '';
+    renderTerrainEditor();
+  }
+
+  function applyTerrainJsonEditor() {
+    if (!TerrainAuthoring || !el['terrain-json']) return;
+    try {
+      setTerrainPreset(JSON.parse(el['terrain-json'].value), 'Terrain preset applied from JSON editor.');
+      addEvent('terrain: JSON applied');
+    } catch (error) {
+      setTerrainStatus('warn', `Terrain JSON invalid: ${error.message || error}`);
+    }
+  }
+
+  async function installTerrainPreset() {
+    if (!TerrainAuthoring || !state.terrainPreset) return;
+    state.terrainPreset = TerrainAuthoring.normalizePreset(state.terrainPreset);
+    const diagnostics = terrainDiagnostics();
+    if (diagnostics.some(item => item.severity === 'error')) {
+      setTerrainStatus('warn', 'Terrain preset has blocking diagnostics.');
+      renderTerrainDiagnostics();
+      return;
+    }
+    setTerrainStatus('neutral', 'Saving terrain preset...');
+    try {
+      const response = await fetch(TERRAIN_ENDPOINT_PATH, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state.terrainPreset)
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.ok === false) throw new Error(result.error || `HTTP ${response.status}`);
+      setTerrainStatus('ok', `Terrain preset saved. Revision ${result.revision}.`);
+      addEvent(`terrain: saved revision ${result.revision}`);
+      try {
+        const channel = new BroadcastChannel('vaw-terrain-authoring');
+        channel.postMessage({ type: 'terrain-preset-updated', revision: result.revision });
+        channel.close();
+      } catch (_) {
+        // Broadcast is optional; game reload can still be manual.
+      }
+    } catch (error) {
+      setTerrainStatus('warn', `Terrain save failed: ${error.message || error}`);
+      addEvent(`terrain: save failed ${error.message || error}`);
+    }
+  }
+
+  function bindTerrainFieldEvents(ids, handler) {
+    for (const id of ids) {
+      el[id]?.addEventListener('input', handler);
+      el[id]?.addEventListener('change', handler);
+    }
+  }
+
   function wireEvents() {
     if (el.dropzone) {
       el.dropzone.addEventListener('dragover', event => { event.preventDefault(); el.dropzone.classList.add('drag'); });
@@ -619,11 +1192,28 @@
     el['checker-material']?.addEventListener('change', updateTextureOverride);
     for (const id of ['project-files-search', 'project-files-category-filter', 'project-files-status-filter']) el[id]?.addEventListener('input', updateProjectFileFilters);
     el['clear-file-filters']?.addEventListener('click', clearProjectFileFilters);
+    bindTerrainFieldEvents(['terrain-fog-color', 'terrain-fog-density', 'terrain-base-material'], updateTerrainFogFromForm);
+    el['terrain-material-select']?.addEventListener('change', () => { state.terrainSelectedMaterialId = el['terrain-material-select'].value; renderTerrainEditor(); });
+    bindTerrainFieldEvents(['terrain-material-id', 'terrain-material-kind', 'terrain-material-color-a', 'terrain-material-color-b', 'terrain-material-repeat', 'terrain-material-roughness', 'terrain-material-opacity'], updateTerrainMaterialFromForm);
+    el['terrain-material-new']?.addEventListener('click', addTerrainMaterial);
+    el['terrain-material-delete']?.addEventListener('click', deleteTerrainMaterial);
+    el['terrain-patch-select']?.addEventListener('change', () => { state.terrainSelectedPatchId = el['terrain-patch-select'].value; renderTerrainEditor(); });
+    bindTerrainFieldEvents(['terrain-patch-id', 'terrain-patch-material', 'terrain-patch-x', 'terrain-patch-z', 'terrain-patch-size-x', 'terrain-patch-size-z', 'terrain-patch-rotation', 'terrain-patch-opacity', 'terrain-patch-layer'], updateTerrainPatchFromForm);
+    el['terrain-patch-new']?.addEventListener('click', addTerrainPatch);
+    el['terrain-patch-delete']?.addEventListener('click', deleteTerrainPatch);
+    el['terrain-strip-select']?.addEventListener('change', () => { state.terrainSelectedStripId = el['terrain-strip-select'].value; renderTerrainEditor(); });
+    bindTerrainFieldEvents(['terrain-strip-id', 'terrain-strip-from-pad', 'terrain-strip-to-pad', 'terrain-strip-material', 'terrain-strip-width', 'terrain-strip-opacity', 'terrain-strip-layer'], updateTerrainStripFromForm);
+    el['terrain-strip-new']?.addEventListener('click', addTerrainStrip);
+    el['terrain-strip-delete']?.addEventListener('click', deleteTerrainStrip);
+    el['terrain-apply-json']?.addEventListener('click', applyTerrainJsonEditor);
+    el['terrain-reload']?.addEventListener('click', () => loadTerrainPreset().catch(error => setTerrainStatus('warn', `Terrain preset unavailable: ${error.message || error}`)));
+    el['terrain-install']?.addEventListener('click', installTerrainPreset);
     const authoringInputIds = [
       'vaw-node-visual-root', 'vaw-node-flame', 'vaw-node-flame-glow', 'vaw-node-gimbal', 'vaw-node-control-flap',
       'vaw-transform-pos-x', 'vaw-transform-pos-y', 'vaw-transform-pos-z', 'vaw-transform-rot-x', 'vaw-transform-rot-y', 'vaw-transform-rot-z',
       'vaw-transform-scale-x', 'vaw-transform-scale-y', 'vaw-transform-scale-z', 'vaw-material-alpha', 'vaw-material-double-sided', 'vaw-material-pixelated', 'vaw-material-overrides',
-      'vaw-fire-split-enabled', 'vaw-fire-split-nodes'
+      'vaw-fire-split-enabled', 'vaw-fire-split-nodes',
+      'vaw-vector-rig-enabled', 'vaw-vector-rig-gimbal-a-axis', 'vaw-vector-rig-gimbal-a-invert', 'vaw-vector-rig-gimbal-b-axis', 'vaw-vector-rig-gimbal-b-invert', 'vaw-vector-rig-roll-axis', 'vaw-vector-rig-roll-invert'
     ];
     for (const id of authoringInputIds) el[id]?.addEventListener('input', updateAuthoringDraftFromForm);
     el['vaw-block-type']?.addEventListener('change', handleBlockTypeChange);
@@ -639,6 +1229,7 @@
     el['vaw-material-clear-overrides']?.addEventListener('click', clearMaterialOverrides);
     el['vaw-material-reset-auto']?.addEventListener('click', resetMaterialPolicyToAuto);
     el['vaw-fire-split-suggest']?.addEventListener('click', () => suggestFireSplitNodes({ enable: true }));
+    el['vaw-vector-rig-default']?.addEventListener('click', useDefaultVectorRigProfile);
     el['vaw-node-visual-root-picker']?.addEventListener('change', () => {
       if (el['vaw-node-visual-root']) el['vaw-node-visual-root'].value = el['vaw-node-visual-root-picker'].value || '';
       updateAuthoringDraftFromForm();
@@ -648,6 +1239,7 @@
       if (suggested && el['vaw-node-visual-root']) el['vaw-node-visual-root'].value = suggested;
       updateAuthoringDraftFromForm();
     });
+    el['vaw-clear-rig-bindings']?.addEventListener('click', clearRigBindings);
     el['play-animation']?.addEventListener('click', playSelectedAnimation);
     el['pause-animation']?.addEventListener('click', toggleAnimationPause);
     el['stop-animation']?.addEventListener('click', stopAnimationPreview);
@@ -932,6 +1524,7 @@
     renderDiagnostics();
     renderVawStatus();
     renderSidecarStatus();
+    renderTerrainEditor();
     renderUiAvailability();
   }
 
@@ -1240,6 +1833,7 @@
     for (const item of state.lastValidation?.diagnostics || []) diagnostics.push(item);
     for (const item of state.textureReport?.diagnostics || []) diagnostics.push({ domain: 'texture-diagnostic', ...item });
     for (const item of state.animationReport?.warnings || []) diagnostics.push({ domain: 'animation-diagnostic', ...item });
+    for (const item of currentVectorRigPreviewDiagnostics()) diagnostics.push(item);
     return diagnostics;
   }
 

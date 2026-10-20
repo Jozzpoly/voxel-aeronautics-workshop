@@ -1,6 +1,6 @@
 # ADR 0021 — Release Delivery Includes Repository Update Instructions
 
-- Status: Accepted
+- Status: Superseded (2026-08-16 recovery)
 - Phase: Foundation 1D.2E
 
 ## Context
@@ -17,10 +17,14 @@ A valid local commit was rejected because the remote `main` contained work missi
 6. The standard push is `git push origin HEAD:main`.
 7. Conflict resolution and `git rebase --abort` must be documented.
 8. Routine force-push is prohibited.
-9. `DELIVERY_WORKFLOW.md` is the persistent process contract for future agents.
+9. Historical delivery instructions are not active process authority. Current repository rules live in root `AGENTS.md`; live branch state must be resolved before publication.
 
 ## Consequences
 
 - File delivery becomes reproducible rather than dependent on remembered Git commands.
 - Concurrent remote changes are integrated before publication.
 - The user retains control of the repository; an agent must state explicitly whether it performed any write.
+
+## Supersession
+
+This ADR records an older file-delivery workflow. The 2026-08-16 recovery removed its branch-specific publication procedure from active authority. It remains useful history for the principles of non-destructive Git publication and explicit remote-state verification.

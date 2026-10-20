@@ -1,0 +1,31 @@
+name: VAW manual authoring browser proof (one-time)
+# v3: also move a selected part without losing block identity before building and flight.
+
+on:
+  push:
+    branches: [recovery/playable-truth]
+    paths: [.github/workflows/manual-authoring-once.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact recovery
+        uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify real Chromium engine
+        run: |
+          test -x /usr/bin/chromium
+          /usr/bin/chromium --version
+      - name: Manual placement, adjacent part, selection, undo-redo and starter flight
+        env:
+          VAW_BROWSER: /usr/bin/chromium
+          DBUS_SESSION_BUS_ADDRESS: ''
+          DBUS_SYSTEM_BUS_ADDRESS: ''
+        run: node tests/run_browser_smoke.mjs

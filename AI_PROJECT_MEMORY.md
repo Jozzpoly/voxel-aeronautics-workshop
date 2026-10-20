@@ -1,38 +1,32 @@
-# AI Project Memory - Voxel Aeronautics Workshop
+# VAW — aktualny checkpoint agentowy
 
-Current source of truth: **Workbench Foundation on stable Gate C**.
+**Przegląd:** 2026-10-20, po kampanii nocnej. **Najważniejsze:** recovery osiągnęło wąską, uruchamialną pętlę buduj → sprawdź → popraw; produkt nadal wymaga oceny i dopracowania. Ten dokument jest jedynym krótkim snapshotem, nie dziennikiem agentów.
 
-- `APP_VERSION=0.8.2-foundation.workbench-foundation`
-- `RELEASE_ID=foundation-workbench-foundation`
-- Blueprint v12, CompiledCraft V5, RuntimeAssemblyPlan V3.
-- Clean main base for this milestone: `ddce6b4`.
+## Prawda o repozytorium / wydaniu
 
-`CraftModel` is the sole workshop source of truth. `CraftCompiler` is the only verified path to compiled runtime data. Structural, mechanical and future signal graphs remain separate. AssemblyBuilder is the runtime allocation boundary; Physics Port is strict and backend-neutral.
+- Aktywne źródło: `recovery/playable-truth`. `main` historyczny, nietknięty; `gh-pages` generowane wydanie. PR #16 **Draft**; nie scalać bez nowej, świadomej decyzji i oceny Ownera.
+- **Ostatni zweryfikowany build gry** = `8f2922594de746a28a3b716c84b1b2c3bf7ccace`; publiczne [VAW](https://jozzpoly.github.io/voxel-aeronautics-workshop/) i [BUILD_INFO](https://github.com/Jozzpoly/voxel-aeronautics-workshop/blob/gh-pages/BUILD_INFO.json). [Validation PASS](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39351043772), [repro PASS](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39351043658), [Pages PASS](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39351142474). Późniejszy HEAD może zawierać dokumentację bez nowego wydania — sprawdź oba SHA, nie utożsamiaj ich automatycznie.
+- Dawne gałęzie zredukowano do trzech, ważne tipy zachowano tagami [archive](docs/BRANCH_ARCHIVE_2026-10-19.md). Nie reaktywować multiagentowego mesha / branchowego chaosu.
 
-Assembly Spaces have durable IDs, parent-local canonical poses and explicit block/link/body/runtime ownership. Root-only craft remains backward compatible. `bodyId` is not persistent device identity; Gate D ports must use `{blockId, portId}`.
+## Co ma realne dowody
 
-Workbench UI v5/v9 preference state now covers docked/floating panels plus Authoring UX camera controls. It supports docked/floating panels, side dock stacking, compact/full dock span modes, build/flight layout separation, the parts hotbar, the dockable flight mission panel, UI-only camera mode/follow strength and manual camera target offset. UI workspace/camera data must stay out of Blueprint saves.
+- P0 repo-recovery, P1 audyt, P2-A poprawność Engineering Analysis i P2-B zachowywanie `lastTestResult` po locie: technicznie domknięte na recovery.
+- P2-C dostało pierwsze użyteczne narzędzia: selekcja po trwałym `blockId`, inspekcja pierwszej awarii, nudge, `FRAME`, tryb `Select (V)`, bezpośrednie przesuwanie niezlinkowanej części po lokalnym XZ, Undo/Redo; podczas gestu ruch realnego visual root, walidacja kandydata i odrzucanie kolizji, exact cancel. **P2-C jako jakość warsztatu nadal niezaakceptowane.**
+- Chromium wykonał ścieżkę od pustej konstrukcji przez ręczne części i edycję po lot/powrót. Testy komponentowe obejmują transformacje zagnieżdżonych AssemblySpace, realne Three.js, brak zmiany Blueprintu podczas preview, zły finalny ray, zmianę zaznaczenia, konflikt pola, rollback i pojedynczy Undo.
+- Zweryfikowany jest build wydawany z konkretnego źródła; publiczny URL i Jaskinia są wejściem, **nie** certyfikatem jakości.
 
-`foundation.catalog` owns gameplay data. `game.module-visual-factory` and `game.scene-environment` remain procedural fallback visuals. Blockbench/imported content must go through `game.visual-asset-registry`, `game.visual-asset-loader` and external Visual Asset Pack V1 manifests listed by the renderer-only pack index.
+## Granice / zagrożenia, których nie rozmywać
 
-Blockbench Import Studio is integrated as a repository tool at `tools/blockbench_import_studio/`. It is an authoring/export surface, not a gameplay authority and not game runtime code.
+1. **Największa luka: Owner UX/feel.** Panelowy interfejs jest nadal ciężki, mechaniczne budowanie trudne, a czytelności ruchu w realnych konstrukcjach nie sprawdzono z użytkownikiem. Testy i screenshot nie zastępują ręcznej oceny.
+2. **Dane:** cross-tab autosave ma wykrywanie konfliktów + ratunkowy eksport, ale bez pełnej atomowości. Stare otwarte karty mogą działać według poprzednich reguł. Nie obiecywać pełnej odporności.
+3. **Mechanizmy:** `AssemblySpace` to własność przestrzeni, `rigid island` to wyprowadzona grupa sztywna, a graf jointów to osobny problem. Jedno nie jest synonimem drugiego. Na razie linkowane części pozostają zablokowane dla prostego dragu; nie przemycać „move all linked” jako naprawy.
+4. **Granica gry:** bez pełnego gizmo/sterowania urządzeniami i programowania; mobile, długie sesje, glTF-heavy performance i prawdziwe czucie lotu niezaakceptowane. Benchmark czystej walidacji przy 2500 blokach w Node (~3,3 ms mediana) **nie** dowodzi 60 FPS.
+5. **Źródła/evidence:** poprzednie czerwone CI obejmują zarówno uzasadnione testy falsyfikacyjne, jak i przejściowe problemy z generowanym CSS. Patrz exact SHA i pełny przebieg, nie ilość PASS. W szczególności pierwszy test race w drag był fałszywie zielony, dopóki fixture nie wykazał niezerowego kandydata.
 
-M4E visual hardening is local: `game.visual-asset-loader` deep-clones imported renderer resources per instance, evicts rejected glTF loads for retry, mounts `bindings.nodes.visualRoot` as the imported subtree when present, applies Visual Asset Pack axis/unit metadata only to the imported child transform, and keeps procedural fallback on every failure. `assets/visual_packs/real_blockbench_thruster_pack/` is the current real glTF source-tree smoke fixture.
+## Jutro — najlepszy pierwszy ruch
 
-M4F fast iteration uses one default working pack, `assets/visual_packs/local_working_visuals/`. Studio's `Install / Update Block Visual` updates only the chosen block folder in that pack through `tools/serve.py`; the game reloads renderer-only visuals via `RELOAD VISUALS` or `Shift+V`. Do not create a new pack for every art polish pass.
+Najpierw odczytaj aktualny `HEAD` recovery i `gh-pages/BUILD_INFO.json`, a potem rzeczywisty ekran/gest. **Nie rozpoczynaj od kolejnego systemu ani checklisty.** Najbardziej opłacalny jest krótki, obserwowalny test Ownera: konstrukcja od zera, wybór/przesuwanie (prawidłowa i zajęta pozycja), `FRAME`, Undo, lot, powrót, poprawka. Rozdzielaj błędy techniczne od nieprzyjemnego feelu i braku affordance. Gdy brak Ownera, odczyt i przygotowanie ograniczonego scenariusza lub analiza konkretnego live friction; nie udawaj Owner acceptance.
 
-M4G visual polish keeps the VAW hit proxy raycastable but render-invisible by default, with `VISUAL DEBUG` only for diagnostics. Studio can request a same-origin game reload after install; the game-side dev controls must not keep Node smoke tests alive through a long-lived `BroadcastChannel`. Use `materialPolicy.alpha: "auto"` plus `materialOverrides` for mixed assets; avoid global `blend` on whole blocks because it can make opaque nozzles/cases sort as transparent under camera angles. Overrides match glTF material names; duplicate names should warn and apply to all matches.
+Dopiero wynik pozwala rozstrzygnąć, czy priorytetem jest kamera / workspace / sterowanie / autorstwo mechanizmów. Można zakwestionować tę hipotezę na podstawie lepszej obserwacji.
 
-Known visual import limitation: the current reimported thruster/checker test asset lost its original in-game look after being extracted and reimported. Do not spend M4C/M4E effort repairing that test asset. Treat it as a fixture proving loader/fallback boundaries only; a newly designed Studio asset must be checked against the game for visual fidelity.
-
-The release is offline-capable: Three r128, Cannon 0.6.2 and generated CSS are vendored. Fixed-step overload is measurable. Save recovery preserves the last valid backup. Hostile unknown import fields are projected away before migration.
-
-Do not reintroduce silent numeric fallback, CDN runtime dependencies, whole-craft scans in per-body hot paths, `window.VAW_RUNTIME`, empty future frameworks, persistent `bodyId` references or asset data inside craft saves.
-
-Current recovery delta: Authoring UX Milestone 1 is implemented in the local working package. It fixes flight runtime mass display after part loss, adds a launcher Flight Focus button using the existing focus path, lowers the bottom launcher below visible panels, adds UI-only camera modes (`static`, `follow-position`, `follow-body`), enables below-craft orbit and Shift+middle camera pan, and keeps `game.js` under the 2500-line architecture guard by extracting `game.camera-controller`.
-
-Current M2A delta: Placement targeting now uses `game.build-targeting` for tested normal math. Voxel placement converts `hitObjectLocalNormal -> sceneNormal -> activeSpaceNormal -> gridNormal -> placementCell` before returning the old-compatible target object. Right-click removal and hinge endpoint selection still receive `target.root` and `target.block`; craft mutation and Blueprint schema were not changed. Final audit polish hardened `targetOk()` against accidental result-shape poisoning and added `tests/test_build_targeting.js` to `tests/run_all.py`; broader validation-runner synthetic timeout tests remain environment-sensitive.
-
-Current M2B/M2C delta: Placement validation now returns deterministic UI feedback instead of a bare boolean. Ghost adjacency and click-status messages distinguish no-hit, no-face, invalid-normal, wrong-assembly-space, occupied, block-limit, invalid-block, orphan-block-assembly-space, empty-plan and future symmetry-collision. Orientation readouts now use block-specific semantics for Core forward/up, Thruster thrust direction, Wing chord/lift normal, ControlSurface chord/lift normal plus mixer axis/sign, and VectorThruster thrust/gimbal normal. Telemetry now labels runtime mass as Active mass to avoid implying whole detached-craft mass.
-
-Next recommended milestone: prove the simple visual replacement workflow end to end for newly authored assets across all current Catalog block types, then only after that plan a user-facing visual pack manager. Do not start Gate D Device & Port Schema until Workbench placement/orientation clarity and visual asset boundaries are stable.
+**Głębsze dowody i falsyfikatory:** [zamknięcie kampanii](docs/history/recovery/2026-10-20-recovery-campaign-review.md), [baseline code audit](docs/CODE_REALITY_AUDIT.md), [cross-project donors](docs/research/2026-10-19-cross-project-builder-ux-donors.md), [PR #16](https://github.com/Jozzpoly/voxel-aeronautics-workshop/pull/16). Poprzednia 31k-znakowa pamięć jest zachowana w historii Gita na `8f292259`; nie traktować jej starych nagłówków „candidate” jako stanu obecnego.

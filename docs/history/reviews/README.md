@@ -8,5 +8,6 @@ These files are preserved as historical evidence. Their recommendations describe
 - `CODE_REVIEW_REPORT.md` - root-level code review snapshot archived during Workbench Foundation cleanup.
 - `HOTFIX_REPORT.md` - root-level hotfix snapshot archived during Workbench Foundation cleanup.
 - `FOUNDATION_CONVERGENCE_REVIEW.md` - convergence review archived as historical evidence.
+- `FOUNDATION_READINESS_REVIEW_2026-06-18.md` - Gate C readiness snapshot retired from the repository root during Foundation Hardening M3C.
 
 Current authority is indexed in [`../../README.md`](../../README.md). Historical review content is intentionally not rewritten.

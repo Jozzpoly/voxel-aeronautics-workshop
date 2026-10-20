@@ -107,6 +107,12 @@
       border: 1px solid rgba(255,255,255,0.1);
       box-shadow: 0 20px 60px rgba(0,0,0,0.5);
     }
+    #help-modal .modal-content { max-width: 640px; }
+    #workshop-guide-details { border-top: 1px solid rgba(148,163,184,0.24); padding-top: 0.75rem; }
+    #workshop-guide-details summary { cursor: pointer; padding: 0.6rem 0; color: #93c5fd; font-weight: 600; }
+    #workshop-guide-details summary:hover { color: white; }
+    #workshop-guide-details summary:focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; }
+    #workshop-guide-details ul { margin-top: 0.8rem; }
     .hud-collapsed #hud-content { display: none; }
     html, body {
       background:
@@ -361,6 +367,21 @@
 .contract-readiness.warn { border-color:rgba(251,191,36,.42); color:#fde68a; }
 .contract-readiness.bad { border-color:rgba(251,113,133,.48); color:#fecdd3; }
 .objective-line { display:flex; gap:.45rem; align-items:flex-start; }
+.contract-notes { display:grid; gap:.38rem; }
+.contract-note {
+  display:grid;
+  grid-template-columns:minmax(3rem,0.34fr) minmax(0,1fr);
+  gap:.5rem;
+  align-items:start;
+  padding:.42rem .5rem;
+  border:1px solid rgba(148,163,184,.12);
+  border-radius:.58rem;
+  background:rgba(15,23,42,.54);
+  font-size:.66rem;
+  line-height:1.35;
+}
+.contract-note span { color:#7dd3fc; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }
+.contract-note strong { min-width:0; color:#dbeafe; font-weight:650; overflow-wrap:anywhere; }
 .objective-line::before { content:'◆'; color:#38bdf8; font-size:.55rem; margin-top:.2rem; }
 
 .mission-hud {

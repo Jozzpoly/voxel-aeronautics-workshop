@@ -56,6 +56,29 @@
         "-Z"
       ]
     },
+    "rigAxis": {
+      "enum": [
+        "x",
+        "y",
+        "z"
+      ]
+    },
+    "rigInput": {
+      "enum": [
+        "gimbalA",
+        "gimbalB",
+        "roll"
+      ]
+    },
+    "nodeAlias": {
+      "enum": [
+        "visualRoot",
+        "flame",
+        "flameGlow",
+        "gimbalAssembly",
+        "controlFlapPivot"
+      ]
+    },
     "blockType": {
       "enum": [
         "Core",
@@ -183,6 +206,60 @@
                 }
               },
               "additionalProperties": false,
+              "propertyNames": {
+                "$ref": "#/$defs/notGameplayPropertyName"
+              }
+            },
+            "rig": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "vectorThruster": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "required": [
+                    "channels"
+                  ],
+                  "properties": {
+                    "channels": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "input",
+                          "node",
+                          "axis"
+                        ],
+                        "properties": {
+                          "input": {
+                            "$ref": "#/$defs/rigInput"
+                          },
+                          "node": {
+                            "$ref": "#/$defs/nodeAlias"
+                          },
+                          "axis": {
+                            "$ref": "#/$defs/rigAxis"
+                          },
+                          "direction": {
+                            "enum": [
+                              1,
+                              -1
+                            ]
+                          }
+                        },
+                        "propertyNames": {
+                          "$ref": "#/$defs/notGameplayPropertyName"
+                        }
+                      }
+                    }
+                  },
+                  "propertyNames": {
+                    "$ref": "#/$defs/notGameplayPropertyName"
+                  }
+                }
+              },
               "propertyNames": {
                 "$ref": "#/$defs/notGameplayPropertyName"
               }

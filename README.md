@@ -1,50 +1,43 @@
-# Voxel Aeronautics Workshop
+# Voxel Aeronautics Workshop (VAW)
 
-**Workbench Foundation - Gate C Stable Base**
+**Eksperymentalny warsztat do budowania maszyn, sprawdzania ich w fizyce i poprawiania konstrukcji na podstawie obserwacji.** Swobodny sandbox, ręczny pilotaż i przyjemność eksperymentowania są ważniejsze od kontraktów czy liczby dostępnych systemów.
 
-Desktop voxel engineering sandbox where the player builds, tests and pilots their own machine. Gate C is the stable gameplay base: Blueprint v12 Assembly Spaces, deterministic multi-body compilation, articulated real-Cannon flight, strict runtime ownership and offline-capable releases.
+**[Uruchom VAW](https://jozzpoly.github.io/voxel-aeronautics-workshop/)** · [Dokładny opublikowany SHA](https://github.com/Jozzpoly/voxel-aeronautics-workshop/blob/gh-pages/BUILD_INFO.json) · [Recovery PR #16](https://github.com/Jozzpoly/voxel-aeronautics-workshop/pull/16)
 
-The current milestone adds the first Workbench UI foundation: dockable/floating panels, side dock stacking, separate build and flight workspace layouts, a full-span bottom parts hotbar with a compact option, a dockable flight mission panel, and refreshed documentation authority. Gameplay, craft saves, physics/runtime contracts and current procedural visuals remain compatible.
+## Stan po kampanii 19–20 października 2026
 
-M4G keeps visual iteration fast without creating a new pack for every polish pass. Studio installs one selected block visual into the renderer-only working pack at `assets/visual_packs/local_working_visuals/`, can request in-game visual reload, and imported glTF instances remain child visuals with cloned renderer resources, `visualRoot` subtree mounting, material policy, transform controls and procedural fallback. The stable hit proxy is render-invisible by default and can be shown only through visual debug. Blueprint, CraftModel, `foundation.catalog`, CraftCompiler, physics and control semantics remain authoritative.
+- `recovery/playable-truth` jest źródłową gałęzią kandydata. `main` pozostaje historyczny i nietknięty. `gh-pages` zawiera generowane wydanie, **nie** alternatywne źródło kodu. Historyczne gałęzie odzyskano pod tagami; zob. [archiwum gałęzi](docs/BRANCH_ARCHIVE_2026-10-19.md).
+- Ostatnia zweryfikowana **opublikowana rewizja produktu**: [`8f292259`](https://github.com/Jozzpoly/voxel-aeronautics-workshop/commit/8f2922594de746a28a3b716c84b1b2c3bf7ccace). Jej [Validation](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39351043772), [reproducible build](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39351043658), [publish](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39351039359) i [Pages](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39351142474) zakończyły się PASS. Identyfikator wydania sprawdzono również z publicznego URL w Operze.
+- Repozytorium może mieć nowsze **commity porządkowe (dokumentacja / jej test kontraktowy)**; przed użyciem source/build sprawdź rzeczywisty HEAD i `BUILD_INFO.json`. Aktualny skrócony stan i najbliższy sensowny ruch: [AI_PROJECT_MEMORY.md](AI_PROJECT_MEMORY.md).
+- Owner potwierdził możliwość uruchomienia VAW przez Jaskinię; **nie zaakceptował** jeszcze jakości budowania, pilotowania, mechanizmów ani mobile. Maszynowe PASS oznacza sprawność określonych ścieżek, nie jakość doświadczenia.
 
-## Run
+## Co naprawdę działa na ścieżce odzyskiwania
 
-```bash
-python tools/serve.py
-```
+Etapy **P2-A Engineering Analysis Truth** i **P2-B Test Evidence Continuity** są technicznie domknięte, a **P2-C Workshop Editing Fundamentals** ma działający fragment, nie pełną akceptację jakości.
 
-Open the printed local address. Runtime libraries and generated UI CSS are vendored; the normal and single-file builds do not require CDN scripts.
+- Swobodne rozpoczynanie konstrukcji, podstawowe stawianie/usuwanie, zaznaczanie części, inspektor, kamera `FRAME`, Undo/Redo i przycisk pełnoekranowego pilotażu `PILOT`.
+- `Select / Inspect (V)`: przeciąganie zaznaczonej, niepołączonej mechanicznie części po jej lokalnej płaszczyźnie XZ. Podczas poprawnego ruchu przesuwa się **wizualna geometria**, nie zapis Blueprintu. Kolor obrysu informuje o akceptacji/odrzuceniu pozycji przez kanoniczny `CraftModel`. Anulowanie przywraca widok, a puszczenie myszy zatwierdza jedno cofane przesunięcie.
+- Istnieje przetestowana automatycznie ścieżka: pusty warsztat → własnoręczne stawianie części → wybór/przesuwanie → uruchomienie w Chromium → powrót. Istnieją także testy wielobryłowego runtime i zawiasów.
+- Sandbox zachowuje ograniczone `lastTestResult` na powrocie do edytora. Wykrywanie części konfliktów autosave i dostępny eksport ratunkowy zmniejszają ryzyko utraty pracy.
 
-## Validate and build
+## Czego to **nie** dowodzi
 
-```bash
-npm run check:css
-python tests/run_all.py
-python tools/build_release.py
-python tools/verify_release.py
-```
+Nie mamy Owner-accepted feelu, czytelnego pełnego UX dla mechanizmów, powszechnego gizmo 3D, transformowania połączonych jointami brył ani funkcjonalnego Device/Port/Signal/ControlRuntime dla gracza. Przeciąganie ogranicza się do lokalnego XZ; Y jest dostępne przez dyskretne przesunięcia. Testy renderowane nie stanowią pomiaru frame-time na złożonych modelach GLTF.
 
-Studio can be tested and served from the same repository:
+Zabezpieczenie dwóch kart nie jest atomową transakcją między procesami; starsza, długo otwarta karta może ominąć nową ochronę. Eksport ratunkowy pozostaje ważnym wyjściem awaryjnym. Nie zmieniać tego opisu na „w pełni bezpieczne zapisy”.
 
-```bash
-npm run studio:test
-npm run studio:serve
-```
+**Następna potrzeba produktowa:** rzeczywista ocena manipulacji i round-tripu budowa → lot → obserwacja → poprawka, zwłaszcza klarowności podglądu, kamery i obciążenia panelami. Nie rozbudowywać odruchowo systemu mechanizmów ani nowej infrastruktury agentowej.
 
-`npm run studio:serve` starts the integrated VAW development server and opens Studio at `/tools/blockbench_import_studio/index.html`, with the local install endpoint enabled. Do not use the standalone Studio static server for daily install/update work unless the integrated VAW server is also running.
+## Dokumentacja — krótka droga
 
-## Current contracts
+1. [AI_PROJECT_MEMORY.md](AI_PROJECT_MEMORY.md) — jeden aktualny checkpoint, bez kroniki wszystkich commitów;
+2. [PROJECT_VISION.md](PROJECT_VISION.md) — Owner intent i trwała wizja;
+3. [ROADMAP.md](ROADMAP.md) — faktyczne obszary zakończone / otwarte;
+4. [ARCHITECTURE.md](ARCHITECTURE.md), [AGENTS.md](AGENTS.md) — granice i zasady pracy;
+5. [docs/README.md](docs/README.md) — aktualne evidence, donory i archiwum.
 
-- Blueprint v12: `assemblySpaces[] + blocks[] + mechanicalLinks[]`.
-- CompiledCraft V5: deterministic structural, rigid, mechanical and ownership graphs.
-- RuntimeAssemblyPlan V3: backend-neutral body/space/part/collider/constraint indexes.
-- Workbench UI v4: user preferences only, with build/flight layout separation, side dock stacking, compact/full dock span modes and dockable mission information.
-- `assemblySpaceId`, `blockId`, `mechanicalLinkId` and `bodyId` are separate identity domains.
-- Root-only craft remains the zero-configuration default.
-- `foundation.catalog` owns gameplay block data; procedural Three visuals remain the fallback renderer.
-- Visual Asset Pack V1 is renderer-only. Missing, invalid or unloadable packs must leave procedural fallback visuals active; imported glTF content is never allowed to replace the stable VAW root or hit proxy.
-- Daily art iteration uses `tools/blockbench_import_studio/` -> `Install / Update Block Visual` -> automatic same-origin reload when possible, with in-game `RELOAD VISUALS` / `Shift+V` as fallback. This updates `local_working_visuals` in place instead of creating a new pack per edit.
-- Gate D - Device & Port Schema - is queued behind Workbench UI and documentation preparation.
+[Retrospektywa kampanii 19–20 X](docs/history/recovery/2026-10-20-recovery-campaign-review.md) jest **historią z dowodami**, a nie drugim aktywnym planem. Poprzednia, rozrastająca się pamięć i README pozostają odzyskiwalne w historii Gita na `8f292259`.
 
-Read [`docs/README.md`](docs/README.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), [`docs/blockbench_import_studio.md`](docs/blockbench_import_studio.md), [`docs/visual_asset_pack_v1.md`](docs/visual_asset_pack_v1.md), [`docs/adr/0042-workbench-ui-layout.md`](docs/adr/0042-workbench-ui-layout.md) and [`docs/adr/0043-visual-asset-boundary.md`](docs/adr/0043-visual-asset-boundary.md) before foundation changes.
+## Lokalne uruchomienie i dowody
+
+`npm run serve` — aplikacja lokalna. `npm test` — główna walidacja. Testów nie używaj jako substytutu interakcji i oceny produktu.

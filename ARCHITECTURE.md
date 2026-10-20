@@ -1,53 +1,98 @@
-# Voxel Aeronautics Workshop - Architecture
+# VAW Architecture
 
-Current milestone: **Workbench Foundation on stable Gate C**.
+This document describes the **current code boundaries observed in the recovery source**. It is not a claim that the corresponding user-facing features are complete or well designed.
+
+## Core data flow
 
 ```text
 Blueprint v12 / CraftModel
   assemblySpaces + blocks + mechanicalLinks
         |
 CraftCompiler
-  structural -> mechanical authoring -> rigid islands -> mechanical graph
+  structural graph
+  -> mechanical authoring resolution
+  -> rigid islands
+  -> mechanical graph
         |
 CompiledCraft V5
         |
 RuntimeAssemblyPlan V3
         |
-FlightSession -> AssemblyBuilder -> Physics Port -> Cannon/headless backend
+FlightSession
+        |
+AssemblyBuilder
+        |
+Physics Port
+        |
+Cannon backend / headless backend
 ```
 
-Pure foundation/compiler modules contain no DOM, Three or Cannon. Blueprint contains serializable authoring data only. AssemblyBuilder is the runtime allocation boundary. FlightSession owns start/stop/retry and transient presentation ownership. `window.VAW_RUNTIME` remains forbidden.
+The recovery validation around `80c0ae4` exercised this path, including articulated and multi-space assembly. That is evidence that the architecture exists; it does not prove authoring UX or gameplay quality.
 
-## Workbench UI
+## Authority boundaries
 
-`foundation.ui-workspace` owns personal UI layout preferences. Version 4 supports docked/floating panels, side dock stacking, compact/full dock span modes, build and flight layout separation, presets, the `parts` hotbar panel and the dockable flight `mission` panel. `game.workspace-controller` applies that state to DOM panels.
+### Authoring
 
-Workbench state is not gameplay data. It is stored with UI preferences and must not be written into Blueprint saves.
+`CraftModel` owns editable machine state. Blueprint data is serializable authoring data only. Engine-native Three/Cannon objects do not belong in Blueprint saves.
 
-## Identity and coordinates
+### Compilation
 
-`assemblySpaceId` is durable spatial identity. `blockId` and `mechanicalLinkId` are durable authoring identities. `bodyId` is deterministic compiled identity and may not persist into future device/signal schemas.
+`CraftCompiler` translates authoring state into deterministic runtime-oriented data. Compilation owns derived topology and diagnostics rather than UI code guessing runtime structure.
 
-A block's grid coordinates are local to its Assembly Space. Runtime world pose is spawn x space chain x body-in-space pose x body/block-local pose. Space hierarchy indexes and root poses are canonicalized once.
+### Runtime allocation
 
-## Visual assets
+`AssemblyBuilder` is the boundary that allocates runtime bodies, colliders and constraints from the compiled plan. `FlightSession` owns flight/test lifecycle and transient runtime presentation.
 
-`foundation.catalog` owns gameplay block data such as mass, force, fuel, durability, drag and descriptions. `game.module-visual-factory` and `game.scene-environment` provide procedural Three.js fallback visuals.
+### Physics
 
-Model, texture and animation packs resolve through `game.visual-asset-registry` and `game.visual-asset-loader`. Missing, invalid or unloadable visual assets fall back to procedural visuals. Loader failures are non-fatal and rejected model loads are retryable. Asset packs are not Blueprint payloads and are not loaded from localStorage.
+Physics is accessed through a backend-neutral port. Cannon is the real browser physics backend; a headless backend exists for deterministic/system tests. Runtime physics identity must not become persistent authoring identity.
 
-Blockbench Import Studio lives under `tools/blockbench_import_studio/` as an authoring/export tool. The game runtime does not import Studio code. Studio output enters the renderer only through validated `VAW_VISUAL_ASSET_PACK_V1` manifests listed by `assets/visual_packs/installed_visual_packs.json`. M4F/M4G fast iteration uses the first indexed pack, `assets/visual_packs/local_working_visuals/`, updates one block visual in place through the local development server, and can request same-origin renderer reload after install.
+## Identity domains
 
-Imported glTF content is mounted under the stable VAW visual root from `game.module-visual-factory`. M4G keeps `vawHitProxy` raycastable but render-invisible by default, with a debug toggle for diagnostics. M4F/M4G mount the manifest `bindings.nodes.visualRoot` subtree when present, deep-clone renderer resources per imported instance, and apply `unitMeters`, axis metadata, optional transform and material policy only to the imported child. Material policy supports `auto` plus per-material alpha overrides for mixed opaque/flame assets. It must never replace `root.userData.isVoxelRoot`, `vawHitProxy`, hit-testing, damage/debris ownership, physics bodies or flight lifecycle.
+These IDs are not interchangeable:
 
-## Runtime health
+- `assemblySpaceId` — durable local spatial ownership;
+- `blockId` — durable authored part/device identity;
+- `mechanicalLinkId` — durable authored mechanical connection identity;
+- `bodyId` — compiled/runtime body identity.
 
-Runtime plans carry exact indexes for block/body/space/part/collider/constraint lookup. Physics inputs and sampled outputs are finite and normalized or fail explicitly. Fixed-step scheduling exposes overload metrics. Hot paths use owner indexes rather than repeatedly scanning the whole craft.
+Future persistent device or signal references must resolve from stable authored identities, not persist `bodyId`.
 
-## Distribution boundary
+## Separate graphs
 
-Three r128, Cannon 0.6.2 and generated UI CSS are vendored and recorded in third-party notices. Release verification hashes the exact canonical bytes. Runtime startup has no CDN dependency.
+The project intentionally separates:
 
-## Safety boundaries
+- structural connectivity;
+- mechanical constraints;
+- future signal connectivity;
+- control/input bindings;
+- future cable/bus/wireless transport.
 
-Connected-body rebase and dynamic articulated fracture remain guarded. Future ports must use `{blockId, portId}` and resolve runtime bodies rather than persisting `bodyId`. Gate D must extract a real responsibility from the full-size composition shell after Workbench UI and documentation preparation.
+A mechanical hinge is not a signal connection. A cable is not the meaning of the signal it carries.
+
+## Visual boundary
+
+Gameplay data belongs to the foundation/catalog and runtime systems. Visual Asset Pack V1 and Blockbench Import Studio are renderer/authoring surfaces.
+
+Imported visual data must not become the authority for mass, force, fuel, collision, persistent IDs, controls or save semantics. Procedural visuals remain a fallback path when imported visuals are unavailable or invalid.
+
+## UI boundary
+
+Workspace layout, panel state and camera preferences are user-interface preferences. They are not Blueprint/craft data.
+
+The current Workbench UI is technically substantial but **not accepted as product-quality UX**. Architecture tests around it must not be interpreted as usability evidence.
+
+## Known areas requiring a reality audit
+
+The following are deliberately not declared mature here:
+
+- the large game composition shell and responsibility distribution;
+- mechanical/hinge authoring and joint capability;
+- device tuning, ports, direct binding and signal/control runtime;
+- visual fidelity, lighting/readability and renderer policy;
+- failure/rebuild ergonomics;
+- target-platform/browser behavior beyond the manually demonstrated recovery path;
+- dynamic articulated fracture and constrained-body rebase;
+- release/generated-provenance policy.
+
+The next code audit must distinguish sound architectural seams from code that only satisfies synthetic contracts.

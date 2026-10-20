@@ -1,0 +1,47 @@
+name: Validate first-play welcome and generate matching CSS (one-time)
+
+on:
+  push:
+    branches: [recovery/playable-truth]
+    paths:
+      - .github/workflows/polish-welcome-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.ref == 'refs/heads/recovery/playable-truth'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Regenerate and validate recovery
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts tailwindcss@4.1.10
+          node tools/generate_tailwind_css.js
+          node tools/generate_tailwind_css.js --check
+          node tests/test_workshop_selection.js
+          node tests/test_visual_asset_loader.js
+          python tests/run_all.py
+      - name: Commit exact generated CSS into recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tailwind.generated.css
+          if git diff --cached --quiet; then
+            echo 'CSS already matches source.'
+          else
+            git commit -m 'build(recovery): regenerate CSS for compact first-play welcome'
+            git push origin HEAD:refs/heads/recovery/playable-truth
+          fi

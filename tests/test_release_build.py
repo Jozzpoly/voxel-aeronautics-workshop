@@ -23,27 +23,16 @@ def embedded_source(single_text: str, relative: Path) -> str:
     return single_text[start:finish]
 
 
-def expected_archive_names(root: Path, prefix: str, single_name: str) -> set[str]:
-    names = set()
-    for path in sorted(root.rglob('*')):
-        relative = path.relative_to(root)
-        if not path.is_file() or any(part in module.IGNORED_ARCHIVE_PARTS for part in relative.parts):
-            continue
-        names.add(prefix + relative.as_posix())
-    names.add(prefix + 'release/' + single_name)
-    names.add(prefix + 'release/SHA256.txt')
-    return names
-
-
 assert '.agent-validation' in module.IGNORED_ARCHIVE_PARTS
 
-module.ensure_source_manifest(ROOT)
-manifest_path = ROOT / module.MANIFEST_NAME
-manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+manifest = module.source_manifest(ROOT)
+assert not (ROOT / module.MANIFEST_NAME).exists(), 'SOURCE_MANIFEST.json must be generated, not tracked at repository root'
 assert manifest['releaseId'] == module.RELEASE_ID
 assert manifest['appVersion'] == module.APP_VERSION
-for relative in module.MANIFEST_INPUTS:
-    assert manifest['files'][relative.as_posix()] == module.sha256(ROOT / relative)
+assert module.MANIFEST_INPUTS == module.manifest_inputs(ROOT)
+for relative in module.manifest_inputs(ROOT):
+    actual_hash = module.sha256_bytes(module.canonical_source_bytes(ROOT, relative))
+    assert manifest['files'][relative.as_posix()] == actual_hash
 
 with tempfile.TemporaryDirectory() as temporary:
     temporary = Path(temporary)
@@ -78,36 +67,41 @@ with tempfile.TemporaryDirectory() as temporary:
 
     prefix = module.ARCHIVE_ROOT + '/'
     with zipfile.ZipFile(archive) as zipped:
-        names = set(zipped.namelist())
-        expected_names = expected_archive_names(ROOT, prefix, single.name)
-        assert names == expected_names, {
-            'missing': sorted(expected_names - names),
-            'unexpected': sorted(names - expected_names),
+        inventory = tuple(zipped.namelist())
+        expected_inventory = module.expected_archive_names(ROOT, single.name)
+        assert inventory == expected_inventory, {
+            'missing': sorted(set(expected_inventory) - set(inventory)),
+            'unexpected': sorted(set(inventory) - set(expected_inventory)),
         }
+        names = set(inventory)
+        packaged_manifest = zipped.read(prefix + module.MANIFEST_NAME).decode('utf-8')
+        assert packaged_manifest == module.manifest_text(ROOT)
 
         required_docs = {
+            prefix + 'README.md',
+            prefix + 'AI_PROJECT_MEMORY.md',
+            prefix + 'PROJECT_VISION.md',
+            prefix + 'ARCHITECTURE.md',
+            prefix + 'ROADMAP.md',
+            prefix + 'AGENTS.md',
             prefix + 'docs/README.md',
+            prefix + 'docs/research/programming_model.md',
+            prefix + 'docs/history/README.md',
+            prefix + 'docs/history/CHANGELOG.md',
             prefix + 'docs/history/phases/README.md',
             prefix + 'docs/history/phases/PHASE_1D4A_REPORT.md',
             prefix + 'docs/history/reviews/README.md',
             prefix + 'docs/history/reviews/FOUNDATION_REVIEW.md',
-            prefix + 'docs/history/reviews/CRITICAL_REVIEW.md',
-            prefix + 'docs/history/reviews/GAME_MODULARIZATION_REVIEW.md',
-            prefix + 'docs/history/reviews/CODE_REVIEW_REPORT.md',
-            prefix + 'docs/history/reviews/HOTFIX_REPORT.md',
-            prefix + 'docs/history/reviews/FOUNDATION_CONVERGENCE_REVIEW.md',
+            prefix + 'docs/history/reviews/FEATURE_EXPANSION_READINESS_AUDIT_2026-07-01.md',
             prefix + 'docs/history/validation/README.md',
             prefix + 'docs/history/validation/TEST_REPORT.md',
-            prefix + 'docs/history/validation/VALIDATION_REPORT.md',
-            prefix + 'docs/recovery/README.md',
-            prefix + 'docs/recovery/BROWSER_RECOVERY_SCENARIO_2026-06-16.md',
-            prefix + 'docs/repository/DOCUMENTATION_CONVERGENCE_STAGE2_REPORT.md',
+            prefix + 'docs/history/validation/M4L_VISUAL_TRUTH_BASELINE_2026-07-01.md',
+            prefix + 'docs/history/recovery/2026-06-16/README.md',
+            prefix + 'docs/history/repository/DOCUMENTATION_CONVERGENCE_STAGE2_REPORT.md',
+            prefix + 'docs/history/workflows/AGENT_WORKFLOW_V3.md',
+            prefix + 'docs/history/handoffs/FEATURE_EXPANSION_READINESS_HANDOFF_2026-07-01.md',
             prefix + 'docs/adr/0042-workbench-ui-layout.md',
             prefix + 'docs/adr/0043-visual-asset-boundary.md',
-            prefix + 'AI_PROJECT_MEMORY.md',
-            prefix + 'AGENT_WORKFLOW.md',
-            prefix + 'DELIVERY_WORKFLOW.md',
-            prefix + 'PUSH_INSTRUCTIONS.md',
         }
         assert required_docs <= names, f'missing classified documentation: {sorted(required_docs - names)}'
 
@@ -142,6 +136,20 @@ with tempfile.TemporaryDirectory() as temporary:
                 'RECOVERY_BASELINE_TESTS.md',
                 'RECOVERY_DELIVERY_2026-06-16.md',
                 'RECOVERY_VALIDATION_REPORT_2026-06-16.md',
+                'README_FOR_AGENTS.md',
+                'AGENT_WORKFLOW.md',
+                'DELIVERY_WORKFLOW.md',
+                'PUSH_INSTRUCTIONS.md',
+                'ROADMAP_NEXT.md',
+                'FUTURE_READINESS_REVIEW.md',
+                'PROGRAMMABLE_MACHINE_RESEARCH.md',
+                'CHANGELOG.md',
+                'docs/ROADMAP_REBASE_2026-07-01.md',
+                'docs/FEATURE_EXPANSION_READINESS_AUDIT_2026-07-01.md',
+                'docs/M4L_VISUAL_TRUTH_BASELINE_2026-07-01.md',
+                'docs/WORKFLOW_REPAIR_HANDOFF.md',
+                'docs/recovery/README.md',
+                'docs/repository/DOCUMENTATION_CONVERGENCE_STAGE2_REPORT.md',
             )},
         }
         assert not (forbidden_root_docs & names), (
@@ -149,9 +157,9 @@ with tempfile.TemporaryDirectory() as temporary:
             f'{sorted(forbidden_root_docs & names)}'
         )
 
-        for relative in module.MANIFEST_INPUTS:
+        for relative in module.manifest_inputs(ROOT):
             archived = zipped.read(prefix + relative.as_posix())
-            assert archived == (ROOT / relative).read_bytes(), f'ZIP source mismatch: {relative}'
+            assert archived == module.canonical_source_bytes(ROOT, relative), f'ZIP source mismatch: {relative}'
 
         assert zipped.read(prefix + 'release/' + single.name) == single.read_bytes()
         packaged_hash = zipped.read(prefix + 'release/SHA256.txt').decode('utf-8')

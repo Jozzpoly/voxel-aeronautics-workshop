@@ -80,7 +80,6 @@ def write_checksums(single: Path, archive: Path, destination: Path) -> None:
 
 def build_variant(root: Path, output: Path) -> tuple[Path, Path, Path, dict]:
     output.mkdir(parents=True, exist_ok=True)
-    build_release.ensure_source_manifest(root)
     single = output / build_release.SINGLE_NAME
     archive = output / build_release.ZIP_NAME
     hashes = output / 'SHA256.txt'
@@ -123,6 +122,23 @@ assert build_release.canonicalize_text_bytes(
     Path('fixture.txt'),
 ) == b'alpha\nbeta\ngamma\n'
 
+with tempfile.TemporaryDirectory(prefix='vaw-manifest-root-scope-') as temporary_root_scope:
+    root_scope = Path(temporary_root_scope) / 'candidate'
+    shutil.copytree(
+        ROOT,
+        root_scope,
+        symlinks=True,
+        copy_function=shutil.copy2,
+        ignore=ignored_copy,
+    )
+    probe = Path('assets/visual_packs/root_scope_probe.json')
+    (root_scope / probe).write_text('{"probe": true}\n', encoding='utf-8', newline='\n')
+    scoped_inputs = build_release.manifest_inputs(root_scope)
+    assert probe in scoped_inputs, 'manifest inputs must be computed from the supplied root'
+    assert probe not in build_release.MANIFEST_INPUTS, 'default manifest inputs must not observe temp-root probes'
+    scoped_manifest = build_release.source_manifest(root_scope)
+    assert probe.as_posix() in scoped_manifest['files'], 'source manifest must include target-root visual sources'
+
 with tempfile.TemporaryDirectory(prefix='vaw-stage11-full-tree-') as temporary_text:
     temporary = Path(temporary_text)
     lf_root = temporary / 'lf-checkout'
@@ -148,16 +164,9 @@ with tempfile.TemporaryDirectory(prefix='vaw-stage11-full-tree-') as temporary_t
         temporary / 'crlf-output',
     )
 
-    lf_manifest = build_release.canonical_source_bytes(
-        lf_root,
-        Path(build_release.MANIFEST_NAME),
-    )
-    crlf_manifest = build_release.canonical_source_bytes(
-        crlf_root,
-        Path(build_release.MANIFEST_NAME),
-    )
-    assert lf_manifest == crlf_manifest, 'canonical SOURCE_MANIFEST.json differs'
-    assert build_release.manifest_text(lf_root) == build_release.manifest_text(crlf_root)
+    lf_manifest = build_release.manifest_text(lf_root)
+    crlf_manifest = build_release.manifest_text(crlf_root)
+    assert lf_manifest == crlf_manifest, 'canonical generated SOURCE_MANIFEST.json differs'
     assert lf_single.read_bytes() == crlf_single.read_bytes(), 'single HTML differs'
     assert lf_zip.read_bytes() == crlf_zip.read_bytes(), 'source ZIP differs'
     assert lf_hashes.read_bytes() == crlf_hashes.read_bytes(), 'checksums differ'

@@ -94,6 +94,15 @@ assert.strictEqual(craft.size, 4);
 assert.strictEqual(craft.get('0,3,0').controlAxis, 'roll');
 assert.strictEqual(craft.get('0,3,0').controlSign, -1);
 const movedId = craft.get('0,3,0').blockId;
+const revisionBeforeMovePreview = craft.revision;
+const snapshotBeforeMovePreview = craft.snapshot();
+assert.strictEqual(typeof craft.validateMove, 'function', 'CraftModel must expose non-mutating authoritative move validation');
+const allowedPreview = craft.validateMove(movedId, 1, 3, 0);
+assert.strictEqual(allowedPreview.ok, true);
+assert.strictEqual(craft.validateMove(movedId, 0, 2, 0).reason, 'occupied');
+assert.strictEqual(craft.validateMove(movedId, Config.GRID.halfExtent + 1, 3, 0).reason, 'invalid-position');
+assert.deepStrictEqual(craft.snapshot(), snapshotBeforeMovePreview, 'preview must not modify authored blocks');
+assert.strictEqual(craft.revision, revisionBeforeMovePreview, 'preview must not generate a revision/history event');
 assert(craft.move(movedId, 1, 3, 0, 'move-control-surface').ok);
 assert.strictEqual(craft.getById(movedId).key, '1,3,0', 'Moving a block must preserve its persistent identity.');
 
@@ -170,6 +179,22 @@ const scaleMilliseconds = Number(process.hrtime.bigint() - scaleStarted) / 1e6;
 assert(maxResult.ok);
 assert.strictEqual(maxCraft.size, Config.GRID.maxBlocks);
 assert(scaleMilliseconds < 5000, `Maximum-size model replacement took ${scaleMilliseconds.toFixed(1)} ms.`);
+
+// Interactive movement invokes this pure proposal on each meaningful pointer
+// event. Measure its worst-case full 2500-block behavior, not just a tiny craft.
+const previewBlock = maxCraft.values()[0];
+const revisionBeforePreviewPerf = maxCraft.revision;
+const previewTimings = [];
+for (let sample = 0; sample < 24; sample += 1) {
+  const started = process.hrtime.bigint();
+  const probe = maxCraft.validateMove(previewBlock.blockId, 18, 20, 18);
+  previewTimings.push(Number(process.hrtime.bigint() - started) / 1e6);
+  assert(probe.ok, probe.reason);
+}
+assert.strictEqual(maxCraft.revision, revisionBeforePreviewPerf, 'Repeated preview checks must not author any change.');
+previewTimings.sort((a, b) => a - b);
+const previewMedianMs = previewTimings[Math.floor(previewTimings.length / 2)];
+const previewMaxMs = previewTimings.at(-1);
 const overflow = [...maximumBlocks, block(0, Config.GRID.maxY, Config.GRID.halfExtent, 'Frame')];
 assert.strictEqual(maxCraft.replace(overflow, 'overflow').ok, false);
 assert.strictEqual(maxCraft.size, Config.GRID.maxBlocks, 'Rejected scale edits must be atomic.');
@@ -239,5 +264,7 @@ console.log(JSON.stringify({
   finalStressBlocks: stress.size,
   maximumCraftBlocks: maxCraft.size,
   maximumReplaceMs: Number(scaleMilliseconds.toFixed(2)),
+  maximumCraftMovePreviewMedianMs: Number(previewMedianMs.toFixed(3)),
+  maximumCraftMovePreviewMaxMs: Number(previewMaxMs.toFixed(3)),
   replaceReownsMechanicalLinks: 'ok'
 }, null, 2));

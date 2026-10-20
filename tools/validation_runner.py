@@ -471,6 +471,7 @@ def run_stage(
         _durable_log_line(log, f"$ {' '.join(resolved_command)}\ntimeout={stage.timeout_seconds}s\n\n")
         child_environment = os.environ.copy()
         child_environment["PYTHONDONTWRITEBYTECODE"] = "1"
+        child_environment.setdefault("PYTHON", sys.executable)
         try:
             process = subprocess.Popen(
                 list(resolved_command),

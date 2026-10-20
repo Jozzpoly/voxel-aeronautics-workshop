@@ -100,8 +100,8 @@ for token in ('Math.abs(sample.velocity.y) <= 2.4', 'horizontalSpeed <= 5.5', 'c
     assert token in stable_hover
 
 # Cargo damage has gameplay consequences and is visible in the debrief.
-assert "minPayloadIntegrity: 0.65" in ALL_JS
-assert "minPayloadIntegrity: 0.50" in ALL_JS
+assert "minPayloadIntegrity: 0.76" in ALL_JS
+assert "minPayloadIntegrity: 0.86" in ALL_JS
 assert 'Cargo integrity was only' in GAME
 assert "document.getElementById('debrief-payload')" in GAME
 assert 'payloadIntegrity: deliveredPayloadIntegrity' in GAME
