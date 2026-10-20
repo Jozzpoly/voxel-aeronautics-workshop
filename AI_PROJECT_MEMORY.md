@@ -1,5 +1,15 @@
 # AI Project Memory — Voxel Aeronautics Workshop
 
+## 2026-10-20 — Real visual geometry follows Select drag (candidate until Pages proof)
+
+- **Observed interaction gap**: real VAW screenshot and source show the original rendered module remaining stationary during `Select / Inspect` dragging while a displaced `BoxHelper` alone indicates the snapped destination. This gives authoritative-but-thin feedback for constructing more complex mechanisms.
+- **Reversible render-only experiment**: `workshop_selection_controller` captures the selected visual's exact local `position` at pointerdown. During a valid nonzero `CraftModel.validateMove` candidate, the actual visual root follows snapped local XZ displacement and the amber outline follows the same world displacement; the original cyan selection helper still marks the home position. The domain CraftModel/Blueprint/history stay unchanged while dragging. An invalid candidate restores the solid module to its original position and shows the invalid rose outline; a missing pointer-plane projection restores it and hides the outline. `cancelDrag` restores exact local position before any preview disposal, including before the final canonical `nudge` commit.
+- **Tests**: real Three.js unit test asserts nonzero visual movement, exact agreement between displaced geometry and `BoxHelper` in a rotated nested assembly space, exact restoration on cancellation/commit, and rollback on invalid final ray or occupied target. Existing browser smoke still tests actual Select drag, Escape, blur, Build, Undo and flight. The one-time source-derived CSS generator and full suite [PASS](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39350547418); temporary workflow archived to `docs/history/ONE_TIME_LIVE_GEOMETRY_DRAG_2026-10-20.yml`.
+- **Provenance/limits**: prior live build was `d6d62c31`; this rendering change requires independent Pages publication. The unit test observes Three geometry and the existing browser smoke proves interaction lifecycle but does **not** yet measure perceived UX/feel, actual-frame performance with giant imported GLTF meshes, or touch. Avoid claiming Owner acceptance. Do not refactor rendering architecture merely to support this narrowly reversible improvement.
+
+---
+
+
 ## 2026-10-20 — Candidate-validity feedback in the Select drag editor
 
 - **Defect / expectation gap**: the amber Select drag BoxHelper could represent an occupied or out-of-grid target while the domain model only rejected it after pointer release. This was not a data-loss defect; the previous amber was explicitly tentative. The product improvement is to distinguish valid and blocked proposals **before release** without duplicating collision semantics in the UI.
