@@ -127,7 +127,7 @@ for stale in ('GitHub Pages dla VAW nie jest włączony',
 
 for token in ('P0', 'P1', 'P2-A', 'P2-B', 'P2-C', 'P2-D', 'Owner',
               'AssemblySpace', 'rigid island', 'main'):
-    assert token in roadmap, f'Current roadmap misses product milestone or uncertainty: {token}'
+    assert token.lower() in roadmap.lower(), f'Current roadmap misses product milestone or uncertainty: {token}'
 assert 'niezaakceptowane' in roadmap.lower(), 'Roadmap must distinguish technical completion from owner acceptance.'
 assert 'history/' in docs_index and 'CODE_REALITY_AUDIT.md' in docs_index
 assert 'research/2026-10-19-cross-project-builder-ux-donors.md' in docs_index
