@@ -257,20 +257,39 @@
           });
         }
 
-        function move(keyOrId, x, y, z, label = 'move-block') {
+        // Single authoritative proposal for both visual preview and committing.
+        // Preparing a move must not alter maps, revision, events, or history.
+        function prepareMove(keyOrId, x, y, z) {
           const before = resolveBlock(keyOrId);
           if (!before) return makeResult(false, 'missing-block');
           const nx = Number(x); const ny = Number(y); const nz = Number(z);
-          const targetKey = blueprint.makeOwnedKey(before.assemblySpaceId, nx, ny, nz);
           if (!blueprint.isWithinGrid(nx, ny, nz)) return makeResult(false, 'invalid-position');
+          const targetKey = blueprint.makeOwnedKey(before.assemblySpaceId, nx, ny, nz);
           if (targetKey !== before.key && blocksByKey.has(targetKey)) return makeResult(false, 'occupied', { key: targetKey });
-          if (targetKey === before.key) return makeResult(true, 'unchanged', { event: null, block: before });
+          if (targetKey === before.key) return makeResult(true, 'unchanged', { block: before, key: targetKey });
           const after = canonicalBlock({ ...before, x: nx, y: ny, z: nz }, new Set(), { strictId: true, strictAssemblySpace: true });
+          if (!after) return makeResult(false, 'invalid-block');
           const candidate = new Map(blocksByKey);
           candidate.delete(before.key);
           candidate.set(after.key, after);
           const validity = validateMap(candidate, { assemblySpacesById: spacesById });
           if (!validity.ok) return validity;
+          return makeResult(true, '', { before, after, candidate, key: targetKey });
+        }
+
+        function validateMove(keyOrId, x, y, z) {
+          const proposal = prepareMove(keyOrId, x, y, z);
+          return makeResult(proposal.ok, proposal.reason, {
+            ...(proposal.key ? { key: proposal.key } : {}),
+            ...(proposal.ok ? { block: proposal.after || proposal.block } : {})
+          });
+        }
+
+        function move(keyOrId, x, y, z, label = 'move-block') {
+          const proposal = prepareMove(keyOrId, x, y, z);
+          if (!proposal.ok) return proposal;
+          if (proposal.reason === 'unchanged') return makeResult(true, 'unchanged', { event: null, block: proposal.block });
+          const { before, after, candidate } = proposal;
           blocksByKey = candidate;
           blocksById.set(after.blockId, after);
           const change = Object.freeze({ before, after });
@@ -699,7 +718,7 @@
 
         const api = {
           get, getById, keyForId, has, keys, values, entries, snapshot, subscribe,
-          isContiguous, neighborCount, validateAddMany, addMany, add, validateRemove, remove, move, replace,
+          isContiguous, neighborCount, validateAddMany, addMany, add, validateRemove, remove, validateMove, move, replace,
           mechanicalLinks, getMechanicalLink, linksForBlock, addMechanicalLink, updateMechanicalLink, removeMechanicalLink,
           assemblySpaces, getAssemblySpace, createAssemblySpace, updateAssemblySpace, reparentAssemblySpace, removeAssemblySpace, reassignBlock,
           replaceDocument, loadDocument, copySubgraph, toDocument, clear
