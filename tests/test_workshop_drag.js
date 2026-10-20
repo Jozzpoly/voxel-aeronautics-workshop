@@ -70,8 +70,21 @@ assert.strictEqual(controller.beginDrag(start), true);
 assert.strictEqual(controller.finishDrag(start, false), false, 'stationary Select click stays a click');
 assert.strictEqual(history, 0);
 assert.strictEqual(controller.beginDrag(start), true);
+const visualHome = mesh.position.clone();
+const worldHome = mesh.getWorldPosition(new THREE.Vector3()).clone();
 assert.strictEqual(controller.previewDrag(new THREE.Vector2(0.2, 0.2), true), true);
+const previewOutline = scene.children.find(item => item.material?.color?.getHex?.() === 0xfbbf24);
+assert(previewOutline?.visible && previewOutline.position.length() > 0,
+  'Falsifier setup must create a visible non-zero proposed move.');
+assert(!mesh.position.equals(visualHome),
+  'The visible part itself must follow the snapped pointer preview, not just its bounding outline.');
+const previewWorldDelta = mesh.getWorldPosition(new THREE.Vector3()).sub(worldHome);
+assert(previewWorldDelta.distanceTo(previewOutline.position) < 1e-6,
+  'Nested rotated assembly-space live visual must coincide exactly with the preview outline.');
 assert.strictEqual(controller.cancelDrag(), true, 'Escape/pointercancel must be able to discard preview');
+assert(mesh.position.equals(visualHome), 'Cancelled preview restores exact local render transform.');
+assert(mesh.getWorldPosition(new THREE.Vector3()).distanceTo(worldHome) < 1e-6,
+  'Cancelled preview restores world transform even in a rotated assembly.');
 assert.strictEqual(history, 0);
 assert.strictEqual(moves.length, 0, 'preview is not a CraftModel mutation');
 assert.strictEqual(controller.cancelDrag(), false, 'cancel is idempotent');
@@ -79,9 +92,11 @@ assert.strictEqual(controller.cancelDrag(), false, 'cancel is idempotent');
 assert.strictEqual(controller.beginDrag(start), true);
 const destination = new THREE.Vector2(0.22, -0.12);
 assert.strictEqual(controller.previewDrag(destination, true), true);
+assert(!mesh.position.equals(visualHome), 'Real geometry follows valid preview before commit.');
 assert.strictEqual(history, 0, 'dragging never commits history before release');
 assert.strictEqual(autosaves, 0);
 assert.strictEqual(controller.finishDrag(destination, true), true);
+assert(mesh.position.equals(visualHome), 'Preview visual is restored before the authoritative authored move.');
 assert.strictEqual(moves.length, 1, 'a true drag with snapped delta changes one authored block');
 assert.strictEqual(history, 1, 'drag must create exactly one undo entry');
 assert.strictEqual(autosaves, 1, 'drag schedules exactly one save');
@@ -177,6 +192,7 @@ const beforeRejectedPreviewMoves = moves.length, beforeRejectedPreviewHistory = 
 assert.strictEqual(controller.previewDrag(destination, true), true);
 assert.strictEqual(candidateOutline.material.color.getHex(), 0xfb7185,
   'Occupied destination must be visibly rejected before pointer release');
+assert(mesh.position.equals(visualHome), 'Invalid candidate cannot drag solid visual into an occupied cell.');
 assert.strictEqual(controller.finishDrag(destination, true), true);
 assert.strictEqual(moves.length, beforeRejectedPreviewMoves, 'Occupied preview must not trigger a commit');
 assert.strictEqual(history, beforeRejectedPreviewHistory, 'Occupied preview must not create Undo history');
