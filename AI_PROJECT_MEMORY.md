@@ -1,5 +1,18 @@
 # AI Project Memory — Voxel Aeronautics Workshop
 
+## 2026-10-20 — Candidate-validity feedback in the Select drag editor
+
+- **Defect / expectation gap**: the amber Select drag BoxHelper could represent an occupied or out-of-grid target while the domain model only rejected it after pointer release. This was not a data-loss defect; the previous amber was explicitly tentative. The product improvement is to distinguish valid and blocked proposals **before release** without duplicating collision semantics in the UI.
+- **Single canonical decision**: `foundation.craft-model` now has pure `validateMove(blockId,x,y,z)`, backed by the *same private `prepareMove`* as the actual `move` mutation. Validation creates no revisions, emits no events and leaves the existing block maps untouched. It preserves the old freeform/disconnected build semantics and occupancy/grid rules.
+- **Render feedback**: `game.workshop-selection-controller` checks each candidate through `craft.validateMove`: amber `0xfbbf24` means admissible candidate, rose `0xfb7185` means rejected by the authoritative domain model. The first rejection transitions status to `MOVE BLOCKED • reason`. The release still invokes the canonical `move` path and additionally skips candidates that already failed preview validation. A missing pointer-plane projection continues to hide the preview and refuse release.
+- **Deterministic proof**: `tests/test_craft_model.js` checks `validateMove` acceptance/occupied/out-of-grid parity and unchanged `snapshot()`/`revision`. `tests/test_workshop_drag.js` constructs a genuinely nonzero candidate overlapping the second part in a rotated assembly frame and requires the preview outline to turn rose **before** pointer release; no `CraftModel.move` or Undo entry follows rejection. The existing real Chromium free-build/drag/fly lifecycle continues to pass.
+- **Scale data**: 24 repeated valid proposed moves of a real maximum-size 2500-block craft on GitHub Actions runner yielded **median 3.319ms, slowest 5.248ms** per `validateMove`, no revisions. [Validation job](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39346399124), sourced from benchmark log. This is CPU-only Node measurement, **not** a 60FPS guarantee for loaded browser scenes or mobile.
+- **Build proof**: exact source-derived Tailwind CSS and full suite passed [one-time validation](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39346141347); generator workflow archived at `docs/history/ONE_TIME_MOVE_PREVIEW_PARITY_2026-10-20.yml`. Later exact validation [PASS](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39346399124), with browser. Release/live SHA requires separate verification; currently **not** evidence of Owner-approved tactile feel.
+- **Next pressure**: ordinary Owner session should judge cursor projection, invalid feedback readability, and movement feel. If validation cost matters in large real scenes, measure browser frame traces before adopting incremental domain indexing or throttling. Do not reduce correctness in pursuit of speculative performance.
+
+---
+
+
 ## 2026-10-20 — Voluntary adversarial drag-truth experiment (shipped; Owner feel unverified)
 
 - **Question chosen autonomously:** can a visible Select drag ever commit a different authored outcome than what the cursor currently indicates? This was an adversarial integrity experiment, not an Owner-requested feature or a new editor architecture.
