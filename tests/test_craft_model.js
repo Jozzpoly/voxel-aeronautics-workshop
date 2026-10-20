@@ -94,6 +94,15 @@ assert.strictEqual(craft.size, 4);
 assert.strictEqual(craft.get('0,3,0').controlAxis, 'roll');
 assert.strictEqual(craft.get('0,3,0').controlSign, -1);
 const movedId = craft.get('0,3,0').blockId;
+const revisionBeforeMovePreview = craft.revision;
+const snapshotBeforeMovePreview = craft.snapshot();
+assert.strictEqual(typeof craft.validateMove, 'function', 'CraftModel must expose non-mutating authoritative move validation');
+const allowedPreview = craft.validateMove(movedId, 1, 3, 0);
+assert.strictEqual(allowedPreview.ok, true);
+assert.strictEqual(craft.validateMove(movedId, 0, 2, 0).reason, 'occupied');
+assert.strictEqual(craft.validateMove(movedId, Config.GRID.halfExtent + 1, 3, 0).reason, 'invalid-position');
+assert.deepStrictEqual(craft.snapshot(), snapshotBeforeMovePreview, 'preview must not modify authored blocks');
+assert.strictEqual(craft.revision, revisionBeforeMovePreview, 'preview must not generate a revision/history event');
 assert(craft.move(movedId, 1, 3, 0, 'move-control-surface').ok);
 assert.strictEqual(craft.getById(movedId).key, '1,3,0', 'Moving a block must preserve its persistent identity.');
 
