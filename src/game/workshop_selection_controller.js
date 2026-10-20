@@ -215,7 +215,8 @@
         const grab = ray.ray.intersectPlane(plane, new THREE.Vector3());
         if (!grab) return false;
         dragSession = { blockId: block.blockId, original: block, visual, origin, plane, grab: grab.clone(),
-          targetDx: 0, targetDz: 0, activated: false, preview: null, projectionValid: false };
+          targetDx: 0, targetDz: 0, activated: false, preview: null,
+          projectionValid: false, candidateAllowed: false, rejectionReason: null };
         return true;
       }
 
@@ -245,6 +246,7 @@
         const point = ray.ray.intersectPlane(drag.plane, new THREE.Vector3());
         if (!point || ![point.x, point.y, point.z].every(Number.isFinite)) {
           drag.projectionValid = false;
+          drag.candidateAllowed = false;
           if (drag.preview) drag.preview.visible = false;
           return true;
         }
@@ -255,7 +257,17 @@
         const { x, y, z } = drag.original;
         drag.targetDx = Math.round(localTarget.x) - x;
         drag.targetDz = Math.round(localTarget.z) - z;
+        const validation = craft.validateMove?.(
+          drag.blockId, x + drag.targetDx, y, z + drag.targetDz
+        ) || { ok: true };
+        drag.candidateAllowed = validation.ok === true;
+        const rejection = drag.candidateAllowed ? null : String(validation.reason || 'invalid');
+        if (rejection && rejection !== drag.rejectionReason) {
+          showStatus(`MOVE BLOCKED • ${rejection.toUpperCase()}`, 1100);
+        }
+        drag.rejectionReason = rejection;
         if (drag.preview) {
+          drag.preview.material?.color?.setHex(drag.candidateAllowed ? 0xfbbf24 : 0xfb7185);
           const snappedWorld = drag.visual.parent.localToWorld(
             new THREE.Vector3(x + drag.targetDx, y, z + drag.targetDz)
           );
@@ -271,7 +283,7 @@
         previewDrag(ndc, true);
         const drag = dragSession;
         const deltaX = drag.targetDx, deltaZ = drag.targetDz;
-        const validProjection = drag.projectionValid;
+        const validProjection = drag.projectionValid && drag.candidateAllowed;
         const stillSameBlock = craft.getById(drag.blockId) === drag.original;
         const stillSelected = selectedBlock()?.blockId === drag.blockId;
         cancelDrag();
