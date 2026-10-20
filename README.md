@@ -8,10 +8,12 @@
 
 - `recovery/playable-truth` jest źródłową gałęzią kandydata. `main` pozostaje historyczny i nietknięty. `gh-pages` zawiera generowane wydanie, **nie** alternatywne źródło kodu. Historyczne gałęzie odzyskano pod tagami; zob. [archiwum gałęzi](docs/BRANCH_ARCHIVE_2026-10-19.md).
 - Ostatnia zweryfikowana **opublikowana rewizja produktu**: [`8f292259`](https://github.com/Jozzpoly/voxel-aeronautics-workshop/commit/8f2922594de746a28a3b716c84b1b2c3bf7ccace). Jej [Validation](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39351043772), [reproducible build](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39351043658), [publish](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39351039359) i [Pages](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39351142474) zakończyły się PASS. Identyfikator wydania sprawdzono również z publicznego URL w Operze.
-- Repozytorium może mieć nowsze **commity wyłącznie dokumentacyjne**; przed użyciem source/build sprawdź rzeczywisty HEAD i `BUILD_INFO.json`. Aktualny skrócony stan i najbliższy sensowny ruch: [AI_PROJECT_MEMORY.md](AI_PROJECT_MEMORY.md).
+- Repozytorium może mieć nowsze **commity porządkowe (dokumentacja / jej test kontraktowy)**; przed użyciem source/build sprawdź rzeczywisty HEAD i `BUILD_INFO.json`. Aktualny skrócony stan i najbliższy sensowny ruch: [AI_PROJECT_MEMORY.md](AI_PROJECT_MEMORY.md).
 - Owner potwierdził możliwość uruchomienia VAW przez Jaskinię; **nie zaakceptował** jeszcze jakości budowania, pilotowania, mechanizmów ani mobile. Maszynowe PASS oznacza sprawność określonych ścieżek, nie jakość doświadczenia.
 
 ## Co naprawdę działa na ścieżce odzyskiwania
+
+Etapy **P2-A Engineering Analysis Truth** i **P2-B Test Evidence Continuity** są technicznie domknięte, a **P2-C Workshop Editing Fundamentals** ma działający fragment, nie pełną akceptację jakości.
 
 - Swobodne rozpoczynanie konstrukcji, podstawowe stawianie/usuwanie, zaznaczanie części, inspektor, kamera `FRAME`, Undo/Redo i przycisk pełnoekranowego pilotażu `PILOT`.
 - `Select / Inspect (V)`: przeciąganie zaznaczonej, niepołączonej mechanicznie części po jej lokalnej płaszczyźnie XZ. Podczas poprawnego ruchu przesuwa się **wizualna geometria**, nie zapis Blueprintu. Kolor obrysu informuje o akceptacji/odrzuceniu pozycji przez kanoniczny `CraftModel`. Anulowanie przywraca widok, a puszczenie myszy zatwierdza jedno cofane przesunięcie.

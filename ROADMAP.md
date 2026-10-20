@@ -8,7 +8,7 @@
 - **P1: code-reality audit** — klasyfikacja warstw; [źródłowy audyt](docs/CODE_REALITY_AUDIT.md) to baseline z 16 VIII, nie opis aktualnego produktu bez późniejszych poprawek.
 - **P2-A: Engineering Analysis Truth** — wyeliminowano błędne world-space sąsiedztwo w multi-space, uściślono `primary-body-local` control estimates i ograniczenia prognoz artykulowanych maszyn.
 - **P2-B: Test Evidence Continuity** — ograniczony `lastTestResult` przeżywa cleanup sandbox/contract; identyfikuje pierwszą awarię i utracone bloki, gdy znane.
-- **Część P2-C: Workshop Editing Fundamentals** — zaznaczanie i test-failure inspect, przesuwanie pojedynczej niezlinkowanej części po lokalnym XZ, live render-preview, kanoniczna walidacja pozycji, Undo, kamera `FRAME`, weryfikowalny browser/build/release. To **technical slice**, nie ukończony warsztat.
+- **Część P2-C: Workshop Editing Fundamentals** — zaznaczanie i test-failure inspect, przesuwanie pojedynczej niezlinkowanej części po lokalnym XZ, live render-preview, kanoniczna walidacja pozycji, Undo, kamera `FRAME`, weryfikowalny browser/build/release. To **technical slice**, nie ukończony warsztat. Obecne narzędzia pozostają **niezaakceptowane przez Ownera pod kątem ergonomii i feelu**.
 
 ## Otwarte w kolejności wartości, nie sztywnych faz
 
