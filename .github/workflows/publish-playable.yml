@@ -7,6 +7,7 @@ name: Publish playable VAW recovery
 # 2026-10-20 release gate: real pointer drag-return suppresses accidental Build edits; Chromium regression PASS.
 # 2026-10-20 release gate: Select-only local-XZ drag, one undo commit and real Chromium free-build PASS.
 # 2026-10-20 release gate: reject invalid final drag projection and selection identity swap; adversarial red-to-green regression PASS.
+# 2026-10-20 release gate: canonical non-mutating move validation colors invalid Select proposals; Chromium and 2500-block bench PASS.
 
 on:
   push:
