@@ -144,7 +144,9 @@ const beforeInvalidMoves = moves.length, beforeInvalidHistory = history;
 assert.strictEqual(controller.beginDrag(start), true);
 assert.strictEqual(controller.previewDrag(destination, true), true);
 assertNonzeroPreview('invalid final ray');
+assert(!mesh.position.equals(visualHome), 'Before invalid ray, real geometry previews the valid candidate.');
 assert.strictEqual(controller.finishDrag(invalidPoint, true), true);
+assert(mesh.position.equals(visualHome), 'Invalid final ray restores original mesh position.');
 assert.strictEqual(moves.length, beforeInvalidMoves,
   'Invalid final cursor projection must not commit stale last-good preview coordinates');
 assert.strictEqual(history, beforeInvalidHistory,
@@ -182,7 +184,9 @@ assert.strictEqual(controller.beginDrag(start), true);
 assert.strictEqual(controller.previewDrag(destination, true), true);
 assertNonzeroPreview('collision falsifier setup');
 const candidateOutline = scene.children.find(item => item.material?.color?.getHex?.() === 0xfbbf24);
-const proposedWorld = mesh.getWorldPosition(new THREE.Vector3()).add(candidateOutline.position);
+// With live geometry, the rendered mesh is already at the proposed world
+// destination; adding the outline offset again would double the displacement.
+const proposedWorld = mesh.getWorldPosition(new THREE.Vector3());
 const proposedLocal = parent.worldToLocal(proposedWorld);
 otherPart.x = Math.round(proposedLocal.x);
 otherPart.y = part.y;
