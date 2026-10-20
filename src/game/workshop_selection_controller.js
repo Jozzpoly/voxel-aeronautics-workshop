@@ -187,6 +187,11 @@
 
       function cancelDrag() {
         if (!dragSession) return false;
+        // Live geometry is only a visual projection. Restore its exact local
+        // transform before any actual CraftModel edit or cancellation.
+        if (dragSession.visual?.position && dragSession.visualHome) {
+          dragSession.visual.position.copy(dragSession.visualHome);
+        }
         if (dragSession.preview) {
           scene?.remove?.(dragSession.preview);
           dragSession.preview.geometry?.dispose?.();
@@ -214,7 +219,8 @@
         ray.setFromCamera(ndc, camera);
         const grab = ray.ray.intersectPlane(plane, new THREE.Vector3());
         if (!grab) return false;
-        dragSession = { blockId: block.blockId, original: block, visual, origin, plane, grab: grab.clone(),
+        dragSession = { blockId: block.blockId, original: block, visual, visualHome: visual.position.clone(),
+          origin, plane, grab: grab.clone(),
           targetDx: 0, targetDz: 0, activated: false, preview: null,
           projectionValid: false, candidateAllowed: false, rejectionReason: null };
         return true;
@@ -247,6 +253,7 @@
         if (!point || ![point.x, point.y, point.z].every(Number.isFinite)) {
           drag.projectionValid = false;
           drag.candidateAllowed = false;
+          drag.visual.position.copy(drag.visualHome);
           if (drag.preview) drag.preview.visible = false;
           return true;
         }
@@ -266,6 +273,14 @@
           showStatus(`MOVE BLOCKED • ${rejection.toUpperCase()}`, 1100);
         }
         drag.rejectionReason = rejection;
+        // Move only the rendered part, never the authoritative block record.
+        // On an invalid target the original remains solid while the red
+        // outline shows the refused candidate. Cancel/commit restores home.
+        drag.visual.position.copy(drag.visualHome);
+        if (drag.candidateAllowed) {
+          drag.visual.position.x += drag.targetDx;
+          drag.visual.position.z += drag.targetDz;
+        }
         if (drag.preview) {
           drag.preview.material?.color?.setHex(drag.candidateAllowed ? 0xfbbf24 : 0xfb7185);
           const snappedWorld = drag.visual.parent.localToWorld(
