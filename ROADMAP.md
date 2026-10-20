@@ -1,99 +1,27 @@
-# VAW Roadmap
+# VAW — roadmapa odzyskiwania (stan 2026-10-20)
 
-This roadmap starts from the recovered reality of 2026-08-16. Historical Gate/M4/M5/M6 plans are archived under `docs/history/` and are not active commitments.
+**Cel nie zmienił się:** swobodnie zbudować maszynę, polecieć/przetestować, zrozumieć wynik i szybko ją przebudować. Drogę ustala realne doświadczenie Ownera, nie kolejność dawnych Gate'ów. [Wizja](PROJECT_VISION.md) i [aktualny stan](AI_PROJECT_MEMORY.md) są krótkimi punktami wejścia.
 
-## P0 — Repository truth and recovery
+## Zrobione technicznie na `recovery/playable-truth`
 
-**Complete** on the recovery lane.
+- **P0: recovery repo** — odzyskano bezpieczny punkt pre-mesh `80c0ae4`, uproszczono gałęzie (trzy aktywne refy, tagi archiwalne), pozostawiono `main` nietknięty.
+- **P1: code-reality audit** — klasyfikacja warstw; [źródłowy audyt](docs/CODE_REALITY_AUDIT.md) to baseline z 16 VIII, nie opis aktualnego produktu bez późniejszych poprawek.
+- **P2-A: Engineering Analysis Truth** — wyeliminowano błędne world-space sąsiedztwo w multi-space, uściślono `primary-body-local` control estimates i ograniczenia prognoz artykulowanych maszyn.
+- **P2-B: Test Evidence Continuity** — ograniczony `lastTestResult` przeżywa cleanup sandbox/contract; identyfikuje pierwszą awarię i utracone bloki, gdy znane.
+- **Część P2-C: Workshop Editing Fundamentals** — zaznaczanie i test-failure inspect, przesuwanie pojedynczej niezlinkowanej części po lokalnym XZ, live render-preview, kanoniczna walidacja pozycji, Undo, kamera `FRAME`, weryfikowalny browser/build/release. To **technical slice**, nie ukończony warsztat.
 
-- current documentation is small and internally consistent;
-- old handoffs/roadmaps/workflows are history, not authority;
-- stale process/generated release state was removed;
-- `main` remains untouched until recovery promotion is justified.
+## Otwarte w kolejności wartości, nie sztywnych faz
 
-## P1 — Code reality and technical-debt audit
+**1. Sprawdzić doświadczenie pracy z konstrukcją.** Najpierw ocena realnej pętli `buduję → testuję → rozumiem → poprawiam` na aktualnym wydaniu. Sprawdzać affordance, ciężar paneli, gesty, widoczność zmian, niepowodzenia, zachowanie kamery i feel lotu. Zebrać różnicę między rzeczywistym blokadorem a preferencją stylistyczną.
 
-**Complete** on the recovery lane. Detailed evidence: [`docs/CODE_REALITY_AUDIT.md`](docs/CODE_REALITY_AUDIT.md).
+**2. Dokończyć istotne luki P2-C i przejść świadomie do P2-D.** Inspekcja awarii i editing powinny być zrozumiałe i przyjemne, nie tylko wykonywalne. Priorytet kolejnej poprawki musi wynikać z obserwacji. Upakowany workspace i niedoszlifowane feedback/sterowanie są kandydatami, nie automatycznie zaakceptowanym redesignem.
 
-The audit classified major surfaces using `PROVEN`, `PARTIAL`, `ROUGH`, `STUB/CLAIM` and `ABSENT`, separating domain capability from runtime integration and actual product workflow.
+**3. Mechaniczne i programowalne urządzenia — później, eksperymentalnie.** Hinge jest realny, ale edycja geometrycznych relacji, grup sztywnych, poruszania mechanizmami i bezpośrednich device bindings nie ma kompletnych ścieżek gracza. Zbadać `rigid island` vs `assemblySpace` vs komponent grafu mechanicznego zanim wybierze się semantykę gestów. Wspierać ręczny pilotaż niezależnie od przyszłego programowania.
 
-The central conclusion is that VAW has a strong technical foundation but repeatedly stops before turning that capability into a coherent engineering loop. Confirmed high-value debt includes:
+**4. Nierozwiązane bezpieczeństwo danych i skala.** Conflict detection nie zapewnia atomowego zapisu w dwóch kartach ani ochrony starych runtime. Browser profiling dla dużych/importowanych wizualizacji jest niewykonany. Naprawiać według konkretnego ryzyka i kosztu, nie z rozpędu.
 
-- incorrect multi-space weak-link analysis;
-- control-authority prediction that does not match supported multi-body thruster routing;
-- sandbox return discarding failure evidence needed for rebuild/learning;
-- mechanical/runtime capabilities without corresponding authoring/control workflows;
-- a still-heavy behavioral `src/game.js` composition root;
-- duplicated prediction/runtime physics calculations;
-- test coverage that mixes strong executable tests with source-shape/token guards.
+## Czego nie robimy tylko dla pozornego postępu
 
-## P2 — Recover the smallest truthful VAW loop
+Nie promujemy `main` z powodu zielonego CI. Nie przywracamy agent-mesha, nie mergujemy `VAW_GRoK` / mobile w ciemno, nie przepisujemy fundamentów pod matter-first building z JV/ANVIL, nie tworzymy ogólnego gizmo czy Device/Signal API bez dowodu wartości. `docs/history/**` to przeszłość, a nie obowiązujący backlog.
 
-**Current phase.**
-
-Target loop:
-
-```text
-build
--> understand what was built
--> launch/test
--> control the machine
--> observe physics/failure
--> understand the result
--> return
--> rebuild
-```
-
-Repair order:
-
-### P2-A — Engineering Analysis Truth
-
-**Complete** on the recovery lane.
-
-- weak-link and exposed-fuel topology now uses compiled `rigidNeighborBlockIds` instead of reconstructing cross-space adjacency from positions;
-- control percentages are explicitly `primary-body-local`; secondary-body Gyro no longer inflates them;
-- articulated craft report the estimator boundary, including runtime pilot-routed secondary thrusters whose joint-coupled effect is not modeled;
-- mission readiness no longer presents that partial articulated estimate as a whole-craft percentage;
-- executable multi-space/multi-body tests cover the reproduced regression and control-scope behavior.
-
-Exit result: the known topology contradiction is removed and the remaining articulated-control limitation is stated instead of guessed.
-
-### P2-B — Test Evidence Continuity
-
-**Complete** on the recovery lane.
-
-- sandbox return captures one bounded `lastTestResult` before flight cleanup destroys transient state;
-- contracts write the same evidence shape rather than a separate report model;
-- first-failure runtime evidence now carries stable `blockId`/type/body identity when known;
-- the snapshot retains lost block IDs (bounded), max impact, final load snapshot, fuel use and integrity;
-- structured failure identity is cleared during later flight cleanup only after the bounded result has already captured it;
-- transient damage remains outside Blueprint/CraftModel persistence.
-
-Exit result: returning from a sandbox experiment no longer erases the minimum evidence needed for the next diagnosis/editing stage. Fixed-step scheduler-health persistence and workshop-facing inspection remain explicitly unresolved rather than being faked inside this milestone.
-
-### P2-C — Workshop Editing Fundamentals
-
-**Current milestone.**
-
-Introduce a real selected-part/edit flow and expose existing high-value domain operations selectively instead of adding more future-facing domain APIs first. Start with stable selected-part identity, use preserved `lastTestResult.firstFailureEvent.blockId` to make failed-part diagnosis actionable when possible, and then enable editing of an existing placed part; do not broaden into a general mechanism/device framework.
-
-### P2-D — Information architecture and visual polish
-
-Only after truth and feedback continuity, simplify panels/camera/telemetry around the real task. Blockbench/visual work follows product needs rather than driving them.
-
-## P3 — Selective salvage
-
-Later branches (`VAW_GRoK`, mobile lanes and other post-mesh work) remain donor pools only.
-
-Salvage one bounded capability at a time only when:
-
-1. it solves a problem identified by the current audit;
-2. its code can be understood independently of old agent status documents;
-3. it preserves current architecture boundaries;
-4. it improves the real product after manual validation.
-
-Never merge donor branches wholesale.
-
-## Long-term direction
-
-Long-term product intent lives in `PROJECT_VISION.md`, not in this recovery roadmap. Device programming, richer mechanisms, renderer optimization, mobile support and broader content remain possible directions, but none is automatically the next milestone merely because an older roadmap named it.
+**Kryterium kolejnej decyzji:** konkretna obserwacja, która istotnie poprawi sprawność, zrozumiałość lub przyjemność iteracji maszyny; testy muszą falsyfikować założenia, a nie jedynie potwierdzać implementację.

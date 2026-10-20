@@ -1,55 +1,22 @@
-# VAW Documentation Index
+# VAW — indeks dokumentacji
 
-This index separates **current truth**, **current evidence**, **technical contracts/reference** and **history**.
+**Aktualna prawda:** [README](../README.md) → [AI_PROJECT_MEMORY](../AI_PROJECT_MEMORY.md) → [wizja](../PROJECT_VISION.md) → [roadmapa](../ROADMAP.md). [Architektura](../ARCHITECTURE.md) i [AGENTS](../AGENTS.md) opisują granice oraz zasady, nie stan zaakceptowania produktu.
 
-## Current truth
+## Dowody i kontekst badawczy (nie osobne źródła roadmapy)
 
-Only these files define active project state/direction:
+- [CODE_REALITY_AUDIT.md](CODE_REALITY_AUDIT.md) — P1 baseline z 16 VIII 2026 i historyczny ledger napraw P2. Przed cytowaniem statusów skonfrontuj z aktualnym source/CI i checkpointem.
+- [Cross-project donor UX / workbench audit](research/2026-10-19-cross-project-builder-ux-donors.md) — konkretne źródła Jaskini, JES, JURE, JV, Splotu, Feniksa Studio, Medium i innych; branch+SHA to evidence z chwili badania, nie licencja na transplantację.
+- [PR #16](https://github.com/Jozzpoly/voxel-aeronautics-workshop/pull/16) — chronologia i źródła red→green z kampanii odzyskiwania. Komentarze PR są historią zdarzeń, nie bieżącym statusem.
+- [Retrospektywa 19–20 października](history/recovery/2026-10-20-recovery-campaign-review.md) — szczegółowy zapis kampanii, błędów, falsyfikatorów i pozostawionych problemów; **historyczny**.
 
-- [`../README.md`](../README.md)
-- [`../AI_PROJECT_MEMORY.md`](../AI_PROJECT_MEMORY.md)
-- [`../PROJECT_VISION.md`](../PROJECT_VISION.md)
-- [`../ARCHITECTURE.md`](../ARCHITECTURE.md)
-- [`../ROADMAP.md`](../ROADMAP.md)
-- [`../AGENTS.md`](../AGENTS.md)
+## Referencje techniczne
 
-If one conflicts with live source or new owner/manual evidence, the document is wrong and must be corrected.
+- `adr/` — granice / architektura, sprawdzaj status i aktualny kod;
+- `visual_asset_pack_v1.md`, `blockbench_import_studio.md`, `mission_map_terrain_authoring.md` — kontrakty narzędzi;
+- `research/programming_model.md` — wizja urządzeń i sygnałów, **nie** dowód implementacji.
 
-## Current evidence
+## `history/` — nieaktywne
 
-- [`CODE_REALITY_AUDIT.md`](CODE_REALITY_AUDIT.md) — P1 source/product audit supporting the current P2 work order. It is evidence, not independent roadmap authority.
-- [`research/2026-10-19-cross-project-builder-ux-donors.md`](research/2026-10-19-cross-project-builder-ux-donors.md) — current bounded cross-project donor research and VAW UX/data-safety falsifiers; **research evidence, not permission to transplant code or a new roadmap**.
+Wszystkie dawne fazy, raporty, handoffy, review, archiwalne workflowy, stare roadmaps i eksperymenty to tylko evidence. Słowa „current”, „ready”, „next” dotyczą okresu powstania danego pliku. Nie skanuj całego `history/` na bootstrap; odzyskuj konkretne źródło na żądanie.
 
-When a current evidence document is superseded, move it to `history/` rather than leaving multiple active audits.
-
-## Technical contracts and reference
-
-These documents describe implementation boundaries or tool formats. They do **not** prove product quality or feature completeness:
-
-- `adr/` — architecture decision records; read each ADR status. Superseded process ADRs are historical context, not current project-state authority;
-- `visual_asset_pack_v1.md` — renderer-facing Visual Asset Pack contract;
-- `blockbench_import_studio.md` — Studio integration reference;
-- `mission_map_terrain_authoring.md` — mission-map/terrain authoring reference;
-- `research/programming_model.md` — design intent for future programmable-machine layers; explicitly not an implementation claim.
-
-Tool-local documents under `tools/**/docs/` are local implementation notes/reference. They are not project-state authority unless a current document explicitly promotes a specific contract.
-
-## History — never current authority
-
-Everything under [`history/`](history/) is historical evidence.
-
-It contains old milestone/phase reports, readiness reviews, validation snapshots, roadmaps, agent handoffs, recovery packages/reports, workflow instructions, repository-reorganization reports and changelog material.
-
-Historical files are preserved because they contain useful design reasoning and evidence. Their words `current`, `stable`, `ready`, `next`, `complete` or branch names apply only to the old checkpoint in which they were written.
-
-**Never use a file under `docs/history/` to decide the active branch, next milestone or current feature status.**
-
-## Practical reading order
-
-1. root current docs;
-2. current evidence when the task depends on its findings;
-3. exact source involved in the task;
-4. relevant contract/ADR;
-5. history only when the reason behind an old decision is needed.
-
-Do not begin by recursively reading the history archive.
+**Kolejność pracy agenta:** bieżąca intencja Ownera → dokładny HEAD i publiczny build SHA → minimalny checkpoint → kod i testy danego obszaru → relevant ADR/research → historia tylko gdy potrzebna. Nie wznawiaj automatycznie ostatniego backlogu.

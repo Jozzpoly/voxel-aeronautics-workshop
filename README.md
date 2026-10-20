@@ -1,92 +1,41 @@
-# Voxel Aeronautics Workshop
+# Voxel Aeronautics Workshop (VAW)
 
-**VAW jest eksperymentalnym warsztatem do budowania maszyn blok po bloku, uruchamiania ich w fizyce i rozumienia, dlaczego działają albo się rozpadają.**
+**Eksperymentalny warsztat do budowania maszyn, sprawdzania ich w fizyce i poprawiania konstrukcji na podstawie obserwacji.** Swobodny sandbox, ręczny pilotaż i przyjemność eksperymentowania są ważniejsze od kontraktów czy liczby dostępnych systemów.
 
-## Uruchom grywalny recovery
+**[Uruchom VAW](https://jozzpoly.github.io/voxel-aeronautics-workshop/)** · [Dokładny opublikowany SHA](https://github.com/Jozzpoly/voxel-aeronautics-workshop/blob/gh-pages/BUILD_INFO.json) · [Recovery PR #16](https://github.com/Jozzpoly/voxel-aeronautics-workshop/pull/16)
 
-[**Zagraj — VAW na GitHub Pages**](https://jozzpoly.github.io/voxel-aeronautics-workshop/). Gra jest dostępna także jako wejście w Jaskini (Owner potwierdził 2026-10-19). Build jest publikowany niezależnie z gałęzi `gh-pages`; jego dokładną rewizję źródłową wskazuje [BUILD_INFO.json](https://github.com/Jozzpoly/voxel-aeronautics-workshop/blob/gh-pages/BUILD_INFO.json). **Dostępność w Jaskini nie jest jeszcze akceptacją jakości warsztatu, sterowania ani mobile.** `main` pozostaje starszą, historyczną bazą; recovery na PR #16 jest osobnym kandydatem.
+## Stan po kampanii 19–20 października 2026
 
-**Dowody aktualne na 2026-10-19:** prawdziwy Chromium browser smoke i articulated lifecycle dla source i standalone przeszły w CI. Testy używają presetów/Blueprintów testowych; nie zastępują swobodnego Owner testu `buduj → uruchom → obserwuj → przebuduj`. Aktualny checkpoint i ograniczenia dowodowe: [AI_PROJECT_MEMORY.md](AI_PROJECT_MEMORY.md). Poniższy sierpniowy opis jest historyczną bazą recovery, nie najświeższym dowodem.
+- `recovery/playable-truth` jest źródłową gałęzią kandydata. `main` pozostaje historyczny i nietknięty. `gh-pages` zawiera generowane wydanie, **nie** alternatywne źródło kodu. Historyczne gałęzie odzyskano pod tagami; zob. [archiwum gałęzi](docs/BRANCH_ARCHIVE_2026-10-19.md).
+- Ostatnia zweryfikowana **opublikowana rewizja produktu**: [`8f292259`](https://github.com/Jozzpoly/voxel-aeronautics-workshop/commit/8f2922594de746a28a3b716c84b1b2c3bf7ccace). Jej [Validation](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39351043772), [reproducible build](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39351043658), [publish](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39351039359) i [Pages](https://github.com/Jozzpoly/voxel-aeronautics-workshop/actions/runs/39351142474) zakończyły się PASS. Identyfikator wydania sprawdzono również z publicznego URL w Operze.
+- Repozytorium może mieć nowsze **commity wyłącznie dokumentacyjne**; przed użyciem source/build sprawdź rzeczywisty HEAD i `BUILD_INFO.json`. Aktualny skrócony stan i najbliższy sensowny ruch: [AI_PROJECT_MEMORY.md](AI_PROJECT_MEMORY.md).
+- Owner potwierdził możliwość uruchomienia VAW przez Jaskinię; **nie zaakceptował** jeszcze jakości budowania, pilotowania, mechanizmów ani mobile. Maszynowe PASS oznacza sprawność określonych ścieżek, nie jakość doświadczenia.
 
-## Stan projektu — 2026-08-16
+## Co naprawdę działa na ścieżce odzyskiwania
 
-Repozytorium jest w trakcie świadomego recovery. To **nie jest deklaracja stabilnego wydania ani ukończonego gameplay loopu**.
+- Swobodne rozpoczynanie konstrukcji, podstawowe stawianie/usuwanie, zaznaczanie części, inspektor, kamera `FRAME`, Undo/Redo i przycisk pełnoekranowego pilotażu `PILOT`.
+- `Select / Inspect (V)`: przeciąganie zaznaczonej, niepołączonej mechanicznie części po jej lokalnej płaszczyźnie XZ. Podczas poprawnego ruchu przesuwa się **wizualna geometria**, nie zapis Blueprintu. Kolor obrysu informuje o akceptacji/odrzuceniu pozycji przez kanoniczny `CraftModel`. Anulowanie przywraca widok, a puszczenie myszy zatwierdza jedno cofane przesunięcie.
+- Istnieje przetestowana automatycznie ścieżka: pusty warsztat → własnoręczne stawianie części → wybór/przesuwanie → uruchomienie w Chromium → powrót. Istnieją także testy wielobryłowego runtime i zawiasów.
+- Sandbox zachowuje ograniczone `lastTestResult` na powrocie do edytora. Wykrywanie części konfliktów autosave i dostępny eksport ratunkowy zmniejszają ryzyko utraty pracy.
 
-Aktywny lane recovery to `recovery/playable-truth`. Został rozpoczęty z pre-mesh snapshotu `80c0ae4aced1dd695af217cdeadea9025c6305c8`. `main` pozostaje starszą linią i nie powinien być traktowany jako bieżąca prawda produktu, dopóki recovery nie zostanie zakończone i świadomie promowane.
+## Czego to **nie** dowodzi
 
-### Co zostało potwierdzone ręcznie
+Nie mamy Owner-accepted feelu, czytelnego pełnego UX dla mechanizmów, powszechnego gizmo 3D, transformowania połączonych jointami brył ani funkcjonalnego Device/Port/Signal/ControlRuntime dla gracza. Przeciąganie ogranicza się do lokalnego XZ; Y jest dostępne przez dyskretne przesunięcia. Testy renderowane nie stanowią pomiaru frame-time na złożonych modelach GLTF.
 
-Właściciel uruchomił exact single-file build z `80c0ae4` 2026-08-16. Potwierdzone jest tylko to, że:
+Zabezpieczenie dwóch kart nie jest atomową transakcją między procesami; starsza, długo otwarta karta może ominąć nową ochronę. Eksport ratunkowy pozostaje ważnym wyjściem awaryjnym. Nie zmieniać tego opisu na „w pełni bezpieczne zapisy”.
 
-- aplikacja startuje i renderuje Workbench;
-- widoczny jest istniejący craft;
-- można wejść w `Launch Sandbox Test`;
-- scena testowa/fizyczna startuje;
-- telemetry aktualizuje stan podczas testu.
+**Następna potrzeba produktowa:** rzeczywista ocena manipulacji i round-tripu budowa → lot → obserwacja → poprawka, zwłaszcza klarowności podglądu, kamery i obciążenia panelami. Nie rozbudowywać odruchowo systemu mechanizmów ani nowej infrastruktury agentowej.
 
-To **nie jest akceptacja jakości produktu**. Aktualny UI, czytelność, zachowanie i ogólny poziom dopracowania zostały ocenione jako wyraźnie niewystarczające. Nie zakładamy, że funkcja opisana w starym roadmapie działa dobrze tylko dlatego, że istnieje kod albo test.
+## Dokumentacja — krótka droga
 
-### Co zostało potwierdzone maszynowo
+1. [AI_PROJECT_MEMORY.md](AI_PROJECT_MEMORY.md) — jeden aktualny checkpoint, bez kroniki wszystkich commitów;
+2. [PROJECT_VISION.md](PROJECT_VISION.md) — Owner intent i trwała wizja;
+3. [ROADMAP.md](ROADMAP.md) — faktyczne obszary zakończone / otwarte;
+4. [ARCHITECTURE.md](ARCHITECTURE.md), [AGENTS.md](AGENTS.md) — granice i zasady pracy;
+5. [docs/README.md](docs/README.md) — aktualne evidence, donory i archiwum.
 
-Bazowy produkt ma szeroko testowany foundation/runtime: CraftModel/CraftCompiler, RuntimeAssemblyPlan, Cannon, articulated/multi-space runtime, flight lifecycle, missions, damage/debris, Visual Asset Pack i Blockbench Studio.
+[Retrospektywa kampanii 19–20 X](docs/history/recovery/2026-10-20-recovery-campaign-review.md) jest **historią z dowodami**, a nie drugim aktywnym planem. Poprzednia, rozrastająca się pamięć i README pozostają odzyskiwalne w historii Gita na `8f292259`.
 
-P1 code-reality audit jest zapisany w [`docs/CODE_REALITY_AUDIT.md`](docs/CODE_REALITY_AUDIT.md). P2-A naprawił pierwszy potwierdzony błąd prawdy produktu: Engineering Analysis korzysta teraz z compiled rigid adjacency dla weak links, a procenty sterowności są jawnie ograniczone do **primary-body local authority** zamiast udawać whole-craft prediction dla maszyn przegubowych. Mission readiness sygnalizuje to ograniczenie zamiast podawać pozornie dokładny wynik.
+## Lokalne uruchomienie i dowody
 
-P2-B domknął fundament ciągłości dowodów `test -> return`: sandbox i kontrakty zapisują jeden ograniczony `lastTestResult` przed cleanupem. Wynik zachowuje pierwszą awarię z `blockId` gdy jest znane, utracone bloki oraz impact/load/fuel evidence i nie trafia do Blueprint/CraftModel. Obecna kompozycja gry nie utrwala jeszcze fixed-step scheduler health i nie ma jeszcze właściwego workshop-facing wyboru/inspekcji wyniku — to jest cel P2-C, a nie ukrywana część P2-B.
-
-P2-A/P2-B mają wykonywalne testy i startup lifecycle proof w disposable kandydacie. Znany nondeterministyczny harness `test_validation_runner.py` pozostaje osobnym długiem infrastruktury.
-
-Znane wyjątki:
-
-- timeout/process-family `validation_runner` jest niestabilny także między Windows/Ubuntu CI — klasyfikacja `HARNESS/ENVIRONMENT`;
-- `SOURCE_MANIFEST.json` jest generowany podczas buildu i pakowany do source ZIP; nie jest wersjonowaną, ręcznie utrzymywaną prawdą repo;
-- obecne środowisko recovery nadal nie dostarcza wiarygodnego browser/rendered proof: Chromium/CDP nie dochodzi do bootstrapu aplikacji. Nie jest z tego deklarowany browser PASS.
-
-Testy są dowodem technicznym, **nie dowodem jakości gry**.
-
-## Aktualna dokumentacja
-
-Bieżącą prawdę projektu tworzą tylko:
-
-1. [`AI_PROJECT_MEMORY.md`](AI_PROJECT_MEMORY.md) — krótki snapshot aktualnego stanu i niepewności;
-2. [`PROJECT_VISION.md`](PROJECT_VISION.md) — trwała wizja i filary projektu;
-3. [`ARCHITECTURE.md`](ARCHITECTURE.md) — aktualne granice architektury zaobserwowane w kodzie;
-4. [`ROADMAP.md`](ROADMAP.md) — obecna kolejność pracy;
-5. [`AGENTS.md`](AGENTS.md) — zasady pracy agentów z repozytorium;
-6. [`docs/README.md`](docs/README.md) — indeks bieżących dowodów, kontraktów, researchu i historii.
-
-Wszystko pod `docs/history/` jest **wyłącznie historią**. Stare milestone'y, Gate'y, readiness review, handoffy i workflowy nie są aktywnym planem.
-
-## Uruchomienie lokalne
-
-```bash
-npm run serve
-```
-
-Główna walidacja techniczna:
-
-```bash
-npm test
-```
-
-Nie używaj wyniku testów jako substytutu ręcznej oceny produktu.
-
-## Najbliższy kierunek
-
-P0 repo recovery, P1 code-reality audit, P2-A Engineering Analysis Truth i P2-B Test Evidence Continuity są zakończone na recovery lane.
-
-**Aktualnym milestone'em jest P2-C — Workshop Editing Fundamentals.**
-
-**Zweryfikowany stan implementacji na `0dd7390` (odczyt 2026-10-19):** pierwsza, ograniczona część P2-C już istnieje w `src/game/workshop_selection_controller.js`, `index.html` i `tests/test_workshop_selection.js`: trwałe zaznaczenie przez `blockId`, wskazanie zachowanej pierwszej awarii, drobne przesunięcia istniejącej części z zapisem do historii oraz odmowa przesunięcia części z mechanicznym linkiem. To dowód obecności kodu i testu, **nie potwierdzenie ergonomii, gotowości całego P2-C ani akceptacji Ownera**. Trzeba przeprowadzić rzeczywisty test renderowany i ocenić dalszą edycję/diagnostykę.
-
-Cel: zbudować prawdziwą tożsamość zaznaczonej już części, połączyć ją z zachowanym `lastTestResult`/failed `blockId` i umożliwić sensowną edycję istniejącego elementu bez ciągłego delete/re-place. Najpierw wykorzystujemy istniejące capability CraftModel tam, gdzie rozwiązują realny problem warsztatu; nie dokładamy nowego Device/Signal/mechanism frameworku.
-
-Późniejsze uproszczenie UI/visual polish ma być oparte na ręcznej ocenie realnego workflow, nie na samej obecności infrastruktury.
-
-## Kontekst Medium / Jaskinia — weryfikacja 2026-10-19
-
-- **Jaskinia jest osobnym produktem i punktem wejścia, nie alternatywnym źródłem prawdy VAW.** Jej [kompas](https://github.com/Jozzpoly/Jozz-Cave-Workbench/issues/5) definiuje szybkie uruchamianie eksperymentów, odzyskiwalne adresy i czytelność pracy dla agentów. [PR #4](https://github.com/Jozzpoly/Jozz-Cave-Workbench/pull/4) rozwija m.in. import materiałów z repozytoriów (także VAW), adresy i interfejs dla agentów; na dzień weryfikacji pozostawał niescalony.
-- **Medium pozostaje laboratorium współpracy, nie wymaganym menedżerem repo.** [Jego bieżące wejście](https://github.com/Jozzpoly/Shared-Work-Medium-Lab/blob/main/START_HERE.md) odróżnia źródła, eksperymenty, Owner feedback i rzeczywiście przyjęty produkt. Nie tworzyć dla VAW agent-mesha, kolejki statusów ani obowiązkowego raportowania tylko po to, by „integrować Medium”.
-- **Brakuje potwierdzonego, jednoklikowego uruchomienia bieżącego recovery.** GitHub Pages dla VAW nie jest włączony; `index.html` w repo i zielone CI nie dowodzą dostępnego grywalnego builda. Następny realny test integracji to uruchomienie konkretnego przypiętego SHA, zebranie obserwacji z warsztatu i dopiero potem świadome udostępnienie wejścia w Jaskini.
-- **Bezpieczeństwo:** `main` zostaje nieruszony, [PR #16](https://github.com/Jozzpoly/voxel-aeronautics-workshop/pull/16) pozostaje szkicem do oceny. Starsze gałęzie mobilne, automatyzacje i `VAW_GRoK` są materiałem donorowym; nie usuwać ani scalać masowo bez zbadania zależności i ważnych adresów. Jedno przyszłe aktywne `main` pozostaje celem, a nie deklaracją stanu obecnego.
-
+`npm run serve` — aplikacja lokalna. `npm test` — główna walidacja. Testów nie używaj jako substytutu interakcji i oceny produktu.
