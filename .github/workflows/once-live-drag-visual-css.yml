@@ -1,0 +1,42 @@
+name: VAW one-time live geometry drag validation
+on:
+  push:
+    branches: [recovery/playable-truth]
+    paths: [.github/workflows/once-live-drag-visual-css.yml]
+permissions:
+  contents: write
+concurrency:
+  group: vaw-live-geometry-drag-validation
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/recovery/playable-truth'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Generate CSS and run complete tests
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts tailwindcss@4.1.10
+          node tools/generate_tailwind_css.js
+          node tools/generate_tailwind_css.js --check
+          node tests/test_workshop_drag.js
+          python -u tests/run_all.py
+      - name: Archive workflow and commit exact artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git mv .github/workflows/once-live-drag-visual-css.yml docs/history/ONE_TIME_LIVE_GEOMETRY_DRAG_2026-10-20.yml
+          git add tailwind.generated.css docs/history/ONE_TIME_LIVE_GEOMETRY_DRAG_2026-10-20.yml
+          git commit -m 'build(recovery): generate CSS for visible geometry drag'
+          git push origin HEAD:refs/heads/recovery/playable-truth
