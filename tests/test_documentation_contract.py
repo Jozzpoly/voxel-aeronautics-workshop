@@ -109,51 +109,52 @@ for phrase in (
 for token in ('Blueprint v12', 'CompiledCraft V5', 'RuntimeAssemblyPlan V3', 'assemblySpaceId', 'blockId', 'bodyId'):
     assert token in architecture, f'Architecture misses current boundary token: {token}'
 
+# The audit classifications are historical/evidence vocabulary; the roadmap
+# may summarize and supersede them without restating magic words verbatim.
 for token in ('PROVEN', 'PARTIAL', 'ROUGH', 'STUB/CLAIM', 'ABSENT'):
-    assert token in roadmap, f'Roadmap misses audit classification: {token}'
-    assert token in audit, f'Code reality audit misses classification: {token}'
+    assert token in audit, f'P1 audit misses classification: {token}'
 
-assert '## P1 — Code reality and technical-debt audit' in roadmap
-assert '**Complete**' in roadmap[roadmap.index('## P1 — Code reality and technical-debt audit'):]
-assert '## P2 — Recover the smallest truthful VAW loop' in roadmap
-assert '**Current phase.**' in roadmap[roadmap.index('## P2 — Recover the smallest truthful VAW loop'):]
-assert '### P2-A — Engineering Analysis Truth' in roadmap
-p2a = roadmap[roadmap.index('### P2-A — Engineering Analysis Truth'):roadmap.index('### P2-B — Test Evidence Continuity')]
-assert '**Complete**' in p2a
-assert '### P2-B — Test Evidence Continuity' in roadmap
-p2b = roadmap[roadmap.index('### P2-B — Test Evidence Continuity'):roadmap.index('### P2-C — Workshop Editing Fundamentals')]
-assert '**Complete**' in p2b
-assert '### P2-C — Workshop Editing Fundamentals' in roadmap
-p2c = roadmap[roadmap.index('### P2-C — Workshop Editing Fundamentals'):roadmap.index('### P2-D — Information architecture and visual polish')]
-assert '**Current milestone.**' in p2c
+# A compact living entrypoint should tell the truth about the shipped version,
+# the protected recovery lane, and the limits of machine/Owner evidence.
+for token in ('AI_PROJECT_MEMORY.md', 'PROJECT_VISION.md', 'ARCHITECTURE.md', 'ROADMAP.md',
+              'AGENTS.md', 'docs/README.md', 'BUILD_INFO.json', 'recovery/playable-truth',
+              'gh-pages', 'P2-A', 'P2-B', 'P2-C'):
+    assert token in readme, f'Current README misses active boundary: {token}'
+for stale in ('GitHub Pages dla VAW nie jest włączony',
+              'Brakuje potwierdzonego, jednoklikowego uruchomienia bieżącego recovery',
+              'Obecne środowisko recovery nadal nie dostarcza wiarygodnego browser/rendered proof'):
+    assert stale not in readme, f'Current README reintroduced superseded release claim: {stale}'
 
+for token in ('P0', 'P1', 'P2-A', 'P2-B', 'P2-C', 'P2-D', 'Owner',
+              'AssemblySpace', 'rigid island', 'main'):
+    assert token in roadmap, f'Current roadmap misses product milestone or uncertainty: {token}'
+assert 'niezaakceptowane' in roadmap.lower(), 'Roadmap must distinguish technical completion from owner acceptance.'
+assert 'history/' in docs_index and 'CODE_REALITY_AUDIT.md' in docs_index
+assert 'research/2026-10-19-cross-project-builder-ux-donors.md' in docs_index
+assert 'history/' in docs_index and 'aktualna prawda' in docs_index.lower()
+assert 'non-authoritative history' in history
+
+# The recovery memory is a snapshot, not the accumulating 31 kB agent journal
+# it replaced. Preserve the detail in Git history and in a dated non-authority review.
+assert 1000 < len(memory) < 12000, 'Current AI_PROJECT_MEMORY should remain a compact bootstrap.'
+for token in ('recovery/playable-truth', 'gh-pages', 'Draft', 'blockId',
+              'AssemblySpace', 'Owner', 'cross-tab', 'CODE_REALITY_AUDIT.md',
+              'Jutro', 'docs/history/recovery/2026-10-20-recovery-campaign-review.md'):
+    assert token in memory, f'Current checkpoint omits a key boundary: {token}'
+assert 'niezaakceptowane' in memory.lower(), 'Memory must preserve uncertainty about product quality.'
+assert 'no active M4/M5/M6/Gate-D feature roadmap' not in memory, 'Stale milestone boilerplate resurfaced.'
+
+review_path = ROOT / 'docs/history/recovery/2026-10-20-recovery-campaign-review.md'
+assert review_path.is_file(), 'Missing bounded historical evidence for October close.'
+review = review_path.read_text(encoding='utf-8')
+for token in ('history', 'nie aktywna roadmapa', '8f292259',
+              'fałszywie zielony', 'atomow', 'P2-A', 'P2-B'):
+    assert token.lower() in review.lower(), f'Retrospective misses critical context: {token}'
+assert 'README.md' in readme and 'CODE_REALITY_AUDIT.md' in docs_index
 assert 'docs/history/' in agents
 assert 'passing test does not prove' in agents.lower()
-assert 'Current evidence' in docs_index
-assert 'CODE_REALITY_AUDIT.md' in docs_index
-assert 'evidence, not independent roadmap authority' in docs_index
-assert 'Everything under' in docs_index and 'history/' in docs_index
-assert 'never current authority' in docs_index
-assert 'non-authoritative history' in history
 assert 'not an implementation claim' in programming
-assert '{blockId, portId}' in programming
-assert 'ControlRuntime' in programming
-assert 'P2-B Test Evidence Continuity' in readme
-assert 'fixed-step scheduler health' in readme.lower()
-assert 'P2-C' in readme and 'failed `blockId`' in readme
-assert 'P2-C — Workshop Editing Fundamentals' in readme
-assert 'P2-A Engineering Analysis Truth' in readme
-
-# Current memory must distinguish owner evidence, machine evidence and audit outcome.
-for heading in ('Manual product truth', 'Machine evidence', 'P1 code-reality result', 'Current priority', 'Documentation authority'):
-    assert heading in memory, f'AI_PROJECT_MEMORY misses current-truth section: {heading}'
-assert 'did not accept the current quality' in memory
-assert 'P1 is complete' in memory
-assert 'P2-A Engineering Analysis Truth is complete' in memory
-assert 'P2-B result — Test Evidence Continuity' in memory
-assert 'P2-C is active' in memory
-assert 'CODE_REALITY_AUDIT.md' in memory
-assert 'no active M4/M5/M6/Gate-D feature roadmap' in memory
+assert '{blockId, portId}' in programming and 'ControlRuntime' in programming
 
 # The current evidence must record the reproduced truth gaps that drive P2.
 for phrase in (
@@ -179,5 +180,5 @@ print({
     'p1Audit': 'classified-and-linked',
     'p2A': 'complete',
     'p2B': 'complete',
-    'p2C': 'current',
+    'p2C': 'technical-slice-owner-pending',
 })
